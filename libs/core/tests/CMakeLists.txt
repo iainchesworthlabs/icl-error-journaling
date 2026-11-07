@@ -4,6 +4,7 @@ add_executable(ej_core_tests
     golden_scenarios.cpp
     test_export_skeleton.cpp
     test_foundations.cpp
+    test_header_history.cpp
     test_log.cpp
     test_uuid.cpp
     test_validators.cpp

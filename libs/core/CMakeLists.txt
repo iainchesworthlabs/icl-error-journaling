@@ -12,6 +12,8 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
 
 add_library(ej_core
     src/export_renderer.cpp
+    src/header_history.cpp
+    src/header_values.cpp
     src/log.cpp
     src/note_template.cpp
     src/software_version.cpp
