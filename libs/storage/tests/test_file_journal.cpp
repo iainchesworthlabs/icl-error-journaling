@@ -596,7 +596,10 @@ TEST_CASE("Folding the journal of every log gives the log the database holds, af
     std::size_t open_files = 0;
     for (const auto& file : std::filesystem::directory_iterator(store.m_Location.journal_dir()))
     {
-        open_files += file.is_regular_file() ? 1 : 0;
+        if (file.is_regular_file())
+        {
+            ++open_files;
+        }
     }
     CHECK(open_files == 1);
     CHECK(std::filesystem::exists(store.journal_path(logs.back())));
