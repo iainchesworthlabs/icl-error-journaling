@@ -5,7 +5,7 @@ libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespac
   include/error_journaling/  public headers: uuid.hpp, ids.hpp (EntryId, ErrorTypeId, NoteTemplateId, LocationId),
                              header_field.hpp, result.hpp (the std::expected conventions), version.hpp,
                              configuration.hpp (the configuration file: schema, import, export),
-                             config_seam.hpp (stand-ins until 1.7, see the header)
+                             config_seam.hpp (a TimeFormat stand-in until 1.7, see the header)
   src/                       implementation files, one per component
   tests/                     Catch2 tests, all labelled `unit`
     golden/                  expected export files, compared byte for byte (docs/testing.md)

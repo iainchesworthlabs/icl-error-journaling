@@ -495,20 +495,20 @@ void read_locations(Reader& r, const QJsonObject& root, Configuration& out)
     }
 }
 
-void report_pattern(Reader& r, const std::string& path, const QString& pattern, config_seam::PatternError error)
+void report_pattern(Reader& r, const std::string& path, const QString& pattern, PatternError error)
 {
     switch (error)
     {
-        case config_seam::PatternError::MISSING_PLACEHOLDER:
+        case PatternError::MISSING_PLACEHOLDER:
             r.add(Code::BAD_PATTERN, path,
                   shown(pattern) +
                       " has no {value}. Put {value} where the typed text should go, for example \"Played {value}\".");
             break;
-        case config_seam::PatternError::UNBALANCED_BRACE:
+        case PatternError::UNBALANCED_BRACE:
             r.add(Code::BAD_PATTERN, path,
                   shown(pattern) + " has a stray brace. Write {{ or }} for a literal brace, and close every {value}.");
             break;
-        case config_seam::PatternError::UNKNOWN_PLACEHOLDER:
+        case PatternError::UNKNOWN_PLACEHOLDER:
             r.add(Code::BAD_PATTERN, path,
                   shown(pattern) + " uses a placeholder the app does not know. Only {value} is allowed.");
             break;
@@ -533,7 +533,7 @@ void read_templates(Reader& r, const QJsonObject& root, Configuration& out)
         {
             continue;
         }
-        ConfigNoteTemplate entry;
+        NoteTemplate entry;
         bool usable = true;
         if (const auto id = r.id<NoteTemplateId>(*object, path, ids))
         {
@@ -562,8 +562,7 @@ void read_templates(Reader& r, const QJsonObject& root, Configuration& out)
         }
         if (const auto pattern = r.text(*object, "output_pattern", path, true, MAX_PATTERN))
         {
-            // SEAM (1.7): switch to ej::validate_pattern.
-            const auto checked = config_seam::validate_pattern(pattern->toStdString());
+            const auto checked = validate_pattern(pattern->toStdString());
             if (checked)
             {
                 entry.m_OutputPattern = pattern->toStdString();

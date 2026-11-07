@@ -9,6 +9,7 @@
 
 #include "error_journaling/config_seam.hpp"
 #include "error_journaling/ids.hpp"
+#include "error_journaling/note_template.hpp"
 #include "error_journaling/result.hpp"
 
 namespace ej
@@ -21,19 +22,8 @@ inline constexpr std::size_t CONFIG_MAX_BYTES = 1024 * 1024;
 inline constexpr std::size_t CONFIG_MAX_ENTRIES_PER_LIST = 500;
 inline constexpr int CONFIG_BOARD_POSITIONS = 11;
 
-// SEAM (1.7): these two aliases move to the real types.
+// SEAM (1.7): this alias moves to the real `TimeFormat`.
 using ConfigTimeFormat = config_seam::TimeFormat;
-
-struct ConfigNoteTemplate
-{
-    NoteTemplateId m_Id;
-    std::string m_Name;           // "Played song"
-    std::string m_ValuePrompt;    // "Which song?"
-    std::string m_OutputPattern;  // "Played {value}"
-    int m_SortOrder = 0;
-
-    friend bool operator==(const ConfigNoteTemplate&, const ConfigNoteTemplate&) = default;
-};
 
 struct ErrorType
 {
@@ -64,9 +54,7 @@ struct Configuration
     bool m_IncludeTotals = false;
     std::vector<ErrorType> m_ErrorTypes;
     std::vector<Location> m_Locations;
-    std::vector<ConfigNoteTemplate> m_Templates;
-
-    friend bool operator==(const Configuration&, const Configuration&) = default;
+    std::vector<NoteTemplate> m_Templates;
 };
 
 struct ConfigError

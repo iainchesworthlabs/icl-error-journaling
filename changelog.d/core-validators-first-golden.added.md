@@ -1,0 +1,1 @@
+**Core validators and the first golden.** `ej_core` gains unit number and software version validation, note template patterns, the log and entry types, and the first golden export file (the PRD example). The export renderer is a skeleton that prints the header block only; the timeline follows. Nothing changes for the person using the app yet.
