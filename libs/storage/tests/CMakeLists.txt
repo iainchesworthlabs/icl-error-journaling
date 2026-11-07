@@ -4,6 +4,7 @@
 add_executable(ej_storage_tests
     test_contract_memory.cpp
     test_crash_point.cpp
+    test_draft_store.cpp
     test_journal_reader.cpp
     test_journal_writer.cpp
     test_storage.cpp)
@@ -18,6 +19,7 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Sql)
 add_executable(ej_storage_integration_tests
     test_main.cpp
     test_contract_sqlite.cpp
+    test_draft_store_sqlite.cpp
     test_file_journal.cpp
     test_platform_files.cpp
     test_recovery.cpp
@@ -34,3 +36,19 @@ catch_discover_tests(ej_storage_integration_tests PROPERTIES LABELS integration)
 
 # `system`: the kill harness, a worker process and the driver that kills it.
 add_subdirectory(kill)
+
+# `perf`: the cost of the launch check on a year of logs (finding F13). It runs last and alone in CI, where timings mean something.
+add_executable(ej_storage_perf_tests
+    test_main.cpp
+    perf/test_launch_cost.cpp)
+target_link_libraries(ej_storage_perf_tests
+    PRIVATE ej_storage Qt6::Sql Catch2::Catch2 icl::warnings icl::coverage)
+target_include_directories(ej_storage_perf_tests
+    PRIVATE "${PROJECT_SOURCE_DIR}/libs/core/tests" "${PROJECT_SOURCE_DIR}/libs/storage/src" "${CMAKE_CURRENT_SOURCE_DIR}")
+# Timings in a build with sanitizers, coverage or no optimisation are several times slower; the test scales its budget.
+set(ej_perf_budget_factor 1)
+if(ICL_SANITIZERS OR ICL_ENABLE_COVERAGE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(ej_perf_budget_factor 10)
+endif()
+catch_discover_tests(ej_storage_perf_tests
+    PROPERTIES LABELS perf TIMEOUT 600 ENVIRONMENT "EJ_PERF_BUDGET_FACTOR=${ej_perf_budget_factor}")

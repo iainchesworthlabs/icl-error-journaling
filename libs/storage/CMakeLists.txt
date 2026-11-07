@@ -7,6 +7,7 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Sql)
 
 add_library(ej_storage
     src/crash_point.cpp
+    src/draft_store.cpp
     src/file_journal.cpp
     src/journal_file.cpp
     src/journal_reader.cpp

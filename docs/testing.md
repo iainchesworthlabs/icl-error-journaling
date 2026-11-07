@@ -148,6 +148,31 @@ After every recovery a case checks that each log has the digest it should, that 
 and that a second recovery finds nothing to do and changes no file. A file made unreadable (C13) needs the system's own way of
 doing it, in `libs/storage/tests/platform/<os>/`.
 
+## The note draft
+
+`DraftStore` (`libs/storage/include/error_journaling/draft_store.hpp`) keeps the note field's text and writes it after at most
+300 ms. Its tests never sleep: `fake_draft_timer.hpp` has a `DraftTimer` the test advances by hand and a wall clock that counts
+its reads (one for each write), so "twenty changes within 300 ms make one write", "a change at 299 ms and one at 301 ms", the
+wall clock stepping back ten days and forward a year, `flush`, an empty string, `committed()`, a write that fails and is tried
+again, and a store that goes away are exact. `test_draft_store.cpp` (`unit`) runs on the in-memory repository;
+`test_draft_store_sqlite.cpp` (`integration`) runs the same store on SQLite and the file journal, and checks that a flushed
+draft survives a reopen, that the timer's write reaches the database, and that adding a note clears the draft in the same
+transaction. The kill harness covers it under real kills: `kill: a typed draft is lost for no more than the debounce` types
+into the field every 10 to 90 ms in the worker (`--mode draft`, with a timer polled on the monotonic clock), kills the worker
+at a random moment, and requires the stored draft to be the text of a change that was typed, and no older than the last change
+that was at least 1.5 seconds old at the kill (the 300 ms debounce plus slack). `EJ_KILL_DRAFT_ITERATIONS` sets the count
+(default 6).
+
+## The launch cost
+
+`libs/storage/tests/perf/test_launch_cost.cpp` (`perf`, executable `ej_storage_perf_tests`) builds the store of a year of use,
+80,300 entries in 365 logs with a journal each (written in bulk, one transaction a log, since the synced write path would take
+hours), and times, on a warm cache, `quick_check`, `integrity_check`, a connection open, the 364 reads of an archived journal's
+tail, the launch (`Recovery::run` with its default options) and the first launch after an upgrade (`Recovery::run` with the full
+check). It prints the figures on one line starting `ej-perf`, and fails when the launch is over its budget. A build with
+sanitizers, coverage or no optimisation gets a factor (`EJ_PERF_BUDGET_FACTOR`, set by CMake) so the same test runs in every
+leg. The figures and the budget are in `docs/plan/stage-2.md`, section 11.
+
 ## Coverage
 
 `linux-coverage` builds with instrumentation. CI runs gcovr and `coverage_gate.py` against
