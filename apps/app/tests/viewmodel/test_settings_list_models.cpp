@@ -61,7 +61,8 @@ struct Spies
 
     [[nodiscard]] int total() const
     {
-        return m_Changed.count() + m_Inserted.count() + m_Removed.count() + m_Moved.count() + m_Reset.count();
+        return static_cast<int>(m_Changed.count() + m_Inserted.count() + m_Removed.count() + m_Moved.count() +
+                                m_Reset.count());
     }
 
     QSignalSpy m_Changed;

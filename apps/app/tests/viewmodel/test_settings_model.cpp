@@ -297,11 +297,11 @@ TEST_CASE("The unit prefix refuses a dash, a hash, nothing and more than 20 char
 
 TEST_CASE("All eight combinations of style, seconds and meridiem are accepted and saved", "[viewmodel][settings]")
 {
-    for (const QString style : {QStringLiteral("24h"), QStringLiteral("12h")})
+    for (const QString& style : {QStringLiteral("24h"), QStringLiteral("12h")})
     {
         for (const bool seconds : {false, true})
         {
-            for (const QString meridiem : {QStringLiteral("upper"), QStringLiteral("lower")})
+            for (const QString& meridiem : {QStringLiteral("upper"), QStringLiteral("lower")})
             {
                 CAPTURE(style.toStdString(), seconds, meridiem.toStdString());
                 SettingsRig rig;
@@ -452,7 +452,7 @@ TEST_CASE("add_error_type refuses an empty, duplicate or over-long name with a m
     SettingsRig rig;
     rig.load_sample();
 
-    for (const std::string name :
+    for (const std::string& name :
          {std::string{}, std::string("  "), std::string("wrong RESPONSE"), std::string(201, 'x')})
     {
         const auto added = rig.m_Settings.add_error_type(name);
@@ -752,7 +752,8 @@ struct RealZoneRig
 qint64 utc_ms(int year, unsigned month, unsigned day, int hour, int minute, int second)
 {
     using namespace std::chrono;
-    const auto when = sys_days{std::chrono::year{year} / month / day} + hours{hour} + minutes{minute} + seconds{second};
+    const auto when = sys_days{std::chrono::year{year} / std::chrono::month{month} / std::chrono::day{day}} +
+                      hours{hour} + minutes{minute} + seconds{second};
     return duration_cast<milliseconds>(when.time_since_epoch()).count();
 }
 

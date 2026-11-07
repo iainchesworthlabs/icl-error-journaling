@@ -357,9 +357,9 @@ void SettingsModel::load()
     m_Gateway.run([](StorageContext& context) { return context.m_Config.load(); },
                   [self = QPointer<SettingsModel>(this)](Result<std::optional<std::string>, StorageError> result)
                   {
-                      if (self)
+                      if (SettingsModel* model = self.data(); model != nullptr)
                       {
-                          self->finish_load(std::move(result));
+                          model->finish_load(std::move(result));
                       }
                   });
 }
@@ -459,9 +459,9 @@ std::expected<void, ConfigEditError> SettingsModel::commit(Configuration candida
                   [self = QPointer<SettingsModel>(this), saved = std::move(candidate),
                    operation](Result<void, StorageError> result) mutable
                   {
-                      if (self)
+                      if (SettingsModel* model = self.data(); model != nullptr)
                       {
-                          self->finish_save(std::move(saved), operation, result);
+                          model->finish_save(std::move(saved), operation, result);
                       }
                   });
     return {};
@@ -1061,9 +1061,10 @@ void SettingsModel::loadImport(const QString& path)
         [self = QPointer<SettingsModel>(this), token](ImportOutcome outcome)
         {
             // A later `loadImport` or a `discardImport` has overtaken this one.
-            if (self && self->m_ImportToken == token)
+            SettingsModel* model = self.data();
+            if (model != nullptr && model->m_ImportToken == token)
             {
-                self->finish_import(std::move(outcome));
+                model->finish_import(std::move(outcome));
             }
         });
 }
@@ -1128,17 +1129,18 @@ void SettingsModel::exportTo(const QString& path)
                   { return context.m_Config.write_file(file, text); },
                   [self = QPointer<SettingsModel>(this)](Result<void, StorageError> result)
                   {
-                      if (!self)
+                      SettingsModel* model = self.data();
+                      if (model == nullptr)
                       {
                           return;
                       }
                       if (result)
                       {
-                          emit self->exportFinished(true, tr("The settings were exported."));
+                          emit model->exportFinished(true, tr("The settings were exported."));
                       }
                       else
                       {
-                          emit self->exportFinished(false, plain_message(result.error()));
+                          emit model->exportFinished(false, plain_message(result.error()));
                       }
                   });
 }
