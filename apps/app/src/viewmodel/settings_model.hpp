@@ -1,0 +1,239 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+
+#include "error_journaling/configuration.hpp"
+#include "error_journaling/ids.hpp"
+#include "error_journaling/result.hpp"
+#include "error_journaling/time_format.hpp"
+#include "error_journaling/time_zone_provider.hpp"
+#include "viewmodel/configuration_source.hpp"
+#include "viewmodel/environment.hpp"
+#include "viewmodel/observer_list.hpp"
+#include "viewmodel/storage_gateway.hpp"
+
+#include <QAbstractItemModel>
+#include <QObject>
+#include <QString>
+#include <QStringList>
+#include <cstdint>
+#include <expected>
+#include <functional>
+#include <optional>
+#include <string>
+
+namespace ej::viewmodel
+{
+
+class BoardLayoutModel;
+class ErrorTypeListModel;
+class LocationListModel;
+class TemplateListModel;
+
+/// The preferences and the three master lists (PRF-01 to PRF-10), and their import and export. It holds the
+/// `Configuration` of Stage 1 as its mirror, saves it through the `ConfigStore` on the storage thread, and is the
+/// `ConfigurationSource` the other models read.
+///
+/// **Saving.** Every change makes a changed copy of the configuration, checks it against the core's rules, and queues
+/// one save of the whole file (the JSON the person imports and exports, replaced as a unit). The mirror, the list
+/// models and the observers change only when the save has succeeded, so nothing the screen shows is missing from the
+/// file. A failed save changes nothing and emits `writeFailed`. One save is in flight at a time: a change that arrives
+/// while the last is being saved is refused with a message, so no change is built on one that may still fail.
+///
+/// **First launch.** Until a valid configuration is in force, `configured` is false and the invokables work on a set-up
+/// in progress that is held in memory and shown by the properties and the list models, but is not saved and is not what
+/// `configuration()` returns. It is saved, and `configured` becomes true, by the change that gives it a facilitator and
+/// a unit prefix (a configuration without those is not one the importer accepts), or by an import.
+///
+/// **Effects.** A new facilitator applies to logs created after it; the open log keeps the one it started with (the log
+/// holds its own header). A new unit prefix or time format applies to every log, because neither is stored in a log.
+/// Retiring an error type or a location removes it from the pickers and keeps it on past entries.
+///
+/// The invokables that change something return "" when the change was accepted, or the plain message of the refusal for
+/// the screen to show inline. GUI thread only.
+class SettingsModel : public QObject, public ConfigurationSource, public ConfigurationEditor
+{
+    Q_OBJECT
+    // True from construction until `load()` has heard from the store, so the first frame does not offer setup to a
+    // person who has a saved configuration.
+    Q_PROPERTY(bool loading READ loading NOTIFY configurationChanged)
+    Q_PROPERTY(bool configured READ configured NOTIFY configurationChanged) // PRF-09: first launch shows setup
+    // Empty, or why the saved file was not used at launch ("update the app", a damaged file). The file is kept.
+    Q_PROPERTY(QString loadProblem READ load_problem NOTIFY configurationChanged)
+    Q_PROPERTY(bool saving READ saving NOTIFY savingChanged)
+    Q_PROPERTY(QString facilitator READ facilitator NOTIFY configurationChanged) // PRF-01
+    Q_PROPERTY(QString unitPrefix READ unit_prefix NOTIFY configurationChanged)  // PRF-02
+    Q_PROPERTY(QString timeStyle READ time_style NOTIFY timeFormatChanged)       // PRF-07: "24h" or "12h"
+    Q_PROPERTY(bool timeSeconds READ time_seconds NOTIFY timeFormatChanged)
+    Q_PROPERTY(QString timeMeridiem READ time_meridiem NOTIFY timeFormatChanged) // "upper" or "lower"
+    // One value that changes whenever the time format does ("12h-seconds-lower"). A QML binding that calls `formatTime`
+    // names it, so the binding is evaluated again when the format changes: `text: (settings.timeFormatKey,
+    // settings.formatTime(ms, zone))`.
+    Q_PROPERTY(QString timeFormatKey READ time_format_key NOTIFY timeFormatChanged)
+    Q_PROPERTY(bool includeTotals READ include_totals NOTIFY configurationChanged) // PRF-10
+    Q_PROPERTY(QAbstractItemModel* errorTypes READ error_types CONSTANT)           // PRF-04
+    Q_PROPERTY(QAbstractItemModel* locations READ locations CONSTANT)              // PRF-03
+    Q_PROPERTY(QAbstractItemModel* templates READ templates CONSTANT)              // PRF-06
+    Q_PROPERTY(QAbstractItemModel* boardLayout READ board_layout CONSTANT)         // PRF-05
+
+public:
+    /// `gateway` and what `environment` refers to (the ids and the zones) must outlive the model. Nothing is read until
+    /// `load()`.
+    SettingsModel(StorageGateway& gateway, const Environment& environment, QObject* parent = nullptr);
+    ~SettingsModel() override;
+
+    /// Reads the saved configuration through the gateway. Once; later calls do nothing. The properties tell the screen
+    /// when it has finished (`loading`), and the observers are told if it found a valid configuration.
+    void load();
+
+    [[nodiscard]] bool loading() const
+    {
+        return m_Loading;
+    }
+    [[nodiscard]] bool saving() const
+    {
+        return m_Saving;
+    }
+    [[nodiscard]] QString load_problem() const
+    {
+        return m_LoadProblem;
+    }
+    [[nodiscard]] QString facilitator() const;
+    [[nodiscard]] QString unit_prefix() const;
+    [[nodiscard]] QString time_style() const;
+    [[nodiscard]] bool time_seconds() const;
+    [[nodiscard]] QString time_meridiem() const;
+    [[nodiscard]] QString time_format_key() const;
+    [[nodiscard]] bool include_totals() const;
+    [[nodiscard]] QAbstractItemModel* error_types() const;
+    [[nodiscard]] QAbstractItemModel* locations() const;
+    [[nodiscard]] QAbstractItemModel* templates() const;
+    [[nodiscard]] QAbstractItemModel* board_layout() const;
+
+    // ConfigurationSource
+    [[nodiscard]] bool configured() const override
+    {
+        return m_Configured;
+    }
+    [[nodiscard]] const Configuration& configuration() const override
+    {
+        return m_Configuration;
+    }
+    void add_observer(ConfigurationObserver& observer) override
+    {
+        m_Observers.add(observer);
+    }
+    void remove_observer(ConfigurationObserver& observer) override
+    {
+        m_Observers.remove(observer);
+    }
+
+    // ConfigurationEditor: the Other sheet adds a type to the master list. Needs a configuration in force.
+    [[nodiscard]] Result<ErrorTypeId, ConfigEditError> add_error_type(std::string name) override;
+
+    Q_INVOKABLE QString setFacilitator(const QString& name);
+    Q_INVOKABLE QString setUnitPrefix(const QString& prefix);
+    /// `style` is "24h" or "12h"; `meridiem` is "upper" (AM, PM) or "lower" (am, pm) and only matters for "12h".
+    Q_INVOKABLE QString setTimeFormat(const QString& style, bool seconds, const QString& meridiem);
+    Q_INVOKABLE QString setIncludeTotals(bool include);
+
+    /// `from` and `to` are rows of the `locations` model.
+    Q_INVOKABLE QString addLocation(const QString& name);
+    Q_INVOKABLE QString renameLocation(const QString& id, const QString& name);
+    Q_INVOKABLE QString moveLocation(int from, int to);
+    /// Retires the location: it leaves the list and the pickers, and past logs still name it.
+    Q_INVOKABLE QString removeLocation(const QString& id);
+
+    /// A new type goes to the end of the master list and is not on the board.
+    Q_INVOKABLE QString addErrorType(const QString& name);
+    Q_INVOKABLE QString renameErrorType(const QString& id, const QString& name);
+    Q_INVOKABLE QString retireErrorType(const QString& id);
+
+    /// Positions are the board positions 1 to 11 (the `position` role of `boardLayout`). A drag takes the tile at
+    /// `fromPosition` out and puts it at `toPosition`, the tiles between shifting by one.
+    Q_INVOKABLE QString moveBoardTile(int fromPosition, int toPosition);
+    /// Puts the type on the tile. A type that is on the board elsewhere swaps places with the tile's type; one that is
+    /// not takes the tile and sends the tile's type off the board.
+    Q_INVOKABLE QString assignBoardTile(int position, const QString& errorTypeId);
+
+    Q_INVOKABLE QString addTemplate(const QString& name, const QString& prompt, const QString& pattern);
+    Q_INVOKABLE QString renameTemplate(const QString& id, const QString& name);
+    Q_INVOKABLE QString updateTemplate(const QString& id, const QString& name, const QString& prompt,
+                                       const QString& pattern);
+    /// A time of day for the screen, so that QML does no time arithmetic: `utcMs` (milliseconds since 1970 UTC) as the
+    /// wall clock of the IANA zone `zone`, in the configured time format ("10:05", "10:05:09 am", "10:05 PM"), by the
+    /// core's `format_time`. The zone's rules apply on that date (daylight saving). Empty for a zone that is not known.
+    Q_INVOKABLE QString formatTime(qint64 utcMs, const QString& zone) const;
+    /// "" for a pattern the renderer accepts, or the message to show while the person types.
+    Q_INVOKABLE QString validatePattern(const QString& pattern) const;
+
+    /// Reads and checks the file at `path` (at most 1 MiB) on the storage thread; nothing changes. Ends with
+    /// `importPrepared` or `importFailed`.
+    Q_INVOKABLE void loadImport(const QString& path);
+    /// Replaces the configuration with the file `loadImport` prepared, in one save.
+    Q_INVOKABLE void applyImport();
+    Q_INVOKABLE void discardImport();
+    Q_INVOKABLE void exportTo(const QString& path);
+
+signals:
+    /// Anything the properties show changed, or `load()` finished.
+    void configurationChanged();
+    void savingChanged();
+    /// The time format differs from what it was: tells a binding on `formatTime` to run again. Not emitted for a change
+    /// of anything else.
+    void timeFormatChanged();
+    /// A file was read and is valid: the counts of what it holds (types and locations not retired, templates), for the
+    /// confirmation. Nothing has changed yet.
+    void importPrepared(int errorTypes, int locations, int templates);
+    /// The file could not be used: the core's plain-English messages, in file order. Nothing changed.
+    void importFailed(const QStringList& messages);
+    void exportFinished(bool ok, const QString& message);
+    void writeFailed(const QString& operation, const QString& message);
+
+private:
+    using EditResult = std::expected<bool, QString>; // true: changed; false: nothing to do; error: the message
+    using Edit = std::function<EditResult(Configuration&)>;
+
+    struct ImportOutcome;
+
+    [[nodiscard]] const Configuration& view() const
+    {
+        return m_Configured ? m_Configuration : m_Setup;
+    }
+
+    /// Applies `edit` to a copy of the configuration (or of the set-up) and saves it.
+    [[nodiscard]] std::expected<void, ConfigEditError> change(const QString& operation, const Edit& edit,
+                                                              bool needs_configured);
+    [[nodiscard]] QString change_message(const QString& operation, const Edit& edit);
+    [[nodiscard]] std::expected<void, ConfigEditError> commit(Configuration candidate, const QString& operation);
+    [[nodiscard]] std::expected<ErrorTypeId, ConfigEditError> add_type(const QString& name, bool needs_configured);
+
+    void finish_load(Result<std::optional<std::string>, StorageError> result);
+    void finish_save(Configuration saved, const QString& operation, const Result<void, StorageError>& result);
+    void finish_import(ImportOutcome outcome);
+    void publish(bool in_force_changed);
+    void set_saving(bool saving);
+
+    StorageGateway& m_Gateway;
+    IdGenerator& m_Ids;
+    const TimeZoneProvider& m_Zones;
+    TimeFormat m_ShownTimeFormat; // what the last `publish` showed, to tell whether the format changed
+
+    Configuration m_Configuration; // in force; empty until `m_Configured`
+    Configuration m_Setup;         // the first-launch set-up in progress
+    bool m_Configured = false;
+    bool m_Loading = true;
+    bool m_LoadStarted = false;
+    bool m_Saving = false;
+    QString m_LoadProblem;
+    std::optional<Configuration> m_PreparedImport;
+    std::uint64_t m_ImportToken = 0;
+
+    ObserverList<ConfigurationObserver> m_Observers;
+
+    ErrorTypeListModel* m_ErrorTypes;
+    LocationListModel* m_Locations;
+    TemplateListModel* m_Templates;
+    BoardLayoutModel* m_BoardLayout;
+};
+
+} // namespace ej::viewmodel
