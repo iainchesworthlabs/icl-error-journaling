@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include <catch2/catch_test_macros.hpp>
-
 #include "error_journaling/ios_bridge.hpp"
+
+#include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("The bridge reports the implementation CMake linked", "[ios_bridge]")
 {

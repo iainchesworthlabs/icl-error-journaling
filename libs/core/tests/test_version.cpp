@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include <string>
+#include "error_journaling/version.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "error_journaling/version.hpp"
+#include <string>
 
 TEST_CASE("The core library reports the project version", "[core]")
 {

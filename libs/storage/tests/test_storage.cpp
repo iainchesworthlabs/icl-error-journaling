@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include <catch2/catch_test_macros.hpp>
-
 #include "error_journaling/storage.hpp"
 #include "error_journaling/version.hpp"
+
+#include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("The storage library has no backend yet and links the core library", "[storage]")
 {

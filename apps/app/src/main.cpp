@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "error_journaling/ios_bridge.hpp"
+#include "error_journaling/storage.hpp"
+#include "error_journaling/version.hpp"
+
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
-
-#include "error_journaling/ios_bridge.hpp"
-#include "error_journaling/storage.hpp"
-#include "error_journaling/version.hpp"
 
 namespace
 {
