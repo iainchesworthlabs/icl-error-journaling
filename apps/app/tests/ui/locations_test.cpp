@@ -236,6 +236,8 @@ TEST_CASE("editor.locations: a refused change and a failed save are shown in a b
     world.settle();
     world.m_Ui.layout();
     QMetaObject::invokeMethod(banner, "closeRequested");
+    // The banner leaves the column, and the rows move up; they are laid out again before the next touch.
+    world.m_Ui.layout();
     CHECK_FALSE(banner->isVisible());
 
     world.m_Rig.store().fail_next_save(make_error(StorageErrorKind::DISK_FULL, "no room"));

@@ -224,6 +224,8 @@ TEST_CASE("editor.error_types: a refused move and a failed save are shown in a b
 
     // A save that fails says so, and the list is unchanged.
     QMetaObject::invokeMethod(banner, "closeRequested");
+    // The banner leaves the column, and the rows move up; they are laid out again before the next touch.
+    world.m_Ui.layout();
     CHECK_FALSE(banner->isVisible());
     world.m_Rig.store().fail_next_save(make_error(StorageErrorKind::DISK_FULL, "no room"));
     const QStringList before = names(world);
