@@ -459,14 +459,15 @@ struct Options
     /// The entries of the open log; none given = the PRD example.
     std::optional<std::vector<Entry>> entries;
     HeaderValues header = test::sample_header();
+    /// The clock format of the configuration; none given = the sample's (24-hour).
+    std::optional<TimeFormat> time_format;
 };
 
 /// The real view models with a log in the open slot, and the Review screen over them. The rig is declared after the
 /// world, so it goes first when this is destroyed and no item outlives a model it reads.
 struct Screen
 {
-    explicit Screen(Options options = {})
-        : m_World(options.zones, test::sample_configuration(), options.share_available)
+    explicit Screen(Options options = {}) : m_World(options.zones, configured(options), options.share_available)
     {
         if (options.past)
         {
@@ -488,6 +489,17 @@ struct Screen
         m_Review = m_Rig.load(QStringLiteral("Review"), properties);
         INFO(m_Rig.errors().toStdString());
         REQUIRE(m_Review != nullptr);
+    }
+
+    /// The sample configuration with the clock format of the options.
+    [[nodiscard]] static Configuration configured(const Options& options)
+    {
+        Configuration configuration = test::sample_configuration();
+        if (options.time_format)
+        {
+            configuration.m_TimeFormat = *options.time_format;
+        }
+        return configuration;
     }
 
     World m_World;

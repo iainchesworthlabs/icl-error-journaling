@@ -409,6 +409,46 @@ TEST_CASE("edit.validation: an empty note is refused by the model and Save is of
     CHECK(e.can_save());
 }
 
+TEST_CASE("edit.time_format: the tumbler has the columns of the time format and the line uses it", "[ui][edit]")
+{
+    Options options;
+    options.time_format = TimeFormat{TimeStyle::H12, true, MeridiemCase::LOWER};
+    Editor e(std::move(options));
+    const TimelineModel& timeline = e.m_World.timeline();
+    const auto shown = [&timeline](int hour, int minute)
+    { return timeline.formatLocalSeconds(hour * 3600 + minute * 60); };
+
+    e.open(1);
+    CHECK(e.in("editSheet", "editTime")->property("value").toString() == shown(10, 5));
+    CHECK(shown(10, 5).endsWith(QStringLiteral(" am")));
+    e.tap_in("editSheet", "editTime");
+    REQUIRE(e.page() == QStringLiteral("time"));
+    QQuickItem* tumbler = e.in("editSheet", "editTumbler");
+    REQUIRE(tumbler != nullptr);
+    CHECK(tumbler->property("twelveHour").toBool());
+    CHECK(tumbler->property("showSeconds").toBool());
+    for (const char* column : {"Hours", "Minutes", "Seconds", "AM/PM"})
+    {
+        QQuickItem* item = e.in("editSheet", column);
+        REQUIRE(item != nullptr);
+        CHECK(item->isVisible());
+    }
+
+    // 11:05 pm: the hour column is 12, 1 ... 11, so index 11 is 11, and the meridiem column says pm.
+    e.in("editSheet", "Hours")->setProperty("currentIndex", 11);
+    e.in("editSheet", "AM/PM")->setProperty("currentIndex", 1);
+    input::play(e.m_Rig, 100);
+    CHECK(text_in(e.m_Rig, QStringLiteral("editShownTime")) ==
+          QStringLiteral("Shown in the log as %1").arg(shown(23, 5)));
+    e.done_time();
+    e.save();
+    e.commit();
+    const std::vector<QString> lines = e.lines();
+    REQUIRE(lines.size() == 6);
+    CHECK(lines.back().startsWith(shown(23, 5) + QLatin1Char(' ')));
+    CHECK(lines.back().endsWith(QStringLiteral("T| Wrong Response")));
+}
+
 TEST_CASE("edit.dst: a time in the hour the clocks skip is refused with the model's message, and never saved",
           "[ui][edit]")
 {
