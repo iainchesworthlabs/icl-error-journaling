@@ -84,8 +84,8 @@ class ConfigFilesTest(unittest.TestCase):
         import json
         root = Path(__file__).resolve().parent.parent.parent
         sample = json.loads((root / "config" / "sample-config.json").read_text(encoding="utf-8"))
-        self.assertEqual(sample["schemaVersion"], 1)
-        self.assertEqual(len(sample["errorTypes"]), 11)
+        self.assertEqual(sample["schema_version"], 1)
+        self.assertEqual(len(sample["error_types"]), 11)
 
 
 class TermMatchingTest(unittest.TestCase):
