@@ -789,8 +789,8 @@ TEST_CASE("kill: every crash point leaves a store that recovers whole", "[kill][
             {
                 const auto kept = save_artifact(killed.path(),
                                                 "crash-point-" + std::to_string(index) + (external ? "-external" : ""));
-                print("FAIL crash point " + std::string(item.m_Id) + " A=" + decimal(acked) + ": " + verdict.m_Message +
-                      " [store kept in " + kept.generic_string() + "]");
+                print("FAIL seed=" + hex(master) + " crash point " + std::string(item.m_Id) + " A=" + decimal(acked) +
+                      ": " + verdict.m_Message + " [store kept in " + kept.generic_string() + "]");
             }
             INFO(verdict.m_Message);
             CHECK(verdict.m_Ok);
@@ -1223,6 +1223,62 @@ TEST_CASE("kill: a migration killed at random moments leaves the old version or 
     }
     print("ej-kill migration result master_seed=" + hex(master) + " iterations=" + decimal(count) +
           " killed_before_the_end=" + decimal(killed_before_the_end));
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A case that failed in the merge queue, pinned
+// ---------------------------------------------------------------------------------------------------------------------
+
+TEST_CASE("kill: seed 0x35b5989d25a5fd6c, iteration 5: a note in flight with a draft typed before it",
+          "[kill][points][regression]")
+{
+    // The TSan leg of a merge-queue run failed this iteration: killed after acknowledgement 364, the store held
+    // operation 365 (50 entries, not 49) and also the draft that operation 365 would have cleared. Operation 365 is a
+    // note and a draft was pending, and a kill after its journal record was synced left both until replay took the
+    // draft out. The random kill depends on scheduling; this runs the same operations and kills at the point every
+    // time.
+    constexpr std::uint64_t MASTER = 0x35b5989d25a5fd6cULL;
+    constexpr std::uint64_t ITERATION = 5;
+    constexpr std::uint64_t OPERATION = 365;
+    const std::uint64_t seed = iteration_seed(MASTER, ITERATION);
+
+    // The workload still makes the operation the failure was about: a note, with a draft pending before it.
+    Workload workload(seed);
+    Operation in_flight;
+    for (std::uint64_t n = 0; n < OPERATION; ++n)
+    {
+        in_flight = workload.next();
+    }
+    REQUIRE(in_flight.m_Kind == OperationKind::ADD_ENTRY);
+    REQUIRE(std::holds_alternative<NoteEntry>(in_flight.m_Entry.m_Body));
+    REQUIRE(model_after(seed, 0, OPERATION - 1).m_Draft.has_value());
+
+    for (const char* point : {"after_journal_sync", "before_db_commit"})
+    {
+        for (const bool external : {false, true})
+        {
+            INFO(point << (external ? ", killed from outside" : ", ends itself"));
+            TempDir dir;
+            const std::filesystem::path store = dir.path() / "store";
+            QStringList arguments = workload_arguments(store, seed, 0);
+            arguments << QStringLiteral("--crash-at") << QString::fromLatin1(point) << QStringLiteral("--crash-op")
+                      << QString::fromStdString(decimal(OPERATION)) << QStringLiteral("--max-ops")
+                      << QString::fromStdString(decimal(OPERATION + 2)) << QStringLiteral("--crash-mode")
+                      << QString::fromLatin1(external ? "wait" : "exit");
+            Worker worker(arguments);
+            REQUIRE(worker.wait_until([&] { return worker.output().m_At || !worker.running(); }));
+            if (external)
+            {
+                CHECK(worker.output().m_At);
+                worker.kill_now();
+            }
+            CHECK(worker.output().m_Acked == OPERATION - 1);
+            // The journal record is durable, so the note is there, whole and once, and its draft is gone.
+            const Verdict verdict = verify_store(store, seed, 0, {OPERATION});
+            INFO(verdict.m_Message);
+            CHECK(verdict.m_Ok);
+        }
+    }
 }
 
 int main(int argc, char* argv[])
