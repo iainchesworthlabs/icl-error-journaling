@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The names QML sees (properties, signals, slots, invokable functions and role names) are camelBack (ICL standard 5.2,
+# D9; docs/plan/stage-3.md, "Scope and conventions"). `CamelCase` in clang-tidy means PascalCase. Everything else is
+# the repository's .clang-tidy.
+InheritParentConfig: true
+CheckOptions:
+  - { key: readability-identifier-naming.MethodCase,       value: camelBack }
+  - { key: readability-identifier-naming.PublicMemberCase, value: camelBack }
