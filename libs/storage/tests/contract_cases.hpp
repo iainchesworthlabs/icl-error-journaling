@@ -370,6 +370,10 @@ TEMPLATE_LIST_TEST_CASE("An archived log can still be edited, deleted from, corr
     CHECK(log.m_Log.initial_header().m_UnitNumber->digits() == "32");
     CHECK(log.m_Meta.m_LastSharedUtc == sample_time(80));
     CHECK_FALSE(f.repo().open_log().value().has_value());  // editing did not reopen it
+
+    // Archiving is the boundary for new entries: only the open log accepts one.
+    CHECK(failure_of(f.repo().add_entry(log_id(FIRST_LOG), sample_error(2, 20))) == StorageErrorKind::NOT_OPEN_LOG);
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Log.entries().size() == 1);
 }
 
 TEMPLATE_LIST_TEST_CASE("Starting a new log archives the open one in a single step", "[contract][repository]", Fixtures)

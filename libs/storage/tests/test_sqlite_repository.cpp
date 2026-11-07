@@ -452,11 +452,20 @@ TEST_CASE("A log is written to its journal even after it is archived", "[sqlite]
 {
     Store store;
     store.start();
+    REQUIRE(store.repo().add_entry(log_id(LOG), sample_error(1, 10)).has_value());
     REQUIRE(store.repo().archive_log(log_id(LOG)).has_value());
     store.m_Journal.m_Events.clear();
-    REQUIRE(store.repo().add_entry(log_id(LOG), sample_error(1, 10)).has_value());
-    CHECK(store.m_Journal.calls() == std::vector<Call>{Call::APPEND});
-    CHECK(store.m_Journal.m_Records.back().m_Seq == 3);
+
+    // Edit, delete and share an archived log: each appends a record to its journal, as for the open log.
+    REQUIRE(store.repo().edit_entry(log_id(LOG), sample_error(1, 12), sample_time(70)).has_value());
+    REQUIRE(store.repo().set_entry_deleted(log_id(LOG), entry_id(1), true).has_value());
+    REQUIRE(store.repo().mark_shared(log_id(LOG), sample_time(80)).has_value());
+    CHECK(store.m_Journal.calls() == std::vector<Call>{Call::APPEND, Call::APPEND, Call::APPEND});
+    CHECK(store.m_Journal.m_Records.back().m_Seq == 6);  // create, add, archive, then these three
+
+    // A new entry is refused, and nothing is journalled for it.
+    CHECK(error_of(store.repo().add_entry(log_id(LOG), sample_error(2, 20))).m_Kind == StorageErrorKind::NOT_OPEN_LOG);
+    CHECK(store.m_Journal.m_Records.size() == 6);
 }
 
 TEST_CASE("A hard delete removes every row of the log and its journal, and keeps the log if the journal stays",

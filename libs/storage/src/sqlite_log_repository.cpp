@@ -17,6 +17,7 @@
 #include <atomic>
 #include <filesystem>
 #include <functional>
+#include <system_error>
 #include <utility>
 
 namespace ej
@@ -390,6 +391,8 @@ struct SqliteLogRepository::Impl
                                             const HeaderHistory& history) const;
     Result<void, StorageError> insert_kind(const Entry& entry, const HeaderHistory& history) const;
     Result<void, StorageError> update_header(LogId id, const HeaderValues& header) const;
+    Result<void, StorageError> delete_log_rows(const QString& key) const;
+    Result<CheckResult, StorageError> check(const char* pragma) const;
     Result<void, StorageError> update_applied(LogId id, std::uint64_t seq, bool is_open) const;
     void checkpoint() const;
 
@@ -841,6 +844,46 @@ Result<void, StorageError> SqliteLogRepository::Impl::update_applied(LogId id, s
                     {static_cast<qulonglong>(seq)});
     }
     return {};
+}
+
+Result<void, StorageError> SqliteLogRepository::Impl::delete_log_rows(const QString& key) const
+{
+    const char* const statements[] = {
+        "DELETE FROM error_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
+        "DELETE FROM note_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
+        "DELETE FROM header_change_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
+        "DELETE FROM entry WHERE day_log_id = ?1",
+        "DELETE FROM day_log WHERE id = ?1",
+    };
+    for (const char* statement : statements)
+    {
+        if (auto removed = exec(QString::fromLatin1(statement), {key}); !removed)
+        {
+            return removed;
+        }
+    }
+    return {};
+}
+
+Result<CheckResult, StorageError> SqliteLogRepository::Impl::check(const char* pragma) const
+{
+    auto rows = run(QString::fromLatin1(pragma));
+    if (!rows)
+    {
+        return Failure(rows.error());
+    }
+    CheckResult result;
+    std::vector<std::string> lines;
+    while (rows->next() && lines.size() < 5)
+    {
+        lines.push_back(to_std(rows->value(0).toString()));
+    }
+    result.m_Ok = lines.size() == 1 && lines.front() == "ok";
+    for (const std::string& line : lines)
+    {
+        result.m_Message += (result.m_Message.empty() ? "" : "; ") + line;
+    }
+    return result;
 }
 
 Result<void, StorageError> SqliteLogRepository::Impl::update_header(LogId id, const HeaderValues& header) const
@@ -1344,19 +1387,9 @@ Result<void, StorageError> SqliteLogRepository::hard_delete_log(LogId id, const 
                 return Failure(make_error(StorageErrorKind::LOG_NOT_ARCHIVED, "only an archived log can be deleted"));
             }
             const QString key = to_qt(id.format());
-            const char* const statements[] = {
-                "DELETE FROM error_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
-                "DELETE FROM note_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
-                "DELETE FROM header_change_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
-                "DELETE FROM entry WHERE day_log_id = ?1",
-                "DELETE FROM day_log WHERE id = ?1",
-            };
-            for (const char* statement : statements)
+            if (auto removed = m_Impl->delete_log_rows(key); !removed)
             {
-                if (auto removed = m_Impl->exec(QString::fromLatin1(statement), {key}); !removed)
-                {
-                    return Failure(removed.error());
-                }
+                return Failure(removed.error());
             }
             // The journal goes before the commit: if the commit then fails, the log is still here and the next launch
             // puts its journal back from the database; the other order could bring a deleted log back from a journal.
@@ -1430,6 +1463,231 @@ Result<std::uint64_t, StorageError> SqliteLogRepository::journal_generation()
         return Failure(value.error());
     }
     return value->toULongLong();
+}
+
+Result<CheckResult, StorageError> SqliteLogRepository::quick_check()
+{
+    return m_Impl->check("PRAGMA quick_check");
+}
+
+Result<CheckResult, StorageError> SqliteLogRepository::integrity_check()
+{
+    return m_Impl->check("PRAGMA integrity_check");
+}
+
+Result<std::map<LogId, std::uint64_t>, StorageError> SqliteLogRepository::applied_seqs()
+{
+    auto rows = m_Impl->run(QStringLiteral("SELECT id, applied_seq FROM day_log"));
+    if (!rows)
+    {
+        return Failure(rows.error());
+    }
+    std::map<LogId, std::uint64_t> result;
+    while (rows->next())
+    {
+        const auto id = Uuid::parse(to_std(rows->value(0).toString()));
+        if (!id)
+        {
+            return Failure(corrupt("a stored log id is not valid"));
+        }
+        result.emplace(LogId{*id}, rows->value(1).toULongLong());
+    }
+    return result;
+}
+
+Result<ReplayCounts, StorageError> SqliteLogRepository::replay(const std::vector<JournalRecord>& records)
+{
+    ReplayCounts counts;
+    auto done = m_Impl->write(
+        [&]() -> Result<std::vector<JournalRecord>, StorageError>
+        {
+            counts = ReplayCounts{};
+            std::map<LogId, Impl::Loaded> cache;
+            for (const JournalRecord& record : records)
+            {
+                if (const auto* create = std::get_if<CreateLogBody>(&record.m_Body))
+                {
+                    auto existing = m_Impl->scalar(QStringLiteral("SELECT 1 FROM day_log WHERE id = ?"),
+                                                   {to_qt(record.m_Log.format())});
+                    if (!existing)
+                    {
+                        return Failure(existing.error());
+                    }
+                    if (existing->isValid() || cache.contains(record.m_Log))
+                    {
+                        ++counts.m_Skipped;
+                        continue;
+                    }
+                    auto stored = make_stored_log(record.m_Log, *create);
+                    if (!stored)
+                    {
+                        return Failure(stored.error());
+                    }
+                    if (auto inserted = m_Impl->insert_log(*stored, record.m_Seq); !inserted)
+                    {
+                        return Failure(inserted.error());
+                    }
+                    if (auto state = m_Impl->exec(QStringLiteral("UPDATE store_state SET journal_generation ="
+                                                                 " journal_generation + 1 WHERE id = 1"));
+                        !state)
+                    {
+                        return Failure(state.error());
+                    }
+                    if (auto applied = m_Impl->update_applied(record.m_Log, record.m_Seq, !stored->m_Meta.m_Archived);
+                        !applied)
+                    {
+                        return Failure(applied.error());
+                    }
+                    cache.emplace(record.m_Log, Impl::Loaded{std::move(*stored), record.m_Seq});
+                    ++counts.m_Applied;
+                    continue;
+                }
+
+                auto found = cache.find(record.m_Log);
+                if (found == cache.end())
+                {
+                    auto loaded = m_Impl->load(record.m_Log);
+                    if (!loaded)
+                    {
+                        return Failure(loaded.error());
+                    }
+                    found = cache.emplace(record.m_Log, std::move(*loaded)).first;
+                }
+                Impl::Loaded& loaded = found->second;
+                if (record.m_Seq <= loaded.m_AppliedSeq)
+                {
+                    ++counts.m_Skipped;
+                    continue;
+                }
+                const auto* add = std::get_if<AddEntryBody>(&record.m_Body);
+                const bool already_there =
+                    (add != nullptr && loaded.m_Stored.m_Log.find(add->m_Entry.m_Id) != nullptr) ||
+                    (std::holds_alternative<ArchiveBody>(record.m_Body) && loaded.m_Stored.m_Meta.m_Archived);
+                if (already_there)
+                {
+                    // The database has this already: only its sequence number moves on.
+                    if (auto moved =
+                            m_Impl->update_applied(record.m_Log, record.m_Seq, !loaded.m_Stored.m_Meta.m_Archived);
+                        !moved)
+                    {
+                        return Failure(moved.error());
+                    }
+                    loaded.m_AppliedSeq = record.m_Seq;
+                    ++counts.m_Skipped;
+                    continue;
+                }
+                StoredLog after = loaded.m_Stored;
+                if (auto applied = apply_record(after, record, ApplyMode::REPLAY); !applied)
+                {
+                    return Failure(applied.error());
+                }
+                if (auto persisted = m_Impl->persist(record, loaded, after); !persisted)
+                {
+                    return Failure(persisted.error());
+                }
+                loaded.m_Stored = std::move(after);
+                loaded.m_AppliedSeq = record.m_Seq;
+                ++counts.m_Applied;
+            }
+            return std::vector<JournalRecord>{};
+        });
+    if (!done)
+    {
+        return Failure(done.error());
+    }
+    return counts;
+}
+
+Result<void, StorageError> SqliteLogRepository::replace_log(const StoredLog& log, std::uint64_t applied_seq)
+{
+    return m_Impl->write(
+        [&]() -> Result<std::vector<JournalRecord>, StorageError>
+        {
+            if (auto removed = m_Impl->delete_log_rows(to_qt(log.m_Meta.m_Id.format())); !removed)
+            {
+                return Failure(removed.error());
+            }
+            if (auto inserted = m_Impl->insert_log(log, applied_seq); !inserted)
+            {
+                return Failure(inserted.error());
+            }
+            const HeaderHistory history(log.m_Log);
+            std::uint64_t seq = 2;
+            for (const Entry& entry : log.m_Log.entries())
+            {
+                if (auto added = m_Impl->insert_entry(log.m_Meta.m_Id.format(), entry, seq++, history); !added)
+                {
+                    return Failure(added.error());
+                }
+            }
+            if (!log.m_Meta.m_Archived)
+            {
+                if (auto state = m_Impl->exec(QStringLiteral("UPDATE store_state SET applied_seq = ? WHERE id = 1"),
+                                              {static_cast<qulonglong>(applied_seq)});
+                    !state)
+                {
+                    return Failure(state.error());
+                }
+            }
+            return std::vector<JournalRecord>{};
+        });
+}
+
+Result<void, StorageError> SqliteLogRepository::set_applied_seq(LogId log, std::uint64_t seq)
+{
+    return m_Impl->write(
+        [&]() -> Result<std::vector<JournalRecord>, StorageError>
+        {
+            auto loaded = m_Impl->load(log);
+            if (!loaded)
+            {
+                return Failure(loaded.error());
+            }
+            if (auto moved = m_Impl->update_applied(log, seq, !loaded->m_Stored.m_Meta.m_Archived); !moved)
+            {
+                return Failure(moved.error());
+            }
+            return std::vector<JournalRecord>{};
+        });
+}
+
+Result<void, StorageError> SqliteLogRepository::checkpoint()
+{
+    return m_Impl->exec(QStringLiteral("PRAGMA wal_checkpoint(TRUNCATE)"));
+}
+
+std::optional<Draft> SqliteLogRepository::salvage_draft(const std::filesystem::path& database)
+{
+    std::error_code ignored;
+    if (!std::filesystem::exists(database, ignored) || QCoreApplication::instance() == nullptr)
+    {
+        return std::nullopt;
+    }
+    const std::u8string text = database.generic_u8string();
+    const QString name = QStringLiteral("ej-salvage-%1").arg(++g_ConnectionCounter);
+    std::optional<Draft> draft;
+    {
+        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), name);
+        db.setDatabaseName(
+            QString::fromUtf8(reinterpret_cast<const char*>(text.data()), static_cast<qsizetype>(text.size())));
+        db.setConnectOptions(QStringLiteral("QSQLITE_OPEN_READONLY"));
+        if (db.isValid() && db.open())
+        {
+            QSqlQuery query(db);
+            if (query.exec(QStringLiteral("SELECT text, updated_utc FROM draft WHERE id = 1")) && query.next() &&
+                !query.value(0).toString().isEmpty())
+            {
+                const std::string content = to_std(query.value(0).toString());
+                if (validate_draft(content))
+                {
+                    draft = Draft{content, millis_of(query.value(1))};
+                }
+            }
+        }
+        db.close();
+    }
+    QSqlDatabase::removeDatabase(name);
+    return draft;
 }
 
 }  // namespace ej
