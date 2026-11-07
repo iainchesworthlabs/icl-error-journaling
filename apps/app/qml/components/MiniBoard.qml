@@ -24,8 +24,7 @@ import ErrorJournalingApp
 // follows the tile when the model moves it. Other is fixed: it is shown and named, and neither selected nor moved. An empty
 // position can be selected, to put a type in it.
 //
-// The sizes are those of the design (64 pt tiles, 6 pt gaps, 11.5 pt labels) as a share of the board's: package 4.1 has no
-// token for the miniature, so `miniScale`, the gap and `labelRatio` are derived from the board's.
+// The sizes are those of the design (64 pt tiles, 6 pt gaps, 11.5 pt labels, a lift of 1.04) from Theme.miniBoard.
 Item {
     id: root
 
@@ -36,13 +35,11 @@ Item {
     signal moveRequested(int fromPosition, int toPosition)
     signal replaceRequested(int position)
 
-    // The miniature as a share of the board (64 / 104 in the design).
-    readonly property real miniScale: 0.6
-    readonly property real gap: Theme.space.tileGap * 0.75
-    readonly property real tileWidth: (width - (Theme.size.boardColumns - 1) * gap) / Theme.size.boardColumns
-    readonly property real tileHeight: Theme.size.tileHeight * miniScale
-    readonly property real labelRatio: 0.85
-    readonly property real liftScale: 1.04
+    readonly property real gap: Theme.miniBoard.gap
+    readonly property real tileWidth: (width + gap) / Theme.size.boardColumns - gap
+    readonly property real tileHeight: Theme.miniBoard.tile
+    readonly property real labelPixels: Math.round(Theme.miniBoard.labelSize * Theme.font.tileLabel.scale)
+    readonly property real liftScale: Theme.miniBoard.selectedScale
     readonly property real liftOffset: Theme.space.tileGap / 2
     readonly property real outlineWidth: Theme.border.otherWidth * 4 / 3
     // Tiles that can be moved: the positions 1 to 11 (the last row, Other, is fixed).
@@ -321,18 +318,16 @@ Item {
                         Text {
                             objectName: "miniLabel"
                             anchors.fill: parent
-                            anchors.margins: Theme.space.tileGap
+                            anchors.margins: root.gap
                             visible: !tile.isEmpty
                             text: tile.label
                             color: Theme.colour.tileText
-                            font.pixelSize: Math.round(Theme.font.tileLabel.size * root.labelRatio)
+                            font.pixelSize: root.labelPixels
                             font.weight: Theme.font.tileLabel.weight
-                            lineHeight: Theme.font.tileLabel.lineHeight
-                            lineHeightMode: Text.ProportionalHeight
                             wrapMode: Text.Wrap
                             verticalAlignment: Text.AlignBottom
                             fontSizeMode: Text.Fit
-                            minimumPixelSize: Math.round(Theme.font.tileLabel.size * root.labelRatio * 0.75)
+                            minimumPixelSize: Math.round(root.labelPixels * 0.6)
                             Accessible.ignored: true
                         }
 
@@ -580,7 +575,7 @@ Item {
             anchors.margins: Theme.space.tileGap
             text: dragState.source ? dragState.source.label : ""
             color: Theme.colour.tileText
-            font.pixelSize: Math.round(Theme.font.tileLabel.size * root.labelRatio)
+            font.pixelSize: root.labelPixels
             font.weight: Theme.font.tileLabel.weight
             wrapMode: Text.Wrap
             verticalAlignment: Text.AlignBottom

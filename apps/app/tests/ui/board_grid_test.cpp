@@ -123,7 +123,7 @@ QQuickItem* load_grid(UiRig& rig, BoardRig& board, bool skeleton = false)
 
 QQuickItem* tile_at(UiRig& rig, int row)
 {
-    QQuickItem* tile = find_item(rig, QStringLiteral("tile%1").arg(row));
+    QQuickItem* tile = rig.find_item(QStringLiteral("tile%1").arg(row));
     REQUIRE(tile != nullptr);
     return tile;
 }
@@ -332,10 +332,10 @@ TEST_CASE("grid.model_updates: a change in one row updates one tile, and a press
 
     // The press on row 0 is still running, and finishes as it would have.
     CHECK(pressIn->property("running").toBool());
-    advance_frames(rig, ANIMATOR_SETTLE);
+    rig.advance(ANIMATOR_SETTLE);
     CHECK(held->findChild<QQuickItem*>(QStringLiteral("tileFace"))->scale() == 0.96);
     rig.release(finger);
-    advance_frames(rig, ANIMATOR_SETTLE);
+    rig.advance(ANIMATOR_SETTLE);
     CHECK(held->findChild<QQuickItem*>(QStringLiteral("tileFace"))->scale() == 1.0);
 
     // The tile objects are the same ones: nothing was created again.
