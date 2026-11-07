@@ -43,7 +43,7 @@ ctest --preset linux-debug
 | `linux-coverage` | Instrumented build for gcovr |
 | `macos-debug`, `macos-release` | The desktop program on a Mac, for iterating on the user interface; built with tests |
 | `ios-release` | The iPhone and iPad application (`apps/app`), unsigned, for a device, on a Mac with Xcode; no tests |
-| `ios-simulator` | The same for the iOS simulator. Not working with the aqtinstall kit and not in CI: it links, but the kit's `qmltooling` plugin objects are built for the device only ("building for 'iOS-simulator', but linking in object file ... built for 'iOS'") |
+| `ios-simulator` | The same for the iOS simulator. Not working with the aqtinstall kit and not in CI: the link fails because the kit's `qmltooling` plugin objects are built for the device only ("building for 'iOS-simulator', but linking in object file ... built for 'iOS'") |
 | `windows-msvc-release`, `windows-msvc-asan` | The developer machine only. Windows is not a v1 platform and CI has no Windows leg |
 
 Sanitizers, Tracy, coverage and fuzzing exclude each other. The configure step stops with a
