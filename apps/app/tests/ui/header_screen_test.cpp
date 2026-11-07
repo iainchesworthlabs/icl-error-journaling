@@ -122,7 +122,7 @@ TEST_CASE("details.unit_keypad: the number pad, the prefix that is shown and not
 
     SECTION("the number pad is asked for and the prefix is drawn apart from the field")
     {
-        CHECK((input->property("inputMethodHints").toInt() & Qt::ImhDigitsOnly) != 0);
+        CHECK((input->property("inputMethodHints").toInt() & static_cast<int>(Qt::ImhDigitsOnly)) != 0);
         CHECK(unit->property("prefixText").toString() == QStringLiteral("UNIT-"));
         CHECK(text_item(rig, QStringLiteral("UNIT-")) != nullptr);
         CHECK(input->property("text").toString().isEmpty());

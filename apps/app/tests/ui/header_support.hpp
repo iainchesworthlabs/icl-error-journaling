@@ -166,8 +166,8 @@ inline void retype(UiRig& rig, QQuickItem* form_field, const QString& text)
     QQuickItem* input = input_of(rig, form_field);
     REQUIRE(input != nullptr);
     rig.tap(input);
-    const int existing = input->property("text").toString().size();
-    for (int i = 0; i < existing; ++i)
+    const qsizetype existing = input->property("text").toString().size();
+    for (qsizetype i = 0; i < existing; ++i)
     {
         rig.key(Qt::Key_Backspace);
     }
