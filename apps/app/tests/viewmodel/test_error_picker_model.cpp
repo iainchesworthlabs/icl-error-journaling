@@ -546,11 +546,11 @@ TEST_CASE("The picker follows the open log it is given and takes itself off the 
 
 TEST_CASE("Only the open document gives the picker its counts", "[viewmodel][picker]")
 {
+    DocumentRig other; // outlives the picker that follows it
     PickerFixture fixture;
     fixture.tap_and_commit(fixture.type(0));
     CHECK(fixture.value(2, ErrorPickerModel::COUNT).toInt() == 1);
 
-    DocumentRig other;
     Entry entry = sample_error(5, 10);
     entry.m_Body = ErrorEntry{fixture.type(1), std::nullopt, "Sequence Out of Order"};
     REQUIRE(other.document->add_entry(std::move(entry), Origin::USER, other.keep(fixture.m_Results)));
