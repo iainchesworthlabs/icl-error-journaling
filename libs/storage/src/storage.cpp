@@ -6,7 +6,7 @@ namespace error_journaling::storage
 
 std::string_view backend_name() noexcept
 {
-    return "none";
+    return "sqlite";
 }
 
 }  // namespace error_journaling::storage

@@ -21,10 +21,11 @@ add_library(ej_viewmodel_test_support STATIC ${ej_viewmodel_support_sources})
 # Headers are included as "support/<name>.hpp".
 target_include_directories(ej_viewmodel_test_support PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(ej_viewmodel_test_support
-    PRIVATE EJ_SAMPLE_CONFIG="${PROJECT_SOURCE_DIR}/config/sample-config.json")
+    PRIVATE EJ_SAMPLE_CONFIG="${PROJECT_SOURCE_DIR}/config/sample-config.json"
+            EJ_GOLDEN_DIR="${PROJECT_SOURCE_DIR}/libs/core/tests/golden")
 # ej_core_test_support brings the golden comparison, the scenarios and the fixed-offset zone provider of the core tests.
 target_link_libraries(ej_viewmodel_test_support
-    PUBLIC ej_viewmodel ej_core_test_support Qt6::Core Catch2::Catch2
+    PUBLIC ej_viewmodel ej_app_root ej_core_test_support Qt6::Core Qt6::Test Catch2::Catch2
     PRIVATE icl::warnings icl::coverage)
 
 set(ej_viewmodel_test_properties "")

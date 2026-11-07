@@ -6,7 +6,7 @@
 namespace error_journaling::storage
 {
 
-/// The kind of storage the application uses. "none" until Stage 3 opens a store in the application; the repositories exist.
+/// The kind of storage the application uses: "sqlite" (the store `app::start_sqlite_storage` opens, Stage 3).
 [[nodiscard]] std::string_view backend_name() noexcept;
 
 }  // namespace error_journaling::storage
