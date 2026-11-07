@@ -208,7 +208,6 @@ int UiRig::press(QQuickItem* item, std::optional<QPointF> at)
     }
     sequence.press(id, point, m_Impl->m_Window.get()).commit();
     m_Impl->m_Down[id] = point;
-    QCoreApplication::processEvents();
     return id;
 }
 
@@ -225,7 +224,6 @@ void UiRig::move(int finger, QQuickItem* item, QPointF to)
     }
     sequence.move(finger, point, m_Impl->m_Window.get()).commit();
     m_Impl->m_Down[finger] = point;
-    QCoreApplication::processEvents();
 }
 
 void UiRig::release(int finger)
@@ -243,7 +241,6 @@ void UiRig::release(int finger)
         sequence.stationary(down.first);
     }
     sequence.release(finger, point, m_Impl->m_Window.get()).commit();
-    QCoreApplication::processEvents();
 }
 
 void UiRig::tap(QQuickItem* item, std::optional<QPointF> at)

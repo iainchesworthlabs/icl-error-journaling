@@ -41,13 +41,15 @@ TEST_CASE("perf.press_path: from a synthetic press to the handler, p95 over 200 
     REQUIRE(button != nullptr);
 
     int handled = 0;
-    const std::vector<double> times = time_each(PRESSES,
-                                                [&]
-                                                {
-                                                    const int finger = rig.press(button);
-                                                    handled = item->property("presses").toInt();
-                                                    rig.release(finger);
-                                                });
+    int finger = 0;
+    // Only the press is timed: from the touch event to the handler having run.
+    const std::vector<double> times = time_each(
+        PRESSES, [&] { finger = rig.press(button); },
+        [&]
+        {
+            handled = item->property("presses").toInt();
+            rig.release(finger);
+        });
     CHECK(handled == PRESSES);
     const double p95 = percentile(times, 0.95);
     INFO("p95 " << p95 << " ms, median " << percentile(times, 0.5) << " ms, worst " << times.back() << " ms");

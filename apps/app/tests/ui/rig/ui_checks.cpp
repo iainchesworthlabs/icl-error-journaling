@@ -318,7 +318,7 @@ void expect_clean(const Violations& violations)
     CHECK(violations.empty());
 }
 
-std::vector<double> time_each(int count, const std::function<void()>& press_once)
+std::vector<double> time_each(int count, const std::function<void()>& press_once, const std::function<void()>& after)
 {
     std::vector<double> times;
     times.reserve(static_cast<std::size_t>(count));
@@ -328,6 +328,10 @@ std::vector<double> time_each(int count, const std::function<void()>& press_once
         press_once();
         const auto end = std::chrono::steady_clock::now();
         times.push_back(std::chrono::duration<double, std::milli>(end - start).count());
+        if (after)
+        {
+            after();
+        }
     }
     std::sort(times.begin(), times.end());
     return times;

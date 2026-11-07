@@ -57,9 +57,10 @@ using Violations = std::vector<QString>;
 /// A Catch2 `CHECK` that there are no faults; a failure prints them.
 void expect_clean(const Violations& violations);
 
-/// `perf.press_path`: runs `press_once` `count` times and returns the sorted times in milliseconds; `p95` is the 95th
-/// percentile of them.
-[[nodiscard]] std::vector<double> time_each(int count, const std::function<void()>& press_once);
+/// `perf.press_path`: runs `press_once` `count` times and returns the sorted times in milliseconds (`after`, if given,
+/// runs after each, outside the time: the release of the finger); `p95` is the 95th percentile of them.
+[[nodiscard]] std::vector<double> time_each(int count, const std::function<void()>& press_once,
+                                            const std::function<void()>& after = {});
 [[nodiscard]] double percentile(const std::vector<double>& sorted, double fraction);
 /// How much slower than a release build this one is (`EJ_PERF_BUDGET_FACTOR`, set by CMake for sanitizers, coverage and
 /// Debug): a budget is multiplied by it. 1 when unset.
