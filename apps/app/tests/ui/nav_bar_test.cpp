@@ -190,7 +190,9 @@ TEST_CASE("nav_bar: the title is a heading, and the actions are named buttons", 
     REQUIRE(leading != nullptr);
     CHECK(leading->m_Role == QAccessible::Button);
     CHECK(leading->m_Name == QStringLiteral("Cancel"));
-    CHECK(find_node(nodes, QStringLiteral("navTrailing"))->m_Name == QStringLiteral("Save"));
+    const Node* trailing = find_node(nodes, QStringLiteral("navTrailing"));
+    REQUIRE(trailing != nullptr);
+    CHECK(trailing->m_Name == QStringLiteral("Save"));
     // Only the title that is shown is there.
     CHECK(find_shown(nodes, QStringLiteral("navTitleBelow")) == nullptr);
 }

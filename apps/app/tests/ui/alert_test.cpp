@@ -220,9 +220,12 @@ TEST_CASE("alert.modal: the default and the destructive buttons are named, and a
         REQUIRE(confirm != nullptr);
         CHECK(confirm->m_Name == QStringLiteral("Start a new log"));
         CHECK(QAccessible::queryAccessibleInterface(confirm->m_Item)->state().defaultButton);
-        CHECK(find_node(nodes, QStringLiteral("alertAlternate"))->m_Name ==
-              QStringLiteral("Share Saturday's log first"));
-        CHECK(find_node(nodes, QStringLiteral("alertCancel"))->m_Name == QStringLiteral("Keep Saturday's log open"));
+        const Node* alternate = find_node(nodes, QStringLiteral("alertAlternate"));
+        const Node* cancel = find_node(nodes, QStringLiteral("alertCancel"));
+        REQUIRE(alternate != nullptr);
+        REQUIRE(cancel != nullptr);
+        CHECK(alternate->m_Name == QStringLiteral("Share Saturday's log first"));
+        CHECK(cancel->m_Name == QStringLiteral("Keep Saturday's log open"));
     }
 
     SECTION("the alert is a named dialog described by its message, and its words are not read twice")
