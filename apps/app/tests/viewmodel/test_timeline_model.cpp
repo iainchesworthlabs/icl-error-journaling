@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <initializer_list>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -897,7 +898,7 @@ TEST_CASE("Edit: saving an unchanged sheet changes nothing and is not an edit", 
     const std::size_t posted = rig.gateway().posted();
     const std::size_t writes = rig.storage().repository().mutating_call_count();
 
-    for (const std::uint64_t entry : {1, 2, 3, 4})
+    for (const std::uint64_t entry : std::initializer_list<std::uint64_t>{1, 2, 3, 4})
     {
         const QVariantMap sheet = rig.model().entryForEdit(text_of(entry));
         CHECK(rig.model().validateEdit(text_of(entry), sheet).isEmpty());
