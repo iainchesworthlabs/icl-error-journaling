@@ -10,12 +10,12 @@ therefore written to find ways to lose data, not to show that the happy path wor
 
 ## 1. Decisions to confirm first
 
-The implementation plan leaves four points open. Each has a recommendation and is repeated in the
-[open questions](#10-open-questions). Work package 2.1 cannot start until the owner has answered the first.
+The implementation plan left four points open. The owner has decided them (see
+[decisions](#10-decisions-and-open-questions)); they are recorded here because the rest of the plan depends on them.
 
-1. **Order of journal and database (needs a decision).** The plan says the journal is fsynced *after* the database
+1. **Order of journal and database (decided).** The plan says the journal is fsynced *after* the database
    commit. That order makes the journal never ahead of the database, so "replay the journal over the database for any
-   change missing from it" could only ever fire if the database had lost committed data. Recommended: **append and fsync
+   change missing from it" could only ever fire if the database had lost committed data. Decided: **append and fsync
    the journal record first, then commit the database, and acknowledge only after both.** The journal is then always a
    superset of the database, replay has a real job, and a crash between the two steps loses nothing. Section 3.2 gives
    the argument and the cost.
@@ -24,8 +24,8 @@ The implementation plan leaves four points open. Each has a recommendation and i
    later than that point must survive. Anything earlier may or may not survive.
 3. **A write that was in flight when the kill landed** (not yet acknowledged) may appear after recovery or may not. It
    must appear whole or not at all.
-4. **Archived logs are not covered by the journal in the plan.** Rebuild from the journal restores only the open log.
-   Section 5.4 proposes keeping each archived log's journal.
+4. **Archived logs are covered too (decided).** Each archived log's journal is kept, so a rebuild restores history.
+   Section 5.4.
 
 ## 2. Design
 
@@ -55,7 +55,7 @@ proposal; Stage 1's `Log` aggregate decides the exact value types):
 - `mark_shared(log_id, utc)`
 
 Every mutating call is one atomic unit: one journal record, one database transaction. Entry and log ids are generated
-by the caller (UUID) before the call, which is what makes replay idempotent.
+by the caller (UUID v4) before the call, which is what makes replay idempotent.
 
 `MemoryLogRepository` implements the same interface with a map. A single typed contract test suite runs every case
 against both implementations, so the memory version cannot drift from the real one.
@@ -76,7 +76,7 @@ against both implementations, so the memory version cannot drift from the real o
 
 Notes: `seq` is the journal sequence number of the record that created the entry and breaks ties when two entries have
 the same `captured_utc`. `error_type_label` is a snapshot, so an entry still renders after the error type is removed
-from the configuration (open question 5). Foreign keys on, `ON DELETE` restricted except `hard_delete_log`, which
+from the configuration (decision 5, open). Foreign keys on, `ON DELETE` restricted except `hard_delete_log`, which
 deletes children in one transaction. Indexes on `entry(day_log_id, captured_utc, seq)` and `day_log(archived)`.
 
 ### 2.4 Connection settings and durable sync
@@ -110,7 +110,7 @@ not interleaved). One line per record:
 - Records are logical, not row images, and carry their own version `v`. The reader understands every version ever
   shipped, so a journal written by an older build still rebuilds after a schema migration.
 - A record is complete only when it ends with `\n` and its CRC matches. Anything else is not a record (section 5.2).
-- Maximum record size is bounded (notes are capped, open question 7), so a torn tail can never look like a huge valid
+- Maximum record size is bounded (notes are capped at 10,000 characters, decision 7), so a torn tail can never look like a huge valid
   line.
 
 ### 2.6 Write path
@@ -125,9 +125,6 @@ For every mutating call, in this order:
    absent, and a later launch must not resurrect an entry the user was told failed.
 4. Return success. Only now may Stage 3 show feedback (DS-01).
 
-If the recommended order is rejected (question 1), steps 2 and 3 swap, the `void` logic disappears, and replay can no
-longer be exercised by an ordinary crash; it would then be tested only by the corruption cases.
-
 ### 2.7 Recovery on launch (DS-03, DS-04)
 
 `Recovery::run(location)` returns `std::expected<RecoveryReport, StorageError>` and is called before the board appears.
@@ -138,7 +135,7 @@ longer be exercised by an ordinary crash; it would then be tested only by the co
    a **different error**; it never triggers a rebuild and never touches the files.
 2. If a migration marker exists, finish or undo the migration first (section 2.9).
 3. `quick_check` on the database. If it fails, or on the first launch after an upgrade, run the full `integrity_check`.
-   Whether the full check is on every launch is open question 6 (DS-04 says every launch; the cost is measured in 2.6).
+   The quick check runs on every launch and the full check only in those two cases (decision 6); the cost is measured in 2.6. DS-04 is reworded to say "integrity check" without requiring the full one.
 4. Read the journal: validate each record, discard a torn tail, and stop at the first gap or mid-file bad record while
    keeping the later valid ones aside (section 5.2).
 5. **Healthy database:** replay every record with `seq > applied_seq` in one transaction. Then compare the open log in
@@ -180,8 +177,7 @@ transaction** as the entry, so a kill cannot leave both the entry and the draft 
 
 The draft is not journalled: it is a scratch value, not a committed entry. Consequence: text typed in the last 300 ms
 before a kill can be lost, and a corrupt database loses the draft. The PRD says the draft survives backgrounding and
-closing (NOTE-03) and no loss of the draft on crash (NFR-08). Question 3 asks the owner to accept "at most 300 ms of
-typing" or to pay for journalling drafts.
+closing (NOTE-03) and no loss of the draft on crash (NFR-08). The owner accepted "at most 300 ms of typing" (decision 3).
 
 ### 2.9 Archive, delete, migrations
 
@@ -220,8 +216,8 @@ implementation in Stage 5:
 - Check after creation, and add a Stage 5 test that reads the attribute back on a device.
 - Reads before the first unlock after a restart fail. `Recovery` must classify that as "locked", not "corrupt"
   (section 2.7 step 1), or a background launch after a reboot would rebuild a healthy database.
-- Whether to exclude the files from iCloud backup is open question 8; NFR-09 says data leaves only through the share
-  sheet or copy, and a device backup is another way out.
+- The files stay in the device backup (decision 8); no exclusion flag is set. NFR-09's wording ("leaves only through
+  the share sheet or copy") should say that the user's own device backup is not counted.
 
 ## 3. Failure modes the plan does not mention
 
@@ -245,7 +241,7 @@ implementation in Stage 5:
 | F14 | A newer database opened by an older build | 2.9, M5 |
 | F15 | The in-flight write that appears after a crash is mistaken for a bug | 1 (3), 4.2 |
 | F16 | Directory entry not synced after creating the journal, so the whole file is missing after power loss | 2.4 |
-| F17 | A note typed in the last 300 ms | 2.8, question 3 |
+| F17 | A note typed in the last 300 ms | 2.8, decision 3 |
 
 ### 3.2 The order of commit and flush
 
@@ -258,7 +254,7 @@ Take the four possible crash points for one write, with the plan's order (databa
 | journal fsync | yes | yes | fine |
 | return to caller | yes | yes | acknowledged |
 
-With the recommended order (journal, then database):
+With the decided order (journal, then database):
 
 | Crash after | Journal | Database | Result |
 |---|---|---|---|
@@ -271,7 +267,7 @@ the journal still holds every acknowledged entry. With the plan's order, the jou
 lost only its last few commits unless the journal is complete, which it is *except* for the single in-flight record,
 so the practical difference is the replay path being exercised and the "database and journal damaged in the same event"
 window shrinking to nothing. Both orders keep every acknowledged entry in the absence of a second fault; the
-recommended order also survives a second fault of that kind.
+decided order also survives a second fault of that kind.
 
 ### 3.3 Void records
 
@@ -284,9 +280,8 @@ forces the failure (a repository wrapper that fails the commit) and reopens.
 - `Clock` is an injected interface; production uses the system clock, tests use a scripted one.
 - The journal and the database order writes by `seq`, never by wall time. Replay and recovery do not read the clock.
 - `captured_utc` is whatever the clock said. If the clock steps backwards, a later entry has an earlier time and
-  sorts before it on the timeline (PRD requires time order). The tie-break is `seq`. Decision needed: sort by time as
-  the PRD says, accept that a step backwards reorders, and rely on the review screen's time editing (REV-02). Tests
-  pin the behaviour.
+  sorts before it on the timeline (PRD requires time order). The tie-break is `seq`. Decided (10): sort by time as the PRD
+  says and accept the reorder; the review screen's time editing (REV-02) is the remedy. Tests pin the behaviour.
 - The debounce uses a monotonic clock so a wall-clock jump neither fires it early nor stalls it.
 - Quarantine and backup names use the UTC time plus a counter, so two in the same second or after a step backwards
   never collide or overwrite.
@@ -394,7 +389,7 @@ tested guarantees plus the readback of the pragmas.
 Timing is an estimate to confirm in work package 2.8: at roughly 0.3 to 1 s per iteration, 10,000 is 1 to 3 hours of
 runner time, sharded into well under 30 minutes of wall time. If an iteration is slower on the macOS runner, the shard
 count rises, not the iteration count. The nightly and the exit-gate runs need CI changes (a nightly job and a manual
-workflow); whether those belong in this repository or in `icl-common-infra` is open question 9.
+workflow); they live in this repository's workflows (decision 9).
 
 **Recovery and migration kills.** Separate drivers kill the child during `Recovery::run` over a corrupt store, and during
 a migration, 200 iterations each at the nightly tier (25 at the PR gate), and check that the next launch recovers or
@@ -459,10 +454,9 @@ that refers to something missing is counted and skipped. The report says `partia
 ### 5.4 Archived logs (F8)
 
 The plan's rebuild restores the open log only. After a database loss, every archived log would be gone, which the
-facilitator would reasonably call data loss. Proposal: on `archive`, keep the finished journal in `journal/archive/`
+facilitator would reasonably call data loss. On `archive`, keep the finished journal in `journal/archive/`
 and include it in the rebuild, so history is rebuilt too. A journal is a few tens of kilobytes per day. `archived_logs_lost`
-in the report is zero when that works. If the owner declines (question 2), the PRD should say archived logs are best
-effort, and the Stage 2 gate stays about the open log.
+in the report is zero when that works. The owner accepted this (decision 2).
 
 ## 6. Work packages (one PR each, in this order)
 
@@ -470,7 +464,7 @@ effort, and the Stage 2 gate stays about the open log.
 
 `LogRepository`, `StorageError`, `Clock`, `RecoveryReport`, journal record types with their encoding and CRC (pure
 functions in `ej_core`), and `MemoryLogRepository`. The typed contract suite is written here and runs against the
-memory version. Depends on the answers to questions 1, 4 and 5 and on Stage 1's `Log` and `Entry` types.
+memory version. Depends on question 5 (snapshot) and on Stage 1's `Log` and `Entry` types.
 
 ### 2.2 Schema v1 and `SqliteLogRepository`
 
@@ -487,7 +481,7 @@ CRC cases J1 to J12 at the reader level, and the `LossyFile` tests.
 ### 2.4 Recovery
 
 `Recovery::run`, error classification, quick and full integrity checks, replay, the journal-versus-database comparison,
-rebuild into a new file with atomic swap, quarantine, the archived-journal retention of 5.4 if accepted. All corruption
+rebuild into a new file with atomic swap, quarantine, the archived-journal retention of 5.4. All corruption
 cases C1 to C16, J1 to J12, X1 to X3, plus idempotence.
 
 ### 2.5 Kill harness
@@ -500,7 +494,7 @@ variables).
 
 `DraftStore` with the 300 ms debounce on a fake monotonic clock, commit-and-clear in one transaction, `flush()`. The
 `perf`-labelled launch measurement: `quick_check`, full `integrity_check` and a journal comparison on a database with
-one year of synthetic logs (about 80,000 entries), with the budget in question 6.
+one year of synthetic logs (about 80,000 entries), with a budget of 100 ms for the launch check, measured and fixed in this package.
 
 ### 2.7 Migrations
 
@@ -576,7 +570,7 @@ kill harness's draft check.
 **Clock (unit):** wall time stepping back between two entries; same `captured_utc` for two entries; time zone change
 between entries; clock at 1970; quarantine names do not collide.
 
-**Perf:** launch-time check on the one-year dataset, with a failing threshold set once measured (question 6).
+**Perf:** launch-time check on the one-year dataset, with a failing threshold set once measured (100 ms proposed).
 
 Each new test carries its label; coverage floors for `ej_storage` start at the measured value after 2.4 and are raised
 in later packages.
@@ -605,30 +599,31 @@ The owner reviews and signs the gate in the pull request that records it. Until 
 
 Each pull request says which parts have not run on a device.
 
-## 10. Open questions
+## 10. Decisions and open questions
 
-1. **Journal first or database first?** Recommended: journal first, then database, acknowledge after both (section 3.2).
-   The plan and DS-02 read database first. This changes the wording of DS-02 and the Stage 2 text.
-2. **Archived logs:** keep each archived journal and rebuild history too (recommended, section 5.4), or accept that a
-   database loss costs the history and say so in the PRD?
-3. **Draft durability:** accept that up to 300 ms of typing can be lost on a kill, and that a corrupt database loses
-   the draft (recommended, with `flush()` on going inactive), or journal drafts at a cost of a larger journal and a
-   journal write per pause in typing?
-4. **A write that was in flight when the app died** may appear after relaunch although the user never saw it confirmed.
-   Agree that appearing is acceptable (recommended; the alternative is losing real entries)?
-5. **Error types in entries:** store a label snapshot with the type id (recommended) so an entry still renders after
-   the type is removed from the configuration, or reference the configuration only?
-6. **Launch cost:** is `quick_check` on every launch with the full `integrity_check` on the first launch after an
-   upgrade, after any `quick_check` failure, and nightly in idle time acceptable under DS-04? Or must the full check run
-   every launch (cost grows with history; budget proposed 100 ms of the 1.5 s in NFR-04)?
-7. **Size limits:** maximum note length (proposed 10,000 characters) and maximum entries per log, so a journal record has
-   a known size bound.
-8. **iCloud and device backup:** exclude the data directory from backup to honour NFR-09, or leave it in so a replaced
-   phone restores the history? (Stage 5 decision; Stage 2 only needs the answer for the interface.)
-9. **Where do the nightly and exit-gate jobs live?** In this repository's workflows, or as a reusable workflow in
-   `icl-common-infra`? The current ci.md lists CodeQL as the only nightly job.
-10. **Clock steps backwards:** sort by time and accept the reorder (section 3.4, PRD wording), or keep entries in
-    capture order by `seq` and show time separately?
-11. **How many kill iterations are enough for PR gate and merge queue**, given runner cost? The proposal is 25 and 100;
-    both are one environment variable.
-12. **Ids:** UUID v4 or v7 for entries (v7 is time-ordered and nicer in the journal; confirm Qt 6.12 provides it, else v4).
+The owner answered on 7 Nov 2026. The text above reflects these answers.
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Journal first or database first | **Journal first**, then database, acknowledge after both (section 3.2). DS-02 is reworded in the PRD to match |
+| 2 | Archived logs | **Keep each archived journal** and rebuild history too (section 5.4), so a database loss does not cost the history |
+| 3 | Draft durability | **Accepted**: up to 300 ms of typing can be lost on a kill; `flush()` on going inactive |
+| 4 | Unconfirmed write after a crash | **Accepted**: it may appear after relaunch |
+| 5 | Error type snapshots | **Open**, see below |
+| 6 | Launch integrity check | **Quick check on every launch**; the full check runs after a failed quick check and on the first launch after an upgrade |
+| 7 | Size limits | **Accepted**: notes up to 10,000 characters; entries per log bounded in the repository |
+| 8 | iCloud and device backup | **Left in backup**; the data is tied to the user's own account. Stage 5 does not set the exclusion flag |
+| 9 | Where nightly and exit-gate jobs live | **This repository's workflows** |
+| 10 | Clock steps backwards | **Sort by time** as the PRD says and accept the reorder; `seq` breaks ties |
+| 11 | Iteration counts | **Accepted**: 25 on the PR gate, 100 on the merge queue, 1,000 nightly, 10,000 for the gate |
+| 12 | Entry ids | **UUID v4**. Anything shown to the user (review screen, reports) uses a short code derived from the id, never the full UUID |
+
+### Still open: error type snapshots (question 5)
+
+An error entry records which error type was tapped, for example "Wrong Response". The configuration owns the list of
+error types and lets the facilitator rename or remove them (PRF-08). If an entry holds only a reference to the type,
+then once the type is renamed or removed an old log cannot say what the entry was: an old export would change or fail.
+A snapshot stores the label as it was at the moment of the tap, next to the reference, so old logs and exports always
+read the way they did when written. It costs one extra text column. Recommendation: store the snapshot. This is the
+plan's current design; it stays unless the owner says otherwise. Whether a renamed type should *also* update old
+entries is a separate question for Stage 3 and the PRD.
