@@ -10,6 +10,14 @@
 namespace ej::bridge
 {
 
+namespace
+{
+
+/// A touch older than this when the press handler runs is not a touch age but a timestamp on another time base.
+constexpr double MAX_TOUCH_AGE_MS = 10000.0;
+
+} // namespace
+
 QmlBridge::QmlBridge(PlatformServices services, HapticPolicyConfig haptics, QObject* parent)
     : QObject(parent), m_Services(std::move(services)),
       m_HapticPolicy(
@@ -123,10 +131,24 @@ void QmlBridge::setApplicationActive(bool active)
     m_HapticPolicy.set_application_active(active);
 }
 
-void QmlBridge::hapticImpact(double /*pressTimestamp*/)
+void QmlBridge::hapticImpact(double pressTimestamp)
 {
-    // Nothing but the fire: the engine prepares itself afterwards (haptics.mm), so no prepare sits in this path.
+    PerfMarks& marks = *m_Services.m_PerfMarks;
+    if (pressTimestamp > 0)
+    {
+        // How old the touch already is. A timestamp on another time base (assumption A5 not holding) gives a nonsense
+        // age, which is dropped here rather than recorded.
+        const double age = marks.uptime_ms() - pressTimestamp;
+        if (age >= 0 && age < MAX_TOUCH_AGE_MS)
+        {
+            marks.event(Mark::TOUCH_AGE, age);
+        }
+    }
+    // Nothing but the fire between the marks: the engine prepares itself afterwards (haptics.mm), so no prepare sits in
+    // this path.
+    marks.begin(Mark::TAP_TO_HAPTIC);
     m_Services.m_Haptics->fire(HapticKind::IMPACT);
+    marks.end(Mark::TAP_TO_HAPTIC);
 }
 
 void QmlBridge::hapticSuccess()

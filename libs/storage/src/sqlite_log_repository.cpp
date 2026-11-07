@@ -4,6 +4,7 @@
 #include "error_journaling/header_history.hpp"
 #include "error_journaling/iso_date.hpp"
 #include "error_journaling/utf8.hpp"
+#include "protect.hpp"
 
 #include <QByteArray>
 #include <QCoreApplication>
@@ -397,6 +398,8 @@ struct SqliteLogRepository::Impl
     void checkpoint() const;
 
     QString m_Name;
+    std::filesystem::path m_Path;
+    mutable bool m_CompanionsProtected = false;
     QSqlDatabase m_Db;
     const Clock& m_Clock;
     Journal& m_Journal;
@@ -437,6 +440,7 @@ Result<void, StorageError> SqliteLogRepository::Impl::open_database(const std::f
         }
     }
 
+    m_Path = path;
     const std::u8string name = path.generic_u8string();
     m_Name = QStringLiteral("ej-store-%1").arg(++g_ConnectionCounter);
     m_Db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), m_Name);
@@ -455,6 +459,7 @@ Result<void, StorageError> SqliteLogRepository::Impl::open_database(const std::f
     {
         return settings;
     }
+    protect_database_files(path);  // the database, and the -wal and -shm files SQLite has made by now
     return identity->blank() ? initialise_schema() : Result<void, StorageError>{};
 }
 
@@ -825,6 +830,12 @@ Result<void, StorageError> SqliteLogRepository::Impl::write(const Build& build) 
         cancel_all(marks, error);
         rollback();
         return Failure(std::move(error));
+    }
+    if (!m_CompanionsProtected)
+    {
+        // SQLite makes the -wal and -shm files on the first write, after the open, so they are protected here.
+        m_CompanionsProtected = true;
+        protect_database_files(m_Path);
     }
     (void)at(CrashPoint::AFTER_DB_COMMIT);
     return {};

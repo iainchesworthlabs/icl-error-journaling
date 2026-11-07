@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app_root.hpp"
+#include "error_journaling/launch_tracker.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/storage.hpp"
@@ -15,6 +16,7 @@
 #include <QQuickWindow>
 #include <QStandardPaths>
 #include <filesystem>
+#include <utility>
 
 namespace
 {
@@ -40,7 +42,7 @@ int main(int argc, char* argv[])
         const QCoreApplication core(argc, argv);
         name_the_program();
         QCommandLineParser parser;
-        parser.setApplicationDescription(QStringLiteral("Error Journaling"));
+        parser.setApplicationDescription(QStringLiteral("CS Bingo Board"));
         parser.addHelpOption();
         parser.addVersionOption();
         parser.addOption(smoke_test);
@@ -60,6 +62,9 @@ int main(int argc, char* argv[])
     ej::bridge::PlatformServices services = ej::bridge::make_platform_services();
     ej::bridge::Share& share_sheet = *services.m_Share;
     ej::bridge::Haptics& haptics = *services.m_Haptics;
+    // The marks the exit gate is measured by (NFR-04). The tracker reports the launch once, when the board is usable.
+    ej::bridge::LaunchTracker launch(*services.m_PerfMarks);
+    launch.process_started();
     ej::bridge::QmlBridge platform_bridge(std::move(services));
     const bool share_available = share_sheet.available();
 
@@ -109,6 +114,19 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("settings"), QVariant::fromValue(root.settings())},
                                  {QStringLiteral("share"), QVariant::fromValue(root.share())}});
     engine.loadFromModule("ErrorJournalingApp", "Main");
+    launch.qml_loaded();
+    // Recovery has finished: the store was opened above, before the window was made. The shell of Stage 5, 5.7 calls
+    // board_enabled() when the 12 tiles accept taps (the session is open); until then this line stands for it.
+    launch.storage_ready();
+    launch.board_enabled();
+    {
+        const auto roots = engine.rootObjects();
+        if (auto* window = roots.isEmpty() ? nullptr : qobject_cast<QQuickWindow*>(roots.first()))
+        {
+            QObject::connect(window, &QQuickWindow::frameSwapped, &platform_bridge,
+                             [&launch] { launch.frame_swapped(); });
+        }
+    }
 
     if (parser.isSet(smoke_test))
     {

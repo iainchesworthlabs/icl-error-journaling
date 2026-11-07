@@ -7,6 +7,7 @@
 #include "error_journaling/sqlite_log_repository.hpp"
 #include "error_journaling/stored_log.hpp"
 #include "journal_seed.hpp"
+#include "protect.hpp"
 #include "quarantine.hpp"
 
 #include <algorithm>
@@ -1059,6 +1060,7 @@ Result<RecoveryReport, StorageError> RecoveryRun::execute()
             return Failure(pruned.error());
         }
     }
+    protect_store(m_Location);  // before the repository closes, while its -wal and -shm files exist
     m_Repository.reset();
     return m_Report;
 }

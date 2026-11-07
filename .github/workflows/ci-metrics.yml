@@ -1,0 +1,38 @@
+# The weekly CI numbers of icl-common-infra docs/ci-many-agents.md section 8.2 (runner-minutes by
+# event and OS, pull request and queue times, runner wait, wasted share, the age of each
+# refs/ci/green/<group>) in the job summary. It only reads, and it cannot fail a merge. The script
+# comes from the same commit as the pin; Dependabot keeps both current.
+
+name: CI metrics
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-metrics
+  cancel-in-progress: false
+
+jobs:
+  metrics:
+    name: Metrics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Check out icl-common-infra
+        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: python3 .icl-infra/scripts/ci_metrics.py --repo "$REPO" --days 7 --summary "$GITHUB_STEP_SUMMARY"

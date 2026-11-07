@@ -1,4 +1,4 @@
-# ICL Error Journaling
+# CS Bingo Board
 
 An iPhone app for logging robot session errors through the day and sharing the log. It builds, tests and releases with the shared infrastructure in
 [icl-common-infra](https://github.com/iainchesworthlabs/icl-common-infra).
