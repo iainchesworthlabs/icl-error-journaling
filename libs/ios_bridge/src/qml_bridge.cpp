@@ -30,6 +30,17 @@ QmlBridge::QmlBridge(PlatformServices services, HapticPolicyConfig haptics, QObj
           haptics),
       m_Presenter(*m_Services.m_Share)
 {
+    // The settings as they are now, and a re-read on every notice. The handler is guarded, so a notice after the bridge
+    // is gone does nothing (the settings object is destroyed with the services, and an iOS one removes its observers).
+    m_Accessibility = m_Services.m_Accessibility->read();
+    m_Services.m_Accessibility->set_change_handler(
+        [self = QPointer<QmlBridge>(this)]
+        {
+            if (self)
+            {
+                self->refresh_accessibility();
+            }
+        });
     // The keep-alive is off unless the device pass asks for it (HAPTIC_KEEPALIVE); then one timer ticks the policy.
     if (m_HapticPolicy.keep_alive_enabled())
     {
@@ -49,6 +60,40 @@ bool QmlBridge::share_available() const noexcept
 bool QmlBridge::sharing() const noexcept
 {
     return m_Sharing;
+}
+
+double QmlBridge::text_scale() const noexcept
+{
+    return m_Accessibility.m_TextScale;
+}
+
+bool QmlBridge::reduce_motion() const noexcept
+{
+    return m_Accessibility.m_ReduceMotion;
+}
+
+bool QmlBridge::voice_over_running() const noexcept
+{
+    return m_Accessibility.m_VoiceOverRunning;
+}
+
+void QmlBridge::refresh_accessibility()
+{
+    const AccessibilityState now = m_Services.m_Accessibility->read();
+    const AccessibilityState before = m_Accessibility;
+    m_Accessibility = now;
+    if (!qFuzzyCompare(now.m_TextScale, before.m_TextScale))
+    {
+        emit textScaleChanged();
+    }
+    if (now.m_ReduceMotion != before.m_ReduceMotion)
+    {
+        emit reduceMotionChanged();
+    }
+    if (now.m_VoiceOverRunning != before.m_VoiceOverRunning)
+    {
+        emit voiceOverRunningChanged();
+    }
 }
 
 void QmlBridge::shareText(const QString& text)

@@ -1,0 +1,1 @@
+**The app can follow the system text size and Reduce Motion.** The bridge reads the text size (Dynamic Type), Reduce Motion and whether VoiceOver is running, and tells the screens when one changes. No screen uses them yet. Not yet run on a device.

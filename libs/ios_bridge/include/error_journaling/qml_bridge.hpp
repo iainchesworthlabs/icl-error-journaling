@@ -23,6 +23,13 @@ class QmlBridge : public QObject
     Q_PROPERTY(bool shareAvailable READ share_available CONSTANT)
     /// True from a share request until its sheet has ended. QML disables the Share button while it is true.
     Q_PROPERTY(bool sharing READ sharing NOTIFY sharingChanged)
+    /// The text size multiplier from the system's content size category (Dynamic Type): 1.0 by default, about 0.82
+    /// to 3.1. `Theme` multiplies its font sizes by it. 1.0 where there is no such setting.
+    Q_PROPERTY(double textScale READ text_scale NOTIFY textScaleChanged)
+    /// Reduce Motion is on: replace springs and slides with a short fade.
+    Q_PROPERTY(bool reduceMotion READ reduce_motion NOTIFY reduceMotionChanged)
+    /// VoiceOver is running. For tests and diagnostics.
+    Q_PROPERTY(bool voiceOverRunning READ voice_over_running NOTIFY voiceOverRunningChanged)
 
 public:
     explicit QmlBridge(PlatformServices services, HapticPolicyConfig haptics = {}, QObject* parent = nullptr);
@@ -30,6 +37,9 @@ public:
 
     [[nodiscard]] bool share_available() const noexcept;
     [[nodiscard]] bool sharing() const noexcept;
+    [[nodiscard]] double text_scale() const noexcept;
+    [[nodiscard]] bool reduce_motion() const noexcept;
+    [[nodiscard]] bool voice_over_running() const noexcept;
 
     /// Shares `text` (UTF-8 on the way to the sheet). Always ends with shareFinished, delivered on a queued call, so a
     /// caller sees one order on every platform. A request while a sheet is up ends "failed" without reaching the sheet.
@@ -63,10 +73,15 @@ signals:
     /// `activityType` is empty when no activity was chosen.
     void shareFinished(const QString& outcome, const QString& activityType);
     void sharingChanged();
+    /// One signal for each setting that changed, and none when the value is the same.
+    void textScaleChanged();
+    void reduceMotionChanged();
+    void voiceOverRunningChanged();
 
 private:
     void begin_share(ShareRequest request, bool temporary_file);
     void refresh_sharing();
+    void refresh_accessibility();
     void deliver(const ShareResult& result);
 
     PlatformServices m_Services;
@@ -74,6 +89,7 @@ private:
     QTimer m_KeepAlive;
     SharePresenter m_Presenter;
     bool m_Sharing = false;
+    AccessibilityState m_Accessibility;
 };
 
 } // namespace ej::bridge

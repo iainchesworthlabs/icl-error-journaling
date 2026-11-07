@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "error_journaling/accessibility_settings.hpp"
 #include "error_journaling/haptic_policy.hpp"
 #include "error_journaling/launch_tracker.hpp"
 #include "error_journaling/perf_marks.hpp"
@@ -6,8 +7,10 @@
 #include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/share_presenter.hpp"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <QCoreApplication>
 #include <QList>
@@ -137,8 +140,33 @@ public:
     }
 };
 
+// Settings the test changes, and a handler it can call as the system would.
+class FakeAccessibility final : public bridge::AccessibilitySettings
+{
+public:
+    bridge::AccessibilityState m_State;
+    std::function<void()> m_Handler;
+
+    [[nodiscard]] bridge::AccessibilityState read() const override
+    {
+        return m_State;
+    }
+    void set_change_handler(std::function<void()> changed) override
+    {
+        m_Handler = std::move(changed);
+    }
+    void notify() const
+    {
+        if (m_Handler)
+        {
+            m_Handler();
+        }
+    }
+};
+
 struct Fakes
 {
+    FakeAccessibility* m_Accessibility = nullptr;
     FakeShare* m_Share = nullptr;
     FakeHaptics* m_Haptics = nullptr;
     FakePerfMarks* m_Marks = nullptr;
@@ -154,6 +182,9 @@ bridge::PlatformServices fake_services(Fakes& fakes)
     auto marks = std::make_unique<FakePerfMarks>();
     fakes.m_Marks = marks.get();
     services.m_PerfMarks = std::move(marks);
+    auto accessibility = std::make_unique<FakeAccessibility>();
+    fakes.m_Accessibility = accessibility.get();
+    services.m_Accessibility = std::move(accessibility);
     services.m_Share = std::move(share);
     services.m_Haptics = std::move(haptics);
     return services;
@@ -719,4 +750,127 @@ TEST_CASE("perf_marks.wrapper: no timestamp, or one on another time base, gives 
     fakes.m_Marks->m_Uptime = 5'000'000.0;
     qml.hapticImpact(100.0); // hours old: another time base
     CHECK(fakes.m_Marks->m_Calls == plain);
+}
+
+TEST_CASE("accessibility.table: every category has a scale, rising with each step", "[unit][accessibility]")
+{
+    const std::vector<std::string> categories{
+        "UICTContentSizeCategoryXS",
+        "UICTContentSizeCategoryS",
+        "UICTContentSizeCategoryM",
+        "UICTContentSizeCategoryL",
+        "UICTContentSizeCategoryXL",
+        "UICTContentSizeCategoryXXL",
+        "UICTContentSizeCategoryXXXL",
+        "UICTContentSizeCategoryAccessibilityM",
+        "UICTContentSizeCategoryAccessibilityL",
+        "UICTContentSizeCategoryAccessibilityXL",
+        "UICTContentSizeCategoryAccessibilityXXL",
+        "UICTContentSizeCategoryAccessibilityXXXL",
+    };
+    double previous = 0;
+    for (const std::string& category : categories)
+    {
+        const double scale = bridge::text_scale_for_category(category);
+        INFO(category);
+        CHECK(scale > previous);
+        previous = scale;
+    }
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryL") == 1.0);
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryXS") == Catch::Approx(0.82).margin(0.01));
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryAccessibilityXXXL") ==
+          Catch::Approx(3.1).margin(0.05));
+    // The accessibility sizes are all above 1.6, and the standard sizes all below it.
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryXXXL") < 1.4);
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryAccessibilityM") > 1.6);
+}
+
+TEST_CASE("accessibility.table: an unknown or empty name is the default size", "[unit][accessibility]")
+{
+    CHECK(bridge::text_scale_for_category("") == 1.0);
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryUnspecified") == 1.0);
+    CHECK(bridge::text_scale_for_category("nonsense") == 1.0);
+}
+
+TEST_CASE("accessibility.stub: the desktop stub is the default size with nothing on and never changes",
+          "[unit][accessibility]")
+{
+    const auto settings = bridge::make_accessibility_settings();
+    const bridge::AccessibilityState state = settings->read();
+    CHECK(state.m_TextScale == 1.0);
+    CHECK_FALSE(state.m_ReduceMotion);
+    CHECK_FALSE(state.m_VoiceOverRunning);
+    settings->set_change_handler([] {});
+    settings->set_change_handler({});
+    CHECK(settings->read() == state);
+}
+
+TEST_CASE("accessibility.wrapper: QML sees the settings at start and the stub's defaults", "[unit][accessibility]")
+{
+    AppFixture app;
+    bridge::QmlBridge stub(bridge::make_platform_services());
+    CHECK(stub.text_scale() == 1.0);
+    CHECK_FALSE(stub.reduce_motion());
+
+    Fakes fakes;
+    auto services = fake_services(fakes);
+    fakes.m_Accessibility->m_State = {1.65, true, true};
+    bridge::QmlBridge qml(std::move(services));
+    // The fake was given its state after the services were made but before the bridge read them.
+    CHECK(qml.text_scale() == Catch::Approx(1.65));
+    CHECK(qml.reduce_motion());
+    CHECK(qml.voice_over_running());
+}
+
+TEST_CASE("accessibility.wrapper: one signal for each setting that changed, none for the same value",
+          "[unit][accessibility]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    int scale = 0;
+    int motion = 0;
+    int voice = 0;
+    QObject::connect(&qml, &bridge::QmlBridge::textScaleChanged, &qml, [&] { ++scale; });
+    QObject::connect(&qml, &bridge::QmlBridge::reduceMotionChanged, &qml, [&] { ++motion; });
+    QObject::connect(&qml, &bridge::QmlBridge::voiceOverRunningChanged, &qml, [&] { ++voice; });
+
+    fakes.m_Accessibility->notify(); // nothing changed
+    CHECK(scale + motion + voice == 0);
+
+    fakes.m_Accessibility->m_State.m_TextScale = 2.35;
+    fakes.m_Accessibility->notify();
+    CHECK(scale == 1);
+    CHECK(motion == 0);
+    CHECK(qml.text_scale() == Catch::Approx(2.35));
+
+    fakes.m_Accessibility->notify(); // the same value again
+    CHECK(scale == 1);
+
+    fakes.m_Accessibility->m_State.m_ReduceMotion = true;
+    fakes.m_Accessibility->m_State.m_VoiceOverRunning = true;
+    fakes.m_Accessibility->notify();
+    CHECK(scale == 1);
+    CHECK(motion == 1);
+    CHECK(voice == 1);
+    CHECK(qml.reduce_motion());
+
+    fakes.m_Accessibility->m_State.m_ReduceMotion = false;
+    fakes.m_Accessibility->notify();
+    CHECK(motion == 2);
+    CHECK_FALSE(qml.reduce_motion());
+}
+
+TEST_CASE("accessibility.wrapper: a notice after the bridge is gone is ignored", "[unit][accessibility]")
+{
+    AppFixture app;
+    std::function<void()> late;
+    {
+        Fakes fakes;
+        bridge::QmlBridge qml(fake_services(fakes));
+        late = fakes.m_Accessibility->m_Handler;
+    }
+    REQUIRE(late);
+    late();
+    SUCCEED();
 }
