@@ -65,7 +65,7 @@ apps/app/             ej_app: the Qt Quick application (executable error-journal
                         log_observer.hpp     LogChange and LogObserver
                         open_log_source.hpp  OpenLogSource and OpenLogObserver
                         observer_list.hpp    ObserverList<T>, the observer set the services share
-                        move_only_function.hpp  MoveOnlyFunction, the one alias of the callable type
+                        move_only_function.hpp  MoveOnlyFunction, a stand-in for std::move_only_function (Apple libc++ lacks it)
   tests/viewmodel/    test_*.cpp (`unit`), integration/*.cpp (`integration`), perf/*.cpp (`perf`, built only when the
                       directory has files), support/: the test support (docs/testing.md)
   packaging/ios.cmake    bundle properties, signing and the plugin defaults of Qt's iOS kit

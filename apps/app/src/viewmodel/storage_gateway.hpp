@@ -129,6 +129,7 @@ private:
 
     void run_loop();
     void deliver(Completion completion);
+    void deliver_finished();
 
     StorageFactory m_Factory;
     // The completions are queued to this object, which lives on the thread that made the gateway. Destroying it
@@ -139,6 +140,7 @@ private:
     std::condition_variable m_WorkAvailable;
     std::condition_variable m_Idle;
     std::deque<Job> m_Queue;
+    std::deque<Completion> m_Finished; // jobs done, completions not yet called on the GUI thread
     bool m_Busy = false;
     bool m_Stopping = false;
     std::size_t m_Outstanding = 0;

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "viewmodel/storage_gateway.hpp"
 
+#include "viewmodel/delivery_receiver.hpp"
+
 #include <QCoreApplication>
 #include <QMetaObject>
 #include <QObject>
@@ -31,7 +33,7 @@ private:
 } // namespace
 
 ThreadedStorageGateway::ThreadedStorageGateway(StorageFactory factory)
-    : m_Factory(std::move(factory)), m_Receiver(std::make_unique<QObject>())
+    : m_Factory(std::move(factory)), m_Receiver(std::make_unique<DeliveryReceiver>([this] { deliver_finished(); }))
 {
     m_Thread = std::thread([this] { run_loop(); });
 }
@@ -53,6 +55,7 @@ ThreadedStorageGateway::~ThreadedStorageGateway()
     m_Thread.join();
     // Completions still posted are removed with the receiver and never called.
     m_Receiver.reset();
+    m_Finished.clear();
 }
 
 void ThreadedStorageGateway::post(Work work, Completion completion)
@@ -145,22 +148,39 @@ void ThreadedStorageGateway::run_loop()
 
 void ThreadedStorageGateway::deliver(Completion completion)
 {
-    // `this` is safe to capture: the receiver, and with it every call posted to it, is gone before the gateway is.
-    QMetaObject::invokeMethod(
-        m_Receiver.get(),
-        [this, shared = std::make_shared<Completion>(std::move(completion))]
+    {
+        const std::lock_guard lock(m_Mutex);
+        m_Finished.push_back(std::move(completion));
+    }
+    // By name and without an argument: the event is read by Qt alone. What the job wrote reaches the GUI thread through
+    // the queue above, under the mutex.
+    QMetaObject::invokeMethod(m_Receiver.get(), "deliver", Qt::QueuedConnection);
+}
+
+void ThreadedStorageGateway::deliver_finished()
+{
+    while (true)
+    {
+        Completion completion;
         {
-            if (*shared)
+            const std::lock_guard lock(m_Mutex);
+            if (m_Finished.empty())
             {
-                (*shared)();
+                return;
             }
-            {
-                const std::lock_guard lock(m_Mutex);
-                --m_Outstanding;
-            }
-            m_Idle.notify_all();
-        },
-        Qt::QueuedConnection);
+            completion = std::move(m_Finished.front());
+            m_Finished.pop_front();
+        }
+        if (completion)
+        {
+            completion();
+        }
+        {
+            const std::lock_guard lock(m_Mutex);
+            --m_Outstanding;
+        }
+        m_Idle.notify_all();
+    }
 }
 
 } // namespace ej::viewmodel
