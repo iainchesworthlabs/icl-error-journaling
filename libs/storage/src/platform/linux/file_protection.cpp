@@ -4,9 +4,29 @@
 namespace ej::platform
 {
 
-Result<void, StorageError> apply_file_protection(const std::filesystem::path&)
+namespace
 {
-    return {};  // nothing to do on a desktop
+
+class NoFileProtection final : public FileProtection
+{
+public:
+    Result<void, StorageError> apply(const std::filesystem::path&, ProtectionClass) override
+    {
+        return {};  // nothing to do here
+    }
+
+    Result<ProtectionClass, StorageError> read_back(const std::filesystem::path&) override
+    {
+        return ProtectionClass::UNSUPPORTED;
+    }
+};
+
+}  // namespace
+
+FileProtection& system_file_protection()
+{
+    static NoFileProtection instance;
+    return instance;
 }
 
 }  // namespace ej::platform

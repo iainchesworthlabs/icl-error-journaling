@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "error_journaling/accessibility_settings.hpp"
 #include "error_journaling/haptic_policy.hpp"
+#include "error_journaling/launch_tracker.hpp"
+#include "error_journaling/perf_marks.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/share_presenter.hpp"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <QCoreApplication>
 #include <QList>
@@ -76,10 +81,95 @@ public:
     }
 };
 
+// Records the marks in order, as text, against a clock the test moves.
+class FakePerfMarks final : public bridge::PerfMarks
+{
+public:
+    std::vector<std::string> m_Calls;
+    std::vector<std::string> m_Lines;
+    double m_SinceStart = 0;
+    double m_Uptime = 100000;
+
+    void begin(bridge::Mark mark) override
+    {
+        m_Calls.push_back("begin " + name(mark));
+    }
+    void end(bridge::Mark mark) override
+    {
+        m_Calls.push_back("end " + name(mark));
+    }
+    void event(bridge::Mark mark, double ms) override
+    {
+        m_Calls.push_back("event " + name(mark) + " " + std::to_string(static_cast<long long>(ms)));
+    }
+    double ms_since_process_start() override
+    {
+        return m_SinceStart;
+    }
+    double uptime_ms() override
+    {
+        return m_Uptime;
+    }
+    void log(std::string_view line) override
+    {
+        m_Lines.emplace_back(line);
+    }
+
+    static std::string name(bridge::Mark mark)
+    {
+        switch (mark)
+        {
+        case bridge::Mark::PROCESS_START:
+            return "process";
+        case bridge::Mark::STORAGE_READY:
+            return "storage";
+        case bridge::Mark::QML_LOADED:
+            return "qml";
+        case bridge::Mark::FIRST_FRAME:
+            return "frame";
+        case bridge::Mark::BOARD_USABLE:
+            return "usable";
+        case bridge::Mark::TAP_TO_HAPTIC:
+            return "tap_to_haptic";
+        case bridge::Mark::TOUCH_AGE:
+            return "touch_age";
+        case bridge::Mark::TAP_TO_COMMIT:
+            return "tap_to_commit";
+        }
+        return "?";
+    }
+};
+
+// Settings the test changes, and a handler it can call as the system would.
+class FakeAccessibility final : public bridge::AccessibilitySettings
+{
+public:
+    bridge::AccessibilityState m_State;
+    std::function<void()> m_Handler;
+
+    [[nodiscard]] bridge::AccessibilityState read() const override
+    {
+        return m_State;
+    }
+    void set_change_handler(std::function<void()> changed) override
+    {
+        m_Handler = std::move(changed);
+    }
+    void notify() const
+    {
+        if (m_Handler)
+        {
+            m_Handler();
+        }
+    }
+};
+
 struct Fakes
 {
+    FakeAccessibility* m_Accessibility = nullptr;
     FakeShare* m_Share = nullptr;
     FakeHaptics* m_Haptics = nullptr;
+    FakePerfMarks* m_Marks = nullptr;
 };
 
 bridge::PlatformServices fake_services(Fakes& fakes)
@@ -89,6 +179,12 @@ bridge::PlatformServices fake_services(Fakes& fakes)
     auto haptics = std::make_unique<FakeHaptics>();
     fakes.m_Share = share.get();
     fakes.m_Haptics = haptics.get();
+    auto marks = std::make_unique<FakePerfMarks>();
+    fakes.m_Marks = marks.get();
+    services.m_PerfMarks = std::move(marks);
+    auto accessibility = std::make_unique<FakeAccessibility>();
+    fakes.m_Accessibility = accessibility.get();
+    services.m_Accessibility = std::move(accessibility);
     services.m_Share = std::move(share);
     services.m_Haptics = std::move(haptics);
     return services;
@@ -552,4 +648,229 @@ TEST_CASE("haptics.policy: the keep-alive is off by default", "[unit][haptics]")
 {
     CHECK_FALSE(bridge::HAPTIC_KEEPALIVE);
     CHECK_FALSE(bridge::HapticPolicyConfig{}.m_KeepAlive);
+}
+
+TEST_CASE("perf_marks.stub: the desktop version never throws and time does not go back", "[unit][perf]")
+{
+    const auto marks = bridge::make_perf_marks();
+    marks->begin(bridge::Mark::TAP_TO_HAPTIC);
+    marks->end(bridge::Mark::TAP_TO_HAPTIC);
+    marks->event(bridge::Mark::BOARD_USABLE, 1.5);
+    marks->log("launch: usable at 1 ms");
+    const double first = marks->ms_since_process_start();
+    const double second = marks->ms_since_process_start();
+    CHECK(first >= 0);
+    CHECK(second >= first);
+    CHECK(marks->uptime_ms() > 0);
+}
+
+TEST_CASE("launch_tracker.order: the board is usable once, after storage, QML, the board and a frame", "[unit][perf]")
+{
+    FakePerfMarks marks;
+    bridge::LaunchTracker tracker(marks);
+
+    marks.m_SinceStart = 20;
+    tracker.process_started();
+    marks.m_SinceStart = 140;
+    tracker.storage_ready();
+    marks.m_SinceStart = 380;
+    tracker.qml_loaded();
+
+    // A frame before the board is enabled is the first frame and nothing more.
+    marks.m_SinceStart = 610;
+    tracker.frame_swapped();
+    CHECK_FALSE(tracker.usable());
+    CHECK(marks.m_Lines.empty());
+
+    marks.m_SinceStart = 700;
+    tracker.board_enabled();
+    CHECK_FALSE(tracker.usable()); // the next frame, not this call
+
+    marks.m_SinceStart = 812;
+    tracker.frame_swapped();
+    CHECK(tracker.usable());
+    marks.m_SinceStart = 900;
+    tracker.frame_swapped();
+    tracker.frame_swapped();
+
+    const std::vector<std::string> expected{"event process 20", "event storage 140", "event qml 380", "event frame 610",
+                                            "event usable 812"};
+    CHECK(marks.m_Calls == expected);
+    REQUIRE(marks.m_Lines.size() == 1);
+    CHECK(marks.m_Lines[0] == "launch: usable at 812 ms (storage 140, qml 380, first frame 610)");
+}
+
+TEST_CASE("launch_tracker.order: no frame is usable before storage is ready, and repeats do nothing", "[unit][perf]")
+{
+    FakePerfMarks marks;
+    bridge::LaunchTracker tracker(marks);
+    tracker.qml_loaded();
+    tracker.board_enabled();
+    tracker.frame_swapped();
+    CHECK_FALSE(tracker.usable());
+
+    marks.m_SinceStart = 50;
+    tracker.storage_ready();
+    tracker.storage_ready(); // once
+    CHECK_FALSE(tracker.usable());
+    tracker.frame_swapped();
+    CHECK(tracker.usable());
+    CHECK(marks.m_Lines.size() == 1);
+}
+
+TEST_CASE("perf_marks.wrapper: the impact is bracketed by the interval and carries the touch age", "[unit][perf]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    fakes.m_Marks->m_Uptime = 5000;
+
+    qml.hapticImpact(4955.0);
+    const std::vector<std::string> expected{"event touch_age 45", "begin tap_to_haptic", "end tap_to_haptic"};
+    CHECK(fakes.m_Marks->m_Calls == expected);
+    CHECK(fakes.m_Haptics->m_Fired.size() == 1);
+}
+
+TEST_CASE("perf_marks.wrapper: no timestamp, or one on another time base, gives no touch age", "[unit][perf]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    fakes.m_Marks->m_Uptime = 5000;
+    const std::vector<std::string> plain{"begin tap_to_haptic", "end tap_to_haptic"};
+
+    qml.hapticImpact();
+    CHECK(fakes.m_Marks->m_Calls == plain);
+
+    fakes.m_Marks->m_Calls.clear();
+    qml.hapticImpact(9'000'000.0); // in the future of the uptime clock
+    CHECK(fakes.m_Marks->m_Calls == plain);
+
+    fakes.m_Marks->m_Calls.clear();
+    fakes.m_Marks->m_Uptime = 5'000'000.0;
+    qml.hapticImpact(100.0); // hours old: another time base
+    CHECK(fakes.m_Marks->m_Calls == plain);
+}
+
+TEST_CASE("accessibility.table: every category has a scale, rising with each step", "[unit][accessibility]")
+{
+    const std::vector<std::string> categories{
+        "UICTContentSizeCategoryXS",
+        "UICTContentSizeCategoryS",
+        "UICTContentSizeCategoryM",
+        "UICTContentSizeCategoryL",
+        "UICTContentSizeCategoryXL",
+        "UICTContentSizeCategoryXXL",
+        "UICTContentSizeCategoryXXXL",
+        "UICTContentSizeCategoryAccessibilityM",
+        "UICTContentSizeCategoryAccessibilityL",
+        "UICTContentSizeCategoryAccessibilityXL",
+        "UICTContentSizeCategoryAccessibilityXXL",
+        "UICTContentSizeCategoryAccessibilityXXXL",
+    };
+    double previous = 0;
+    for (const std::string& category : categories)
+    {
+        const double scale = bridge::text_scale_for_category(category);
+        INFO(category);
+        CHECK(scale > previous);
+        previous = scale;
+    }
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryL") == 1.0);
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryXS") == Catch::Approx(0.82).margin(0.01));
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryAccessibilityXXXL") ==
+          Catch::Approx(3.1).margin(0.05));
+    // The accessibility sizes are all above 1.6, and the standard sizes all below it.
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryXXXL") < 1.4);
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryAccessibilityM") > 1.6);
+}
+
+TEST_CASE("accessibility.table: an unknown or empty name is the default size", "[unit][accessibility]")
+{
+    CHECK(bridge::text_scale_for_category("") == 1.0);
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryUnspecified") == 1.0);
+    CHECK(bridge::text_scale_for_category("nonsense") == 1.0);
+}
+
+TEST_CASE("accessibility.stub: the desktop stub is the default size with nothing on and never changes",
+          "[unit][accessibility]")
+{
+    const auto settings = bridge::make_accessibility_settings();
+    const bridge::AccessibilityState state = settings->read();
+    CHECK(state.m_TextScale == 1.0);
+    CHECK_FALSE(state.m_ReduceMotion);
+    CHECK_FALSE(state.m_VoiceOverRunning);
+    settings->set_change_handler([] {});
+    settings->set_change_handler({});
+    CHECK(settings->read() == state);
+}
+
+TEST_CASE("accessibility.wrapper: QML sees the settings at start and the stub's defaults", "[unit][accessibility]")
+{
+    AppFixture app;
+    bridge::QmlBridge stub(bridge::make_platform_services());
+    CHECK(stub.text_scale() == 1.0);
+    CHECK_FALSE(stub.reduce_motion());
+
+    Fakes fakes;
+    auto services = fake_services(fakes);
+    fakes.m_Accessibility->m_State = {1.65, true, true};
+    bridge::QmlBridge qml(std::move(services));
+    // The fake was given its state after the services were made but before the bridge read them.
+    CHECK(qml.text_scale() == Catch::Approx(1.65));
+    CHECK(qml.reduce_motion());
+    CHECK(qml.voice_over_running());
+}
+
+TEST_CASE("accessibility.wrapper: one signal for each setting that changed, none for the same value",
+          "[unit][accessibility]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    int scale = 0;
+    int motion = 0;
+    int voice = 0;
+    QObject::connect(&qml, &bridge::QmlBridge::textScaleChanged, &qml, [&] { ++scale; });
+    QObject::connect(&qml, &bridge::QmlBridge::reduceMotionChanged, &qml, [&] { ++motion; });
+    QObject::connect(&qml, &bridge::QmlBridge::voiceOverRunningChanged, &qml, [&] { ++voice; });
+
+    fakes.m_Accessibility->notify(); // nothing changed
+    CHECK(scale + motion + voice == 0);
+
+    fakes.m_Accessibility->m_State.m_TextScale = 2.35;
+    fakes.m_Accessibility->notify();
+    CHECK(scale == 1);
+    CHECK(motion == 0);
+    CHECK(qml.text_scale() == Catch::Approx(2.35));
+
+    fakes.m_Accessibility->notify(); // the same value again
+    CHECK(scale == 1);
+
+    fakes.m_Accessibility->m_State.m_ReduceMotion = true;
+    fakes.m_Accessibility->m_State.m_VoiceOverRunning = true;
+    fakes.m_Accessibility->notify();
+    CHECK(scale == 1);
+    CHECK(motion == 1);
+    CHECK(voice == 1);
+    CHECK(qml.reduce_motion());
+
+    fakes.m_Accessibility->m_State.m_ReduceMotion = false;
+    fakes.m_Accessibility->notify();
+    CHECK(motion == 2);
+    CHECK_FALSE(qml.reduce_motion());
+}
+
+TEST_CASE("accessibility.wrapper: a notice after the bridge is gone is ignored", "[unit][accessibility]")
+{
+    AppFixture app;
+    std::function<void()> late;
+    {
+        Fakes fakes;
+        bridge::QmlBridge qml(fake_services(fakes));
+        late = fakes.m_Accessibility->m_Handler;
+    }
+    REQUIRE(late);
+    late();
+    SUCCEED();
 }

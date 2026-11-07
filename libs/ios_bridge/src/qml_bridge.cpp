@@ -10,6 +10,14 @@
 namespace ej::bridge
 {
 
+namespace
+{
+
+/// A touch older than this when the press handler runs is not a touch age but a timestamp on another time base.
+constexpr double MAX_TOUCH_AGE_MS = 10000.0;
+
+} // namespace
+
 QmlBridge::QmlBridge(PlatformServices services, HapticPolicyConfig haptics, QObject* parent)
     : QObject(parent), m_Services(std::move(services)),
       m_HapticPolicy(
@@ -22,6 +30,17 @@ QmlBridge::QmlBridge(PlatformServices services, HapticPolicyConfig haptics, QObj
           haptics),
       m_Presenter(*m_Services.m_Share)
 {
+    // The settings as they are now, and a re-read on every notice. The handler is guarded, so a notice after the bridge
+    // is gone does nothing (the settings object is destroyed with the services, and an iOS one removes its observers).
+    m_Accessibility = m_Services.m_Accessibility->read();
+    m_Services.m_Accessibility->set_change_handler(
+        [self = QPointer<QmlBridge>(this)]
+        {
+            if (self)
+            {
+                self->refresh_accessibility();
+            }
+        });
     // The keep-alive is off unless the device pass asks for it (HAPTIC_KEEPALIVE); then one timer ticks the policy.
     if (m_HapticPolicy.keep_alive_enabled())
     {
@@ -41,6 +60,40 @@ bool QmlBridge::share_available() const noexcept
 bool QmlBridge::sharing() const noexcept
 {
     return m_Sharing;
+}
+
+double QmlBridge::text_scale() const noexcept
+{
+    return m_Accessibility.m_TextScale;
+}
+
+bool QmlBridge::reduce_motion() const noexcept
+{
+    return m_Accessibility.m_ReduceMotion;
+}
+
+bool QmlBridge::voice_over_running() const noexcept
+{
+    return m_Accessibility.m_VoiceOverRunning;
+}
+
+void QmlBridge::refresh_accessibility()
+{
+    const AccessibilityState now = m_Services.m_Accessibility->read();
+    const AccessibilityState before = m_Accessibility;
+    m_Accessibility = now;
+    if (!qFuzzyCompare(now.m_TextScale, before.m_TextScale))
+    {
+        emit textScaleChanged();
+    }
+    if (now.m_ReduceMotion != before.m_ReduceMotion)
+    {
+        emit reduceMotionChanged();
+    }
+    if (now.m_VoiceOverRunning != before.m_VoiceOverRunning)
+    {
+        emit voiceOverRunningChanged();
+    }
 }
 
 void QmlBridge::shareText(const QString& text)
@@ -123,10 +176,24 @@ void QmlBridge::setApplicationActive(bool active)
     m_HapticPolicy.set_application_active(active);
 }
 
-void QmlBridge::hapticImpact(double /*pressTimestamp*/)
+void QmlBridge::hapticImpact(double pressTimestamp)
 {
-    // Nothing but the fire: the engine prepares itself afterwards (haptics.mm), so no prepare sits in this path.
+    PerfMarks& marks = *m_Services.m_PerfMarks;
+    if (pressTimestamp > 0)
+    {
+        // How old the touch already is. A timestamp on another time base (assumption A5 not holding) gives a nonsense
+        // age, which is dropped here rather than recorded.
+        const double age = marks.uptime_ms() - pressTimestamp;
+        if (age >= 0 && age < MAX_TOUCH_AGE_MS)
+        {
+            marks.event(Mark::TOUCH_AGE, age);
+        }
+    }
+    // Nothing but the fire between the marks: the engine prepares itself afterwards (haptics.mm), so no prepare sits in
+    // this path.
+    marks.begin(Mark::TAP_TO_HAPTIC);
     m_Services.m_Haptics->fire(HapticKind::IMPACT);
+    marks.end(Mark::TAP_TO_HAPTIC);
 }
 
 void QmlBridge::hapticSuccess()

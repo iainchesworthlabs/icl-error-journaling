@@ -8,16 +8,50 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 
 | Event | Jobs |
 |---|---|
-| Draft pull request | Policy, Plan, workflow analysis, dependency scan |
+| Draft pull request | Policy, Plan, Reuse, workflow analysis, dependency scan |
 | Ready pull request | Above, plus Linux release and ASan/UBSan builds and coverage |
-| Merge queue, push to `develop` | Above, plus Linux debug and TSan, the macOS desktop builds (debug and release, with the tests; Xcode 27 as a leg that cannot fail the run), and the kill harness at 100 random kills on four legs (below) |
-| Change to what the iOS build reads (a path filter), or a manual run | iOS compile check for a device (`ios-build.yml`, not required) |
-| Nightly | CodeQL; the kill harness at 1,000 random kills (`kill-nightly.yml`) |
+| Merge queue | Above, plus Linux debug and TSan, and the kill harness at 100 random kills on four legs (below). The macOS builds run too when the entry touches Apple paths or its pull request carries `deep` (below) |
+| Push to `develop` | Everything: the groups above, the macOS desktop builds (debug and release, with the tests), Xcode 27 as a leg that cannot fail the run, and the kill harness. Then Report red and Mark green |
+| Change to what the iOS build reads, or a manual run | iOS compile check for a device (`ios-build.yml`, not required). A pull request runs it only for Apple paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
+| Nightly | CodeQL; the kill harness at 1,000 random kills (`kill-nightly.yml`); the weekly CI metrics (`ci-metrics.yml`, Mondays 06:00 UTC) |
 | Manual run of the Stage 2 exit gate | The kill harness at 10,000 random kills on Linux and macOS (`kill-gate.yml`) |
 | Tag `v*` | Release: the source archive, and the signed iOS build for TestFlight |
 
 The Plan job reads `.github/ci/plan.json`. A change to documentation only builds nothing. A path
 the plan does not recognise builds everything.
+
+## Where the macOS builds run, and CI reuse
+
+The owner's decisions of 2026-11-07 (`docs/ci-many-agents.md` in `icl-common-infra`, section 9):
+
+- **macOS and iOS are gated after the merge.** The `build-macos` group (debug and release) runs on the push to `develop` and on a
+  manual run, not on a pull request. A queue entry runs it too when the **Place the macOS groups** step of the Plan job finds
+  that the entry promotes it: a path in `groups.build-macos.promote` of `.github/ci/plan.json` (`platform/macos`,
+  `platform/ios`, any `.mm` file, `libs/ios_bridge`, `apps/app/packaging/ios`), or the `deep` label on the pull request
+  (read from the API; if that fails, the macOS builds run). A change that breaks only macOS can therefore land, and the push
+  run finds it with the merge named. `kill-queue` still has a macOS leg in the queue (the Stage 2 design); that is a separate
+  decision.
+- **A red `develop` is reported, not blocked.** After a push run, **Report red** opens or updates one `main-red: <group>`
+  issue per failed group, naming the pull requests merged since `refs/ci/green/<group>`, and comments once on each. **Mark
+  green** then moves `refs/ci/green/<group>` forward for each group that passed. Neither reverts anything or fails the run.
+  Those refs live outside `refs/heads` and `refs/tags`; a failure to create one is a warning.
+- **Reuse is in shadow mode.** The **Reuse** job (`find-proof`) looks, in every run, for an earlier run of `ci.yml`
+  (a pull request run, a manual run, or an earlier queue entry of the same pull request) whose groups passed on a tree that
+  differs only in paths the group does not read. It never fails. With the repository variable `CI_REUSE_MODE` unset (the
+  default, `shadow`) it writes what it **would** reuse to the job summary (`Reuse (shadow)`), the `reused` output stays
+  empty, and every group still runs. `CI Status` is given `reused` but, empty, treats every group as required. No reuse
+  for fork pull requests. Shadow mode runs for 7 days or 50 queue entries, whichever is later, before the variable is set to `on`.
+- **Proofs.** The last steps of `CI Status` upload the `ci-proof` artifact (14 days): which groups passed and the object ids
+  of the barrier paths at the tested commit. A pull request run's tested commit is only known from it.
+
+The groups and the paths they do not read are the `groups` table of `.github/ci/plan.json`; `reuse.barrier` lists the paths
+that refuse reuse whenever they differ (workflows, actions, `.github/ci`, the toolchain pins, CMake, the presets, `vcpkg`
+files, `tools/ci`, `tools/checks`, `tools/sanitizers`, the coverage floors). A new job name or leg in a group changes `jobs`
+there. `ci-metrics.yml` writes the weekly numbers (runner-minutes by event and OS, queue time, runner wait, the age of each
+green ref) to its job summary.
+
+To try a change on macOS before it is queued, run `gh workflow run ci.yml --ref <branch>` (every group, once) or, for the
+iOS compile, `gh workflow run ios-build.yml --ref <branch>`; label the pull request `deep` to have the queue run macOS.
 
 ## The kill harness tiers
 
@@ -60,7 +94,7 @@ workflow runs from the default branch; its result and seed are recorded in `docs
 
 Two jobs defined in `ci.yml` are the required checks: **CI Status** and **Scan dependency diff**.
 CI Status fails when any job failed or was cancelled, and when a job the plan asked for was
-skipped (the kill harness's `kill-queue` is one of them in the merge queue). Do not require checks from the called workflows by name; their names carry the caller's
+skipped (the kill harness's `kill-queue` is one of them in the merge queue; `build-macos` is one when the plan placed it). Do not require checks from the called workflows by name; their names carry the caller's
 job name as a prefix.
 
 `ios-build.yml` is a separate workflow because a macOS runner is billed at a multiple and a required check that a path

@@ -18,6 +18,12 @@ set(ERROR_JOURNALING_IOS_BUILD_NUMBER "" CACHE STRING "Build number of the iOS a
 set(ERROR_JOURNALING_IOS_SIGNING_TEAM "" CACHE STRING "Apple team ID the iOS application is signed for (empty: an unsigned build)")
 set(ERROR_JOURNALING_IOS_SIGNING_PROFILE "" CACHE STRING "Name of the provisioning profile the iOS application is signed with (empty: an unsigned build)")
 
+# The identity the application is signed with. The release workflow signs with the distribution certificate, which is the
+# default. Instruments cannot profile a distribution-signed build (it lacks get-task-allow), so for the device
+# measurements the owner configures "Apple Development" with a development profile (docs/building.md, "Profiling on a
+# device").
+set(ERROR_JOURNALING_IOS_SIGNING_IDENTITY "Apple Distribution" CACHE STRING "Code signing identity of a signed iOS build")
+
 # The iOS kit's plugin targets that carry no QT_DEFAULT_PLUGIN property: Qt's plugin auto-linking reads it as an operand
 # of $<AND:...>, and an empty value is a generate-time error ("Parameters to $<AND> must resolve to either '0' or '1'").
 # Only a plugin with no value is given one, with what the desktop kits say: the ones the application needs are linked,
@@ -72,6 +78,9 @@ function(ej_configure_ios_app target)
         MACOSX_BUNDLE_COPYRIGHT "Copyright (C) Iain Chesworth Labs contributors"
         # iPhone and iPad.
         XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
+        # The default data protection class of the application's files. Xcode applies it when it signs; an unsigned build
+        # only carries the reference, and verify_app.sh --signed checks the signature's entitlements.
+        XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS "${ERROR_JOURNALING_PACKAGING_DIR}/ios/error-journaling.entitlements"
         # The icon set Info.plist.in's CFBundleIconName names; without this Xcode has nothing to compile that slot from and
         # the home screen shows a blank icon.
         XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon")
@@ -87,7 +96,7 @@ function(ej_configure_ios_app target)
             XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "YES"
             XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES"
             XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Manual"
-            XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Distribution"
+            XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "${ERROR_JOURNALING_IOS_SIGNING_IDENTITY}"
             XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${ERROR_JOURNALING_IOS_SIGNING_TEAM}"
             XCODE_ATTRIBUTE_PROVISIONING_PROFILE_SPECIFIER "${ERROR_JOURNALING_IOS_SIGNING_PROFILE}")
     elseif(ERROR_JOURNALING_IOS_SIGNING_TEAM OR ERROR_JOURNALING_IOS_SIGNING_PROFILE)

@@ -23,6 +23,7 @@ add_executable(ej_storage_integration_tests
     test_file_journal.cpp
     test_migrator.cpp
     test_platform_files.cpp
+    test_protect.cpp
     test_recovery.cpp
     test_sqlite_repository.cpp
     test_storage_location.cpp)

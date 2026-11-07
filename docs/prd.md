@@ -1,10 +1,10 @@
-# ICL Error Journaling – PRD v1
+# CS Bingo Board – PRD v1
 
 7 Nov 2026 · Iain Chesworth
 
 ## Overview
 
-ICL Error Journaling (shown on the iPhone as Error Journaling) is an iPhone app that lets a facilitator log a timestamped robot error in one tap, keep a running journal of the session, and post the day's log to Slack at the end of the day. It replaces ad-hoc notes typed during sessions, where timings are lost and errors go uncounted.
+CS Bingo Board is an iPhone app that lets a facilitator log a timestamped robot error in one tap, keep a running journal of the session, and post the day's log to Slack at the end of the day. It replaces ad-hoc notes typed during sessions, where timings are lost and errors go uncounted.
 
 The app is an Iain Chesworth Labs product built in C++23 with Qt/QML. v1 targets the iPhone 17 and is distributed through TestFlight. An iPad layout is a planned growth path and is out of scope for v1.
 
@@ -284,7 +284,7 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 **Open items**
 
-- [ ] App name and repository name: decided – ICL Error Journaling, home screen name Error Journaling, repository icl-error-journaling.
+- [x] App name and repository name: decided – CS Bingo Board on the home screen, in the App Store and in every user-visible text (owner, 8 Nov 2026, replacing ICL Error Journaling); repository icl-error-journaling and bundle identifier com.iainchesworthlabs.errorjournaling unchanged.
 
 - [ ] Dark mode and motion, finalised from the approved light-mode screens. The facilitator's palette of plum and deep blue, and the 11 tile colours, are approved.
 

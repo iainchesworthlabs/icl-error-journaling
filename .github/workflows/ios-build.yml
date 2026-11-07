@@ -4,21 +4,22 @@ name: iOS build
 # .app Xcode made (apps/app/packaging/ios/verify_app.sh). It needs no Apple account and no secret; a signed build is the
 # release workflow's, with the owner's account.
 #
-# Not a required check, and not on the merge queue: it runs only when something the iOS build reads changes (a required
+# Not a required check, and not on the merge queue: it runs on a pull request only when an Apple path changes (a required
 # check that a path filter keeps from running never reports, which would hold every unrelated pull request), and a macOS
 # runner is billed at a multiple. Dispatch it by hand to run it anywhere:
 #   gh workflow run ios-build.yml --ref <branch>
 
 on:
+  # A pull request runs it only when it touches Apple paths; every other change is checked on the push to develop
+  # (decision 1 of icl-common-infra docs/ci-many-agents.md, section 9). Dispatch it on a branch to run it earlier.
   pull_request:
     branches: [main, develop]
     paths:
-      - "libs/**"
-      - "apps/**"
-      - "cmake/**"
-      - "CMakeLists.txt"
+      - "libs/*/src/platform/ios/**"
+      - "libs/ios_bridge/**"
+      - "**/*.mm"
+      - "apps/app/packaging/**"
       - "CMakePresets.json"
-      - "vcpkg.json"
       - ".github/workflows/ios-build.yml"
       - ".github/toolchain-versions.json"
   push:
@@ -126,4 +127,5 @@ jobs:
           set -euo pipefail
           app="$(find build/ios-release -name error-journaling.app -type d | head -n 1)"
           [ -n "$app" ] || { echo "::error::no error-journaling.app under build/ios-release"; exit 1; }
+          plutil -lint apps/app/packaging/ios/error-journaling.entitlements
           apps/app/packaging/ios/verify_app.sh "$app" --bundle-id "$BUNDLE_ID" --executable error-journaling

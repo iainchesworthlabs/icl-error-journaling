@@ -1,0 +1,1 @@
+**Launch and tap timings can be read on a device.** The app marks when the board is usable and how long a tap takes to reach the haptic, for Instruments, and prints one `launch:` line with timings only to the system log. A development-signed build can be made for profiling, and a desktop tool makes a year of fictional data to test it with. Not yet run on a device.

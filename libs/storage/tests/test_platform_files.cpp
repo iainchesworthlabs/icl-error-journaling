@@ -99,7 +99,8 @@ TEST_CASE("The directory sync works on a folder and reports one that is not ther
 TEST_CASE("The file protection is a no-op on a desktop and succeeds", "[platform]")
 {
     TempDir dir;
-    CHECK(platform::apply_file_protection(dir.path()).has_value());
+    const auto wanted = platform::ProtectionClass::COMPLETE_UNTIL_FIRST_USER_AUTHENTICATION;
+    CHECK(platform::system_file_protection().apply(dir.path(), wanted).has_value());
 }
 
 TEST_CASE("The errno mapping tells a full disk and a refusal from other failures", "[platform]")

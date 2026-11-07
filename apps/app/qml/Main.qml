@@ -9,6 +9,17 @@ Window {
     // Given by main.cpp: the version of the core library, and which bridge and storage are linked.
     required property string versionText
     required property string platformText
+    // The models, from AppRoot (Stage 3, 3.11). The placeholder below does not use them yet; Stage 4 replaces this window
+    // with the screens that bind to them.
+    required property QtObject session
+    required property QtObject undo
+    required property QtObject board
+    required property QtObject picker
+    required property QtObject timeline
+    required property QtObject history
+    required property QtObject day
+    required property QtObject settings
+    required property QtObject share
     // The bridge to what Qt does not cover on an iPhone (the share sheet, haptics); see docs/plan/spikes.md.
     required property QtObject bridge
     // The fixed fictional text the share test sends.
@@ -17,7 +28,7 @@ Window {
     width: 390
     height: 844
     visible: true
-    title: qsTr("Error Journaling")
+    title: qsTr("CS Bingo Board")
     color: "#f4f1ea"
 
     Item {
@@ -59,7 +70,7 @@ Window {
                     objectName: "impactTile"
                     label: qsTr("Impact on press")
                     tileColour: "#d9c7e8"
-                    onPressedDown: root.bridge.hapticImpact()
+                    onPressedDown: timestamp => root.bridge.hapticImpact(timestamp)
                 }
 
                 SpikeTile {
@@ -119,13 +130,14 @@ Window {
         required property string label
         property color tileColour: "#e0e0e0"
 
-        signal pressedDown
+        // The touch's press timestamp (milliseconds), for the timing marks.
+        signal pressedDown(real timestamp)
         signal tapped
 
         width: parent ? parent.width : 0
         height: 88
         radius: 12
-        color: area.pressed ? Qt.darker(tileColour, 1.15) : tileColour
+        color: handler.pressed ? Qt.darker(tileColour, 1.15) : tileColour
 
         Text {
             anchors.centerIn: parent
@@ -134,13 +146,15 @@ Window {
             text: tile.label
         }
 
-        MouseArea {
-            id: area
+        TapHandler {
+            id: handler
 
-            anchors.fill: parent
             // The impact fires on touch-down, never on release (spikes.md).
-            onPressed: tile.pressedDown()
-            onClicked: tile.tapped()
+            onPressedChanged: {
+                if (pressed)
+                    tile.pressedDown(point.pressTimestamp)
+            }
+            onTapped: tile.tapped()
         }
     }
 }

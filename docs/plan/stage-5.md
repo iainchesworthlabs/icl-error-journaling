@@ -251,7 +251,7 @@ picker in Settings. **PRD:** PRF-08, PRF-09, NFR-10.
 | identifier | `com.iainchesworthlabs.errorjournaling.config` (the bundle identifier plus `.config`) |
 | conforms to | `public.json` |
 | filename extension | `ejconfig` |
-| description | Error Journaling setup |
+| description | CS Bingo Board setup |
 
 and one document type that names it, role Viewer, handler rank Owner. A dedicated extension means the application is the
 only thing the phone offers for the file, instead of appearing in the "Open in" list for every JSON file. It also means
@@ -300,7 +300,7 @@ std::unique_ptr<DocumentPicker> make_document_picker();   // ios/document_picker
 - Whether an import replaces the whole setup, and the confirmation sheet before it, are Stage 3 and Stage 4 (the PRD says
   "imported", and the earlier plans treat it as whole-file). Stage 5 delivers the file and the errors.
 - **Export** (the other direction of PRF-08) is the share sheet with a file item ([Share sheet](#share-sheet)), writing
-  `Error Journaling setup.ejconfig`. It is not in the Stage 5 table, but PRF-08 needs it and it costs one call; it is
+  `cs-bingo-board-setup.ejconfig`. It is not in the Stage 5 table, but PRF-08 needs it and it costs one call; it is
   included in Stage 5 (decision 9).
 
 The repository side: `.gitignore` and `tools/ci/check_config_files.py` gain `*.ejconfig`, so a real setup file renamed for
@@ -599,7 +599,7 @@ template: no comment in it may contain a dollar sign followed by a brace, or an 
 
 | Change | Key | Value | Package |
 |---|---|---|---|
-| Exported type | `UTExportedTypeDeclarations` | identifier `com.iainchesworthlabs.errorjournaling.config`, conforms to `public.json`, extension `ejconfig`, description "Error Journaling setup" | 5.5 |
+| Exported type | `UTExportedTypeDeclarations` | identifier `com.iainchesworthlabs.errorjournaling.config`, conforms to `public.json`, extension `ejconfig`, description "CS Bingo Board setup" | 5.5 |
 | Document types | `CFBundleDocumentTypes` | (1) the exported type, role Viewer, `LSHandlerRank` Owner; (2) `public.json`, role Viewer, `LSHandlerRank` Alternate (open question 3) | 5.5 |
 | Copy, do not open in place | `LSSupportsOpeningDocumentsInPlace` | `false` | 5.5 |
 | Launch screen | `UILaunchScreen` | `UIColorName` `LaunchBackground`, `UIImageName` `LaunchBoard`, `UIImageRespectsSafeAreaInsets` `false` | 5.8 |
@@ -663,7 +663,7 @@ home-screen icon animation and the time from the finger to the process starting 
 1. Install B1 with D3.
 2. Restart the phone. Unlock it. Wait 60 seconds. Open nothing.
 3. On the Mac: Xcode > Open Developer Tool > Instruments. Template **App Launch**. Choose the iPhone 17 and the app
-   (Error Journaling). Add the **Points of Interest** instrument (the + button, Library). The app's marks appear in it.
+   (CS Bingo Board). Add the **Points of Interest** instrument (the + button, Library). The app's marks appear in it.
 4. Press Record. Instruments launches the app. When the board is up, wait 3 seconds and stop.
 5. Read it: **start** = the beginning of the "Process Creation" interval in the launch (lifecycle) track; **end** = the
    `BOARD_USABLE` event in Points of Interest (select the track and use the events list; the Start column is time from
@@ -723,7 +723,7 @@ the figure; it is recorded for information.
 | C7 | A fresh install: the first-launch offer to import (PRF-09) | The picker imports the sample |
 | D1 | Console, `protection:` line, after launch and again after tapping a tile and waiting 5 minutes (B1 and B2) | Every file checked, including `-wal` and `-shm`, reads back complete-until-first-user-authentication |
 | D2 | Restart the phone. Leave it locked for 2 minutes. Unlock and open the app within 10 seconds | Opens normally; no recovery message; the entry count is what it was before |
-| D3 | Files app > On My iPhone | No Error Journaling folder (`UIFileSharingEnabled` is not set, so Documents is not exposed) |
+| D3 | Files app > On My iPhone | No CS Bingo Board folder (`UIFileSharingEnabled` is not set, so Documents is not exposed) |
 | L1 | B1 with the lifecycle log on: swipe Home; return; pull Control Center; lock; unlock; open the app switcher | The log shows `inactive`/`suspended`/`active` as expected; record the sequence for each (A2) |
 | L2 | Type a note draft. Within a second press the side button. Press Stop in Xcode. Relaunch. Repeat 5 times | The draft is there every time |
 | L3 | Type a draft, swipe Home, swipe the app away in the switcher, relaunch | The draft is there |
