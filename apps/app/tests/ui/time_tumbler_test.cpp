@@ -10,6 +10,7 @@
 #include <QAccessible>
 #include <QQuickItem>
 #include <QSignalSpy>
+#include <chrono>
 
 using namespace ej::ui;
 using namespace ej::ui::input;
@@ -357,7 +358,7 @@ TEST_CASE("time_tumbler.touch: a drag on a column changes it, and each change is
     const double row = f.rig.geometry(f.minutes).height() / 6;
     // Up by three rows: the minutes go up by three (the column is dragged up to bring later values to the middle).
     f.rig.drag(f.minutes, QPointF(40, row * 3), QPointF(40, 0), 8);
-    play(f.rig, 800);
+    f.rig.advance(std::chrono::milliseconds(800));
     const int after = f.index(f.minutes);
     INFO("minutes " << before << " to " << after);
     CHECK(after != before);
@@ -373,7 +374,8 @@ TEST_CASE("time_tumbler.touch: a drag on a column changes it, and each change is
     CHECK(last == 11 * HOUR + after * MINUTE);
 }
 
-TEST_CASE("time_tumbler.values: the columns are in place at once, with the value in the band and no spin", "[ui][time_tumbler]")
+TEST_CASE("time_tumbler.values: the columns are in place at once, with the value in the band and no spin",
+          "[ui][time_tumbler]")
 {
     Fixture f;
     // No time has been played: the selected rows are already level with the band.
@@ -395,7 +397,8 @@ TEST_CASE("time_tumbler.values: the columns are in place at once, with the value
         for (const Node& node : f.rig.tree(column))
         {
             if (node.m_TypeName.startsWith(QStringLiteral("QQuickText")) &&
-                node.m_Item->property("text").toString() == text && node.m_Rect.center().y() > f.rig.geometry(column).top())
+                node.m_Item->property("text").toString() == text &&
+                node.m_Rect.center().y() > f.rig.geometry(column).top())
             {
                 found = true;
                 CHECK(std::abs(node.m_Rect.center().y() - middle) < 1.0);
