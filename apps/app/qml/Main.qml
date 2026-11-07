@@ -17,7 +17,7 @@ Window {
     width: 390
     height: 844
     visible: true
-    title: qsTr("Error Journaling")
+    title: qsTr("CS Bingo Board")
     color: "#f4f1ea"
 
     Item {

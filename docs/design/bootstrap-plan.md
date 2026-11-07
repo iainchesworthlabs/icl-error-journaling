@@ -20,8 +20,8 @@ Invocation: `MODE=new NAME=icl-error-journaling KIND=app+lib UI=qt PLATFORMS=ios
 | Item | Value |
 |---|---|
 | Repository | `iainchesworthlabs/icl-error-journaling` |
-| Application name | ICL Error Journaling |
-| iOS display name (`ERROR_JOURNALING_DISPLAY_NAME`) | Error Journaling |
+| Application name | CS Bingo Board (renamed from ICL Error Journaling, 8 Nov 2026) |
+| iOS display name (`ERROR_JOURNALING_DISPLAY_NAME`) | CS Bingo Board |
 | Bundle identifier (`ERROR_JOURNALING_APPLICATION_ID`) | `com.iainchesworthlabs.errorjournaling` |
 | C++ project name, CMake prefix | `error_journaling`, `ERROR_JOURNALING_` |
 | Targets (implementation plan, Stage 0) | `ej_core`, `ej_storage`, `ej_app`, `ej_ios_bridge` |
