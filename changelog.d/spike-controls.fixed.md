@@ -1,1 +1,1 @@
-The test build shows the Stage 0 spike controls on the board: a tile that fires the impact haptic on press, a tile that fires the success haptic on tap, and a button that opens the share sheet and shows what it reported.
+**Spike controls in the test build.** The board shows a tile that fires the impact haptic on press, a tile that fires the success haptic on tap, and a button that opens the share sheet and shows what it reported.
