@@ -318,6 +318,12 @@ Operation Workload::make_start_new_log(Operation base)
     return base;
 }
 
+std::string draft_text(std::uint64_t seed, std::uint64_t step)
+{
+    return "typing a note for Sam Example, change " + std::to_string(step) + " of run " + std::to_string(seed % 1000) +
+           std::string(static_cast<std::size_t>(step % 37), '.');
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Pacer
 // ---------------------------------------------------------------------------------------------------------------------

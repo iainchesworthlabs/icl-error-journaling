@@ -223,16 +223,31 @@ bool RecoveryRun::tail_agrees_with(const JournalInfo& info, std::uint64_t applie
     {
         return false;
     }
-    const std::streamoff window = std::min<std::streamoff>(size, static_cast<std::streamoff>(MAX_RECORD_BYTES) + 2);
-    std::string tail(static_cast<std::size_t>(window), '\0');
-    in.seekg(size - window);
-    in.read(tail.data(), window);
-    if (!in || tail.back() != '\n')
+    // A record is a few hundred bytes, so the last few kilobytes hold it; a longer last line (a long note) widens the
+    // window, up to the longest line there can be. Reading whole files here is what made the launch check grow with the
+    // days kept (measured in tests/perf/test_launch_cost.cpp).
+    const std::streamoff limit = std::min<std::streamoff>(size, static_cast<std::streamoff>(MAX_RECORD_BYTES) + 2);
+    std::streamoff window = std::min<std::streamoff>(limit, 4096);
+    std::string tail;
+    std::size_t start = std::string::npos;
+    for (;;)
     {
-        return false;
+        tail.assign(static_cast<std::size_t>(window), '\0');
+        in.clear();
+        in.seekg(size - window);
+        in.read(tail.data(), window);
+        if (!in || tail.back() != '\n')
+        {
+            return false;
+        }
+        tail.pop_back();
+        start = tail.rfind('\n');
+        if (start != std::string::npos || window >= limit)
+        {
+            break;
+        }
+        window = std::min<std::streamoff>(limit, window * 4);
     }
-    tail.pop_back();
-    const std::size_t start = tail.rfind('\n');
     if (start == std::string::npos && window < size)
     {
         return false;  // the last line is longer than any record

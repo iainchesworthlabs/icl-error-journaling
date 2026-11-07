@@ -43,6 +43,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 using namespace ej;
@@ -175,6 +176,8 @@ struct WorkerOutput
     bool m_Recovering = false;
     bool m_Recovered = false;
     bool m_At = false; // the worker is at its crash point, waiting to be killed
+    // Each change of the note field and when the driver read the line, which is never earlier than the change.
+    std::vector<std::pair<std::uint64_t, std::chrono::steady_clock::time_point>> m_Typed;
     std::string m_Error;
 };
 
@@ -296,6 +299,10 @@ private:
         else if (line == "DONE")
         {
             m_Output.m_Done = true;
+        }
+        else if (line.starts_with("TYPED "))
+        {
+            m_Output.m_Typed.emplace_back(number_after(6), std::chrono::steady_clock::now());
         }
         else if (line.starts_with("AT "))
         {
@@ -938,6 +945,114 @@ TEST_CASE("kill: recovery killed at random moments recovers again to the same re
     }
     print("ej-kill recovery result master_seed=" + hex(master) + " iterations=" + decimal(count) +
           " killed_before_the_end=" + decimal(killed_mid_run));
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The typed draft (NOTE-03, decision 3): at most the debounce's worth of typing is lost
+// ---------------------------------------------------------------------------------------------------------------------
+
+TEST_CASE("kill: a typed draft is lost for no more than the debounce", "[kill][draft]")
+{
+    // The draft store writes 300 ms after the first change it is holding. A change this old, or a later one, must be in
+    // the store after a kill; the rest of the age is slack for the polling of the worker's timer, the write itself and
+    // the delay before the driver reads a line (which only makes the age measured here smaller than the real one).
+    constexpr std::chrono::milliseconds REQUIRED_AGE{1500};
+    const std::uint64_t master = master_seed();
+    const std::uint64_t count = env_number("EJ_KILL_DRAFT_ITERATIONS", 6);
+    print("ej-kill master_seed=" + hex(master) + " draft iterations=" + decimal(count));
+    std::uint64_t failures = 0;
+    for (std::uint64_t iteration = 0; iteration < count; ++iteration)
+    {
+        const std::uint64_t seed = iteration_seed(master, 3'000'000 + iteration);
+        SplitMix64 rng(seed);
+        const std::uint64_t target = rng.between(30, 100);
+        const std::chrono::milliseconds delay(static_cast<std::int64_t>(rng.between(0, 400)));
+        INFO("draft iteration " << iteration << ", seed " << hex(seed) << ", " << target << " changes, then "
+                                << delay.count() << " ms");
+        TempDir dir;
+        const std::filesystem::path store = dir.path() / "store";
+        QStringList arguments = workload_arguments(store, seed, 0);
+        arguments.replace(1, QStringLiteral("draft"));
+        arguments << QStringLiteral("--max-ops") << QStringLiteral("2000");
+        Worker worker(arguments);
+        REQUIRE(worker.wait_until([&] { return worker.output().m_Typed.size() >= target; }));
+        std::this_thread::sleep_for(delay);
+        const auto killed_at = std::chrono::steady_clock::now();
+        worker.kill_now();
+        CHECK(worker.output().m_Error.empty());
+
+        std::uint64_t required = 0; // the newest change that is old enough to have to be there
+        for (const auto& [step, seen] : worker.output().m_Typed)
+        {
+            if (seen + REQUIRED_AGE <= killed_at)
+            {
+                required = std::max(required, step);
+            }
+        }
+        const std::uint64_t newest = worker.output().m_Typed.back().first;
+
+        const Snapshot killed(store);
+        const StorageLocation location(store);
+        RecoveryOptions options;
+        options.m_FullCheck = true;
+        const auto report = Recovery::run(location, verification_clock(), options);
+        REQUIRE(report.has_value());
+        CHECK((report->m_Outcome == RecoveryOutcome::CLEAN || report->m_Outcome == RecoveryOutcome::REPLAYED));
+        std::optional<Draft> draft;
+        {
+            ScriptedClock clock;
+            FileJournal journal(location);
+            auto repository = SqliteLogRepository::open(location.database_path(), clock, journal);
+            REQUIRE(repository.has_value());
+            const auto integrity = (*repository)->integrity_check();
+            REQUIRE(integrity.has_value());
+            CHECK(integrity->m_Ok);
+            draft = (*repository)->get_draft().value();
+        }
+        std::optional<std::uint64_t> found;
+        if (draft)
+        {
+            for (std::uint64_t step = 1; step <= newest + 1 && !found; ++step)
+            {
+                if (draft_text(seed, step) == draft->m_Text)
+                {
+                    found = step;
+                }
+            }
+        }
+        bool ok = true;
+        std::string why;
+        if (draft && !found)
+        {
+            ok = false;
+            why = "the stored draft is none of the texts that were typed";
+        }
+        else if (found && *found < required)
+        {
+            ok = false;
+            why = "the draft holds change " + decimal(*found) + " but change " + decimal(required) + " was typed " +
+                  decimal(static_cast<std::uint64_t>(REQUIRED_AGE.count())) + " ms before the kill";
+        }
+        else if (!draft && required > 0)
+        {
+            ok = false;
+            why = "no draft, but change " + decimal(required) + " was typed " +
+                  decimal(static_cast<std::uint64_t>(REQUIRED_AGE.count())) + " ms before the kill";
+        }
+        if (!ok)
+        {
+            ++failures;
+            const auto kept =
+                save_artifact(killed.path(), "draft-seed-" + hex(master) + "-iteration-" + decimal(iteration));
+            print("FAIL draft seed=" + hex(master) + " iteration=" + decimal(iteration) + ": " + why +
+                  " [store kept in " + kept.generic_string() + "]");
+        }
+        CHECK(ok);
+    }
+    const std::string summary = "ej-kill draft result master_seed=" + hex(master) + " iterations=" + decimal(count) +
+                                " failures=" + decimal(failures);
+    print(summary);
+    append_summary(summary);
 }
 
 int main(int argc, char* argv[])

@@ -9,6 +9,7 @@
 //   START <n>   before operation n is issued
 //   ACK <n>     after operation n returned success, and never before
 //   DONE        the workload ended by itself
+//   TYPED <n>   the note field changed for the nth time (mode `draft`)
 //   RECOVERING  recovery is about to run
 //   RECOVERED <outcome>
 //   AT <point>  at the crash point, waiting to be killed (mode `wait`)
@@ -20,6 +21,7 @@
 // where the driver's random kill depends on scheduling.
 #include "error_journaling/clock.hpp"
 #include "error_journaling/crash_point.hpp"
+#include "error_journaling/draft_store.hpp"
 #include "error_journaling/file_journal.hpp"
 #include "error_journaling/recovery.hpp"
 #include "error_journaling/sqlite_log_repository.hpp"
@@ -240,6 +242,81 @@ int run_workload(const Arguments& arguments)
     return 0;
 }
 
+/// A `DraftTimer` on the monotonic clock that the worker's loop polls.
+class PollingTimer final : public DraftTimer
+{
+public:
+    void start(std::chrono::milliseconds delay, Callback on_expired) override
+    {
+        m_Deadline = std::chrono::steady_clock::now() + delay;
+        m_Callback = std::move(on_expired);
+    }
+
+    void stop() override
+    {
+        m_Callback = nullptr;
+    }
+
+    void poll()
+    {
+        if (m_Callback && std::chrono::steady_clock::now() >= m_Deadline)
+        {
+            const Callback callback = std::move(m_Callback);
+            m_Callback = nullptr;
+            callback();
+        }
+    }
+
+private:
+    std::chrono::steady_clock::time_point m_Deadline;
+    Callback m_Callback;
+};
+
+/// Types into the note field: a change every 10 to 90 ms, written by the draft store's timer, until killed.
+int run_draft(const Arguments& arguments)
+{
+    const StorageLocation location(arguments.m_Directory);
+    if (auto made = location.create_directories(); !made)
+    {
+        say("ERROR " + describe(made.error()));
+        return 2;
+    }
+    ScriptedClock recovery_clock;
+    if (auto recovered = Recovery::run(location, recovery_clock); !recovered)
+    {
+        say("ERROR recovery: " + describe(recovered.error()));
+        return 2;
+    }
+    const SystemClock clock;
+    FileJournal journal(location);
+    auto repository = SqliteLogRepository::open(location.database_path(), clock, journal);
+    if (!repository)
+    {
+        say("ERROR open: " + describe(repository.error()));
+        return 2;
+    }
+    PollingTimer timer;
+    DraftStore store(**repository, clock, timer);
+    SplitMix64 rng(arguments.m_Seed ^ 0x54595045ULL);
+    say("TYPING");
+    for (std::uint64_t step = 1; step <= arguments.m_MaxOperations; ++step)
+    {
+        if (auto kept = store.set(draft_text(arguments.m_Seed, step)); !kept)
+        {
+            say("ERROR set: " + describe(kept.error()));
+            return 2;
+        }
+        say("TYPED " + std::to_string(step));
+        for (std::uint64_t waited = 0, pause = rng.between(10, 90); waited < pause; waited += 5)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            timer.poll();
+        }
+    }
+    say("DONE");
+    return 0;
+}
+
 int run_recovery(const Arguments& arguments)
 {
     const StorageLocation location(arguments.m_Directory);
@@ -277,6 +354,10 @@ int main(int argc, char** argv)
     if (arguments->m_Mode == "recover")
     {
         return run_recovery(*arguments);
+    }
+    if (arguments->m_Mode == "draft")
+    {
+        return run_draft(*arguments);
     }
     say("ERROR unknown mode");
     return 64;

@@ -629,3 +629,43 @@ then once the type is renamed or removed an old log cannot say what the entry wa
 A snapshot stores the label as it was at the moment of the tap, next to the reference, so old logs and exports always
 read the way they did when written. It costs one extra text column. Decided: store the snapshot. Whether a renamed type should *also* update old
 entries is a separate question for Stage 3 and the PRD.
+
+## 11. Findings during implementation
+
+### The draft is written at most 300 ms after it changed (work package 2.6)
+
+Section 2.8 says `DraftStore::set` is "debounced by 300 ms", and decision 3 accepts "at most 300 ms of typing" lost on a kill.
+A debounce that restarts its timer on every change would break that: someone typing without a 300 ms pause would write nothing
+until they stopped. `DraftStore` therefore arms its timer at the first change that is waiting and does not restart it: changes
+inside the window only replace the pending text, and when the timer expires the latest text is written. "Twenty changes
+within 300 ms make one write" still holds; a change at 299 ms is covered by the first write and one at 301 ms makes the next.
+The kill harness checks the bound under real kills.
+
+### Launch cost on a year of use (work package 2.6, finding F13)
+
+The plan proposed a launch budget of 100 ms. `libs/storage/tests/perf/test_launch_cost.cpp` builds a year (365 logs, 80,300
+entries, a 34 MB database, a journal each) and measures a warm launch. On the development machine (Windows, optimised build):
+
+| What | Time |
+|---|---|
+| `PRAGMA quick_check` alone | 120 to 160 ms |
+| `PRAGMA integrity_check` alone | about 350 ms |
+| Opening the database (settings read back) | 2 ms |
+| Reading the tail of 364 archived journals | 22 ms |
+| **Launch: `Recovery::run`, default options** | **200 to 225 ms** |
+| First launch after an upgrade: `Recovery::run` with the full check | about 2.9 s |
+
+The measurement changed two things. The check of an archived journal's tail used to read up to 128 KiB from each file, in effect
+the whole journal; it now reads 4 KiB and widens the window only for a longer last line, so the cost of a launch no longer
+depends on how long the journals are. After that the launch is `quick_check` and little else, and SQLite's check of a 34 MB file
+cannot be made much faster without changing the schema (a record is about 430 bytes, mostly text ids and their indexes);
+memory-mapped reads made it about a third faster and were not adopted, because they change how the database file is read for
+every connection.
+
+So **the 100 ms proposal is not met** at one year, and the budget the test enforces is 400 ms for the launch (about twice the
+measurement, for a shared runner) on a build without instrumentation, ten times that with sanitizers, coverage or no
+optimisation. NFR-04 allows 1.5 s from cold start to a usable board, so a 200 ms check fits, but it grows with the history kept.
+**The first launch after an upgrade is the problem:** about 2.9 s, almost all of it comparing every archived log with its
+journal (a full check reads every journal). Decision 6 asks only for the full integrity check after an upgrade, which is 350 ms.
+Open question for the owner: should that launch compare only the open log, as every launch does, and leave the other logs to a
+check after the board is up? Until it is decided the test bounds that launch at 10 s so that a change for the worse is seen.

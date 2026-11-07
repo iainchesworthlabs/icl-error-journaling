@@ -121,6 +121,10 @@ private:
     std::vector<Tracked> m_Entries;
 };
 
+/// The text of the note field after the `step`th change of the typing workload (mode `draft` of the worker): different
+/// for every step, so the driver can tell which change a stored draft is.
+[[nodiscard]] std::string draft_text(std::uint64_t seed, std::uint64_t step);
+
 /// How long the worker waits after each operation, in microseconds: steady, with bursts (several operations with no
 /// pause). Its own stream, so changing the pace never changes the operations.
 class Pacer
