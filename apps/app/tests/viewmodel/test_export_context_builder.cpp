@@ -293,3 +293,29 @@ TEST_CASE("export_text is render_export: one function for Copy, Share and the go
     CHECK(*text == *direct);
     check_golden("prd-example", *text);
 }
+
+TEST_CASE("A renamed type reads as it did when the entry was tapped; an entry with no snapshot uses the new name",
+          "[viewmodel][export]")
+{
+    Sample sample;
+    Configuration configuration = sample.configuration();
+    const ErrorTypeId mute = type_named(configuration, "Mute Delay");
+    Log log(prd_header(configuration));
+    REQUIRE(log.add(error_at(1, 10, 20, mute, "Mute Delay")));
+    REQUIRE(log.add(error_at(2, 10, 40, mute, ""))); // written before name snapshots existed
+
+    for (ErrorType& type : configuration.m_ErrorTypes)
+    {
+        if (type.m_Id == mute)
+        {
+            type.m_Name = "Mute Lag"; // renamed after both entries were made
+        }
+    }
+    sample.m_Source.set(configuration);
+
+    const auto text = export_text(log, ExportContextBuilder(sample.m_Source, sample.m_Zones).build());
+
+    REQUIRE(text.has_value());
+    CHECK(text->find("\n10:20 T| Mute Delay") != std::string::npos);
+    CHECK(text->find("\n10:40 T| Mute Lag") != std::string::npos);
+}
