@@ -5,7 +5,7 @@ one pull request into `develop`. Requirement IDs refer to the [PRD](../prd.md).
 
 **Exit gate:** all core tests pass with TSan and the sanitisers on, and the golden export matches the PRD example.
 
-**Status:** draft for owner review. No code is written until the owner approves this page.
+**Status:** approved by the owner; implemented in work packages 1.1 to 1.7. Exit-gate result: see pull request for 1.7.
 
 ## Scope and conventions
 

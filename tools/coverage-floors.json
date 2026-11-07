@@ -1,7 +1,7 @@
 {
   "default": { "line": 90, "branch": 80 },
   "components": {
-    "libs/core": { "line": 90, "branch": 85 },
+    "libs/core": { "line": 94, "branch": 90 },
     "libs/storage": { "line": 90, "branch": 50 },
     "libs/ios_bridge": { "line": 90, "branch": 50 },
     "apps/app": { "line": 60, "branch": 30 }
