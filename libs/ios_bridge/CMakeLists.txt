@@ -40,11 +40,13 @@ add_library(ej_qml_bridge
     src/lifecycle_adapter.cpp
     src/open_file_filter.cpp
     src/qml_bridge.cpp
+    src/setup_files.cpp
     include/error_journaling/config_exporter.hpp
     include/error_journaling/config_importer.hpp
     include/error_journaling/lifecycle_adapter.hpp
     include/error_journaling/open_file_filter.hpp
-    include/error_journaling/qml_bridge.hpp)
+    include/error_journaling/qml_bridge.hpp
+    include/error_journaling/setup_files.hpp)
 add_library(error_journaling::qml_bridge ALIAS ej_qml_bridge)
 set_target_properties(ej_qml_bridge PROPERTIES AUTOMOC ON)
 target_include_directories(ej_qml_bridge PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")
