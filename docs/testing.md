@@ -112,6 +112,9 @@ and copies the store as the kill left it to `$EJ_KILL_ARTIFACT_DIR/seed-<master>
 | `kill: every crash point leaves a store that recovers whole` | K1 to K6 and K9, each in two ways: the worker ends itself at the point (`--crash-mode exit`), and it stops there and the driver kills it (`--crash-mode wait`). The point is reached in the first write, an ordinary write, a later write and, for the archive pair, in each of its two records | 24 points, twice, every run |
 | `kill: recovery killed at each of its crash points ...` | K7 and X3: recovery over C1, C4 and C6 damage, killed at each of its crash points in both ways, then recovered again | every run |
 | `kill: recovery killed at random moments ...` | the recovery worker, 0 to 150 ms after it starts | `EJ_KILL_RECOVERY_ITERATIONS`, default 25 |
+| `kill: a typed draft is lost for no more than the debounce` | the draft worker (see The note draft) at a random moment | `EJ_KILL_DRAFT_ITERATIONS`, default 6 |
+| `kill: a migration killed at each of its crash points ...` | K8 and M3: the test-only migration (version 1 to 3) of a populated store, killed at each of its five crash points in both ways; then the next launch's `Migrator::resume`, and the migration run again to the end | every run |
+| `kill: a migration killed at random moments ...` | the migration worker, 0 to 120 ms after it starts | `EJ_KILL_MIGRATION_ITERATIONS`, default 25 |
 
 Environment: `EJ_KILL_SEED` (decimal or `0x` hex; drawn at random when unset, and printed first as
 `ej-kill master_seed=0x... iterations=...`), `EJ_KILL_ITERATIONS`, `EJ_KILL_FIRST` and `EJ_KILL_LAST` (the range of iterations,
@@ -172,6 +175,20 @@ tail, the launch (`Recovery::run` with its default options) and the first launch
 check). It prints the figures on one line starting `ej-perf`, and fails when the launch is over its budget. A build with
 sanitizers, coverage or no optimisation gets a factor (`EJ_PERF_BUDGET_FACTOR`, set by CMake) so the same test runs in every
 leg. The figures and the budget are in `docs/plan/stage-2.md`, section 11.
+
+## Migration tests
+
+`test_migrator.cpp` (`integration`) runs `Migrator` over copies of the populated store with the test-only steps of
+`migration_steps.hpp` (version 1 to 3: a column that every log gets a value in, and a table filled from the entries); the
+product has no steps. M1 forward migration keeps every row and adds what the steps add, and the backup is the old database
+byte for byte; M2 a step that fails restores the previous database byte for byte; M4 a `foreign_key_check` or caller check that
+fails restores; M5 a newer schema or another application's database is refused with no file changed; M6 the backup copy and the
+marker are durable, and the marker names the copy, before the first step runs (the `Observer` option records the order); M7 a
+migrated database that is then lost rebuilds from the journals written before the migration. The states a killed migration can
+leave (a marker with the database at the old version, at the new version, damaged, missing, or failing its checks; no backup;
+an unreadable marker) are made by hand and resumed, and `Recovery::run` is shown to deal with a marker before it opens anything.
+M3 and K8 are real kills in the kill harness (above): the next launch must find the old schema whole or the new schema whole,
+with every row, no marker, and a migration that then runs to the end.
 
 ## Coverage
 

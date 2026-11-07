@@ -16,8 +16,10 @@
 //   EJ_KILL_ARTIFACT_DIR         where the store of a failed iteration is copied (default ./ej-kill-artifacts)
 //   EJ_KILL_SUMMARY              a file the result line is appended to
 // Command line: `--seed 0x... --iteration i` re-runs one iteration (up to 20 times) and says how often it failed.
+#include "error_journaling/migrator.hpp"
 #include "error_journaling/recovery.hpp"
 #include "kill_workload.hpp"
+#include "migration_steps.hpp"
 #include "platform/process_containment.hpp"
 #include "recovery_fixture.hpp"
 
@@ -308,11 +310,11 @@ private:
         {
             m_Output.m_At = true;
         }
-        else if (line == "RECOVERING")
+        else if (line == "RECOVERING" || line == "MIGRATING")
         {
             m_Output.m_Recovering = true;
         }
-        else if (line.starts_with("RECOVERED"))
+        else if (line.starts_with("RECOVERED") || line.starts_with("MIGRATED"))
         {
             m_Output.m_Recovered = true;
         }
@@ -1053,6 +1055,174 @@ TEST_CASE("kill: a typed draft is lost for no more than the debounce", "[kill][d
                                 " failures=" + decimal(failures);
     print(summary);
     append_summary(summary);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A migration killed (K8, M3): the old version or the new one, never half
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+
+QStringList migration_arguments(const std::filesystem::path& dir, std::uint64_t crash_hit, bool wait_to_be_killed)
+{
+    QStringList arguments{QStringLiteral("--mode"), QStringLiteral("migrate"), QStringLiteral("--dir"),
+                          path_text(dir),           QStringLiteral("--seed"),  QStringLiteral("1790000000000")};
+    if (crash_hit > 0)
+    {
+        arguments << QStringLiteral("--crash-at") << QStringLiteral("mid_migration") << QStringLiteral("--crash-hit")
+                  << QString::fromStdString(decimal(crash_hit)) << QStringLiteral("--crash-mode")
+                  << QString::fromLatin1(wait_to_be_killed ? "wait" : "exit");
+    }
+    return arguments;
+}
+
+std::map<std::string, std::int64_t> table_counts(const std::filesystem::path& database)
+{
+    RawDb db(database);
+    std::map<std::string, std::int64_t> counts;
+    for (const char* table :
+         {"day_log", "entry", "error_entry", "note_entry", "header_change_entry", "draft", "store_state"})
+    {
+        counts[table] =
+            db.scalar(QStringLiteral("SELECT COUNT(*) FROM %1").arg(QString::fromLatin1(table))).toLongLong();
+    }
+    return counts;
+}
+
+/// After a killed migration and the next launch's `Migrator::resume`: the marker is gone, every row is there, and the
+/// database is the old schema whole or the new schema whole. Returns the version.
+std::int64_t check_not_half_migrated(const StoreCopy& store, const std::map<std::string, std::int64_t>& rows)
+{
+    CHECK_FALSE(std::filesystem::exists(store.location().migration_marker()));
+    RawDb db(store.database());
+    const std::int64_t version = db.scalar(QStringLiteral("PRAGMA user_version")).toLongLong();
+    CHECK(db.scalar(QStringLiteral("PRAGMA quick_check")).toString() == QStringLiteral("ok"));
+    const std::int64_t has_column =
+        db.scalar(QStringLiteral("SELECT COUNT(*) FROM pragma_table_info('day_log') WHERE name = 'test_note'"))
+            .toLongLong();
+    const std::int64_t has_table =
+        db.scalar(QStringLiteral("SELECT COUNT(*) FROM sqlite_master WHERE name = 'test_audit'")).toLongLong();
+    if (version == 1)
+    {
+        CHECK(has_column == 0);
+        CHECK(has_table == 0);
+    }
+    else
+    {
+        CHECK(version == TEST_TARGET_VERSION);
+        CHECK(has_column == 1);
+        CHECK(has_table == 1);
+        CHECK(db.scalar(QStringLiteral("SELECT COUNT(*) FROM day_log WHERE test_note = 'v2'")).toLongLong() ==
+              rows.at("day_log"));
+        CHECK(db.scalar(QStringLiteral("SELECT COUNT(*) FROM test_audit")).toLongLong() == rows.at("entry"));
+    }
+    return version;
+}
+
+/// The next launch after a kill, and then the migration run again to the end.
+void relaunch_and_finish(const StoreCopy& store, const std::map<std::string, std::int64_t>& rows)
+{
+    ScriptedClock clock(sample_time(7000));
+    const auto resumed = Migrator::resume(store.location(), clock);
+    REQUIRE(resumed.has_value());
+    const std::int64_t version = check_not_half_migrated(store, rows);
+    CHECK(table_counts(store.database()) == rows);
+    if (version == 1)
+    {
+        // The old version recovers to the logs it held, like any other store of this build.
+        CHECK((resumed->m_Outcome == MigrationOutcome::NOT_COMMITTED ||
+               resumed->m_Outcome == MigrationOutcome::NO_MARKER || resumed->m_Outcome == MigrationOutcome::RESTORED));
+        const auto recovered = recover(store.location());
+        REQUIRE(recovered.has_value());
+        CHECK(recovered->m_Outcome == RecoveryOutcome::CLEAN);
+        require_recovered(store, pristine().m_Digests, pristine().m_OpenLog);
+    }
+    const auto finished = Migrator(store.location(), clock, test_steps(), TEST_TARGET_VERSION).run();
+    REQUIRE(finished.has_value());
+    CHECK(check_not_half_migrated(store, rows) == TEST_TARGET_VERSION);
+    CHECK(table_counts(store.database()) == rows);
+}
+
+} // namespace
+
+TEST_CASE("kill: a migration killed at each of its crash points leaves the old version or the new, never half",
+          "[kill][migration]")
+{
+    const auto rows = []
+    {
+        StoreCopy store;
+        return table_counts(store.database());
+    }();
+    for (const bool external : {false, true})
+    {
+        bool finished = false;
+        for (std::uint64_t hit = 1; hit <= 10 && !finished; ++hit)
+        {
+            INFO("killed at crash point " << hit << (external ? " from outside" : ", ends itself"));
+            StoreCopy store;
+            Worker worker(migration_arguments(store.root(), hit, external));
+            REQUIRE(worker.wait_until([&] { return worker.output().m_At || !worker.running(); }));
+            if (worker.output().m_At)
+            {
+                worker.kill_now();
+            }
+            else
+            {
+                REQUIRE(worker.wait_for_end());
+            }
+            CHECK(worker.output().m_Error.empty());
+            if (!worker.output().m_At && worker.exit_code() == 0)
+            {
+                finished = true; // the migration has fewer crash points than this: every one was tried
+                CHECK(worker.output().m_Recovered);
+            }
+            else if (!external)
+            {
+                CHECK(worker.exit_code() == 137);
+            }
+            relaunch_and_finish(store, rows);
+        }
+        CHECK(finished);
+    }
+}
+
+TEST_CASE("kill: a migration killed at random moments leaves the old version or the new, never half",
+          "[kill][migration]")
+{
+    const std::uint64_t master = master_seed();
+    const std::uint64_t count = env_number("EJ_KILL_MIGRATION_ITERATIONS", DEFAULT_ITERATIONS);
+    print("ej-kill master_seed=" + hex(master) + " migration iterations=" + decimal(count));
+    const auto rows = []
+    {
+        StoreCopy store;
+        return table_counts(store.database());
+    }();
+    std::uint64_t killed_before_the_end = 0;
+    for (std::uint64_t iteration = 0; iteration < count; ++iteration)
+    {
+        const std::uint64_t seed = iteration_seed(master, 4'000'000 + iteration);
+        SplitMix64 rng(seed);
+        const std::chrono::microseconds delay(static_cast<std::int64_t>(rng.between(0, 120'000)));
+        INFO("migration iteration " << iteration << ", seed " << hex(seed) << ", kill after " << delay.count()
+                                    << " us");
+        StoreCopy store;
+        Worker worker(migration_arguments(store.root(), 0, false));
+        REQUIRE(worker.wait_until([&] { return worker.output().m_Recovering || !worker.running(); }));
+        if (worker.running())
+        {
+            spin_for(delay);
+            worker.kill_now();
+            if (!worker.output().m_Recovered)
+            {
+                ++killed_before_the_end;
+            }
+        }
+        CHECK(worker.output().m_Error.empty());
+        relaunch_and_finish(store, rows);
+    }
+    print("ej-kill migration result master_seed=" + hex(master) + " iterations=" + decimal(count) +
+          " killed_before_the_end=" + decimal(killed_before_the_end));
 }
 
 int main(int argc, char* argv[])
