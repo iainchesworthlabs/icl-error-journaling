@@ -341,9 +341,9 @@ pull request (as Stage 3 specified).
 | 4.8 | Other picker | `qml/screens/other/`, tests | 4.4, 4.6 |
 | 4.9 | Today's details and Software version | `qml/screens/header/`, tests | 4.4, 4.6; Stage 3 additions 1, 2, 4, 5 |
 | 4.10 | Review and Edit entry | `qml/screens/review/`, tests | 4.4, 4.5, 4.6; Stage 3 addition 5 |
-| 4.11 | New day prompt and History | `qml/screens/newday/`, `qml/screens/history/`, tests | 4.2 approved, 4.4, 4.6, 4.10 for the review of a past log |
+| 4.11 | New day prompt and History | `qml/screens/newday/`, `qml/screens/history/`, tests | 4.2 approved by the owner, 4.4, 4.6, 4.10 for the review of a past log |
 | 4.12 | Settings and board layout | `qml/screens/settings/` (the list, the formats, board layout), tests | 4.4, 4.5, 4.6 |
-| 4.13 | Editors, first launch and import | `qml/screens/settings/editors/`, `qml/screens/setup/`, tests | 4.2 approved, 4.12; Stage 3 addition 4 |
+| 4.13 | Editors, first launch and import | `qml/screens/settings/editors/`, `qml/screens/setup/`, tests | 4.2 approved by the owner, 4.12; Stage 3 addition 4 |
 | 4.14 | Motion and refresh rate | `Theme` motion values (edit of 4.1's file), the curves in the components (small edits), `packaging` property list key | 4.7 to 4.13 merged; a device |
 | 4.15 | Shell and navigation | `qml/Main.qml`, `src/main.cpp` wiring if needed, `tests/ui/app_flow_test.cpp` | 4.7 to 4.13; Stage 3: 3.11 |
 | 4.16 | Dark mode pass, accessibility audit and screenshots | `tests/ui/` audit tests, `tools/ej_screenshots`, `docs/design/` dark notes | 4.15 |

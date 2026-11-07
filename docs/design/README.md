@@ -1,6 +1,6 @@
 # ICL Error Journaling – design package v1
 
-The facilitator approved the eight light-mode screens (1 to 8 below) on 7 Nov 2026. They are the visual reference for Stage 4 of the implementation plan. Package 4.2 of Stage 4 added the screens that package lacked (9 to 34) and the dark palette; the owner reviewed every light and dark screen on 7 Nov 2026 and accepted them; they **wait for the facilitator's approval**, which comes when she tries them (see [Review of the 4.2 drafts](#review-of-the-42-drafts)). All names, sites and error types shown are fictional placeholders; the real values come only from the configuration file at runtime.
+The facilitator approved the eight light-mode screens (1 to 8 below) on 7 Nov 2026. They are the visual reference for Stage 4 of the implementation plan. Package 4.2 of Stage 4 added the screens that package lacked (9 to 34) and the dark palette; the owner reviewed every light and dark screen on 7 Nov 2026 and accepted them; Stage 4 builds them on the owner's approval (owner, 7 Nov 2026), and the facilitator approves them on a TestFlight build, with any change she asks for going into a later build (see [Review of the 4.2 drafts](#review-of-the-42-drafts)). All names, sites and error types shown are fictional placeholders; the real values come only from the configuration file at runtime.
 
 ## What is here
 
@@ -81,7 +81,7 @@ How the dark variants of the original eight screens were made: each light colour
 
 1. The owner opens the `.dc.html` files (see "What is here" for how) and the dark ones beside them, checks them against `docs/plan/stage-4.md` and the PRD, and asks for changes. Redrawing at this stage is cheap; rebuilding QML is not.
 2. The facilitator approves the screens and the dark palette after the owner is satisfied. The approval is recorded by changing the first paragraph of this file and the "source" line of `tokens.json`.
-3. A screen package of Stage 4 starts only when the screens it builds are approved. The dark palette also gates the Stage 4 exit gate.
+3. A screen package of Stage 4 starts when the owner has approved the screens it builds (owner decision, 7 Nov 2026). The facilitator's approval comes from using them on TestFlight; what she asks for is fixed in a later build. The dark palette also gates the Stage 4 exit gate.
 4. Package 4.1 turns the contrast table into a test (`Theme.contrastPairs`). A change to a dark value updates `contrast.md` in the same pull request.
 
 ## Human factors behind the layout
