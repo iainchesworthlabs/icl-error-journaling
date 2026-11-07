@@ -12,11 +12,9 @@
    The version before the suffix must equal `VERSION` in `project()` in `CMakeLists.txt` and `version`
    in `vcpkg.json`; the Release workflow stops at its first job when it does not, so change them in the
    pull request that assembles the changelog.
-4. The Release workflow builds the Linux, macOS and Windows packages. Windows binaries are handled
-   according to the `SIGN_WINDOWS` repository variable: `false`, `test` or `production`. The Linux package must
-   start on Ubuntu 24.04 (glibc 2.39): the `check-glibc-floor` step fails the job when something in it needs a newer
-   glibc, which a build on the newest runner can do with a single function. A project that needs a higher floor passes
-   `allowed` and says why here.
+4. The Release workflow archives the source at the tag (the only asset of the GitHub release) and, when
+   `SIGN_IOS_UPLOAD` is `true`, builds, signs and uploads the iOS application to TestFlight (below). No desktop package
+   is built: macOS and Linux are development and CI platforms only, and Windows is not supported.
 5. The publish job waits for approval in the `release` environment, then writes `SHA512SUMS`,
    detached GPG signatures, an SPDX SBOM and build provenance, creates the GitHub Release, and for a
    final release fast-forwards `main` to the tag.
@@ -33,12 +31,6 @@ gh attestation verify <file> --repo iainchesworthlabs/<repository>
 
 The public key is `docs/signing-key.asc`. Its fingerprint is published in `SECURITY.md` of the organisation `.github` repository.
 
-## Windows test signing
-
-Test-signed files carry `-testsigned` in the name and are accepted only on machines that trust the
-personal CA. Until a production certificate exists they may go on any release, final or
-pre-release, and the notes say so. See `docs/test-signing.md` in `icl-common-infra`.
-
 ## Phones and tablets
 
 A project that builds for Android or iOS follows section 7.7 of the standard in `icl-common-infra`, and signs and
@@ -48,13 +40,14 @@ public one. So the template ships the TestFlight way only.
 
 ### iOS and TestFlight
 
-`apps/ios` is a one-screen UIKit application that shows the greeting of the core library. It exists so that the whole
-path (compile, sign, check, validate with Apple, upload) works from the first day and can be copied from; a project
-replaces the application and keeps the packaging around it: `apps/ios/CMakeLists.txt`, `apps/ios/packaging/`, the `ios`
-job of `release.yml` and `ios-build.yml`.
+`apps/app` is the Qt Quick application `ej_app` (an empty window with a placeholder for the board). The path from compile
+to TestFlight (compile, sign, check, validate with Apple, upload) is `apps/app/packaging/ios.cmake` and
+`apps/app/packaging/ios/`, the `ios` job of `release.yml` and `ios-build.yml`. Both workflows install Qt's iOS kit and
+the macOS host kit at the version in `.github/toolchain-versions.json`, and the presets chain vcpkg's toolchain to the
+kit's. The application is portrait only (`Info.plist.in`).
 
 - **`ios-build.yml`** compiles the application unsigned on every change that the iOS build reads, and looks inside the
-  bundle with `apps/ios/packaging/verify_app.sh`. It needs no secret. It is not a required check (see `docs/ci.md`).
+  bundle with `apps/app/packaging/ios/verify_app.sh`. It needs no secret. It is not a required check (see `docs/ci.md`).
 - **The `ios` job of `release.yml`** runs only when the repository variable `SIGN_IOS_UPLOAD` is `true`; with it unset the
   release is made without iOS. It imports the certificate and profile (`import-ios-signing`), configures with the build
   number of the run, archives and exports an App Store IPA (`export-ios-ipa`), checks the IPA with `verify_app.sh
@@ -68,8 +61,8 @@ job of `release.yml` and `ios-build.yml`.
   project version when empty. TestFlight refuses a number that is not higher than every earlier one for the same version.
 - **Property list.** `ITSAppUsesNonExemptEncryption` is `false`, which is the owner's declaration to Apple that the
   application uses no encryption beyond the system's. Change it only if that stops being true. The check refuses usage
-  text for a permission the application does not ask for. Safe areas are the application's: the UIKit sample lays out in
-  `safeAreaLayoutGuide`; a Qt Quick application reads `SafeArea.margins` (Qt 6.9 or later).
+  text for a permission the application does not ask for. Safe areas are the application's: it reads `SafeArea.margins`
+  (Qt 6.9 or later).
 - **Signing names.** The signing needs, by name only: the organisation secrets `IOS_DIST_CERT_P12_BASE64`,
   `IOS_DIST_CERT_PASSWORD`, `APPSTORE_API_KEY_ID`, `APPSTORE_API_ISSUER_ID` and `APPSTORE_API_PRIVATE_KEY` (shared with
   the repository), the repository secret `IOS_PROVISIONING_PROFILE_BASE64`, and the repository variable `SIGN_IOS_UPLOAD`.

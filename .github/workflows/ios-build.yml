@@ -1,7 +1,7 @@
 name: iOS build
 
-# An unsigned compile check of the iPhone and iPad application (apps/ios): the `ios-release` preset, and a look inside the
-# .app Xcode made (apps/ios/packaging/verify_app.sh). It needs no Apple account and no secret; a signed build is the
+# An unsigned compile check of the iPhone and iPad application (apps/app): the `ios-release` preset, and a look inside the
+# .app Xcode made (apps/app/packaging/ios/verify_app.sh). It needs no Apple account and no secret; a signed build is the
 # release workflow's, with the owner's account.
 #
 # Not a required check, and not on the merge queue: it runs only when something the iOS build reads changes (a required
@@ -20,6 +20,7 @@ on:
       - "CMakePresets.json"
       - "vcpkg.json"
       - ".github/workflows/ios-build.yml"
+      - ".github/toolchain-versions.json"
   push:
     branches: [main, develop]
     paths:
@@ -30,6 +31,7 @@ on:
       - "CMakePresets.json"
       - "vcpkg.json"
       - ".github/workflows/ios-build.yml"
+      - ".github/toolchain-versions.json"
   workflow_dispatch:
 
 concurrency:
@@ -46,9 +48,14 @@ env:
 
 jobs:
   ios-build:
-    name: iOS (device, unsigned compile)
+    name: iOS (${{ matrix.name }}, unsigned compile)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: device, preset: ios-release}
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 90
     permissions:
       contents: read
     steps:
@@ -57,13 +64,41 @@ jobs:
         with:
           persist-credentials: false
 
-      # The vcpkg toolchain is the toolchain file of every preset, iOS's included. The manifest has no dependency for a
-      # device (the tests are not built there).
+      # The vcpkg toolchain is the toolchain file of every preset, iOS's included (it chains to Qt's). The manifest has no
+      # dependency for a device (the tests are not built there).
       - name: Set up vcpkg
         uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
       - name: Set up CMake
         uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+
+      # Qt's iOS kit, and the macOS kit that aqtinstall's --autodesktop installs beside it for the host tools a cross build
+      # runs (moc, rcc, qmlcachegen, qsb). The version is the `qt` key of .github/toolchain-versions.json, as for every
+      # other build. Not cached: the iOS kit is several gigabytes, and the repository's cache quota is better spent on the
+      # builds that run on every push.
+      - name: Read the Qt version
+        id: qt
+        shell: bash
+        run: echo "version=$(jq -r .qt .github/toolchain-versions.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Qt (iOS kit and macOS host kit)
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: ${{ steps.qt.outputs.version }}
+          host: mac
+          target: ios
+          arch: ios
+          dir: ${{ runner.temp }}
+          aqtsource: "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7"
+          cache: false
+
+      - name: Name the Qt kits
+        shell: bash
+        env:
+          QT_VERSION: ${{ steps.qt.outputs.version }}
+        run: |
+          echo "QT_ROOT_DIR=$RUNNER_TEMP/Qt/$QT_VERSION/ios" >> "$GITHUB_ENV"
+          echo "QT_HOST_PATH=$RUNNER_TEMP/Qt/$QT_VERSION/macos" >> "$GITHUB_ENV"
 
       - name: Show the toolchain
         shell: bash
@@ -73,17 +108,22 @@ jobs:
           xcrun --sdk iphoneos --show-sdk-version
 
       - name: Configure
-        run: cmake --preset ios-release
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: cmake --preset "$PRESET"
 
       - name: Build
-        run: cmake --build --preset ios-release
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: cmake --build --preset "$PRESET"
 
       # What Xcode made, from the bundle alone: the identifier, the icon, the launch screen, no permission text, arm64 and no
       # link to the build machine. (An unsigned build: no --signed.)
       - name: Check the application bundle
+        if: matrix.name == 'device'
         shell: bash
         run: |
           set -euo pipefail
           app="$(find build/ios-release -name error-journaling.app -type d | head -n 1)"
           [ -n "$app" ] || { echo "::error::no error-journaling.app under build/ios-release"; exit 1; }
-          apps/ios/packaging/verify_app.sh "$app" --bundle-id "$BUNDLE_ID" --executable error-journaling
+          apps/app/packaging/ios/verify_app.sh "$app" --bundle-id "$BUNDLE_ID" --executable error-journaling

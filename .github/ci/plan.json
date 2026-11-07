@@ -5,6 +5,6 @@
                "REUSE.toml", ".editorconfig", "LICENSES/**"],
   "build": ["libs/**", "apps/**", "tests/**", "CMakeLists.txt", "CMakePresets.json", "vcpkg.json", "cmake/**",
             "tools/coverage-floors.json", "tools/preprocessor-*"],
-  "gui": [],
+  "gui": ["apps/app/**", "libs/core/**", "libs/storage/**", "**/*.qml", "cmake/**", "CMakePresets.json"],
   "machinery": [".github/workflows/**", ".github/ci/**", ".github/toolchain-versions.json", "tools/ci/**"]
 }

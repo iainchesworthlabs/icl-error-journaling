@@ -1,22 +1,42 @@
 # Architecture
 
 ```text
-libs/core/            library: public headers, sources, tests
+libs/core/            ej_core: QtCore only; the version for now, the domain model from Stage 1
   include/error_journaling/
   src/
-    platform/<os>/    one directory per platform, chosen by CMake
   tests/
-apps/cli/             command-line application and its integration tests
-apps/ios/             iPhone and iPad application: a one-screen UIKit sample and its packaging
-  packaging/          Info.plist.in, asset catalogue (icon, launch colour), verify_app.sh
+libs/storage/         ej_storage: empty until Stage 2; links ej_core
+libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, behind interfaces
+  src/platform/ios/      Objective-C++ (.mm), built for iOS
+  src/platform/desktop/  stub, built everywhere else
+apps/app/             ej_app: the Qt Quick application (executable error-journaling)
+  qml/                the module ErrorJournalingApp (the URI differs from the executable name)
+  src/                main.cpp
+  packaging/ios.cmake    bundle properties, signing and the plugin defaults of Qt's iOS kit
+  packaging/ios/         Info.plist.in, asset catalogue (icon, launch colour), verify_app.sh
 cmake/icl/            vendored CMake modules from icl-common-infra (do not edit)
 tools/                project scripts, baselines and coverage floors
 ```
 
+## Targets
+
+| Target | Kind | Depends on |
+|---|---|---|
+| `ej_core` | static library, C++23 | QtCore |
+| `ej_storage` | static library | `ej_core` |
+| `ej_ios_bridge` | static library; Objective-C++ on iOS, a stub elsewhere | nothing (UIKit and Foundation on iOS) |
+| `ej_app` | Qt Quick executable (`error-journaling`) | the three libraries, Qt Quick |
+
+Each library has a placeholder test with the `unit` label; the application has two `ui` tests (`app.smoke` starts it
+without a display and waits for the first frame, `app.version` answers `--version`). The application is the iPhone
+application on iOS (portrait only, laid out inside `SafeArea.margins`) and a desktop program on macOS and Linux, built
+to iterate on the user interface and to be tested in CI; no desktop package is released.
+
 ## Platform code
 
 Platform differences live in `src/platform/<os>/` with the same file names in each directory.
-`icl_platform_sources(target)` adds the directory that matches the target system. Source files
+`icl_platform_sources(target)` adds the directory that matches the target system; `ej_ios_bridge` picks its directory in
+its own `CMakeLists.txt` (`ios` or `desktop`). Source files
 contain no `#if` on the platform or compiler; the preprocessor check fails the pull request if
 one appears. Other directives are counted per file against `tools/preprocessor-baseline.json`,
 which can go down but not up.

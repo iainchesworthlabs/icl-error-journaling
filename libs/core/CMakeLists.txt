@@ -7,20 +7,20 @@ configure_file(
     "${CMAKE_CURRENT_BINARY_DIR}/generated/error_journaling/version.hpp"
     @ONLY)
 
-add_library(error_journaling_core
-    src/greeting.cpp
+# QtCore only (docs/architecture.md): no GUI, QML or SQL here, so the library builds and tests without a display.
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
+
+add_library(ej_core
     src/version.cpp)
-add_library(error_journaling::core ALIAS error_journaling_core)
+add_library(error_journaling::core ALIAS ej_core)
 
-# One implementation file per platform; CMake adds the directory that matches the target.
-icl_platform_sources(error_journaling_core)
-
-target_include_directories(error_journaling_core
+target_include_directories(ej_core
     PUBLIC
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>")
-target_compile_features(error_journaling_core PUBLIC cxx_std_23)
-target_link_libraries(error_journaling_core
+target_compile_features(ej_core PUBLIC cxx_std_23)
+target_link_libraries(ej_core
+    PUBLIC Qt6::Core
     PRIVATE icl::warnings icl::hardening icl::tracy icl::coverage)
 
 if(ERROR_JOURNALING_BUILD_TESTS)

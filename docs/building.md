@@ -21,8 +21,10 @@ hard-code paths.
 | `ICL_QT_ROOT` | A prebuilt Qt kit, for example `~/Qt/6.12.0/gcc_64`. `QT_ROOT_DIR` and `QTDIR` are the fallbacks. Qt is not a vcpkg dependency; install it with aqtinstall. |
 | `ERROR_JOURNALING_VCPKG_ROOT`, `ERROR_JOURNALING_QT_ROOT` | A vcpkg checkout or Qt kit used for this project only. |
 
-A configure with none of them set stops and lists the options. Set them once in the shell profile. A project with a
-Qt application pins the version in the `qt` key of `.github/toolchain-versions.json`; CI installs it from there.
+A configure with none of them set stops and lists the options. Set them once in the shell profile. The
+Qt version is the `qt` key of `.github/toolchain-versions.json` (6.12.0); CI installs it from there. The libraries link
+QtCore and the application links Qt Quick, so every configure needs a Qt kit; CTest runs the Qt Quick tests with
+`QT_QPA_PLATFORM=offscreen`.
 
 ## Presets
 
@@ -39,19 +41,30 @@ ctest --preset linux-debug
 | `linux-asan-ubsan` | AddressSanitizer and UndefinedBehaviorSanitizer |
 | `linux-tsan` | ThreadSanitizer |
 | `linux-coverage` | Instrumented build for gcovr |
-| `macos-release`, `windows-msvc-release`, `windows-msvc-asan` | Platform builds |
-| `ios-release` | The iPhone and iPad application (`apps/ios`), unsigned, on a Mac with Xcode; no tests and no command-line program |
+| `macos-debug`, `macos-release` | The desktop program on a Mac, for iterating on the user interface; built with tests |
+| `ios-release` | The iPhone and iPad application (`apps/app`), unsigned, for a device, on a Mac with Xcode; no tests |
+| `ios-simulator` | The same for the iOS simulator. Not working with the aqtinstall kit and not in CI: the link fails because the kit's `qmltooling` plugin objects are built for the device only ("building for 'iOS-simulator', but linking in object file ... built for 'iOS'") |
+| `windows-msvc-release`, `windows-msvc-asan` | The developer machine only. Windows is not a v1 platform and CI has no Windows leg |
 
 Sanitizers, Tracy, coverage and fuzzing exclude each other. The configure step stops with a
 message when two are enabled.
 
 ### iOS
 
-`cmake --preset ios-release` needs a vcpkg checkout at the baseline of `vcpkg.json` (`VCPKG_ROOT`; CI's `setup-vcpkg` action
-sets it) and Xcode. It builds `build/ios-release/error-journaling.app` without signing. Three cache variables make a signed
+`cmake --preset ios-release` (or `ios-simulator`) needs a vcpkg checkout at the baseline of `vcpkg.json` (`VCPKG_ROOT`;
+CI's `setup-vcpkg` action sets it), Xcode, Qt's iOS kit (`QT_ROOT_DIR`, for example `~/Qt/6.12.0/ios`) and a macOS Qt
+of the same version for the host tools (`QT_HOST_PATH`, for example `~/Qt/6.12.0/macos`). aqtinstall installs both:
+`aqt install-qt mac ios 6.12.0 --autodesktop`. It builds `error-journaling.app` under `build/ios-release` without
+signing. Three cache variables make a signed
 build, which is the release workflow's (`docs/releasing.md`, "iOS and TestFlight"): `ERROR_JOURNALING_IOS_SIGNING_TEAM` and
 `ERROR_JOURNALING_IOS_SIGNING_PROFILE` go together (CMake stops when only one is given), and `ERROR_JOURNALING_IOS_BUILD_NUMBER`
 sets `CFBundleVersion`. The identifier is `ERROR_JOURNALING_APPLICATION_ID` in `CMakeLists.txt`. Check the bundle with
-`apps/ios/packaging/verify_app.sh <app> --bundle-id <id> --executable error-journaling`.
+`apps/app/packaging/ios/verify_app.sh <app> --bundle-id <id> --executable error-journaling`.
+
+### Windows (developer machine)
+
+`cmake --preset windows-msvc-release` from a Visual Studio developer prompt builds the libraries, the application and
+their tests. Put the Qt `bin` directory on `PATH` first (for example `C:\repos\common\Qt\6.12.0\msvc2022_64\bin`):
+the test executables load the Qt libraries when CTest discovers the tests. Nothing ships from Windows.
 
 Put personal settings in `CMakeUserPresets.json`, which is ignored by git.
