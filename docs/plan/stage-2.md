@@ -76,7 +76,7 @@ against both implementations, so the memory version cannot drift from the real o
 
 Notes: `seq` is the journal sequence number of the record that created the entry and breaks ties when two entries have
 the same `captured_utc`. `error_type_label` is a snapshot, so an entry still renders after the error type is removed
-from the configuration (decision 5, open). Foreign keys on, `ON DELETE` restricted except `hard_delete_log`, which
+from the configuration (decision 5). Foreign keys on, `ON DELETE` restricted except `hard_delete_log`, which
 deletes children in one transaction. Indexes on `entry(day_log_id, captured_utc, seq)` and `day_log(archived)`.
 
 ### 2.4 Connection settings and durable sync
@@ -464,7 +464,7 @@ in the report is zero when that works. The owner accepted this (decision 2).
 
 `LogRepository`, `StorageError`, `Clock`, `RecoveryReport`, journal record types with their encoding and CRC (pure
 functions in `ej_core`), and `MemoryLogRepository`. The typed contract suite is written here and runs against the
-memory version. Depends on question 5 (snapshot) and on Stage 1's `Log` and `Entry` types.
+memory version. Depends on Stage 1's `Log` and `Entry` types.
 
 ### 2.2 Schema v1 and `SqliteLogRepository`
 
@@ -609,7 +609,7 @@ The owner answered on 7 Nov 2026. The text above reflects these answers.
 | 2 | Archived logs | **Keep each archived journal** and rebuild history too (section 5.4), so a database loss does not cost the history |
 | 3 | Draft durability | **Accepted**: up to 300 ms of typing can be lost on a kill; `flush()` on going inactive |
 | 4 | Unconfirmed write after a crash | **Accepted**: it may appear after relaunch |
-| 5 | Error type snapshots | **Open**, see below |
+| 5 | Error type snapshots | **Store the snapshot** (agreed 7 Nov 2026), see below |
 | 6 | Launch integrity check | **Quick check on every launch**; the full check runs after a failed quick check and on the first launch after an upgrade |
 | 7 | Size limits | **Accepted**: notes up to 10,000 characters; entries per log bounded in the repository |
 | 8 | iCloud and device backup | **Left in backup**; the data is tied to the user's own account. Stage 5 does not set the exclusion flag |
@@ -618,12 +618,11 @@ The owner answered on 7 Nov 2026. The text above reflects these answers.
 | 11 | Iteration counts | **Accepted**: 25 on the PR gate, 100 on the merge queue, 1,000 nightly, 10,000 for the gate |
 | 12 | Entry ids | **UUID v4**. Anything shown to the user (review screen, reports) uses a short code derived from the id, never the full UUID |
 
-### Still open: error type snapshots (question 5)
+### Error type snapshots (decision 5)
 
 An error entry records which error type was tapped, for example "Wrong Response". The configuration owns the list of
 error types and lets the facilitator rename or remove them (PRF-08). If an entry holds only a reference to the type,
 then once the type is renamed or removed an old log cannot say what the entry was: an old export would change or fail.
 A snapshot stores the label as it was at the moment of the tap, next to the reference, so old logs and exports always
-read the way they did when written. It costs one extra text column. Recommendation: store the snapshot. This is the
-plan's current design; it stays unless the owner says otherwise. Whether a renamed type should *also* update old
+read the way they did when written. It costs one extra text column. Decided: store the snapshot. Whether a renamed type should *also* update old
 entries is a separate question for Stage 3 and the PRD.
