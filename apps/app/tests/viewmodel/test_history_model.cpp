@@ -52,9 +52,8 @@ static_assert(!std::is_default_constructible_v<DeleteConfirmation>);
 static_assert(!std::is_constructible_v<DeleteConfirmation, LogId>);
 static_assert(!std::is_convertible_v<LogId, DeleteConfirmation>);
 template <typename... Arguments>
-concept can_hard_delete = requires(LogRepository& repository, Arguments... arguments) {
-    repository.hard_delete_log(arguments...);
-};
+concept can_hard_delete =
+    requires(LogRepository& repository, Arguments... arguments) { repository.hard_delete_log(arguments...); };
 
 static_assert(!can_hard_delete<LogId>);
 static_assert(!can_hard_delete<LogId, LogId>);
@@ -262,7 +261,7 @@ private:
               const std::vector<Entry>& entries, bool archive)
     {
         HeaderValues header = sample_header();
-        header.m_LocalDate = std::chrono::year{year} / month / day;
+        header.m_LocalDate = std::chrono::year{year} / std::chrono::month{month} / std::chrono::day{day};
         header.m_Location = std::move(location);
         const LogId id = sample_id<LogId>(number);
         REQUIRE(m_Storage.memory().create_log(id, header));
