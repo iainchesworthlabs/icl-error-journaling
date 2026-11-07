@@ -1023,3 +1023,39 @@ that number.
     2.3 and 2.4 adapt to this. (owner, 2026-11-07)
 12. **Adding a type from the Other sheet does not record it.** The new type appears in the list and the facilitator taps
     it, so a typo in a new name cannot create an entry she did not mean to log. (owner, 2026-11-07)
+
+## Addendum: five additions for Stage 4 (decided by the owner, 2026-11-07)
+
+Stage 4 (`stage-4.md`, decision 4) found five things the approved screens need that this page does not give, and the owner
+decided to add them here rather than do the work in QML. The packages named are still unmerged, so each is added to that
+package's scope, tests and sketch. QML-facing names are camelCase and the C++ readers follow the casing rules above.
+
+1. **UTC from local time (3.4, `LogSession`).** The version-change sheet has a time field. Add
+   `Q_INVOKABLE bool changeHeader(const QString& fieldKey, const QString& text, int localSeconds)`: `localSeconds` is seconds
+   since local midnight of the log's date, resolved in the log's zone with `TimeZoneProvider::to_utc` exactly as
+   `TimelineModel::saveEntry` does for the edit sheet, so an instant in the missing hour or the repeated hour behaves as
+   Stage 1 defined. The existing `atUtcMs` overload stays for tests. Add `Q_PROPERTY(int nowLocalSeconds READ now_local_seconds)`
+   (the clock in the log's zone, for the "now" default). Tests: a change at a local time before and after the Melbourne
+   changes of 2026-10-04 and 2026-04-05, the entry's instant and zone, an unknown or out-of-range value refused, and the
+   default equals the clock.
+2. **Preview of a header change (3.4, `LogSession`).** Add `Q_INVOKABLE QString previewHeaderChange(const QString& fieldKey, const QString& text, int localSeconds) const`:
+   it applies the change to a scratch copy of the mirror and returns `render_entry_line` of the new entry, or the plain
+   refusal message of `validateHeaderValue` or for a value equal to the one in force. It writes nothing. Tests: the preview
+   equals the line of the entry `changeHeader` then saves, byte for byte; an unchanged or invalid value returns its message;
+   no repository call is made.
+3. **Entry point for a new log (3.4 `LogSession`, with the design in Stage 4 package 4.2).** `startNewLog()` already exists;
+   the addition is the property the confirmation shows, `Q_PROPERTY(int liveEntryCount READ live_entry_count NOTIFY headerChanged)`
+   of the open log, so the confirmation can say what is being archived. The control's place (a row at the bottom of Today's
+   details, behind a confirmation) is a Stage 4 design decision. Test: the count follows commits and undo.
+4. **Time formatting for the screens (3.7, `TimelineModel`).** Add `Q_INVOKABLE QString formatLocalSeconds(int localSeconds) const`,
+   which formats with the user's time format through the renderer's formatter, so the edit sheet, the version sheet and the
+   time tumbler never format a time in QML (PRF-07). The preference-change test of `TimelineModel` covers it.
+5. **Roles for the template chips and value prompt (3.3, `template_list_model`; the role names are also a design item in 4.2).**
+   `SettingsModel::templates` names its roles, so the Log screen's chips and prompt can bind: `templateId`, `name`, `prompt`
+   (the text asking for the value), `pattern` and `inputHint` (`text`, or `digits` where a pattern's value is numeric, as a
+   hint only). The same applies to the other list models (`errorTypes`: `typeId`, `label`, `retired`; `locations`:
+   `locationId`, `name`; `boardLayout`: the roles of `BoardModel` without counts), so 3.3 lists every role name in its sketch.
+   Test: each model's `roleNames()` equals the documented list.
+
+Items 1, 2 and 3 are in the pull request of 3.4, item 4 in 3.7 and item 5 in 3.3. Stage 4 package 4.9 needs items 1 and 2,
+4.10 needs item 4, and 4.9, 4.12 and 4.13 need item 5.

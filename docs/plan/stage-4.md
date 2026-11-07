@@ -8,9 +8,8 @@ share sheet and launch screen that touch the same files are in [Stage 5](stage-5
 **Exit gate:** side-by-side review of each screen against the design on an iPhone 17, in light and dark mode, signed off
 by the facilitator.
 
-**Status:** draft for owner review. No QML or C++ is written until the owner approves this page. `AGENTS.md` also
-forbids UI code until the Stage 2 exit gate has passed; this page is written now so it can be reviewed in parallel, and
-only package 4.2 (design documents) and the reading of this page may start before the gate.
+**Status:** approved by the owner on 2026-11-07 (every recommendation accepted). `AGENTS.md` forbids UI code until the
+Stage 2 exit gate has passed, so only package 4.2 (design documents) may start before the gate.
 
 ## Scope and conventions
 
@@ -28,7 +27,7 @@ putting the rule in QML.
 - **Services reach QML as required properties,** never as context properties or global singletons: the root window
   declares `required property` for `session`, `undo`, `board`, `picker`, `timeline`, `history`, `day`, `settings`, `share` and
   `bridge`, `Main.qml` hands each screen only what it uses, and a test creates a screen with whatever it wants to inject
-  (open question 3). `AppRoot` (Stage 3, 3.11) supplies them; the names are those of the sketches in `stage-3.md`.
+  (decision 3). `AppRoot` (Stage 3, 3.11) supplies them; the names are those of the sketches in `stage-3.md`.
 - **CMake.** The QML files are added with `file(GLOB_RECURSE ... CONFIGURE_DEPENDS qml/*.qml)` into the existing
   `qt_add_qml_module`, and the UI tests with `file(GLOB ... CONFIGURE_DEPENDS)` into one test executable `ej_ui_tests`
   in `apps/app/tests/ui/`, as Stage 3 did for `ej_viewmodel`. A package therefore adds its files without editing a shared
@@ -37,7 +36,7 @@ putting the rule in QML.
   re-skinned (custom `background` and `contentItem`), never from a platform or default style (NFR-05). The Basic
   controls are used where they supply what a custom item would have to rebuild: text input behaviour and the keyboard,
   `Popup` and its overlay, `Tumbler`, `StackView`, and the accessibility roles. Every file imports
-  `QtQuick.Controls.Basic` explicitly, so no `QQuickStyle` call and no `main.cpp` change is needed (open question 2).
+  `QtQuick.Controls.Basic` explicitly, so no `QQuickStyle` call and no `main.cpp` change is needed (decision 2).
 - **No platform tests in QML.** `Qt.platform.os` and its kin are not used. What differs (share available, a document
   picker, a haptic) arrives as a property or a signal of `bridge` or of a Stage 3 object, so one policy check
   (`check_qml_platform.py`, 4.1) can fail a QML file that asks. This is the QML counterpart of the "no `#if`" rule.
@@ -50,7 +49,7 @@ putting the rule in QML.
   its properties, drives it with synthesised touch and key events and asserts on the item tree. They are labelled `ui`;
   budgets are labelled `perf`. Screens are tested against the real Stage 3 view models over the in-memory repository, the
   `ManualStorageGateway` and `TestClock` of Stage 3 (so a test can look at the screen between "submitted" and
-  "committed"); components are tested with plain property values. Qt Quick Test is not used (open question 1).
+  "committed"); components are tested with plain property values. Qt Quick Test is not used (decision 1).
 - **Coverage.** Catch2 does not measure QML. Coverage of the C++ of the rig and helpers is held by the existing floor; the
   QML is covered by the rule that each component and screen has a test file named after it, which a policy check
   enforces (4.1), and by the screenshot set of 4.16.
@@ -79,8 +78,7 @@ place, and the right column is what changes if it is wrong.
 
 ## Gaps in Stage 3 found while writing this page
 
-The approved screens need five things the Stage 3 page does not give. Each is small. They are listed here so the owner can
-decide to add them to Stage 3 (my recommendation, open question 4) rather than have QML work around them.
+The approved screens need five things the Stage 3 page does not give. Each is small. The owner decided (decision 4) to add them to Stage 3, in the addendum at the end of `stage-3.md`, rather than have QML work around them.
 
 1. **Local time to a UTC instant.** The version-change sheet has a time field that defaults to now.
    `LogSession::changeHeader(field, text, atUtcMs)` takes a UTC instant, and turning "14:05 on this log's date in the
@@ -93,7 +91,7 @@ decide to add them to Stage 3 (my recommendation, open question 4) rather than h
    line (or the plain refusal message), built on a scratch copy with `render_entry_line`, so the preview and the saved
    line cannot differ (REV-01).
 3. **An entry point for DAY-02.** "A new log can be started at any time from the menu" has no menu in the approved
-   screens and no place for it. `LogSession::startNewLog()` exists. The design question is where it lives (open question 8).
+   screens and no place for it. `LogSession::startNewLog()` exists. The design question is where it lives (decision 8).
 4. **Template value prompt data.** NOTE-04 prompts for a value when a chip is tapped. `SettingsModel::templates` must give
    QML the template's id, name, prompt text and the field's input hint as roles; the roles of the four list models are not
    named in Stage 3 ("names as in 3.3"). 3.3 should list them.
@@ -174,7 +172,7 @@ that draws shapes only, in neutral colours, with no text, badge or type colour (
 | `NoteComposer`, `Chip` | NoteComposer with template chips | The text field with Add, the chip row, the 300 ms draft binding | 4.6 |
 | `ListRow`, `GroupedList`, `SwipeRow` | ListRow, SwipeRow | 48 pt rows in a 14 pt-radius group; a row that reveals Copy and Delete on swipe | 4.6 |
 | `ChoiceCard` | ChoiceCard | The two plain choices of the version sheet, selected state | 4.6 |
-| `PrimaryButton`, `SearchField`, `FormField`, `TimeTumbler` | (inputs) | The 54 pt button; the search field; a labelled field with inline validation message; the time input (open question 11) | 4.6 |
+| `PrimaryButton`, `SearchField`, `FormField`, `TimeTumbler` | (inputs) | The 54 pt button; the search field; a labelled field with inline validation message; the time input (decision 11) | 4.6 |
 
 ### Design tokens (4.1)
 
@@ -267,7 +265,7 @@ for all of it; the tests are listed under each package and the device checks in 
   distinguishable by more than colour.
 - **Reduce Motion** (4.3 supplies `bridge.reduceMotion`) replaces springs and slides with a 100 ms fade; the tile press
   keeps its scale because it is feedback, not decoration.
-- **Bold Text and Increase Contrast** are not specially handled in v1 (open question 14).
+- **Bold Text and Increase Contrast** are not specially handled in v1 (decision 14).
 
 ### Safe area
 
@@ -276,7 +274,7 @@ sheets with it. The header card clears the Dynamic Island; the tab bar's 83 pt i
 sheet's grabber sits below the top inset; the keyboard lifts a sheet by `Qt.inputMethod.keyboardRectangle` (U5). A test
 overrides the insets (59 and 34 as the design gives, and the same plus 20 pt, as a different phone would) and checks
 nothing interactive enters an inset and nothing is clipped. Portrait only: the property list's orientation lock is checked
-by the existing policy check (open question 15).
+by the existing policy check (decision 15).
 
 ## Motion
 
@@ -388,7 +386,7 @@ cross-cutting tests above run on a stub component; each policy check against a k
 No code. Draw, in the format of the existing `.dc.html` files, the screens the design package lists as not drawn
 (History, header banner, first-launch setup, the three editors, the import confirmation and import errors, the delete-log
 confirmation, the template value prompt, the write-failed and recovery messages), the entry point for starting a new log
-(open question 8), the board layout's selected-tile state with the VoiceOver alternative, and **every screen in dark mode**.
+(decision 8), the board layout's selected-tile state with the VoiceOver alternative, and **every screen in dark mode**.
 Add the dark values to `tokens.json` and the rules to the design README. The owner reviews the documents, then the
 facilitator approves them; a screen package starts when its design is approved. This is the only package that can run
 now, and the dark palette blocks the Stage 4 exit gate (implementation plan, decisions that block a stage).
@@ -409,7 +407,7 @@ the category and the font QML picks on a device.
 
 Tests (`unit`): the category-to-scale table (every category, monotone, accessibility sizes above 2.0); the wrapper emits one
 signal per change and none when the value is the same; the stub; a notification after the bridge is destroyed is ignored.
-This is a Stage 5 interface added by Stage 4 (open question 5), so 5.1's file layout and `platform_services.cpp` rebase rules
+This is a Stage 5 interface added by Stage 4 (decision 5), so 5.1's file layout and `platform_services.cpp` rebase rules
 apply.
 
 ### 4.4 Containers and navigation components
@@ -526,7 +524,7 @@ number pad hint is set, letters never reach the field, the prefix is displayed a
 message and nothing is saved); `details.location` (a configured location sets its id, Other shows a free text field and
 sends the text); `details.version_validation` (`1.4`, `1.4.2-beta` show the message inline and Save stays disabled until
 valid); `details.correct_first_fill` (filling an empty field calls `correctHeader` and adds no timeline entry);
-`details.new_log_row` (the DAY-02 row from open question 8 asks for confirmation before `startNewLog`); `version.choices`
+`details.new_log_row` (the DAY-02 row from decision 8 asks for confirmation before `startNewLog`); `version.choices`
 (the two plain choices, one selected, texts in the facilitator's words); `version.change` ("It changed during the day" calls
 `changeHeader` with the time chosen, once, and the timeline gains the line); `version.correct` ("I typed it wrong" calls
 `correctHeader`, no entry); `version.preview` (the preview equals the saved line byte for byte, updates as the fields
@@ -600,7 +598,7 @@ The error type, location and template editors (add, rename, reorder, retire, `va
 the first-launch screen (offer to import a file or set up manually, PRF-09), the import confirmation (the summary from
 `importPrepared`) and the import error list (`importFailed`, messages in file order). The platform-specific part is a
 signal out: `importRequested()` and `exportRequested()`; on the desktop the shell opens Qt's file dialog and on iOS Stage 5's
-document picker supplies the path, then calls `settings.loadImport(path)` (open question 6).
+document picker supplies the path, then calls `settings.loadImport(path)` (decision 6).
 
 Tests: `editor.error_types` (add, rename, retire; a retired type disappears from the list; duplicate and empty names refused
 inline; reorder through move buttons as well as drag); `editor.locations`; `editor.templates` (name, prompt, pattern; the live
@@ -729,73 +727,73 @@ fakes. Not proved by any test on this page:
 - **Preprocessor baseline.** `tools/preprocessor-baseline.json` must not rise (QML adds none; the `Q_PROPERTY` and
   `Q_OBJECT` macros in 4.3 are not directives).
 - **Coverage.** The C++ in the rig and helpers is covered by the existing floor; 4.18 raises it if it rose.
-- **Wording this page changes** (to be applied in 4.18 once the owner accepts the recommendations):
+- **Wording this page changes** (accepted by the owner on 2026-11-07; applied in 4.18):
   - Implementation plan, Stage 4, step 5: "label sizes that respond to the system text size where the layout allows"
     becomes the rule in [Dynamic Type](#dynamic-type) (list and note text scale without a cap; fixed-geometry chrome is capped).
-  - Implementation plan, test layers: "QML tests" are Catch2 `ui` cases over the real view models (open question 1).
+  - Implementation plan, test layers: "QML tests" are Catch2 `ui` cases over the real view models (decision 1).
   - PRD NFR-02: "labels of up to three lines" and `tokens.json` `tileLabel.maxLines` 4 are reconciled as in question 9.
-  - Stage 5, 5.7: the haptic and share call lines are written in Stage 4 (open question 6), so 5.7 shrinks to the import
+  - Stage 5, 5.7: the haptic and share call lines are written in Stage 4 (decision 6), so 5.7 shrinks to the import
     wiring, the launch tracker and the device pass.
 
-## Decisions and open questions
+## Decisions (decided by the owner, 2026-11-07)
 
-Each has a recommendation, which this page assumes until the owner decides otherwise. None blocks writing; the first
-three decide the shape of every package.
+The owner accepted every recommendation on this page on 2026-11-07. The numbering of the former open questions is kept,
+so references such as "decision 4" elsewhere on the page and in other pages resolve to the decision with that number.
 
 1. **How are QML screens tested?** Options: Qt Quick Test (`TestCase` in QML, run with a Qt-supplied runner), or Catch2
-   cases that load QML offscreen and drive it from C++. **Recommendation: Catch2 offscreen.** One runner, one set of labels
+   cases that load QML offscreen and drive it from C++. **Decided: Catch2 offscreen.** One runner, one set of labels
    and the sanitiser/TSan builds as for all other tests (Qt Quick Test's runner is its own `main`), the real Stage 3 view models and fakes are
    plain C++ objects the case already owns, and it matches the owner's Catch2 decision. The cost is writing the rig (4.1) and
-   asserting from C++ rather than QML.
+   asserting from C++ rather than QML. (owner, 2026-11-07)
 2. **Qt Quick Controls or plain items?** Options: only plain items, or `QtQuick.Controls.Basic` types fully re-skinned.
-   **Recommendation: Basic controls re-skinned where they supply behaviour (text input, `Popup`, `Tumbler`, `StackView`),
+   **Decided: Basic controls re-skinned where they supply behaviour (text input, `Popup`, `Tumbler`, `StackView`),
    plain items elsewhere (Tile, board, toast).** No default look is ever visible (NFR-05); the controls save rebuilding input and
-   accessibility roles. Importing `QtQuick.Controls.Basic` per file avoids a `QQuickStyle` call and a `main.cpp` edit.
+   accessibility roles. Importing `QtQuick.Controls.Basic` per file avoids a `QQuickStyle` call and a `main.cpp` edit. (owner, 2026-11-07)
 3. **How do the view models reach QML?** Options: context properties, registered singletons, or required properties from the root.
-   **Recommendation: required properties passed down explicitly.** A screen's dependencies are visible in its first lines,
-   a test injects exactly what it needs, and `qmllint` can check the types.
+   **Decided: required properties passed down explicitly.** A screen's dependencies are visible in its first lines,
+   a test injects exactly what it needs, and `qmllint` can check the types. (owner, 2026-11-07)
 4. **Add the five Stage 3 gaps to Stage 3?** (UTC from local time, header-change preview, template roles, time formatting
-   invokable, and the entry point for new log.) **Recommendation: yes,** as an addendum owned by 3.4 and 3.7 (items 1, 2, 5), 3.3
+   invokable, and the entry point for new log.) **Decided: yes,** as an addendum owned by 3.4 and 3.7 (items 1, 2, 5), 3.3
    (item 4) and the design (item 3), before 4.9. The alternative, doing the time arithmetic in QML, breaks the rule that QML holds no logic and
-   risks a wrong time at daylight saving.
+   risks a wrong time at daylight saving. (owner, 2026-11-07)
 5. **Add an `AccessibilitySettings` bridge capability (text scale, Reduce Motion) to Stage 5's bridge, owned by Stage 4 (4.3)?**
-   **Recommendation: yes.** NFR-07 requires Dynamic Type and Stage 5 has no item for it. Without it the fallback is
-   a fixed scale, which fails NFR-07. It follows Stage 5's pattern and is small.
-6. **Who writes the haptic, share and import call lines in QML: Stage 4 or Stage 5's 5.7?** **Recommendation: Stage 4,**
+   **Decided: yes.** NFR-07 requires Dynamic Type and Stage 5 has no item for it. Without it the fallback is
+   a fixed scale, which fails NFR-07. It follows Stage 5's pattern and is small. (owner, 2026-11-07)
+6. **Who writes the haptic, share and import call lines in QML: Stage 4 or Stage 5's 5.7?** **Decided: Stage 4,**
    against the `qml_bridge` methods that already exist from the spike (`prepareHaptics`, `hapticImpact`, `hapticSuccess`, the
    share through Stage 3's `ShareService`), so a screen is finished and testable in one pull request; the import and export
    rows emit signals and the shell routes them (desktop file dialog now, the Stage 5 picker later). 5.7 then keeps the launch
-   tracker, the picker hookup and the device pass. The owner amends `stage-5.md` when accepting.
+   tracker, the picker hookup and the device pass. The owner amends `stage-5.md` when accepting. (owner, 2026-11-07)
 7. **Press-to-record and VoiceOver activation.** Stage 5 decision 1 already makes the tile record on touch-down.
-   **Recommendation:** VoiceOver activation takes the same two calls (haptic, then record) so behaviour does not depend on how
-   the tile was reached. The accidental-touch risk is handled by the undo toast, as in the approved design.
-8. **Where does "start a new log" (DAY-02) live?** The design package has no menu. **Recommendation: a row at the bottom of
+   **Decided:** VoiceOver activation takes the same two calls (haptic, then record) so behaviour does not depend on how
+   the tile was reached. The accidental-touch risk is handled by the undo toast, as in the approved design. (owner, 2026-11-07)
+8. **Where does "start a new log" (DAY-02) live?** The design package has no menu. **Decided: a row at the bottom of
    Today's details, "Start a new log for another unit or site", behind a confirmation `Alert`** (it archives the open log),
    because that is where the facilitator is already looking at the unit and site. A menu on the Log screen is a new control
-   she did not approve. To be drawn in 4.2.
-9. **Tile label lines.** NFR-02 says up to three lines that never truncate; `tokens.json` says four. **Recommendation:** three lines
+   she did not approve. To be drawn in 4.2. (owner, 2026-11-07)
+9. **Tile label lines.** NFR-02 says up to three lines that never truncate; `tokens.json` says four. **Decided:** three lines
    at the default size, four at larger sizes up to the 1.3 cap, never truncated, with a test using the longest label of the
-   sample configuration ("Sequence Out of Order"). Tile width is 118 pt, which holds it.
-10. **Dark palette direction (blocks the exit gate).** **Recommendation:** keep the plum header card and the deep blue primary
+   sample configuration ("Sequence Out of Order"). Tile width is 118 pt, which holds it. (owner, 2026-11-07)
+10. **Dark palette direction (blocks the exit gate).** **Decided:** keep the plum header card and the deep blue primary
     as the brand anchors; a near-black blue-grey background and raised surfaces; tile colours as the same 11 hues at low
     lightness and moderate saturation with light text (the tile rule "text is always `textPrimary` on the tile colour" holds, with the dark-mode `textPrimary`); no red or green; Other stays neutral with a dashed border; the
-    Review text white on black, as the light mode is black on white. Drawn and contrast-checked in 4.2, approved by the facilitator.
-11. **Time input control.** **Recommendation:** a custom two-column `Tumbler` (hours, minutes, with seconds and meridiem when
+    Review text white on black, as the light mode is black on white. Drawn and contrast-checked in 4.2, approved by the facilitator. (owner, 2026-11-07)
+11. **Time input control.** **Decided:** a custom two-column `Tumbler` (hours, minutes, with seconds and meridiem when
     the time format has them), re-skinned, VoiceOver adjustable. A text field for times invites a typo that the model must
-    reject; the native `UIDatePicker` is not reachable from Qt Quick without a bridge item.
-12. **Visual regression.** **Recommendation: no pixel golden files.** Fonts and rendering differ between the runner and the phone, so
+    reject; the native `UIDatePicker` is not reachable from Qt Quick without a bridge item. (owner, 2026-11-07)
+12. **Visual regression.** **Decided: no pixel golden files.** Fonts and rendering differ between the runner and the phone, so
     pixel files would fail for the wrong reasons. Instead: geometry tests against the token numbers, the contrast and
     accessibility tests, the screenshot artifact of 4.16 for review, and the device pass. The one pixel comparison in the
-    project stays the launch image of Stage 5, which has no text.
-13. **Who designs the screens that are not drawn?** **Recommendation:** drafted as `.dc.html` mock-ups in 4.2 in the
+    project stays the launch image of Stage 5, which has no text. (owner, 2026-11-07)
+13. **Who designs the screens that are not drawn?** **Decided:** drafted as `.dc.html` mock-ups in 4.2 in the
     existing format, reviewed by the owner, then approved by the facilitator, before the screen package starts. The cost of
-    redrawing is much lower than the cost of rebuilding QML.
-14. **Bold Text and Increase Contrast.** **Recommendation:** not handled in v1 (NFR-07 asks for VoiceOver and Dynamic Type); the
-    tokens already pass 4.5 to 1. Revisit if the facilitator uses them.
-15. **Orientation and iPad.** **Recommendation:** portrait only on iPhone, as NFR-01 and the plan have it; the layout uses
-    `SafeFrame` and token sizes so a later iPad layout is a new set of screens, not a rewrite of components.
-16. **Long-press (BRD-07, Should).** **Recommendation:** build it last (4.17) because it depends on the Edit sheet and has no
-    effect on the gate; it can slip to 1.1.
+    redrawing is much lower than the cost of rebuilding QML. (owner, 2026-11-07)
+14. **Bold Text and Increase Contrast.** **Decided:** not handled in v1 (NFR-07 asks for VoiceOver and Dynamic Type); the
+    tokens already pass 4.5 to 1. Revisit if the facilitator uses them. (owner, 2026-11-07)
+15. **Orientation and iPad.** **Decided:** portrait only on iPhone, as NFR-01 and the plan have it; the layout uses
+    `SafeFrame` and token sizes so a later iPad layout is a new set of screens, not a rewrite of components. (owner, 2026-11-07)
+16. **Long-press (BRD-07, Should).** **Decided:** build it last (4.17) because it depends on the Edit sheet and has no
+    effect on the gate; it can slip to 1.1. (owner, 2026-11-07)
 17. **Desktop build in CI.** The plan says the UI is iterated on a macOS desktop build; the Linux runner builds it too.
-    **Recommendation:** keep the QML free of anything desktop-only except the dev file dialog in the shell, which 4.15 isolates in
-    one file the iOS build does not load.
+    **Decided:** keep the QML free of anything desktop-only except the dev file dialog in the shell, which 4.15 isolates in
+    one file the iOS build does not load. (owner, 2026-11-07)
