@@ -66,7 +66,8 @@ void expect_clean(const Violations& violations);
 [[nodiscard]] double perf_budget_factor();
 
 /// `perf.scene`: the number of items under `from` (the loaded item by default) and the number of those that are
-/// delegates of a model, found by their class name.
+/// delegates: the items a Repeater or a ListView/GridView has made (asked of it, so a delegate with no required
+/// properties counts), and any item that has the `index` and `model` of a delegate.
 struct SceneSize
 {
     int m_Items = 0;

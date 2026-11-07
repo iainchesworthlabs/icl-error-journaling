@@ -168,6 +168,17 @@ QtObject {
 
     readonly property Space space: Space {}
 
+    // The miniature board of the settings screen (docs/design/screens/BoardSettings.dc.html): a tile, the gap between tiles,
+    // the label size in points (a whole pixel size is made from it: 11.5 is 12) and the scale of a selected tile's lift.
+    component MiniBoard: QtObject {
+        readonly property real tile: 64
+        readonly property real gap: 6
+        readonly property real labelSize: 11.5
+        readonly property real selectedScale: 1.04
+    }
+
+    readonly property MiniBoard miniBoard: MiniBoard {}
+
     // Line widths: the dashed border of the Other tile, and a hairline for dividers and outlines.
     component Border: QtObject {
         readonly property real otherWidth: 1.5

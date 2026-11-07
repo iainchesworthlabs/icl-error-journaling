@@ -199,6 +199,7 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
         check_numbers(json.value(QStringLiteral("radius")).toObject(), child(theme, "radius"));
         check_numbers(json.value(QStringLiteral("spacing")).toObject(), child(theme, "space"));
         check_numbers(json.value(QStringLiteral("frame")).toObject(), child(theme, "frame"));
+        check_numbers(json.value(QStringLiteral("miniBoard")).toObject(), child(theme, "miniBoard"));
         const QJsonObject scale =
             json.value(QStringLiteral("typography")).toObject().value(QStringLiteral("textScale")).toObject();
         CHECK_THAT(number(child(theme, "size"), QStringLiteral("textScaleMin")),
@@ -209,8 +210,8 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
                    WithinAbs(scale.value(QStringLiteral("default")).toDouble(), 1e-9));
 
         // Nothing in the singleton that the contract does not have.
-        for (const auto& [group, key] :
-             {std::pair{"size", "size"}, std::pair{"radius", "radius"}, std::pair{"space", "spacing"}})
+        for (const auto& [group, key] : {std::pair{"size", "size"}, std::pair{"radius", "radius"},
+                                         std::pair{"space", "spacing"}, std::pair{"miniBoard", "miniBoard"}})
         {
             QSet<QString> have;
             for (const QString& name : json.value(QString::fromLatin1(key)).toObject().keys())

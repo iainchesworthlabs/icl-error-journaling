@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cmath>
 #include <map>
+#include <set>
 
 namespace ej::ui
 {
@@ -20,6 +21,8 @@ namespace
 constexpr double EPSILON = 0.5;
 constexpr double DEFAULT_TARGET = 44.0;
 constexpr int REDUCED_MOTION_MS = 100;
+/// `Text.ElideNone`, which is Qt::ElideNone (3): ElideLeft, ElideRight and ElideMiddle are 0, 1 and 2.
+constexpr int TEXT_ELIDE_NONE = 3;
 
 QString label(const Node& node)
 {
@@ -32,16 +35,21 @@ QString label(const Node& node)
         .arg(node.m_Rect.height());
 }
 
-bool is_text(const Node& node)
+bool is_class(const QObject* object, const char* name)
 {
-    for (const QMetaObject* meta = node.m_Item->metaObject(); meta != nullptr; meta = meta->superClass())
+    for (const QMetaObject* meta = object->metaObject(); meta != nullptr; meta = meta->superClass())
     {
-        if (qstrcmp(meta->className(), "QQuickText") == 0)
+        if (qstrcmp(meta->className(), name) == 0)
         {
             return true;
         }
     }
     return false;
+}
+
+bool is_text(const Node& node)
+{
+    return is_class(node.m_Item, "QQuickText");
 }
 
 bool related(const Node& a, const Node& b)
@@ -185,7 +193,7 @@ Violations check_text_scale(UiRig& rig)
             continue;
         }
         const QQuickItem* item = node.m_Item;
-        const bool elides = item->property("elide").toInt() != 0;   // Text.ElideNone is 0
+        const bool elides = item->property("elide").toInt() != TEXT_ELIDE_NONE;
         const bool wraps = item->property("wrapMode").toInt() != 0; // Text.NoWrap is 0
         if (!elides && item->property("truncated").toBool())
         {
@@ -345,16 +353,36 @@ double perf_budget_factor()
 SceneSize measure_scene(UiRig& rig, QQuickItem* from)
 {
     SceneSize size;
+    std::set<const QQuickItem*> delegates;
     for (const Node& node : rig.tree(from))
     {
         ++size.m_Items;
-        // A delegate of a view or a Repeater is a child of the view's content item or of the Repeater's parent and is
-        // marked by a model index; the class name of the item does not tell, but the model data does.
+        QQuickItem* item = node.m_Item;
+        // A Repeater makes its delegates as items of its parent; a view makes them in its content item. Ask each for
+        // the ones it has made, however the delegate is declared.
+        const bool repeater = is_class(item, "QQuickRepeater");
+        const bool view = is_class(item, "QQuickItemView");
+        if (repeater || view)
+        {
+            const int count = item->property("count").toInt();
+            for (int i = 0; i < count; ++i)
+            {
+                QQuickItem* delegate = nullptr;
+                const bool asked = QMetaObject::invokeMethod(item, repeater ? "itemAt" : "itemAtIndex",
+                                                             Q_RETURN_ARG(QQuickItem*, delegate), Q_ARG(int, i));
+                if (asked && delegate != nullptr)
+                {
+                    delegates.insert(delegate);
+                }
+            }
+        }
+        // A delegate of a model that declares them as required properties, such as a Tumbler or a path view.
         if (node.m_Item->property("index").isValid() && node.m_Item->property("model").isValid())
         {
-            ++size.m_Delegates;
+            delegates.insert(node.m_Item);
         }
     }
+    size.m_Delegates = static_cast<int>(delegates.size());
     return size;
 }
 

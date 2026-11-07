@@ -16,6 +16,8 @@ int main(int argc, char* argv[])
     }
     qputenv("QT_QUICK_BACKEND", "software");
     qputenv("QSG_RENDER_LOOP", "basic");
+    // Qt Quick holds back touch updates and delivers the last of them on the next frame; a test wants each at once.
+    qputenv("QML_NO_TOUCH_COMPRESSION", "1");
 
     const QGuiApplication application(argc, argv);
     return Catch::Session().run(argc, argv);

@@ -61,6 +61,14 @@ struct Node
 /// Time is manual. The animation clock is replaced by `ManualAnimationDriver`, so an animation of 120 ms is finished
 /// after `advance(120ms)` and not before, and a test never sleeps. `attach` hands the rig the `TestClock` and the
 /// `ManualStorageGateway` of Stage 3, so that `advance` moves them too and `settle` runs the jobs that are waiting.
+///
+/// What runs on which clock. Property animations and animators (`ScaleAnimator`, `XAnimator`, `OpacityAnimator`) move
+/// with `advance`, because Qt drives them from the animation clock that `ManualAnimationDriver` replaces; an animator
+/// writes its value back to the item when it ends, so look at an animator's result after its whole duration. The
+/// services of Stage 3 run on the `TestClock`, which `advance` moves when it is attached (`attach`, or `use` in
+/// `rig/services.hpp`). A QML `Timer` and a `QTimer` run on the wall clock and `advance` does not move them: the UI has
+/// none, because the plan keeps all time arithmetic in C++ of Stage 3, and a test that must wait for one calls
+/// `wait_real`, which does wait.
 class UiRig
 {
 public:
@@ -98,7 +106,9 @@ public:
     void move(int finger, QQuickItem* item, QPointF to);
     void release(int finger);
     void tap(QQuickItem* item, std::optional<QPointF> at = std::nullopt);
-    /// A finger down at `from`, over `steps` moves to `to`, and up, all in the item's coordinates.
+    /// A finger down at `from`, over `steps` moves to `to`, and up, all in the item's coordinates. Each update is
+    /// delivered before `move` returns: the test main turns off the compression of touch updates, which would deliver
+    /// only the last.
     void drag(QQuickItem* item, QPointF from, QPointF to, int steps = 8);
     void swipe(QQuickItem* item, QPointF from, QPointF to)
     {
@@ -110,11 +120,18 @@ public:
 
     // ---- time ----
 
-    /// Moves the animation clock by `by`, in steps of one frame so that an animation sees each, then the `TestClock`
-    /// and the events it leaves.
+    /// Moves the animation clock by `by` in steps of one frame (16 ms, the last one shorter), and after each step moves
+    /// the attached clocks, processes the events it leaves and renders a frame. An animator starts on the frame after
+    /// the one that asked for it, so it too is finished after `advance` of its duration plus at most one frame.
     void advance(std::chrono::milliseconds by);
+    /// Lets real time pass for `by`, processing events, for the one thing `advance` cannot move: a QML `Timer` or a
+    /// `QTimer` (wall clock). It sleeps, so use it for a component that owns such a timer and for nothing else.
+    void wait_real(std::chrono::milliseconds by);
     /// Runs the manual gateway until its queue is empty, then processes events. With nothing attached, only the events.
     void settle();
+    /// Called by `advance` for each step of at most one frame, in place of the attached clock: for a service rig (Stage
+    /// 3's `Rig`), which moves its own clocks.
+    void on_advance(std::function<void(std::chrono::milliseconds)> hook);
     /// Called by `settle`, after the attached gateway has run: for a service rig (Stage 3's `Rig`) that settles itself.
     void on_settle(std::function<void()> hook);
     void attach(test::TestClock& clock);
@@ -127,8 +144,15 @@ public:
     /// The item and the items that the accessibility tree lists under it, in the order a screen reader reads them.
     [[nodiscard]] std::vector<Node> accessible_tree(QQuickItem* from = nullptr);
     [[nodiscard]] QRectF geometry(QQuickItem* item) const;
-    /// The first item under the root whose objectName is `name`; null when there is none.
+    /// The first item under the root whose objectName is `name`, found through the QObject tree; null when there is
+    /// none. It does not see the delegates of a Repeater or a view, or the pages of a StackView, which are not QObject
+    /// children of the item that made them: use `find_item` for those.
     [[nodiscard]] QQuickItem* find(const QString& name, QQuickItem* from = nullptr) const;
+    /// The first item under `from` (the root by default) whose objectName is `name`, found through the item tree
+    /// (`childItems`, depth first), which includes the delegates of a Repeater or a view and the pages of a StackView.
+    [[nodiscard]] QQuickItem* find_item(const QString& name, QQuickItem* from = nullptr) const;
+    /// Every such item, in the order of `tree()`: for the delegates of a Repeater that share an objectName.
+    [[nodiscard]] std::vector<QQuickItem*> find_items(const QString& name, QQuickItem* from = nullptr) const;
     /// Lays the item tree out and paints one frame (software renderer), so that sizes that depend on polish are final.
     void layout();
     /// The rendered window, for the few tests that look at pixels.
@@ -141,6 +165,27 @@ private:
     void walk(QQuickItem* item, int depth, std::vector<Node>& out) const;
 
     std::unique_ptr<Impl> m_Impl;
+};
+
+/// Takes an item out of what a screen reader reads for as long as the object lives, for a test of the reading order of
+/// a sheet or an alert that is open over a screen. Qt cannot hide what is under a modal from a screen reader, and
+/// `Popup` does not either, so the test hides the base layer itself: the item is made invisible, which every check
+/// skips, and shown again when the object goes. Do not use it on an ancestor of the thing being tested.
+///
+///     HideBase hidden(rig.find_item("logScreen"));
+///     expect_clean(check_reading_order(rig));
+class HideBase
+{
+public:
+    explicit HideBase(QQuickItem* base);
+    ~HideBase();
+
+    HideBase(const HideBase&) = delete;
+    HideBase& operator=(const HideBase&) = delete;
+
+private:
+    QQuickItem* m_Base;
+    bool m_WasVisible;
 };
 
 /// True when `type` is `QQuickPointerHandler` or derives from it, by walking the meta objects, which keeps the private
