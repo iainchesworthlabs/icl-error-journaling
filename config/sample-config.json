@@ -1,24 +1,111 @@
 {
-  "schemaVersion": 1,
-  "_note": "Minimal sample with fictional values only. The full schema is designed in Stage 1 and replaces this shape. A real configuration file is never committed.",
-  "facilitator": "Sam Example",
-  "unitPrefix": "UNIT",
-  "locations": ["North Site", "South Site"],
-  "errorTypes": [
-    { "id": 1, "name": "Wrong Response", "tileColour": "#DCE8F7", "boardPosition": 1 },
-    { "id": 2, "name": "Sequence Out of Order", "tileColour": "#E6E0F5", "boardPosition": 2 },
-    { "id": 3, "name": "Wrong Track Played", "tileColour": "#FBE3CF", "boardPosition": 3 },
-    { "id": 4, "name": "Track Not Found", "tileColour": "#D3ECEE", "boardPosition": 4 },
-    { "id": 5, "name": "Track Skipped", "tileColour": "#F3DDEB", "boardPosition": 5 },
-    { "id": 6, "name": "Audio Drop Out", "tileColour": "#FFF0C2", "boardPosition": 6 },
-    { "id": 7, "name": "Volume Jump", "tileColour": "#E0E6EE", "boardPosition": 7 },
-    { "id": 8, "name": "Mute Delay", "tileColour": "#D9E2FB", "boardPosition": 8 },
-    { "id": 9, "name": "Speech Delay", "tileColour": "#F6E2D6", "boardPosition": 9 },
-    { "id": 10, "name": "Track Delay", "tileColour": "#ECE5D3", "boardPosition": 10 },
-    { "id": 11, "name": "Navigation Failure", "tileColour": "#F5D9E0", "boardPosition": 11 }
+  "schema_version": 1,
+  "preferences": {
+    "facilitator": "Sam Example",
+    "unit_prefix": "UNIT",
+    "time_format": {
+      "style": "24h",
+      "seconds": false,
+      "meridiem": "upper"
+    },
+    "include_totals": false
+  },
+  "error_types": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000a1",
+      "name": "Wrong Response",
+      "retired": false,
+      "board_position": 1
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a2",
+      "name": "Sequence Out of Order",
+      "retired": false,
+      "board_position": 2
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a3",
+      "name": "Wrong Track Played",
+      "retired": false,
+      "board_position": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a4",
+      "name": "Track Not Found",
+      "retired": false,
+      "board_position": 4
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a5",
+      "name": "Track Skipped",
+      "retired": false,
+      "board_position": 5
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a6",
+      "name": "Audio Drop Out",
+      "retired": false,
+      "board_position": 6
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a7",
+      "name": "Volume Jump",
+      "retired": false,
+      "board_position": 7
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a8",
+      "name": "Mute Delay",
+      "retired": false,
+      "board_position": 8
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a9",
+      "name": "Speech Delay",
+      "retired": false,
+      "board_position": 9
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000aa",
+      "name": "Track Delay",
+      "retired": false,
+      "board_position": 10
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000ab",
+      "name": "Navigation Failure",
+      "retired": false,
+      "board_position": 11
+    }
   ],
-  "noteTemplates": [
-    { "id": 1, "name": "Played song", "valuePrompt": "Which song?", "outputPattern": "Played {value}" },
-    { "id": 2, "name": "Visitor interaction", "valuePrompt": "Who visited?", "outputPattern": "Visitor: {value}" }
+  "locations": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000b1",
+      "name": "North Site",
+      "sort_order": 1,
+      "retired": false
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000b2",
+      "name": "South Site",
+      "sort_order": 2,
+      "retired": false
+    }
+  ],
+  "note_templates": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000c1",
+      "name": "Played song",
+      "value_prompt": "Which song?",
+      "output_pattern": "Played {value}",
+      "sort_order": 1
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000c2",
+      "name": "Visitor interaction",
+      "value_prompt": "Who visited?",
+      "output_pattern": "Visitor: {value}",
+      "sort_order": 2
+    }
   ]
 }

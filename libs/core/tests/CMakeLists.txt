@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 add_executable(ej_core_tests
     golden.cpp
+    test_configuration.cpp
     test_foundations.cpp
     test_uuid.cpp
     test_version.cpp)
@@ -10,6 +11,7 @@ target_link_libraries(ej_core_tests
 target_compile_definitions(ej_core_tests
     PRIVATE
         EJ_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
+        EJ_SAMPLE_CONFIG="${PROJECT_SOURCE_DIR}/config/sample-config.json"
         EJ_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
         EJ_GOLDEN_ACTUAL_DIR="${CMAKE_CURRENT_BINARY_DIR}/golden-actual")
 

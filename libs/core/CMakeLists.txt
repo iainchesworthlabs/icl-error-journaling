@@ -11,6 +11,8 @@ configure_file(
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
 
 add_library(ej_core
+    src/config_seam.cpp
+    src/configuration.cpp
     src/uuid.cpp
     src/version.cpp)
 add_library(error_journaling::core ALIAS ej_core)
