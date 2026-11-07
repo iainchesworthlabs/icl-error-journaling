@@ -10,6 +10,7 @@ else()
 endif()
 
 add_library(ej_ios_bridge
+    src/haptic_policy.cpp
     src/platform_services.cpp
     src/share_presenter.cpp
     ${bridge_sources})

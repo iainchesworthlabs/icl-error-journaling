@@ -11,6 +11,8 @@ Window {
     required property string platformText
     // The bridge to what Qt does not cover on an iPhone (the share sheet, haptics); see docs/plan/spikes.md.
     required property QtObject bridge
+    // The fixed fictional text the share test sends.
+    readonly property string spikeShareText: "Sam Example logged a Wrong Response on UNIT at North Site."
 
     width: 390
     height: 844
@@ -73,7 +75,7 @@ Window {
                     tileColour: "#e8dcc2"
                     onTapped: {
                         shareStatus.text = qsTr("Share sheet open…")
-                        root.bridge.shareSpikeText()
+                        root.bridge.shareText(root.spikeShareText)
                     }
                 }
 
@@ -93,14 +95,13 @@ Window {
     }
 
     // Prepare the impact generator ahead of the first press, and again whenever the app becomes active.
-    Component.onCompleted: root.bridge.prepareHaptics()
+    Component.onCompleted: root.bridge.setBoardVisible(true)
 
     Connections {
         target: Qt.application
 
         function onStateChanged() {
-            if (Qt.application.state === Qt.ApplicationActive)
-                root.bridge.prepareHaptics()
+            root.bridge.setApplicationActive(Qt.application.state === Qt.ApplicationActive)
         }
     }
 
