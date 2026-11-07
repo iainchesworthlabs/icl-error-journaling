@@ -1,10 +1,118 @@
 {
-  "docs": ["docs/**", "*.md", "mkdocs.yml", "LICENSE*", "changelog.d/**", "requirements/docs.txt"],
-  "no_build": [".github/PULL_REQUEST_TEMPLATE*", ".github/CODEOWNERS", ".github/dependabot.yml",
-               ".github/rulesets/**", ".github/repo-settings.json", ".github/labels.json",
-               "REUSE.toml", ".editorconfig", "LICENSES/**"],
-  "build": ["libs/**", "apps/**", "tests/**", "CMakeLists.txt", "CMakePresets.json", "vcpkg.json", "cmake/**",
-            "tools/coverage-floors.json", "tools/preprocessor-*"],
-  "gui": ["apps/app/**", "libs/core/**", "libs/storage/**", "**/*.qml", "cmake/**", "CMakePresets.json"],
-  "machinery": [".github/workflows/**", ".github/ci/**", ".github/toolchain-versions.json", "tools/ci/**"]
+  "docs": [
+    "docs/**",
+    "*.md",
+    "mkdocs.yml",
+    "LICENSE*",
+    "changelog.d/**",
+    "requirements/docs.txt"
+  ],
+  "no_build": [
+    ".github/PULL_REQUEST_TEMPLATE*",
+    ".github/CODEOWNERS",
+    ".github/dependabot.yml",
+    ".github/rulesets/**",
+    ".github/repo-settings.json",
+    ".github/labels.json",
+    "REUSE.toml",
+    ".editorconfig",
+    "LICENSES/**"
+  ],
+  "build": [
+    "libs/**",
+    "apps/**",
+    "tests/**",
+    "CMakeLists.txt",
+    "CMakePresets.json",
+    "vcpkg.json",
+    "cmake/**",
+    "tools/coverage-floors.json",
+    "tools/preprocessor-*"
+  ],
+  "gui": [
+    "apps/app/**",
+    "libs/core/**",
+    "libs/storage/**",
+    "**/*.qml",
+    "cmake/**",
+    "CMakePresets.json"
+  ],
+  "machinery": [
+    ".github/workflows/**",
+    ".github/ci/**",
+    ".github/toolchain-versions.json",
+    "tools/ci/**"
+  ],
+  "groups": {
+    "build-fast": {
+      "home": "pull_request",
+      "skips": [
+        "libs/*/src/platform/{macos,ios,android,windows,wasm}/**",
+        "apps/app/packaging/ios/**",
+        "apps/app/packaging/ios.cmake",
+        "**/*.mm"
+      ],
+      "jobs": [
+        "Build (fast) / linux-gcc-release",
+        "Build (fast) / linux-clang-asan-ubsan"
+      ]
+    },
+    "coverage": {
+      "home": "pull_request",
+      "skips": [
+        "libs/*/src/platform/{macos,ios,android,windows,wasm}/**",
+        "apps/app/packaging/ios/**",
+        "apps/app/packaging/ios.cmake",
+        "**/*.mm"
+      ],
+      "jobs": [
+        "Coverage"
+      ]
+    },
+    "build-linux-full": {
+      "home": "queue",
+      "skips": [
+        "libs/*/src/platform/{macos,ios,android,windows,wasm}/**",
+        "apps/app/packaging/ios/**",
+        "apps/app/packaging/ios.cmake",
+        "**/*.mm"
+      ],
+      "jobs": [
+        "Build (Linux full) / linux-gcc-debug",
+        "Build (Linux full) / linux-clang-tsan"
+      ]
+    },
+    "build-macos": {
+      "home": "post_merge",
+      "skips": [
+        "libs/*/src/platform/{linux,windows,android,wasm}/**"
+      ],
+      "promote": [
+        "libs/*/src/platform/{macos,ios}/**",
+        "**/*.mm",
+        "libs/ios_bridge/**",
+        "apps/app/packaging/ios/**",
+        "apps/app/packaging/ios.cmake"
+      ],
+      "jobs": [
+        "Build (macOS) / macos-debug",
+        "Build (macOS) / macos-release"
+      ]
+    }
+  },
+  "reuse": {
+    "max_age_hours": 48,
+    "barrier": [
+      "cmake",
+      "CMakePresets.json",
+      "CMakeLists.txt",
+      "vcpkg.json",
+      "vcpkg-configuration.json",
+      "vcpkg-overlay-ports",
+      "tools/ci",
+      "tools/checks",
+      "tools/sanitizers",
+      "tools/coverage-floors.json"
+    ]
+  }
 }
