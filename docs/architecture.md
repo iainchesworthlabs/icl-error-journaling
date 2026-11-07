@@ -2,18 +2,27 @@
 
 ```text
 libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespace `ej`
-  include/error_journaling/  public headers: uuid.hpp, ids.hpp (EntryId, ErrorTypeId, NoteTemplateId, LocationId),
+  include/error_journaling/  public headers: uuid.hpp, ids.hpp (EntryId, ErrorTypeId, NoteTemplateId, LocationId, LogId),
                              header_field.hpp, result.hpp (the std::expected conventions), version.hpp,
                              timestamp.hpp, time_zone_provider.hpp (Qt implementation in src/qt_time_zone_provider.cpp,
                              the only file that includes QTimeZone), time_format.hpp, day_prompt.hpp,
                              configuration.hpp (the configuration file: schema, import, export)
+                             Storage contract (Stage 2, no file or database access): log_repository.hpp (the
+                             `LogRepository` interface, `DeleteConfirmation`), storage_error.hpp, clock.hpp,
+                             journal_record.hpp (the journal record types, their one-line JSON encoding and CRC),
+                             stored_log.hpp (what each operation does to a log: shared by every repository and by
+                             recovery), recovery_report.hpp, utf8.hpp
   src/                       implementation files, one per component
   tests/                     Catch2 tests, all labelled `unit`
     golden/                  expected export files, compared byte for byte (docs/testing.md)
     fixtures/                other input files for tests
     golden.hpp, golden.cpp   the golden comparison helper
     fake_time_zone_provider.hpp  fixed-offset TimeZoneProvider for deterministic tests
-libs/storage/         ej_storage: empty until Stage 2; links ej_core
+    storage_samples.hpp      sample data (fictional stand-ins) shared with the storage tests
+libs/storage/         ej_storage: the repositories behind `LogRepository` (Stage 2); links ej_core
+  include/error_journaling/  memory_log_repository.hpp
+  src/                       memory_log_repository.cpp
+  tests/                     test_repository_contract.cpp runs every repository through one typed contract suite
 libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, behind interfaces
   src/platform/ios/      Objective-C++ (.mm), built for iOS
   src/platform/desktop/  stub, built everywhere else
@@ -31,12 +40,12 @@ tools/                project scripts, baselines and coverage floors
 | Target | Kind | Depends on |
 |---|---|---|
 | `ej_core` | static library, C++23 | QtCore |
-| `ej_storage` | static library | `ej_core` |
+| `ej_storage` | static library: the repositories (in memory now; SQLite, the journal and recovery follow in Stage 2) | `ej_core` |
 | `ej_ios_bridge` | static library; Objective-C++ on iOS, a stub elsewhere | nothing (UIKit and Foundation on iOS) |
 | `ej_qml_bridge` | static library; the `qml_bridge` QObject QML calls, over the `ej_ios_bridge` interface | `ej_ios_bridge`, QtCore |
 | `ej_app` | Qt Quick executable (`error-journaling`) | the libraries above, Qt Quick |
 
-Each library has a placeholder test with the `unit` label; the application has two `ui` tests (`app.smoke` starts it
+Each library has tests with the `unit` label; the application has two `ui` tests (`app.smoke` starts it
 without a display and waits for the first frame, `app.version` answers `--version`). The application is the iPhone
 application on iOS (portrait only, laid out inside `SafeArea.margins`) and a desktop program on macOS and Linux, built
 to iterate on the user interface and to be tested in CI; no desktop package is released.

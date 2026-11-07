@@ -11,17 +11,23 @@ configure_file(
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
 
 add_library(ej_core
+    src/clock.cpp
     src/configuration.cpp
     src/day_prompt.cpp
     src/export_renderer.cpp
     src/header_history.cpp
     src/header_values.cpp
+    src/journal_record.cpp
     src/log.cpp
     src/note_template.cpp
     src/qt_time_zone_provider.cpp
+    src/recovery_report.cpp
     src/software_version.cpp
+    src/storage_error.cpp
+    src/stored_log.cpp
     src/time_format.cpp
     src/unit_number.cpp
+    src/utf8.cpp
     src/uuid.cpp
     src/version.cpp)
 add_library(error_journaling::core ALIAS ej_core)

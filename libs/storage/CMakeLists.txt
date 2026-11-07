@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# The log's storage (Stage 2). Empty for now: it links ej_core and reports that it keeps nothing yet.
+# The log's storage (Stage 2). The in-memory repository now; SQLite, the journal and recovery follow in later work
+# packages of docs/plan/stage-2.md.
 
 add_library(ej_storage
+    src/memory_log_repository.cpp
     src/storage.cpp)
 add_library(error_journaling::storage ALIAS ej_storage)
 

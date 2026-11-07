@@ -1,0 +1,486 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The contract of LogRepository. Every case runs against every implementation in `Fixtures`, so the in-memory
+// repository cannot drift from the real one (docs/plan/stage-2.md, section 2.2).
+#include "error_journaling/clock.hpp"
+#include "error_journaling/log_repository.hpp"
+#include "error_journaling/memory_log_repository.hpp"
+#include "storage_samples.hpp"
+
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
+
+#include <string>
+#include <tuple>
+#include <type_traits>
+
+using namespace ej;
+using namespace ej::test;
+
+namespace
+{
+
+struct MemoryFixture
+{
+    ScriptedClock m_Clock{sample_time(0)};
+    MemoryLogRepository m_Repository{m_Clock};
+
+    LogRepository& repo() { return m_Repository; }
+    ScriptedClock& clock() { return m_Clock; }
+};
+
+using Fixtures = std::tuple<MemoryFixture>;
+
+constexpr std::uint64_t FIRST_LOG = 1;
+
+LogId log_id(std::uint64_t n)
+{
+    return sample_id<LogId>(n);
+}
+
+EntryId entry_id(std::uint64_t n)
+{
+    return sample_id<EntryId>(n);
+}
+
+template <typename Result>
+void require_ok(const Result& result)
+{
+    const std::string text = result ? std::string() : describe(result.error());
+    INFO(text);
+    REQUIRE(result.has_value());
+}
+
+template <typename Result>
+StorageErrorKind failure_of(const Result& result)
+{
+    REQUIRE_FALSE(result.has_value());
+    return result.error().m_Kind;
+}
+
+template <typename Fixture>
+void start_log(Fixture& f, std::uint64_t n = FIRST_LOG)
+{
+    require_ok(f.repo().create_log(log_id(n), sample_header()));
+}
+
+std::vector<EntryId> time_order(const StoredLog& log, bool include_deleted = false)
+{
+    std::vector<EntryId> ids;
+    for (const Entry* entry : log.m_Log.sorted_entries(include_deleted))
+    {
+        ids.push_back(entry->m_Id);
+    }
+    return ids;
+}
+
+// Nothing deletes a log without the confirmation type, and nobody outside the History path can make one (DS-05).
+static_assert(!std::is_default_constructible_v<DeleteConfirmation>);
+static_assert(!std::is_constructible_v<DeleteConfirmation, LogId>);
+template <typename Repository>
+concept DeletesWithoutConfirmation = requires(Repository& repository, LogId id) { repository.hard_delete_log(id); };
+static_assert(!DeletesWithoutConfirmation<LogRepository>);
+static_assert(!std::is_invocable_v<decltype(&LogRepository::hard_delete_log), LogRepository&, LogId, LogId>);
+
+}  // namespace
+
+TEMPLATE_LIST_TEST_CASE("A store with no log has no open log, no logs and no draft", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    const auto open = f.repo().open_log();
+    REQUIRE(open.has_value());
+    CHECK_FALSE(open->has_value());
+    CHECK(f.repo().list_logs().value().empty());
+    CHECK_FALSE(f.repo().get_draft().value().has_value());
+    CHECK(failure_of(f.repo().load_log(log_id(1))) == StorageErrorKind::NOT_FOUND);
+}
+
+TEMPLATE_LIST_TEST_CASE("Creating a log makes it the open log with its header and creation time",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    f.clock().set(sample_time(5));
+    start_log(f);
+
+    const auto open = f.repo().open_log().value();
+    REQUIRE(open.has_value());
+    CHECK(open->m_Meta.m_Id == log_id(FIRST_LOG));
+    CHECK(open->m_Meta.m_CreatedUtc == sample_time(5));
+    CHECK_FALSE(open->m_Meta.m_Archived);
+    CHECK(open->m_Log.initial_header().m_Facilitator == "Sam Example");
+    CHECK(open->m_Log.initial_header().m_UnitNumber->digits() == "27");
+    CHECK(open->m_Log.initial_header().m_Location->m_Text == "North Site");
+    CHECK(open->m_Log.entries().empty());
+}
+
+TEMPLATE_LIST_TEST_CASE("Ids are unique and only one log is open", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    CHECK(failure_of(f.repo().create_log(log_id(FIRST_LOG), sample_header())) == StorageErrorKind::ALREADY_EXISTS);
+    CHECK(failure_of(f.repo().create_log(log_id(2), sample_header())) == StorageErrorKind::OPEN_LOG_EXISTS);
+    CHECK(f.repo().list_logs().value().size() == 1);
+}
+
+TEMPLATE_LIST_TEST_CASE("A header that breaks a rule does not create a log", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    HeaderValues header = sample_header();
+    header.m_Facilitator = std::string(MAX_HEADER_TEXT_CODE_POINTS + 1, 'x');
+    CHECK(failure_of(f.repo().create_log(log_id(1), header)) == StorageErrorKind::LIMIT_EXCEEDED);
+    CHECK_FALSE(f.repo().open_log().value().has_value());
+    CHECK(f.repo().list_logs().value().empty());
+}
+
+TEMPLATE_LIST_TEST_CASE("Added entries come back whole and in time order, equal times by arrival",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 30)));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_note(2, 10, "Played a song")));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(3, 30)));  // the same minute as 1
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(4, 20)));
+
+    const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(time_order(log) == std::vector<EntryId>{entry_id(2), entry_id(4), entry_id(1), entry_id(3)});
+    REQUIRE(log.m_Log.entries().size() == 4);
+    CHECK(log.m_Log.entries()[0].m_Id == entry_id(1));  // arrival order is the stored order
+    CHECK(std::get<NoteEntry>(log.m_Log.find(entry_id(2))->m_Body).m_Value == "Played a song");
+    CHECK(log.m_Log.find(entry_id(1))->m_Captured.m_Zone == "Australia/Melbourne");
+}
+
+TEMPLATE_LIST_TEST_CASE("An error entry keeps the label its type had when it was written", "[contract][repository]",
+                        Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10, "Wrong Response", "robot paused")));
+    const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    const auto& error = std::get<ErrorEntry>(log.m_Log.find(entry_id(1))->m_Body);
+    CHECK(error.m_ErrorTypeLabel == "Wrong Response");
+    CHECK(error.m_ErrorType == sample_id<ErrorTypeId>(1));
+    CHECK(error.m_AttachedNote == "robot paused");
+}
+
+TEMPLATE_LIST_TEST_CASE("An entry for an unknown log is refused", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    CHECK(failure_of(f.repo().add_entry(log_id(9), sample_error(1, 10))) == StorageErrorKind::NOT_FOUND);
+    CHECK(failure_of(f.repo().set_entry_deleted(log_id(9), entry_id(1), true)) == StorageErrorKind::NOT_FOUND);
+    CHECK(failure_of(f.repo().mark_shared(log_id(9), sample_time(1))) == StorageErrorKind::NOT_FOUND);
+    CHECK(failure_of(f.repo().archive_log(log_id(9))) == StorageErrorKind::NOT_FOUND);
+}
+
+TEMPLATE_LIST_TEST_CASE("A rejected write leaves the log unchanged", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+    const StoredLog before = f.repo().load_log(log_id(FIRST_LOG)).value();
+
+    CHECK(failure_of(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 11))) == StorageErrorKind::ALREADY_EXISTS);
+    CHECK(failure_of(f.repo().add_entry(log_id(FIRST_LOG), sample_error(2, 11, ""))) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(failure_of(
+              f.repo().add_entry(log_id(FIRST_LOG), sample_note(3, 11, std::string(MAX_NOTE_CODE_POINTS + 1, 'x')))) ==
+          StorageErrorKind::LIMIT_EXCEEDED);
+    CHECK(failure_of(f.repo().edit_entry(log_id(FIRST_LOG), sample_error(7, 11), sample_time(1))) ==
+          StorageErrorKind::NOT_FOUND);
+    CHECK(failure_of(f.repo().set_entry_deleted(log_id(FIRST_LOG), entry_id(7), true)) == StorageErrorKind::NOT_FOUND);
+    CHECK(failure_of(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::UNIT_NUMBER, "not a number")) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+
+    const StoredLog after = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(after.m_Log.entries().size() == before.m_Log.entries().size());
+    CHECK(after.m_Log.initial_header().m_UnitNumber->digits() == "27");
+    CHECK(time_order(after) == time_order(before));
+}
+
+TEMPLATE_LIST_TEST_CASE("The entries of a log are bounded", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    for (std::size_t i = 1; i <= MAX_ENTRIES_PER_LOG; ++i)
+    {
+        REQUIRE(
+            f.repo().add_entry(log_id(FIRST_LOG), sample_error(i, static_cast<std::int64_t>(i % 1000))).has_value());
+    }
+    CHECK(failure_of(f.repo().add_entry(log_id(FIRST_LOG), sample_error(MAX_ENTRIES_PER_LOG + 1, 1))) ==
+          StorageErrorKind::LIMIT_EXCEEDED);
+}
+
+TEMPLATE_LIST_TEST_CASE("Edit changes the content and records the edit time", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+    require_ok(f.repo().edit_entry(log_id(FIRST_LOG), sample_error(1, 40, "Other", "added later"), sample_time(90)));
+
+    const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    const Entry* entry = log.m_Log.find(entry_id(1));
+    REQUIRE(entry != nullptr);
+    CHECK(entry->m_Captured.m_Utc == sample_time(40));
+    CHECK(entry->m_EditedUtc == sample_time(90));
+    CHECK(std::get<ErrorEntry>(entry->m_Body).m_ErrorTypeLabel == "Other");
+    CHECK(std::get<ErrorEntry>(entry->m_Body).m_AttachedNote == "added later");
+    CHECK(log.m_Log.entries().size() == 1);
+}
+
+TEMPLATE_LIST_TEST_CASE("Soft delete hides an entry from the timeline and restore brings it back",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(2, 20)));
+    require_ok(f.repo().set_entry_deleted(log_id(FIRST_LOG), entry_id(1), true));
+
+    StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(time_order(log) == std::vector<EntryId>{entry_id(2)});
+    CHECK(time_order(log, true) == std::vector<EntryId>{entry_id(1), entry_id(2)});
+    CHECK(log.m_Log.entries().size() == 2);  // nothing was removed
+
+    require_ok(f.repo().set_entry_deleted(log_id(FIRST_LOG), entry_id(1), false));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(time_order(log) == std::vector<EntryId>{entry_id(1), entry_id(2)});
+}
+
+TEMPLATE_LIST_TEST_CASE("Correct changes the header and writes no entry; Change adds an entry",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::UNIT_NUMBER, "31"));
+    StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(log.m_Log.initial_header().m_UnitNumber->digits() == "31");
+    CHECK(log.m_Log.entries().empty());
+
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_change(1, 30, HeaderField::SOFTWARE_VERSION, "1.4.3")));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(log.m_Log.initial_header().m_SoftwareVersion->format() == "1.4.2");  // the start did not move
+    REQUIRE(log.m_Log.entries().size() == 1);
+    const auto& change = std::get<HeaderChangeEntry>(log.m_Log.entries()[0].m_Body);
+    CHECK(change.m_Field == HeaderField::SOFTWARE_VERSION);
+    CHECK(change.m_NewValue == "1.4.3");
+
+    // A second Correct now fixes the change, not the start.
+    require_ok(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::SOFTWARE_VERSION, "1.4.4"));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(log.m_Log.initial_header().m_SoftwareVersion->format() == "1.4.2");
+    CHECK(std::get<HeaderChangeEntry>(log.m_Log.entries()[0].m_Body).m_NewValue == "1.4.4");
+}
+
+TEMPLATE_LIST_TEST_CASE("A header change to the value in force is refused", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    CHECK(failure_of(f.repo().add_entry(log_id(FIRST_LOG), sample_change(1, 30, HeaderField::UNIT_NUMBER, "27"))) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Log.entries().empty());
+}
+
+TEMPLATE_LIST_TEST_CASE("Archiving keeps the log and leaves no open log", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+    require_ok(f.repo().archive_log(log_id(FIRST_LOG)));
+
+    CHECK_FALSE(f.repo().open_log().value().has_value());
+    const auto logs = f.repo().list_logs().value();
+    REQUIRE(logs.size() == 1);
+    CHECK(logs[0].m_Archived);
+    CHECK(logs[0].m_LiveEntryCount == 1);
+    CHECK(logs[0].m_Header.m_Facilitator == "Sam Example");
+    CHECK(logs[0].m_Header.m_UnitNumber->digits() == "27");
+    CHECK(logs[0].m_TotalEntryCount == 1);
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Meta.m_Archived);
+    CHECK(failure_of(f.repo().archive_log(log_id(FIRST_LOG))) == StorageErrorKind::NOT_OPEN_LOG);
+
+    // The next day's log can start now.
+    require_ok(f.repo().create_log(log_id(2), sample_header()));
+    CHECK(f.repo().open_log().value()->m_Meta.m_Id == log_id(2));
+}
+
+TEMPLATE_LIST_TEST_CASE("An archived log can still be edited, deleted from, corrected and shared (DAY-04)",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+    require_ok(f.repo().archive_log(log_id(FIRST_LOG)));
+
+    require_ok(f.repo().edit_entry(log_id(FIRST_LOG), sample_error(1, 12), sample_time(70)));
+    require_ok(f.repo().set_entry_deleted(log_id(FIRST_LOG), entry_id(1), true));
+    require_ok(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::UNIT_NUMBER, "32"));
+    require_ok(f.repo().mark_shared(log_id(FIRST_LOG), sample_time(80)));
+
+    const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(log.m_Log.find(entry_id(1))->m_Deleted);
+    CHECK(log.m_Log.initial_header().m_UnitNumber->digits() == "32");
+    CHECK(log.m_Meta.m_LastSharedUtc == sample_time(80));
+    CHECK_FALSE(f.repo().open_log().value().has_value());  // editing did not reopen it
+}
+
+TEMPLATE_LIST_TEST_CASE("Starting a new log archives the open one in a single step", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+
+    HeaderValues next = sample_header();
+    next.m_LocalDate = std::chrono::year{2026} / 11 / 8;
+    require_ok(f.repo().start_new_log(log_id(FIRST_LOG), log_id(2), next));
+
+    const auto open = f.repo().open_log().value();
+    REQUIRE(open.has_value());
+    CHECK(open->m_Meta.m_Id == log_id(2));
+    CHECK(open->m_Meta.m_Previous == log_id(FIRST_LOG));
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Meta.m_Archived);
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Log.entries().size() == 1);
+}
+
+TEMPLATE_LIST_TEST_CASE("A refused start leaves the old log open and creates nothing", "[contract][repository]",
+                        Fixtures)
+{
+    TestType f;
+    start_log(f);
+
+    CHECK(failure_of(f.repo().start_new_log(log_id(7), log_id(2), sample_header())) == StorageErrorKind::NOT_OPEN_LOG);
+    CHECK(failure_of(f.repo().start_new_log(log_id(FIRST_LOG), log_id(FIRST_LOG), sample_header())) ==
+          StorageErrorKind::ALREADY_EXISTS);
+    HeaderValues bad = sample_header();
+    bad.m_Facilitator = std::string(MAX_HEADER_TEXT_CODE_POINTS + 1, 'x');
+    CHECK(failure_of(f.repo().start_new_log(log_id(FIRST_LOG), log_id(2), bad)) == StorageErrorKind::LIMIT_EXCEEDED);
+
+    const auto open = f.repo().open_log().value();
+    REQUIRE(open.has_value());
+    CHECK(open->m_Meta.m_Id == log_id(FIRST_LOG));
+    CHECK_FALSE(open->m_Meta.m_Archived);
+    CHECK(f.repo().list_logs().value().size() == 1);
+}
+
+TEMPLATE_LIST_TEST_CASE("Logs are listed newest first by date, then by creation time", "[contract][repository]",
+                        Fixtures)
+{
+    TestType f;
+    const auto day = [](unsigned d)
+    {
+        HeaderValues header = sample_header();
+        header.m_LocalDate = std::chrono::year{2026} / 11 / std::chrono::day{d};
+        return header;
+    };
+    f.clock().set(sample_time(1));
+    require_ok(f.repo().create_log(log_id(1), day(7)));
+    require_ok(f.repo().archive_log(log_id(1)));
+    f.clock().set(sample_time(2));
+    require_ok(f.repo().create_log(log_id(2), day(9)));
+    require_ok(f.repo().archive_log(log_id(2)));
+    f.clock().set(sample_time(3));
+    require_ok(f.repo().create_log(log_id(3), day(9)));  // a second log on the same date
+    require_ok(f.repo().archive_log(log_id(3)));
+    f.clock().set(sample_time(4));
+    require_ok(f.repo().create_log(log_id(4), day(8)));
+
+    const auto logs = f.repo().list_logs().value();
+    REQUIRE(logs.size() == 4);
+    CHECK(logs[0].m_Id == log_id(3));
+    CHECK(logs[1].m_Id == log_id(2));
+    CHECK(logs[2].m_Id == log_id(4));
+    CHECK(logs[3].m_Id == log_id(1));
+}
+
+TEMPLATE_LIST_TEST_CASE("The creation time comes from the clock, even when it stepped back or reads 1970",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    f.clock().set(UtcMillis{});
+    start_log(f, 1);
+    CHECK(f.repo().load_log(log_id(1)).value().m_Meta.m_CreatedUtc == UtcMillis{});
+    require_ok(f.repo().archive_log(log_id(1)));
+    f.clock().set(sample_time(100));
+    start_log(f, 2);
+    require_ok(f.repo().archive_log(log_id(2)));
+    f.clock().set(sample_time(50));  // stepped back
+    start_log(f, 3);
+    CHECK(f.repo().load_log(log_id(3)).value().m_Meta.m_CreatedUtc == sample_time(50));
+}
+
+TEMPLATE_LIST_TEST_CASE("Mark shared records the time", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    CHECK_FALSE(f.repo().load_log(log_id(FIRST_LOG)).value().m_Meta.m_LastSharedUtc.has_value());
+    require_ok(f.repo().mark_shared(log_id(FIRST_LOG), sample_time(77)));
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Meta.m_LastSharedUtc == sample_time(77));
+    CHECK(f.repo().list_logs().value()[0].m_LastSharedUtc == sample_time(77));
+}
+
+TEMPLATE_LIST_TEST_CASE("Only an archived log can be deleted, and only with its own confirmation",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+
+    // The open log is never deleted (DS-05).
+    CHECK(failure_of(
+              f.repo().hard_delete_log(log_id(FIRST_LOG), HistoryDeleteConfirmation::confirmed(log_id(FIRST_LOG)))) ==
+          StorageErrorKind::LOG_NOT_ARCHIVED);
+    CHECK(f.repo().open_log().value().has_value());
+
+    require_ok(f.repo().archive_log(log_id(FIRST_LOG)));
+    // A confirmation for another log does not delete this one.
+    CHECK(failure_of(f.repo().hard_delete_log(log_id(FIRST_LOG), HistoryDeleteConfirmation::confirmed(log_id(2)))) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).has_value());
+
+    require_ok(f.repo().hard_delete_log(log_id(FIRST_LOG), HistoryDeleteConfirmation::confirmed(log_id(FIRST_LOG))));
+    CHECK(failure_of(f.repo().load_log(log_id(FIRST_LOG))) == StorageErrorKind::NOT_FOUND);
+    CHECK(f.repo().list_logs().value().empty());
+    CHECK(failure_of(f.repo().hard_delete_log(log_id(FIRST_LOG), HistoryDeleteConfirmation::confirmed(log_id(
+                                                                     FIRST_LOG)))) == StorageErrorKind::NOT_FOUND);
+}
+
+TEMPLATE_LIST_TEST_CASE("The draft is set, replaced, cleared by an empty string and bounded", "[contract][repository]",
+                        Fixtures)
+{
+    TestType f;
+    require_ok(f.repo().set_draft("half a thought", sample_time(1)));
+    auto draft = f.repo().get_draft().value();
+    REQUIRE(draft.has_value());
+    CHECK(draft->m_Text == "half a thought");
+    CHECK(draft->m_UpdatedUtc == sample_time(1));
+
+    require_ok(f.repo().set_draft("a whole thought", sample_time(2)));
+    CHECK(f.repo().get_draft().value()->m_Text == "a whole thought");
+
+    require_ok(f.repo().set_draft("", sample_time(3)));
+    CHECK_FALSE(f.repo().get_draft().value().has_value());
+
+    CHECK(failure_of(f.repo().set_draft(std::string(MAX_NOTE_CODE_POINTS + 1, 'x'), sample_time(4))) ==
+          StorageErrorKind::LIMIT_EXCEEDED);
+    CHECK(failure_of(f.repo().set_draft("broken \xC3", sample_time(4))) == StorageErrorKind::INVALID_ARGUMENT);
+    CHECK_FALSE(f.repo().get_draft().value().has_value());
+}
+
+TEMPLATE_LIST_TEST_CASE("Adding a note clears the draft in the same step; other entries and refused notes keep it",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().set_draft("typed note", sample_time(1)));
+
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+    CHECK(f.repo().get_draft().value().has_value());
+
+    // A refused note must not clear it.
+    CHECK_FALSE(f.repo().add_entry(log_id(FIRST_LOG), sample_note(1, 11, "duplicate id")).has_value());
+    CHECK(f.repo().get_draft().value().has_value());
+
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_note(2, 12, "typed note")));
+    CHECK_FALSE(f.repo().get_draft().value().has_value());
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Log.entries().size() == 2);
+}

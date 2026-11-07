@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
-#include <optional>
-#include <string>
-#include <variant>
-
 #include "error_journaling/header_field.hpp"
 #include "error_journaling/ids.hpp"
 #include "error_journaling/timestamp.hpp"
+
+#include <optional>
+#include <string>
+#include <variant>
 
 namespace ej
 {
@@ -16,6 +16,9 @@ struct ErrorEntry
 {
     ErrorTypeId m_ErrorType;
     std::optional<std::string> m_AttachedNote;
+    /// The name of the error type as it read when the entry was written (Stage 2, decision 5), so the entry still reads
+    /// the same after the type is renamed or removed from the configuration. Storage requires it for a new entry.
+    std::string m_ErrorTypeLabel = {};
 };
 
 struct NoteEntry

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include "error_journaling/uuid.hpp"
+
 #include <compare>
 #include <functional>
-
-#include "error_journaling/uuid.hpp"
 
 namespace ej
 {
@@ -30,11 +30,15 @@ struct EntryIdTag;
 struct ErrorTypeIdTag;
 struct NoteTemplateIdTag;
 struct LocationIdTag;
+struct LogIdTag;
 
 using EntryId = TypedId<EntryIdTag>;
 using ErrorTypeId = TypedId<ErrorTypeIdTag>;
 using NoteTemplateId = TypedId<NoteTemplateIdTag>;
 using LocationId = TypedId<LocationIdTag>;
+/// The id of one log (a day's log). The caller generates it as a UUID v4 before the call that creates the log, which is
+/// what makes replaying a journal idempotent.
+using LogId = TypedId<LogIdTag>;
 
 }  // namespace ej
 
