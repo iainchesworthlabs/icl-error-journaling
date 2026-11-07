@@ -503,3 +503,103 @@ TEST_CASE("Recovery restores the backup of a migration that left a damaged datab
     CHECK(database_bytes(store) == before_bytes);
     require_recovered(store, pristine().m_Digests, pristine().m_OpenLog);
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The edges: databases and markers that are not what they should be
+// ---------------------------------------------------------------------------------------------------------------------
+
+TEST_CASE("A store with no database, or an empty one, has nothing to migrate", "[migration]")
+{
+    StoreCopy store;
+    ScriptedClock clock(sample_time(4000));
+    SECTION("no database")
+    {
+        std::filesystem::remove(store.database());
+        const auto report = migrator_for(store, clock, test_steps()).run();
+        REQUIRE(report.has_value());
+        CHECK(report->m_Outcome == MigrationOutcome::UP_TO_DATE);
+        CHECK_FALSE(std::filesystem::exists(store.database()));
+    }
+    SECTION("a database nothing was ever written to")
+    {
+        write_bytes(store.database(), "");
+        {
+            RawDb db(store.database());
+            REQUIRE(db.exec(QStringLiteral("CREATE TABLE unrelated (x INTEGER)")));
+            REQUIRE(db.exec(QStringLiteral("PRAGMA user_version = 0")));
+        }
+        const auto report = migrator_for(store, clock, test_steps()).run();
+        REQUIRE(report.has_value());
+        CHECK(report->m_Outcome == MigrationOutcome::UP_TO_DATE);
+        CHECK(backups_of(store).empty());
+    }
+}
+
+TEST_CASE("A file that is not a database is refused and left as it was", "[migration]")
+{
+    StoreCopy store;
+    write_bytes(store.database(), std::string(6000, '\x41'));
+    const auto before = tree_of(store.root());
+    ScriptedClock clock(sample_time(4000));
+    const auto report = migrator_for(store, clock, test_steps()).run();
+    REQUIRE_FALSE(report.has_value());
+    CHECK(report.error().m_Kind == StorageErrorKind::CORRUPT);
+    CHECK(tree_of(store.root()) == before);
+}
+
+TEST_CASE("A marker left by a killed migration is dealt with before the next one starts", "[migration]")
+{
+    StoreCopy store;
+    ScriptedClock clock(sample_time(4000));
+    const std::string original = database_bytes(store);
+    std::filesystem::create_directories(store.location().backup_dir());
+    write_bytes(store.location().backup_dir() / "ej-v1-copy.db", original);
+    write_marker(store, 1, 3, "backup/ej-v1-copy.db");
+
+    const auto report = migrator_for(store, clock, test_steps()).run();
+    REQUIRE(report.has_value());
+    CHECK(report->m_Outcome == MigrationOutcome::MIGRATED);
+    CHECK_FALSE(std::filesystem::exists(store.location().migration_marker()));
+    CHECK(user_version(store.database()) == 3);
+}
+
+TEST_CASE("A marker with a number that is not one cannot be read", "[migration][resume]")
+{
+    StoreCopy store;
+    write_bytes(store.location().migration_marker(), "ej-migration 1\nfrom=one\nto=3\nbackup=backup/x.db\n");
+    const auto before = tree_of(store.root());
+    ScriptedClock clock(sample_time(4000));
+    const auto report = Migrator::resume(store.location(), clock);
+    REQUIRE_FALSE(report.has_value());
+    CHECK(tree_of(store.root()) == before);
+}
+
+TEST_CASE("When even the restore fails, the error says so and the marker stays for the next start", "[migration]")
+{
+    StoreCopy store;
+    ScriptedClock clock(sample_time(4000));
+    // A step that fails after taking the backup away, so that there is nothing to put back.
+    MigrationStep sabotage{1, "removes the backup and fails",
+                           [&](MigrationConnection&) -> Result<void, StorageError>
+                           {
+                               for (const auto& backup : backups_of(store))
+                               {
+                                   std::filesystem::remove(backup);
+                               }
+                               return fail(make_error(StorageErrorKind::DATABASE, "the step failed"));
+                           }};
+    const auto report = migrator_for(store, clock, {sabotage}, {}, 2).run();
+    REQUIRE_FALSE(report.has_value());
+    CHECK(report.error().m_Message.find("could not be put back") != std::string::npos);
+    CHECK(std::filesystem::exists(store.location().migration_marker()));
+}
+
+TEST_CASE("The names the report uses for an outcome", "[migration]")
+{
+    CHECK(migration_outcome_name(MigrationOutcome::UP_TO_DATE) == "up_to_date");
+    CHECK(migration_outcome_name(MigrationOutcome::MIGRATED) == "migrated");
+    CHECK(migration_outcome_name(MigrationOutcome::NO_MARKER) == "no_marker");
+    CHECK(migration_outcome_name(MigrationOutcome::NOT_COMMITTED) == "not_committed");
+    CHECK(migration_outcome_name(MigrationOutcome::COMPLETED) == "completed");
+    CHECK(migration_outcome_name(MigrationOutcome::RESTORED) == "restored");
+}
