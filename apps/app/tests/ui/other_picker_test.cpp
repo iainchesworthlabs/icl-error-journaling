@@ -497,7 +497,8 @@ TEST_CASE("other.pick: a type that is not on the board is recorded like any othe
 {
     Fixture f;
     f.open();
-    const Row* navigation = row_for(rows(f), QStringLiteral("Navigation Failure"));
+    const std::vector<Row> listed = rows(f);
+    const Row* navigation = row_for(listed, QStringLiteral("Navigation Failure"));
     REQUIRE(navigation != nullptr);
     f.m_Rig.tap(navigation->m_Item);
     f.commit();
@@ -668,7 +669,8 @@ TEST_CASE("other.voiceover: rows read \"label, n today\" and a screen reader's a
     CHECK(names.contains(QStringLiteral("Wrong Response, 2 today")));
     CHECK(names.contains(QStringLiteral("Navigation Failure")));
 
-    const Row* track = row_for(rows(f), QStringLiteral("Track Skipped"));
+    const std::vector<Row> listed = rows(f);
+    const Row* track = row_for(listed, QStringLiteral("Track Skipped"));
     REQUIRE(track != nullptr);
     CHECK(accessible_press(track->m_Item));
     CHECK(f.m_Bridge->m_Impacts == 1);
