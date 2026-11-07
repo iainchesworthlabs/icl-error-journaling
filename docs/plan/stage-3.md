@@ -7,7 +7,7 @@ are in the [design package](../design/README.md).
 **Exit gate:** a headless test drives a full day (header, taps, notes, a version change, review edits, share, new day)
 through the services and produces the golden export.
 
-**Status:** draft for owner review. No code is written until the owner approves this page.
+**Status:** approved by the owner; implemented in work packages 3.1 to 3.12. Exit-gate result: see "Exit gate record" at the end of this page.
 
 ## Scope and conventions
 
@@ -1059,3 +1059,101 @@ package's scope, tests and sketch. QML-facing names are camelCase and the C++ re
 
 Items 1, 2 and 3 are in the pull request of 3.4, item 4 in 3.7 and item 5 in 3.3. Stage 4 package 4.9 needs items 1 and 2,
 4.10 needs item 4, and 4.9, 4.12 and 4.13 need item 5.
+
+## Exit gate record
+
+Recorded 7 Nov 2026 (work package 3.12). The gate is **met**. Nothing failed, and nothing in the gate has run on a device.
+
+| | |
+|---|---|
+| Run | `CI`, push to `develop`, [run 42387774736](https://github.com/iainchesworthlabs/icl-error-journaling/actions/runs/42387774736), all jobs green (the dependency scan is skipped on a push) |
+| Commit | `e220e5414dea518979b4fddffce0433f1c9071b0` (`develop` after work package 3.11, #60) |
+| Legs | Linux gcc debug and release, clang ASan/UBSan and TSan, coverage; macOS debug and release; macOS with Xcode 27; the kill harness in the queue shape on four legs |
+| Same code, again | A dispatch of the same workflow on a branch with the same sources and a probe floor for the view-model component ([run 42388052670](https://github.com/iainchesworthlabs/icl-error-journaling/actions/runs/42388052670)), green on every leg. Its coverage job gave the view-model figures below. |
+
+### 1. A full day, headless, in both variants: met
+
+`full_day(Rig&)` ran twice on every leg above, and both runs passed on all of them:
+
+| Variant | Test case | Label | Store and gateway |
+|---|---|---|---|
+| unit | "A full day, headless, on the in-memory store" | `unit` | in-memory repository, `ManualStorageGateway`, `TestClock` |
+| integration | "A full day, headless, on the real store and a storage thread" | `integration` | `SqliteLogRepository`, `FileConfigStore`, `ThreadedStorageGateway`, restart through `Recovery::run` |
+
+Each run goes through the 19 steps of "The exit-gate test" and ends with the closing checks of step 19, including that exactly three
+golden comparisons were made (`CHECK(m_Goldens == 3)`).
+
+### 2. The three golden comparisons: met
+
+Each is made against `libs/core/tests/golden/prd-example.txt` itself through `check_golden`, byte for byte, in both variants:
+
+| | Step | Text compared |
+|---|---|---|
+| Golden 1 | 13 | the clipboard after `copyAll()` on the open log's timeline |
+| Golden 2 | 16 | the text handed to the share sheet by `day.shareFirst()` |
+| Golden 3 | 18 | the text handed to the share sheet by `share.shareLog(id)` from History |
+
+### 3. Test counts
+
+The view-model tests are found by a glob, and all of them passed on all seven test legs:
+
+| Part | Cases | Result |
+|---|---|---|
+| `unit` (`apps/app/tests/viewmodel/test_*.cpp`) | 431 | all passed |
+| `integration` (`apps/app/tests/viewmodel/integration/*.cpp`) | 30 | all passed, 5 of them the threading tests and 11 the gateway tests |
+
+The whole `ctest` run of a test leg is 916 tests in the `unit`, `integration` and `system` phases (the label summary shows 713, 221
+and 8, which add up to more than 916), then the 2 `ui` tests and the 1 `perf` test: 100% passed on `linux-gcc-debug`,
+`linux-gcc-release`, `linux-clang-asan-ubsan`, `linux-clang-tsan`, `linux-coverage`, `macos-debug`, `macos-release` and
+`macos-xcode27-release`. There are no `perf`-label view-model tests; the budgets of the threading section are checks inside the
+`integration` cases.
+
+### 4. Threading tests under TSan: met, with the limits of the check stated
+
+All 30 `integration` cases, the threading cases among them, ran in the `linux-clang-tsan` leg and reported nothing. Those cases are:
+taps during a 40 ms commit do not block the GUI thread and arrive in tap order; every repository call is on the one storage thread; the
+first frame is `LOADING` with empty models and then `OPEN`; confirmation follows the commit; draining at quit finishes queued writes;
+and the gateway cases (order of 1,000 jobs, `drain()`, destruction with jobs queued, a result for a destroyed receiver dropped).
+
+Three things the page above should not be read to say:
+
+- **The budgets in the test are looser than the plan's sketch.** The test enforces a longest tick gap under 30 ms and a 95th
+  percentile of `recordError` under 5 ms (constants in `test_threading.cpp`), not 16 ms and 1 ms, because a loaded runner and TSan delay a
+  timer by a few milliseconds. The plan said the final budget is written to `perf-budget.json` from measurement; that file does not exist
+  and the measured figures are not printed on a pass, so this record has no measured gap. The device measurement is Stage 5.
+- **TSan does not see inside Qt.** `tools/sanitizers/tsan.supp` drops reports whose stacks pass through the prebuilt Qt libraries, which
+  are not instrumented. Code in this repository is instrumented.
+- **One run per leg.** The gate is one green run; there is no repeat count for the timing cases.
+
+### 5. Sanitiser legs: met
+
+`linux-clang-asan-ubsan` and `linux-clang-tsan` ran all 916 tests, the 2 `ui` tests and the `perf` test, with no AddressSanitizer,
+LeakSanitizer, UBSan or ThreadSanitizer report in any job log. The kill harness (queue shape, 100 random kills and the crash-point
+cases) was green on `linux-gcc-debug`, `linux-clang-asan-ubsan`, `linux-clang-tsan` and `macos-debug`. This package changes no code and was not built
+locally.
+
+### 6. Coverage and the floor: met, floor raised
+
+The coverage job (`linux-coverage`, gcovr with throw and unreachable branches excluded) measured, with the view-model code as its own
+component:
+
+| Component | Statement | Branch | Floor before | Floor after |
+|---|---|---|---|---|
+| `apps/app/src/viewmodel` (`ej_viewmodel`) | 93.8% | 82.0% | none of its own (inside `apps/app`, 60 / 30) | **93 / 82** (proposed 90 / 70) |
+| `apps/app` (the rest: `main.cpp`, `app_root`, `qt_clipboard`) | 72.8% | 58.9% | 60 / 30 | 60 / 30, unchanged |
+| `libs/core` | 96.7% | 92.1% | 94 / 90 | unchanged |
+| `libs/storage` | 90.8% | 77.3% | 90 / 75 | unchanged |
+| `libs/ios_bridge` | 95.9% | 85.5% | 90 / 50 | unchanged |
+
+On the push run, where the view-model code is not split off, `apps/app` as a whole measured 92.6% statements and 80.8% branches. The gate
+keys on a subdirectory (the longest matching prefix wins), so `tools/coverage-floors.json` gained `apps/app/src/viewmodel`. The floors
+are the measured figures rounded down; only the one new floor is set, and no floor was lowered. The preprocessor baseline did not rise
+(`tools/ci/precheck.py` passes).
+
+### What the gate does not show
+
+Nothing in Stage 3 has run on a device, and the development machine has no Mac. The Linux and macOS legs ran in CI only. The list in "What cannot be verified here" stands in full for an iPhone 17 in Stage 5 or the first TestFlight
+build with the services: commit-to-feedback latency with a real `F_FULLFSYNC`, frame drops on a ProMotion display, share sheet outcomes
+and the foreground event after returning from the sheet, foreground and background calls (`check()`, `flushDraft()`) and a commit in
+flight when iOS suspends the app, the device time zone and a real midnight, the clipboard and its paste notice on iOS, the speed of the
+store on the phone, and the accessibility names. The full-day test uses a fake clock, a fake platform and a fake clipboard throughout.

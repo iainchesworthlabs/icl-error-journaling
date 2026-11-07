@@ -4,6 +4,7 @@
     "libs/core": { "line": 94, "branch": 90 },
     "libs/storage": { "line": 90, "branch": 75 },
     "libs/ios_bridge": { "line": 90, "branch": 50 },
-    "apps/app": { "line": 60, "branch": 30 }
+    "apps/app": { "line": 60, "branch": 30 },
+    "apps/app/src/viewmodel": { "line": 93, "branch": 82 }
   }
 }
