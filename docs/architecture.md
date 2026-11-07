@@ -68,7 +68,9 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
                          top_view_controller.mm shared by the presenters
   src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
-  qml/                the module ErrorJournalingApp (the URI differs from the executable name)
+  qml/                the module ErrorJournalingApp (the URI differs from the executable name). Every .qml under it is
+                      found by a glob (qml/qml_files.cmake). theme/ holds the token singleton `Theme` and `SafeFrame`;
+                      components/ and screens/ are filled by Stage 4 (docs/plan/stage-4.md). Main.qml is the Stage 0 window
   src/                main.cpp
   src/viewmodel/      ej_viewmodel: the thin QObject layer between the core and storage and QML (Stage 3), namespace
                       `ej::viewmodel`; every .cpp and .hpp here is picked up by a glob (see below). Headers are
@@ -88,6 +90,8 @@ apps/app/             ej_app: the Qt Quick application (executable error-journal
                         open_log_source.hpp  OpenLogSource and OpenLogObserver
                         observer_list.hpp    ObserverList<T>, the observer set the services share
                         move_only_function.hpp  MoveOnlyFunction, a stand-in for std::move_only_function (Apple libc++ lacks it)
+  tests/ui/           the tests of the QML: *_test.cpp (`ui`, or `perf` for a case tagged [perf]), rig/ (UiRig, the
+                      cross-cutting checks, the main), stubs/ (QML used by the rig's own tests), perf-budget.json
   tests/viewmodel/    test_*.cpp (`unit`), integration/*.cpp (`integration`), perf/*.cpp (`perf`, built only when the
                       directory has files), support/: the test support (docs/testing.md)
   packaging/ios.cmake    bundle properties, signing and the plugin defaults of Qt's iOS kit
@@ -118,6 +122,23 @@ Each library has tests with the `unit` label; the application has two `ui` tests
 without a display and waits for the first frame, `app.version` answers `--version`). The application is the iPhone
 application on iOS (portrait only, laid out inside `SafeArea.margins`) and a desktop program on macOS and Linux, built
 to iterate on the user interface and to be tested in CI; no desktop package is released.
+
+## QML
+
+All QML is in the one module `ErrorJournalingApp`, in three folders (docs/plan/stage-4.md): `qml/theme/` (`Theme`, a
+`pragma Singleton` with every colour, size, radius, spacing, type role and motion value of `docs/design/tokens.json`, and
+`SafeFrame`, the only reader of the safe-area insets), `qml/components/` (one file for each component, which knows no view
+model) and `qml/screens/<screen>/` (the only layer that knows the view models). A file in one folder uses a type from
+another after `import ErrorJournalingApp`, which a file of the module may do.
+
+The view models reach a screen as `required property` values passed down from the root window, never as context
+properties or singletons, so a test creates a screen with whatever it wants to inject and `qmllint` checks the types.
+`Theme` takes three inputs from outside, `colourScheme`, `textScale` and `reduceMotion`, which the shell sets from the
+bridge; nothing else in QML reads the platform (`tools/ci/check_qml_platform.py`).
+
+An executable's resources cannot be linked into another executable, so the module is built twice from the same files:
+into `ej_app`, and into `ej_ui_tests` together with the stubs. `qml/qml_files.cmake` is the one place that lists the files
+(a glob) and marks the singleton, and both `CMakeLists.txt` call it.
 
 ## Platform code
 

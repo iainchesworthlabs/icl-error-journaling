@@ -6,16 +6,15 @@
 #include <QSize>
 #include <QString>
 #include <QVariantMap>
-
 #include <chrono>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
 
-// The Qt Quick classes are only declared here. The headers of the core define a name (`STRICT`) that the Windows headers
-// behind Qt Quick define as a macro, so a test includes its own headers first and <QQuickItem> and the rest after them,
-// which clang-format's include order gives; this header must not bring Qt Quick in ahead of them.
+// The Qt Quick classes are only declared here. The headers of the core define a name (`STRICT`) that the Windows
+// headers behind Qt Quick define as a macro, so a test includes its own headers first and <QQuickItem> and the rest
+// after them, which clang-format's include order gives; this header must not bring Qt Quick in ahead of them.
 class QImage;
 class QObject;
 class QQmlEngine;
@@ -36,23 +35,23 @@ struct Node
 {
     QQuickItem* m_Item = nullptr;
     int m_Depth = 0;
-    QString m_TypeName;       ///< the C++ class name, such as `QQuickRectangle` or `QQuickText`
+    QString m_TypeName; ///< the C++ class name, such as `QQuickRectangle` or `QQuickText`
     QString m_ObjectName;
-    QRectF m_Rect;            ///< in the window
-    bool m_Visible = false;   ///< visible, with an opacity above zero and a size
+    QRectF m_Rect;          ///< in the window
+    bool m_Visible = false; ///< visible, with an opacity above zero and a size
     bool m_Enabled = false;
-    bool m_Interactive = false; ///< takes a press: a mouse area, a pointer handler, or a control
+    bool m_Interactive = false;      ///< takes a press: a mouse area, a pointer handler, or a control
     bool m_InAccessibleTree = false; ///< a screen reader can reach it (not `Accessible.ignored`)
-    int m_Role = 0;           ///< a QAccessible::Role; 0 is NoRole
-    QString m_Name;           ///< `Accessible.name`, or the text of a `Text`
+    int m_Role = 0;                  ///< a QAccessible::Role; 0 is NoRole
+    QString m_Name;                  ///< `Accessible.name`, or the text of a `Text`
     QString m_Description;
-    QString m_Value;          ///< the accessible value, such as a count or a position
+    QString m_Value; ///< the accessible value, such as a count or a position
 };
 
-/// The common fixture of the QML tests (docs/plan/stage-4.md, "Tests"): a window of an iPhone 17 offscreen, an engine that
-/// has the module `ErrorJournalingApp`, and the means to load a component, drive it with touch and keys, advance time
-/// without waiting, and read back the item tree with its accessibility data. One `UiRig` is one engine, so the `Theme`
-/// singleton is a fresh one in each.
+/// The common fixture of the QML tests (docs/plan/stage-4.md, "Tests"): a window of an iPhone 17 offscreen, an engine
+/// that has the module `ErrorJournalingApp`, and the means to load a component, drive it with touch and keys, advance
+/// time without waiting, and read back the item tree with its accessibility data. One `UiRig` is one engine, so the
+/// `Theme` singleton is a fresh one in each.
 ///
 ///     UiRig rig;
 ///     auto* tile = rig.load("UiStubGood", {{"title", "Sam Example"}});
@@ -65,7 +64,7 @@ struct Node
 class UiRig
 {
 public:
-    explicit UiRig(QSize window = QSize(402, 874));
+    explicit UiRig(QSize window_size = QSize(402, 874));
     ~UiRig();
 
     UiRig(const UiRig&) = delete;
@@ -111,11 +110,13 @@ public:
 
     // ---- time ----
 
-    /// Moves the animation clock by `by`, in steps of one frame so that an animation sees each, then the `TestClock` and
-    /// the events it leaves.
+    /// Moves the animation clock by `by`, in steps of one frame so that an animation sees each, then the `TestClock`
+    /// and the events it leaves.
     void advance(std::chrono::milliseconds by);
     /// Runs the manual gateway until its queue is empty, then processes events. With nothing attached, only the events.
     void settle();
+    /// Called by `settle`, after the attached gateway has run: for a service rig (Stage 3's `Rig`) that settles itself.
+    void on_settle(std::function<void()> hook);
     void attach(test::TestClock& clock);
     void attach(test::ManualStorageGateway& gateway);
 

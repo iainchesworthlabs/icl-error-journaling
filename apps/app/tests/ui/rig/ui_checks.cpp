@@ -6,7 +6,6 @@
 #include <QObject>
 #include <QQuickItem>
 #include <QQuickWindow>
-
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -162,8 +161,8 @@ Violations check_reading_order(UiRig& rig)
             const bool same_row = overlap > smaller / 2;
             if (!same_row && later.m_Rect.bottom() <= first.m_Rect.top() + EPSILON)
             {
-                out.push_back(QStringLiteral("read after, but above: %1 is read before %2")
-                                  .arg(label(first), label(later)));
+                out.push_back(
+                    QStringLiteral("read after, but above: %1 is read before %2").arg(label(first), label(later)));
             }
             else if (same_row && later.m_Rect.left() + EPSILON < first.m_Rect.left())
             {
@@ -186,7 +185,7 @@ Violations check_text_scale(UiRig& rig)
             continue;
         }
         const QQuickItem* item = node.m_Item;
-        const bool elides = item->property("elide").toInt() != 0; // Text.ElideNone is 0
+        const bool elides = item->property("elide").toInt() != 0;   // Text.ElideNone is 0
         const bool wraps = item->property("wrapMode").toInt() != 0; // Text.NoWrap is 0
         if (!elides && item->property("truncated").toBool())
         {
@@ -260,9 +259,8 @@ Violations check_motion_reduced(UiRig& rig)
         }
         const bool slides =
             name.contains("XAnimator") || name.contains("YAnimator") ||
-            (name.contains("NumberAnimation") &&
-             (object->property("property").toString() == QStringLiteral("x") ||
-              object->property("property").toString() == QStringLiteral("y")));
+            (name.contains("NumberAnimation") && (object->property("property").toString() == QStringLiteral("x") ||
+                                                  object->property("property").toString() == QStringLiteral("y")));
         const QVariant from = object->property("from");
         const QVariant to = object->property("to");
         if (slides && from.isValid() && to.isValid() && !std::isnan(from.toReal()) && !std::isnan(to.toReal()) &&
@@ -337,6 +335,13 @@ double percentile(const std::vector<double>& sorted, double fraction)
     return sorted[std::min(index, sorted.size() - 1)];
 }
 
+double perf_budget_factor()
+{
+    bool parsed = false;
+    const double factor = qEnvironmentVariable("EJ_PERF_BUDGET_FACTOR").toDouble(&parsed);
+    return parsed ? std::max(1.0, factor) : 1.0;
+}
+
 SceneSize measure_scene(UiRig& rig, QQuickItem* from)
 {
     SceneSize size;
@@ -363,13 +368,16 @@ std::vector<Geometry> snapshot_geometry(UiRig& rig, QQuickItem* from)
         {
             continue;
         }
-        // The key is the path of class names and sibling positions from the root, which does not change when a label does.
+        // The key is the path of class names and sibling positions from the root, which does not change when a label
+        // does.
         QString key;
         for (const QQuickItem* item = node.m_Item; item != nullptr && item != (from != nullptr ? from : rig.root());
              item = item->parentItem())
         {
-            const auto siblings = item->parentItem() != nullptr ? item->parentItem()->childItems() : QList<QQuickItem*>();
-            key.prepend(QStringLiteral("/%1:%2").arg(QString::fromLatin1(item->metaObject()->className()))
+            const auto siblings =
+                item->parentItem() != nullptr ? item->parentItem()->childItems() : QList<QQuickItem*>();
+            key.prepend(QStringLiteral("/%1:%2")
+                            .arg(QString::fromLatin1(item->metaObject()->className()))
                             .arg(siblings.indexOf(item)));
         }
         out.push_back({key, node.m_Rect});

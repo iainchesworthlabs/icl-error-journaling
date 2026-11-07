@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The perf cases of the rig (docs/plan/stage-4.md, "Tests"): perf.press_path, perf.scene and perf.first_frame, shown on the
-// stub that follows the rules. Packages 4.5 and 4.7 point the same helpers at the Tile and at the Log screen.
+// The perf cases of the rig (docs/plan/stage-4.md, "Tests"): perf.press_path, perf.scene and perf.first_frame, shown on
+// the stub that follows the rules. Packages 4.5 and 4.7 point the same helpers at the Tile and at the Log screen.
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"
 
@@ -34,7 +34,8 @@ QJsonObject budget(const QString& name)
 TEST_CASE("perf.press_path: from a synthetic press to the handler, p95 over 200 presses is under 16 ms", "[ui][perf]")
 {
     UiRig rig;
-    QQuickItem* item = rig.load(QStringLiteral("UiStubGood"), {{QStringLiteral("title"), QStringLiteral("Sam Example")}});
+    QQuickItem* item =
+        rig.load(QStringLiteral("UiStubGood"), {{QStringLiteral("title"), QStringLiteral("Sam Example")}});
     REQUIRE(item != nullptr);
     QQuickItem* button = rig.find(QStringLiteral("activate"));
     REQUIRE(button != nullptr);
@@ -50,7 +51,7 @@ TEST_CASE("perf.press_path: from a synthetic press to the handler, p95 over 200 
     CHECK(handled == PRESSES);
     const double p95 = percentile(times, 0.95);
     INFO("p95 " << p95 << " ms, median " << percentile(times, 0.5) << " ms, worst " << times.back() << " ms");
-    CHECK(p95 < PRESS_BUDGET_MS);
+    CHECK(p95 < PRESS_BUDGET_MS * perf_budget_factor());
 }
 
 TEST_CASE("perf.press_path: the helpers measure what they say", "[ui]")
@@ -69,7 +70,8 @@ TEST_CASE("perf.press_path: the helpers measure what they say", "[ui]")
 TEST_CASE("perf.scene: the item and delegate counts stay under the budget in perf-budget.json", "[ui][perf]")
 {
     UiRig rig;
-    REQUIRE(rig.load(QStringLiteral("UiStubGood"), {{QStringLiteral("title"), QStringLiteral("Sam Example")}}) != nullptr);
+    REQUIRE(rig.load(QStringLiteral("UiStubGood"), {{QStringLiteral("title"), QStringLiteral("Sam Example")}}) !=
+            nullptr);
     const SceneSize size = measure_scene(rig);
     const QJsonObject limit = budget(QStringLiteral("UiStubGood"));
     REQUIRE_FALSE(limit.isEmpty());
@@ -95,7 +97,8 @@ TEST_CASE("perf.scene: a Repeater's delegates are counted", "[ui]")
 TEST_CASE("perf.first_frame: changing the text of a label moves no rectangle", "[ui][perf]")
 {
     UiRig rig;
-    QQuickItem* item = rig.load(QStringLiteral("UiStubGood"), {{QStringLiteral("title"), QStringLiteral("Sam Example")}});
+    QQuickItem* item =
+        rig.load(QStringLiteral("UiStubGood"), {{QStringLiteral("title"), QStringLiteral("Sam Example")}});
     REQUIRE(item != nullptr);
     const std::vector<Geometry> before = snapshot_geometry(rig);
     REQUIRE_FALSE(before.empty());
@@ -105,7 +108,8 @@ TEST_CASE("perf.first_frame: changing the text of a label moves no rectangle", "
     CHECK(moved_items(before, snapshot_geometry(rig)).empty());
 
     // A layout that does change is found, so the check can fail.
-    item->setProperty("title", QStringLiteral("A title long enough that it has to wrap onto a second line of text in the frame"));
+    item->setProperty(
+        "title", QStringLiteral("A title long enough that it has to wrap onto a second line of text in the frame"));
     rig.layout();
     CHECK_FALSE(moved_items(before, snapshot_geometry(rig)).empty());
 }

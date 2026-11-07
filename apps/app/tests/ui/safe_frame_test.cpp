@@ -97,11 +97,13 @@ TEST_CASE("safe_frame.override: the frame follows the size of the window", "[ui]
     CHECK(rig.geometry(rig.find(QStringLiteral("inside"))) == QRectF(0, 59, 430, 932 - 59 - 34));
 }
 
-TEST_CASE("safe_frame.log: logInsets prints the four insets once, for the device build of assumption U1", "[ui][safe_frame]")
+TEST_CASE("safe_frame.log: logInsets prints the four insets once, for the device build of assumption U1",
+          "[ui][safe_frame]")
 {
     static QStringList messages;
     messages.clear();
-    const auto previous = qInstallMessageHandler([](QtMsgType, const QMessageLogContext&, const QString& text) { messages.append(text); });
+    const auto previous = qInstallMessageHandler([](QtMsgType, const QMessageLogContext&, const QString& text)
+                                                 { messages.append(text); });
     {
         UiRig rig;
         REQUIRE(rig.load_source(QByteArrayLiteral(R"(
@@ -124,7 +126,8 @@ TEST_CASE("safe_frame.override: content in the frame passes the cross-cutting ch
 {
     UiRig rig;
     // The stub puts its content in a frame with the design's insets.
-    REQUIRE(rig.load(QStringLiteral("UiStubGood"), {{QStringLiteral("title"), QStringLiteral("Today's details")}}) != nullptr);
+    REQUIRE(rig.load(QStringLiteral("UiStubGood"), {{QStringLiteral("title"), QStringLiteral("Today's details")}}) !=
+            nullptr);
     expect_clean(check_safe_area(rig, 59, 34));
     expect_clean(check_everything(rig));
 }

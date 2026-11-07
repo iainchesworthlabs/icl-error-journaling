@@ -5,17 +5,15 @@
 #include "rig/stage3_hooks.hpp"
 
 #include <QAccessible>
+#include <QCoreApplication>
 #include <QImage>
+#include <QPointingDevice>
+#include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
-
-#include <QCoreApplication>
-#include <QPointingDevice>
-#include <QQmlComponent>
 #include <QTest>
 #include <QtGlobal>
-
 #include <algorithm>
 #include <functional>
 #include <map>
@@ -59,14 +57,15 @@ struct UiRig::Impl
     QString m_Errors;
     test::TestClock* m_Clock = nullptr;
     test::ManualStorageGateway* m_Gateway = nullptr;
+    std::function<void()> m_Settle;
     QPointingDevice* m_Device = nullptr;
     std::map<int, QPoint> m_Down; ///< finger id to its last position in the window
     int m_NextFinger = 1;
 };
 
-UiRig::UiRig(QSize window) : m_Impl(std::make_unique<Impl>())
+UiRig::UiRig(QSize window_size) : m_Impl(std::make_unique<Impl>())
 {
-    m_Impl->m_Window->resize(window);
+    m_Impl->m_Window->resize(window_size);
     m_Impl->m_Window->setColor(Qt::white);
     m_Impl->m_Window->show();
     m_Impl->m_Device = QTest::createTouchDevice();
@@ -112,7 +111,8 @@ QObject* UiRig::theme()
 void UiRig::set_dark(bool dark)
 {
     QObject* t = theme();
-    t->setProperty("colourScheme", dark ? static_cast<int>(Qt::ColorScheme::Dark) : static_cast<int>(Qt::ColorScheme::Light));
+    t->setProperty("colourScheme",
+                   dark ? static_cast<int>(Qt::ColorScheme::Dark) : static_cast<int>(Qt::ColorScheme::Light));
     layout();
 }
 
@@ -198,10 +198,9 @@ int UiRig::press(QQuickItem* item, std::optional<QPointF> at)
     const QPoint point = item->mapToScene(local).toPoint();
     const int id = m_Impl->m_NextFinger++;
     auto sequence = QTest::touchEvent(m_Impl->m_Window.get(), m_Impl->m_Device, false);
-    for (const auto& [other, position] : m_Impl->m_Down)
+    for (const auto& down : m_Impl->m_Down)
     {
-        sequence.stationary(other);
-        (void) position;
+        sequence.stationary(down.first);
     }
     sequence.press(id, point, m_Impl->m_Window.get()).commit();
     m_Impl->m_Down[id] = point;
@@ -213,13 +212,12 @@ void UiRig::move(int finger, QQuickItem* item, QPointF to)
 {
     const QPoint point = item->mapToScene(to).toPoint();
     auto sequence = QTest::touchEvent(m_Impl->m_Window.get(), m_Impl->m_Device, false);
-    for (const auto& [other, position] : m_Impl->m_Down)
+    for (const auto& down : m_Impl->m_Down)
     {
-        if (other != finger)
+        if (down.first != finger)
         {
-            sequence.stationary(other);
+            sequence.stationary(down.first);
         }
-        (void) position;
     }
     sequence.move(finger, point, m_Impl->m_Window.get()).commit();
     m_Impl->m_Down[finger] = point;
@@ -236,10 +234,9 @@ void UiRig::release(int finger)
     const QPoint point = found->second;
     m_Impl->m_Down.erase(found);
     auto sequence = QTest::touchEvent(m_Impl->m_Window.get(), m_Impl->m_Device, false);
-    for (const auto& [other, position] : m_Impl->m_Down)
+    for (const auto& down : m_Impl->m_Down)
     {
-        sequence.stationary(other);
-        (void) position;
+        sequence.stationary(down.first);
     }
     sequence.release(finger, point, m_Impl->m_Window.get()).commit();
     QCoreApplication::processEvents();
@@ -301,7 +298,16 @@ void UiRig::settle()
     {
         run_gateway(*m_Impl->m_Gateway);
     }
+    if (m_Impl->m_Settle)
+    {
+        m_Impl->m_Settle();
+    }
     QCoreApplication::processEvents();
+}
+
+void UiRig::on_settle(std::function<void()> hook)
+{
+    m_Impl->m_Settle = std::move(hook);
 }
 
 void UiRig::attach(test::TestClock& clock)
@@ -327,8 +333,8 @@ Node UiRig::describe(QQuickItem* item, int depth) const
     node.m_Enabled = item->isEnabled();
     node.m_Visible = item->isVisible() && item->opacity() > 0 && item->width() > 0 && item->height() > 0;
 
-    // What takes a press: a mouse area, a text input, a control, or an item with a pointer handler. (Not every item that
-    // accepts mouse buttons does: a Text takes them for its links, and a Flickable for its drags.)
+    // What takes a press: a mouse area, a text input, a control, or an item with a pointer handler. (Not every item
+    // that accepts mouse buttons does: a Text takes them for its links, and a Flickable for its drags.)
     bool takes_press = inherits_class(item, "QQuickMouseArea") || inherits_class(item, "QQuickTextInput") ||
                        inherits_class(item, "QQuickTextEdit") || inherits_class(item, "QQuickControl");
     for (const QObject* child : item->children())
@@ -438,7 +444,7 @@ QQuickItem* UiRig::find(const QString& name, QQuickItem* from) const
 void UiRig::layout()
 {
     // Rendering one frame runs polish and sync, which settles anchors, layouts and implicit sizes.
-    (void) m_Impl->m_Window->grabWindow();
+    (void)m_Impl->m_Window->grabWindow();
 }
 
 QImage UiRig::grab()

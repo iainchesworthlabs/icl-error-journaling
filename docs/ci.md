@@ -73,6 +73,25 @@ There is no Windows leg and no desktop package: Windows, Android and desktop pac
 branch with `gh workflow run ci.yml --ref <branch>`, and the iOS build with `gh workflow run ios-build.yml --ref <branch>`.
 Nothing in CI runs on a device or in the simulator: the bundle is built and inspected, not started.
 
+## QML checks
+
+`tools/ci/check_qml_*.py` keep the QML honest (`docs/plan/stage-4.md`, package 4.1). They read the text of `apps/app/qml/`
+and are CTest tests with the label `unit`, so they run in the unit phase of every build; a QML file that fails one fails
+the pull request. `python tools/ci/precheck.py` runs the first four after the shared checks.
+
+| Test | Script | Fails a QML file that |
+|---|---|---|
+| `qml.platform` | `check_qml_platform.py` | asks which platform it runs on (`Qt.platform`), because what differs arrives as a property or a signal of the bridge |
+| `theme.no_literals` | `check_qml_literals.py` | writes a hex colour, `Qt.rgba` and its kin, a named colour, or a number other than 0 for a size, radius, spacing, margin, font size or duration, outside `qml/theme/`. A ratio (`* 2`, `/ 2`) is allowed. A line may end in `// literal-ok: <reason>`; the reasons are printed |
+| `i18n.strings` | `check_qml_strings.py` | shows a string literal that is not `qsTr()`, or joins `qsTr()` to something with `+`, or gives it something that is not a literal |
+| `qml.tests` | `check_qml_tests.py` | has no `apps/app/tests/ui/<snake_case_name>_test.cpp` with a `TEST_CASE`; a file under a folder named `private` is tested through its neighbour |
+| `qml.format` | `check_qml_format.py` | `qmlformat` would change (`apps/app/qml/.qmlformat.ini`; fix with `qmlformat -i`). Skipped, with a message at configure time, by a Qt kit without `qmlformat` |
+| `qml.lint` | the `ej_ui_tests_qmllint` target | `qmllint` warns about: `apps/app/qml/.qmllint.ini` sets the maximum to 0 |
+
+The theme and the Stage 0 window `Main.qml` are held to less (the theme is where literals live; `Main.qml` is replaced by
+package 4.15, which removes the exception in `tools/ci/qml_source.py` and the lint skip in `apps/app/qml/qml_files.cmake`).
+The unit tests of the scripts are `tools/tests/test_qml_checks.py`, run by the Confidentiality job with the others.
+
 ## Platform layout check
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_platform_layout.py`. For a `src/platform` directory that holds both
@@ -118,6 +137,7 @@ The terms file stays outside the repository.
 
 ```bash
 python3 tools/ci/precheck.py
+python3 tools/ci/check_qml_literals.py   # or platform, strings, tests: one QML check on its own
 ```
 
 It needs a checkout of `icl-common-infra` next to this repository or in `ICL_COMMON_INFRA`.

@@ -4,7 +4,6 @@
 #include "rig/ui_rig.hpp"
 
 #include <QString>
-
 #include <functional>
 #include <vector>
 
@@ -14,23 +13,23 @@ namespace ej::ui
 /// What a cross-cutting check found: one line for each fault, naming the item. Empty means the check passed.
 using Violations = std::vector<QString>;
 
-/// The cross-cutting tests of docs/plan/stage-4.md, "Tests", as functions over a loaded `UiRig`. Each component and each
-/// screen test calls them on the item it loaded, in the states it can be in:
+/// The cross-cutting tests of docs/plan/stage-4.md, "Tests", as functions over a loaded `UiRig`. Each component and
+/// each screen test calls them on the item it loaded, in the states it can be in:
 ///
 ///     UiRig rig;
 ///     rig.load("Tile", {...});
 ///     expect_clean(check_names(rig));
 ///     expect_clean(check_everything(rig));
 ///
-/// A check that cannot fail proves nothing, so the stubs in `stubs/` (`UiStubBad*`) each break one rule and the tests of
-/// the rig show that the right check finds it.
+/// A check that cannot fail proves nothing, so the stubs in `stubs/` (`UiStubBad*`) each break one rule and the tests
+/// of the rig show that the right check finds it.
 
 /// `a11y.names`: every interactive item that is shown has a role and a name that a screen reader reaches, and no two
 /// controls under one parent share a name unless their values differ. An item that is not interactive is ignored.
 [[nodiscard]] Violations check_names(UiRig& rig);
 
-/// `a11y.targets`: every interactive item that is shown is `minimum(node)` points square or more, counting the margin of
-/// its pointer handlers as hit area. The minimum is 44 pt unless the test says otherwise (a tile: 88).
+/// `a11y.targets`: every interactive item that is shown is `minimum(node)` points square or more, counting the margin
+/// of its pointer handlers as hit area. The minimum is 44 pt unless the test says otherwise (a tile: 88).
 [[nodiscard]] Violations check_targets(UiRig& rig, const std::function<double(const Node&)>& minimum = {});
 
 /// `a11y.reading_order`: the items a screen reader reaches are read in the order they appear, top to bottom and left to
@@ -62,6 +61,9 @@ void expect_clean(const Violations& violations);
 /// percentile of them.
 [[nodiscard]] std::vector<double> time_each(int count, const std::function<void()>& press_once);
 [[nodiscard]] double percentile(const std::vector<double>& sorted, double fraction);
+/// How much slower than a release build this one is (`EJ_PERF_BUDGET_FACTOR`, set by CMake for sanitizers, coverage and
+/// Debug): a budget is multiplied by it. 1 when unset.
+[[nodiscard]] double perf_budget_factor();
 
 /// `perf.scene`: the number of items under `from` (the loaded item by default) and the number of those that are
 /// delegates of a model, found by their class name.

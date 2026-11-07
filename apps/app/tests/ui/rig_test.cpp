@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The rig itself (docs/plan/stage-4.md, "Tests": rig.*) and the cross-cutting checks, each against a stub that follows the
-// rule and a stub that breaks it, because a check that cannot fail proves nothing.
+// The rig itself (docs/plan/stage-4.md, "Tests": rig.*) and the cross-cutting checks, each against a stub that follows
+// the rule and a stub that breaks it, because a check that cannot fail proves nothing.
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"
 #include "support/manual_storage_gateway.hpp"
@@ -12,7 +12,6 @@
 #include <QAccessible>
 #include <QQuickItem>
 #include <QQuickWindow>
-
 #include <algorithm>
 #include <chrono>
 
@@ -193,6 +192,16 @@ TEST_CASE("rig.advance: the clock and the gateway of Stage 3 move with the rig",
     rig.settle();
     CHECK(done);
     CHECK(gateway.pending() == 0);
+}
+
+TEST_CASE("rig.settle: a hook runs after the gateway, for a rig that settles itself", "[ui][rig]")
+{
+    UiRig rig;
+    int calls = 0;
+    rig.on_settle([&calls] { ++calls; });
+    rig.settle();
+    rig.settle();
+    CHECK(calls == 2);
 }
 
 TEST_CASE("rig.theme: the scheme, the text scale and Reduce Motion reach the singleton of the rig's engine",
