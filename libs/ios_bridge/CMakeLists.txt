@@ -13,6 +13,7 @@ add_library(ej_ios_bridge
     src/accessibility_settings.cpp
     src/haptic_policy.cpp
     src/launch_tracker.cpp
+    src/lifecycle.cpp
     src/platform_services.cpp
     src/share_presenter.cpp
     src/timing_stats.cpp
@@ -36,10 +37,12 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui)
 add_library(ej_qml_bridge
     src/config_exporter.cpp
     src/config_importer.cpp
+    src/lifecycle_adapter.cpp
     src/open_file_filter.cpp
     src/qml_bridge.cpp
     include/error_journaling/config_exporter.hpp
     include/error_journaling/config_importer.hpp
+    include/error_journaling/lifecycle_adapter.hpp
     include/error_journaling/open_file_filter.hpp
     include/error_journaling/qml_bridge.hpp)
 add_library(error_journaling::qml_bridge ALIAS ej_qml_bridge)

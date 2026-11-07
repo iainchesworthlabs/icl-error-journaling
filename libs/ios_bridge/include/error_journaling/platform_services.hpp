@@ -2,6 +2,7 @@
 #pragma once
 
 #include "error_journaling/accessibility_settings.hpp"
+#include "error_journaling/background_tasks.hpp"
 #include "error_journaling/document_picker.hpp"
 #include "error_journaling/haptics.hpp"
 #include "error_journaling/perf_marks.hpp"
@@ -21,6 +22,7 @@ struct PlatformServices
     std::unique_ptr<PerfMarks> m_PerfMarks;
     std::unique_ptr<AccessibilitySettings> m_Accessibility;
     std::unique_ptr<DocumentPicker> m_DocumentPicker;
+    std::unique_ptr<BackgroundTasks> m_BackgroundTasks;
 };
 
 /// The implementations for the platform CMake linked.

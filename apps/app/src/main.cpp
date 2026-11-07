@@ -3,6 +3,8 @@
 #include "error_journaling/config_exporter.hpp"
 #include "error_journaling/config_importer.hpp"
 #include "error_journaling/launch_tracker.hpp"
+#include "error_journaling/lifecycle.hpp"
+#include "error_journaling/lifecycle_adapter.hpp"
 #include "error_journaling/open_file_filter.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
@@ -74,6 +76,7 @@ int main(int argc, char* argv[])
     // import it: the filter holds it until the importer is ready. What an earlier import left behind is removed now.
     ej::bridge::PerfMarks& marks = *services.m_PerfMarks;
     ej::bridge::DocumentPicker& document_picker = *services.m_DocumentPicker;
+    ej::bridge::BackgroundTasks& background_tasks = *services.m_BackgroundTasks;
     ej::bridge::OpenFileFilter open_files([&marks](std::string_view line) { marks.log(line); });
     QCoreApplication::instance()->installEventFilter(&open_files);
     const QString temporary_path = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
@@ -97,6 +100,19 @@ int main(int argc, char* argv[])
     ej::app::AppRoot root(production.environment(),
                           ej::app::AppPlatform{share_sheet, haptics, clipboard, share_available},
                           ej::app::start_sqlite_storage(store));
+    // What the application does when it goes inactive and comes back (NOTE-03, DAY-01): flush the note draft and finish
+    // the writes in flight inside a background task, and run the day check on becoming active once the store is ready.
+    // Connected before the drain below, so the flush at quit comes first.
+    ej::bridge::LifecycleActions lifecycle_actions;
+    lifecycle_actions.flush_draft = [&root] { root.session()->flushDraft(); };
+    lifecycle_actions.drain = [&root] { root.drain(); };
+    lifecycle_actions.check_day = [&root] { root.day()->check(); };
+    lifecycle_actions.set_application_active = [&platform_bridge](bool active)
+    { platform_bridge.setApplicationActive(active); };
+    lifecycle_actions.log = [&marks](std::string_view line) { marks.log(line); };
+    ej::bridge::LifecycleCoordinator lifecycle(std::move(lifecycle_actions), background_tasks);
+    ej::bridge::LifecycleAdapter lifecycle_adapter(
+        *QCoreApplication::instance(), [&lifecycle](ej::bridge::LifecycleEvent event) { lifecycle.on_event(event); });
     // Every queued write is finished once, on the GUI thread, before the program ends.
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &root, [&root] { root.drain(); });
 
@@ -157,6 +173,14 @@ int main(int argc, char* argv[])
     // Recovery has finished: the store was opened above, before the window was made. The shell of Stage 5, 5.7 calls
     // board_enabled() when the 12 tiles accept taps (the session is open); until then this line stands for it.
     launch.storage_ready();
+    // The store was opened and recovered above: a day check that was waiting for it runs now. Qt may not send Active
+    // for the launch itself (the state was already Active when the adapter connected), so the first one is sent here;
+    // the check is idempotent, so a second one from Qt raises no second prompt.
+    lifecycle.storage_ready();
+    if (QGuiApplication::applicationState() == Qt::ApplicationActive)
+    {
+        lifecycle.on_event(ej::bridge::LifecycleEvent::BECAME_ACTIVE);
+    }
     launch.board_enabled();
     {
         const auto roots = engine.rootObjects();
