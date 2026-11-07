@@ -10,7 +10,6 @@
 #include <QQuickItem>
 #include <QString>
 #include <algorithm>
-#include <chrono>
 
 /// What the tests of the input and list components of package 4.6 share: a host item for the component under test (the
 /// rig sizes the item it loads to the window, which would hide the component's own size), and a few lookups.
@@ -25,16 +24,6 @@ namespace ej::ui::input
                           "    id: host\n") +
         body.toUtf8() + QByteArrayLiteral("\n}\n");
     return rig.load_source(source);
-}
-
-/// Plays `ms` of animation one frame at a time with a frame painted after each. An animator runs when a frame is
-/// rendered, and `UiRig::advance` paints one frame at the end of the whole span.
-inline void play(UiRig& rig, int ms)
-{
-    for (int done = 0; done < ms; done += 16)
-    {
-        rig.advance(std::chrono::milliseconds(16));
-    }
 }
 
 /// `Theme.colour.<name>` of this rig's engine, for the scheme the rig is in.

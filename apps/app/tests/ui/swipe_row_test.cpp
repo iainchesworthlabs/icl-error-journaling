@@ -9,6 +9,7 @@
 #include <QAccessible>
 #include <QQuickItem>
 #include <QSignalSpy>
+#include <chrono>
 
 using namespace ej::ui;
 using namespace ej::ui::input;
@@ -95,7 +96,7 @@ TEST_CASE("swipe_row.reveal: a swipe past the threshold reveals Copy and Delete,
     SECTION("a short swipe goes back")
     {
         swipe_left(rig, row, 300, 270);
-        play(rig, 400);
+        rig.advance(std::chrono::milliseconds(400));
         CHECK_FALSE(row->property("revealed").toBool());
         CHECK(face_x(rig, row) == 0);
     }
@@ -104,7 +105,7 @@ TEST_CASE("swipe_row.reveal: a swipe past the threshold reveals Copy and Delete,
     {
         swipe_left(rig, row, 340, 140);
         CHECK(row->property("revealed").toBool());
-        play(rig, 400);
+        rig.advance(std::chrono::milliseconds(400));
         CHECK(face_x(rig, row) == -reveal);
         // The actions are in view: the face has left the right-hand 152 pt.
         QQuickItem* copy = rig.find(QStringLiteral("copyAction"), row);
@@ -118,10 +119,10 @@ TEST_CASE("swipe_row.reveal: a swipe past the threshold reveals Copy and Delete,
     SECTION("a swipe cannot pull the row past the actions or to the right")
     {
         swipe_left(rig, row, 340, 10);
-        play(rig, 400);
+        rig.advance(std::chrono::milliseconds(400));
         CHECK(face_x(rig, row) == -reveal);
         swipe_left(rig, row, 250, 450);
-        play(rig, 400);
+        rig.advance(std::chrono::milliseconds(400));
         CHECK(face_x(rig, row) == 0);
         CHECK_FALSE(row->property("revealed").toBool());
     }
@@ -138,7 +139,7 @@ TEST_CASE("swipe_row.reveal: a tap on a revealed action emits once, and the row 
     QSignalSpy activated(row, SIGNAL(activated()));
 
     swipe_left(rig, row, 340, 140);
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
     REQUIRE(row->property("revealed").toBool());
 
     rig.tap(rig.find(QStringLiteral("deleteAction"), row));
@@ -146,19 +147,20 @@ TEST_CASE("swipe_row.reveal: a tap on a revealed action emits once, and the row 
     CHECK(copied.count() == 0);
     CHECK(activated.count() == 0);
     CHECK_FALSE(row->property("revealed").toBool());
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
     CHECK(face_x(rig, row) == 0);
 
     swipe_left(rig, row, 340, 140);
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
     rig.tap(rig.find(QStringLiteral("copyAction"), row));
     CHECK(copied.count() == 1);
     CHECK(deleted.count() == 1);
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
     CHECK(face_x(rig, row) == 0);
 }
 
-TEST_CASE("swipe_row.closed: a tap anywhere on a closed row, the right half included, only activates it", "[ui][swipe_row]")
+TEST_CASE("swipe_row.closed: a tap anywhere on a closed row, the right half included, only activates it",
+          "[ui][swipe_row]")
 {
     UiRig rig;
     REQUIRE(load_host(rig, list()) != nullptr);
@@ -206,21 +208,21 @@ TEST_CASE("swipe_row.closed: the buttons take taps only while the row is open, a
     QSignalSpy deleted(row, SIGNAL(deleteRequested()));
 
     swipe_left(rig, row, 340, 140);
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
     REQUIRE(row->property("revealed").toBool());
     rig.tap(rig.find(QStringLiteral("copyAction"), row));
     CHECK(copied.count() == 1);
     CHECK(deleted.count() == 0);
     CHECK(activated.count() == 0);
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
 
     swipe_left(rig, row, 340, 140);
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
     rig.tap(rig.find(QStringLiteral("deleteAction"), row));
     CHECK(copied.count() == 1);
     CHECK(deleted.count() == 1);
     CHECK(activated.count() == 0);
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
 
     // Closed again: a tap where Delete was only activates the row.
     CHECK_FALSE(row->property("revealed").toBool());
@@ -241,11 +243,11 @@ TEST_CASE("swipe_row.reveal: a tap activates a closed row and only closes an ope
     CHECK(activated.count() == 1);
 
     swipe_left(rig, row, 340, 140);
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
     rig.tap(face_of(rig, row), QPointF(300, 24));
     CHECK(activated.count() == 1);
     CHECK_FALSE(row->property("revealed").toBool());
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
     CHECK(face_x(rig, row) == 0);
 }
 
@@ -263,7 +265,7 @@ TEST_CASE("swipe_row.reveal: a vertical drag scrolls the list and does not open 
     QQuickItem* face = face_of(rig, row);
     // Down the list with a little drift to the left, which is how a thumb scrolls.
     rig.drag(face, QPointF(200, 40), QPointF(185, -100), 10);
-    play(rig, 400);
+    rig.advance(std::chrono::milliseconds(400));
     CHECK(flick->property("contentY").toDouble() > 0);
     CHECK_FALSE(row->property("revealed").toBool());
     CHECK(face_x(rig, row) == 0);
