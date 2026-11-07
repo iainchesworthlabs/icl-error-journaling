@@ -36,6 +36,11 @@ endif()
 
 if(ERROR_JOURNALING_BUILD_TESTS)
     set(ej_app_test_environment QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QSG_RENDER_LOOP=basic)
+    if(ICL_SANITIZERS MATCHES "thread")
+        # The prebuilt Qt libraries are not instrumented; the file says why.
+        list(APPEND ej_app_test_environment
+            "TSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tools/sanitizers/tsan.supp")
+    endif()
 
     # Starts the real application without a display, waits for the first frame and exits.
     add_test(NAME app.smoke COMMAND ej_app --smoke-test)
