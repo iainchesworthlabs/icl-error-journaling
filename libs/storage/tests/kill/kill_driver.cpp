@@ -12,8 +12,8 @@
 //   EJ_KILL_SEED                 the master seed (decimal or 0x hex); drawn at random and printed when unset
 //   EJ_KILL_ITERATIONS           random-kill iterations (default 25)
 //   EJ_KILL_FIRST, EJ_KILL_LAST  the range of iterations to run (default 0 .. iterations - 1), to shard a long run; the
-//                                seeds of the random kills of recovery, a migration and the draft start at EJ_KILL_FIRST
-//                                too, so shards do not repeat each other
+//                                seeds of the random kills of recovery, a migration and the draft start at
+//                                EJ_KILL_FIRST too, so shards do not repeat each other
 //   EJ_KILL_RECOVERY_ITERATIONS, EJ_KILL_MIGRATION_ITERATIONS, EJ_KILL_DRAFT_ITERATIONS
 //                                random kills of recovery, of a migration (default 25 each) and of the typed draft
 //                                (default 6)
@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -387,8 +388,22 @@ KillPlan kill_plan(std::uint64_t seed)
     return plan;
 }
 
+/// A delay from 100 microseconds to about 200 milliseconds, spread evenly on a log scale: recovery and a migration take
+/// a few milliseconds on a fast machine with a quiet disk and over a second on a slow one, and a kill only tests
+/// anything when it lands inside the run.
+std::chrono::microseconds log_uniform_delay(SplitMix64& rng)
+{
+    const double unit = static_cast<double>(rng.next() >> 11) / 9007199254740992.0;
+    return std::chrono::microseconds(static_cast<std::int64_t>(100.0 * std::exp2(unit * 11.0)));
+}
+
 void spin_for(std::chrono::microseconds delay)
 {
+    if (delay > std::chrono::milliseconds(3))
+    {
+        std::this_thread::sleep_for(delay - std::chrono::milliseconds(2));
+        delay = std::chrono::milliseconds(2);
+    }
     const auto until = std::chrono::steady_clock::now() + delay;
     while (std::chrono::steady_clock::now() < until)
     {
@@ -872,7 +887,8 @@ QStringList recovery_arguments(const std::filesystem::path& dir, std::uint64_t c
 
 } // namespace
 
-TEST_CASE("kill: recovery killed at each of its crash points recovers again to the same result", "[kill][recovery][points]")
+TEST_CASE("kill: recovery killed at each of its crash points recovers again to the same result",
+          "[kill][recovery][points]")
 {
     const std::map<LogId, StateDigest>& expected = pristine().m_Digests;
     for (const Damage kind : {Damage::EMPTY_DATABASE, Damage::ENTRY_PAGE, Damage::NO_DATABASE})
@@ -930,7 +946,7 @@ TEST_CASE("kill: recovery killed at random moments recovers again to the same re
         SplitMix64 rng(seed);
         const std::array<Damage, 3> kinds{Damage::EMPTY_DATABASE, Damage::ENTRY_PAGE, Damage::NO_DATABASE};
         const Damage kind = kinds[static_cast<std::size_t>(rng.below(kinds.size()))];
-        const std::chrono::microseconds delay(static_cast<std::int64_t>(rng.between(0, 150'000)));
+        const std::chrono::microseconds delay = log_uniform_delay(rng);
         INFO("recovery iteration " << iteration << ", seed " << hex(seed) << ", kill after " << delay.count() << " us");
 
         StoreCopy store;
@@ -953,8 +969,10 @@ TEST_CASE("kill: recovery killed at random moments recovers again to the same re
         CHECK((report->m_Outcome == RecoveryOutcome::REBUILT || report->m_Outcome == RecoveryOutcome::CLEAN));
         require_recovered(store, expected, pristine().m_OpenLog);
     }
-    print("ej-kill recovery result master_seed=" + hex(master) + " iterations=" + decimal(count) +
-          " killed_before_the_end=" + decimal(killed_mid_run));
+    const std::string summary = "ej-kill recovery result master_seed=" + hex(master) + " iterations=" + decimal(count) +
+                                " killed_before_the_end=" + decimal(killed_mid_run);
+    print(summary);
+    append_summary(summary);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1211,7 +1229,7 @@ TEST_CASE("kill: a migration killed at random moments leaves the old version or 
     {
         const std::uint64_t seed = iteration_seed(master, 4'000'000 + env_number("EJ_KILL_FIRST", 0) + iteration);
         SplitMix64 rng(seed);
-        const std::chrono::microseconds delay(static_cast<std::int64_t>(rng.between(0, 120'000)));
+        const std::chrono::microseconds delay = log_uniform_delay(rng);
         INFO("migration iteration " << iteration << ", seed " << hex(seed) << ", kill after " << delay.count()
                                     << " us");
         StoreCopy store;
@@ -1229,8 +1247,11 @@ TEST_CASE("kill: a migration killed at random moments leaves the old version or 
         CHECK(worker.output().m_Error.empty());
         relaunch_and_finish(store, rows);
     }
-    print("ej-kill migration result master_seed=" + hex(master) + " iterations=" + decimal(count) +
-          " killed_before_the_end=" + decimal(killed_before_the_end));
+    const std::string summary = "ej-kill migration result master_seed=" + hex(master) +
+                                " iterations=" + decimal(count) +
+                                " killed_before_the_end=" + decimal(killed_before_the_end);
+    print(summary);
+    append_summary(summary);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
