@@ -3,15 +3,32 @@
 
 #include <QMetaObject>
 #include <QPointer>
+#include <chrono>
 #include <filesystem>
 #include <utility>
 
 namespace ej::bridge
 {
 
-QmlBridge::QmlBridge(PlatformServices services, QObject* parent)
-    : QObject(parent), m_Services(std::move(services)), m_Presenter(*m_Services.m_Share)
+QmlBridge::QmlBridge(PlatformServices services, HapticPolicyConfig haptics, QObject* parent)
+    : QObject(parent), m_Services(std::move(services)),
+      m_HapticPolicy(
+          *m_Services.m_Haptics,
+          []
+          {
+              return std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::steady_clock::now().time_since_epoch());
+          },
+          haptics),
+      m_Presenter(*m_Services.m_Share)
 {
+    // The keep-alive is off unless the device pass asks for it (HAPTIC_KEEPALIVE); then one timer ticks the policy.
+    if (m_HapticPolicy.keep_alive_enabled())
+    {
+        m_KeepAlive.setInterval(m_HapticPolicy.interval());
+        connect(&m_KeepAlive, &QTimer::timeout, this, [this] { m_HapticPolicy.tick(); });
+        m_KeepAlive.start();
+    }
 }
 
 QmlBridge::~QmlBridge() = default;
@@ -96,8 +113,19 @@ void QmlBridge::prepareHaptics()
     m_Services.m_Haptics->prepare();
 }
 
-void QmlBridge::hapticImpact()
+void QmlBridge::setBoardVisible(bool visible)
 {
+    m_HapticPolicy.set_board_visible(visible);
+}
+
+void QmlBridge::setApplicationActive(bool active)
+{
+    m_HapticPolicy.set_application_active(active);
+}
+
+void QmlBridge::hapticImpact(double /*pressTimestamp*/)
+{
+    // Nothing but the fire: the engine prepares itself afterwards (haptics.mm), so no prepare sits in this path.
     m_Services.m_Haptics->fire(HapticKind::IMPACT);
 }
 

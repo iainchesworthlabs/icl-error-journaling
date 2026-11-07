@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include "error_journaling/haptic_policy.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/share_presenter.hpp"
 
 #include <QObject>
 #include <QString>
+#include <QTimer>
 #include <memory>
 
 namespace ej::bridge
@@ -23,7 +25,7 @@ class QmlBridge : public QObject
     Q_PROPERTY(bool sharing READ sharing NOTIFY sharingChanged)
 
 public:
-    explicit QmlBridge(PlatformServices services, QObject* parent = nullptr);
+    explicit QmlBridge(PlatformServices services, HapticPolicyConfig haptics = {}, QObject* parent = nullptr);
     ~QmlBridge() override;
 
     [[nodiscard]] bool share_available() const noexcept;
@@ -37,10 +39,19 @@ public:
     /// export). Ends with shareFinished like shareText.
     Q_INVOKABLE void shareTemporaryFile(const QString& path);
 
-    /// Call when a tile appears, so the first press has no start-up delay.
+    /// Wakes the haptic engine now, whatever the board and application state. The board calls setBoardVisible and the
+    /// window setApplicationActive instead and lets the policy decide; this stays for a caller that knows better.
     Q_INVOKABLE void prepareHaptics();
-    /// Call from onPressed (touch-down), not from onClicked or onReleased.
-    Q_INVOKABLE void hapticImpact();
+    /// The board became visible or hidden. Prepares the haptics when it becomes visible while the application is
+    /// active.
+    Q_INVOKABLE void setBoardVisible(bool visible);
+    /// The application became active or inactive. Prepares the haptics when it becomes active while the board is
+    /// visible.
+    Q_INVOKABLE void setApplicationActive(bool active);
+    /// Fires the impact haptic. Call it from onPressed (touch-down), never from onClicked or onReleased: the entry is
+    /// recorded on the press too, and a finger sliding off must not fire a haptic without an entry. `pressTimestamp` is
+    /// the touch's event timestamp in milliseconds, used only for the timing marks of Stage 5, 5.3; 0 when unknown.
+    Q_INVOKABLE void hapticImpact(double pressTimestamp = 0);
     /// Call when a note has been saved.
     Q_INVOKABLE void hapticSuccess();
 
@@ -58,6 +69,8 @@ private:
     void deliver(const ShareResult& result);
 
     PlatformServices m_Services;
+    HapticPolicy m_HapticPolicy;
+    QTimer m_KeepAlive;
     SharePresenter m_Presenter;
     bool m_Sharing = false;
 };

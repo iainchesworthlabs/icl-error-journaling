@@ -1,0 +1,1 @@
+**Haptics are prepared ahead of the touch.** The engine is woken when the board is shown and when the app becomes active, never while the app is inactive, so the tap haptic fires on touch-down without a start-up delay. A repeating wake-up exists but is off until it is shown to be needed. Not yet run on a device.

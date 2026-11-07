@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "error_journaling/haptic_policy.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/share_presenter.hpp"
@@ -11,6 +12,7 @@
 #include <QObject>
 #include <QString>
 #include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -378,12 +380,15 @@ TEST_CASE("haptics.wrapper: the QML calls reach the haptics, impact and success 
 
     qml.prepareHaptics();
     qml.hapticImpact();
+    qml.hapticImpact(123456.0);
     qml.hapticSuccess();
 
+    // The wrapper prepares only when asked: a fire is a fire and nothing else (the Haptics implementation prepares).
     CHECK(fakes.m_Haptics->m_Prepared == 1);
-    REQUIRE(fakes.m_Haptics->m_Fired.size() == 2);
+    REQUIRE(fakes.m_Haptics->m_Fired.size() == 3);
     CHECK(fakes.m_Haptics->m_Fired[0] == bridge::HapticKind::IMPACT);
-    CHECK(fakes.m_Haptics->m_Fired[1] == bridge::HapticKind::SUCCESS);
+    CHECK(fakes.m_Haptics->m_Fired[1] == bridge::HapticKind::IMPACT);
+    CHECK(fakes.m_Haptics->m_Fired[2] == bridge::HapticKind::SUCCESS);
 }
 
 TEST_CASE("share.config_file: a shared file is gone after every outcome", "[integration][share]")
@@ -441,4 +446,110 @@ TEST_CASE("share.config_file: the launch purge removes stale files and nothing e
     CHECK_FALSE(fs::exists(directory.path() / "stale-one.ejconfig"));
     CHECK(fs::exists(directory.path() / "kept" / "inner.txt"));
     CHECK(bridge::purge_directory(directory.path() / "missing") == 0);
+}
+
+TEST_CASE("haptics.wrapper: the policy calls reach the haptics through QML", "[unit][haptics]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+
+    qml.setBoardVisible(true);
+    CHECK(fakes.m_Haptics->m_Prepared == 1);
+    qml.setApplicationActive(false);
+    qml.setApplicationActive(true);
+    CHECK(fakes.m_Haptics->m_Prepared == 2);
+    CHECK(fakes.m_Haptics->m_Fired.empty());
+}
+
+namespace
+{
+
+// A policy over a fake haptics and a clock the test moves.
+struct PolicyRig
+{
+    FakeHaptics m_Haptics;
+    std::chrono::milliseconds m_Now{1000};
+    bridge::HapticPolicy m_Policy;
+
+    explicit PolicyRig(bool keep_alive)
+        : m_Policy(
+              m_Haptics, [this] { return m_Now; },
+              bridge::HapticPolicyConfig{keep_alive, std::chrono::milliseconds{4000}})
+    {
+    }
+};
+
+} // namespace
+
+TEST_CASE("haptics.policy: it prepares when the board becomes visible and when the application becomes active",
+          "[unit][haptics]")
+{
+    PolicyRig rig(false);
+
+    rig.m_Policy.set_board_visible(true);
+    CHECK(rig.m_Haptics.m_Prepared == 1);
+    rig.m_Policy.set_board_visible(true); // no change, no prepare
+    CHECK(rig.m_Haptics.m_Prepared == 1);
+
+    rig.m_Policy.set_application_active(false);
+    CHECK(rig.m_Haptics.m_Prepared == 1);
+    rig.m_Policy.set_application_active(true);
+    CHECK(rig.m_Haptics.m_Prepared == 2);
+    rig.m_Policy.set_application_active(true);
+    CHECK(rig.m_Haptics.m_Prepared == 2);
+}
+
+TEST_CASE("haptics.policy: it prepares on none of them while inactive or hidden", "[unit][haptics]")
+{
+    PolicyRig rig(true);
+
+    // Hidden board: becoming active and ticking do nothing.
+    rig.m_Policy.set_application_active(false);
+    rig.m_Policy.set_application_active(true);
+    rig.m_Now += std::chrono::seconds(10);
+    rig.m_Policy.tick();
+    CHECK(rig.m_Haptics.m_Prepared == 0);
+
+    // Inactive application: the board becoming visible and ticking do nothing.
+    rig.m_Policy.set_application_active(false);
+    rig.m_Policy.set_board_visible(true);
+    rig.m_Now += std::chrono::seconds(10);
+    rig.m_Policy.tick();
+    CHECK(rig.m_Haptics.m_Prepared == 0);
+
+    // Active again, with the board still visible: one prepare, then the board is hidden and a tick does nothing.
+    rig.m_Policy.set_application_active(true);
+    CHECK(rig.m_Haptics.m_Prepared == 1);
+    rig.m_Policy.set_board_visible(false);
+    rig.m_Now += std::chrono::seconds(10);
+    rig.m_Policy.tick();
+    CHECK(rig.m_Haptics.m_Prepared == 1);
+}
+
+TEST_CASE("haptics.policy: the keep-alive ticks once per interval, and only when enabled", "[unit][haptics]")
+{
+    PolicyRig on(true);
+    on.m_Policy.set_board_visible(true);
+    REQUIRE(on.m_Haptics.m_Prepared == 1);
+    on.m_Now += std::chrono::milliseconds(3999);
+    on.m_Policy.tick();
+    CHECK(on.m_Haptics.m_Prepared == 1);
+    on.m_Now += std::chrono::milliseconds(1);
+    on.m_Policy.tick();
+    CHECK(on.m_Haptics.m_Prepared == 2);
+    on.m_Policy.tick(); // the interval starts again from the prepare
+    CHECK(on.m_Haptics.m_Prepared == 2);
+
+    PolicyRig off(false);
+    off.m_Policy.set_board_visible(true);
+    off.m_Now += std::chrono::hours(1);
+    off.m_Policy.tick();
+    CHECK(off.m_Haptics.m_Prepared == 1);
+}
+
+TEST_CASE("haptics.policy: the keep-alive is off by default", "[unit][haptics]")
+{
+    CHECK_FALSE(bridge::HAPTIC_KEEPALIVE);
+    CHECK_FALSE(bridge::HapticPolicyConfig{}.m_KeepAlive);
 }
