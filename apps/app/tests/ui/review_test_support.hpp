@@ -383,6 +383,14 @@ private:
     return first;
 }
 
+/// `find_in` for an item that must be there: the test stops with a failure when there is none.
+[[nodiscard]] inline QQuickItem* require_in(UiRig& rig, const QString& name, QQuickItem* from = nullptr)
+{
+    QQuickItem* item = find_in(rig, name, from);
+    REQUIRE(item != nullptr);
+    return item;
+}
+
 [[nodiscard]] inline QString text_in(UiRig& rig, const QString& name, QQuickItem* from = nullptr)
 {
     QQuickItem* item = find_in(rig, name, from);
@@ -511,6 +519,12 @@ struct Screen
         return find_in(m_Rig, QString::fromLatin1(name), from);
     }
 
+    /// An item that must be there.
+    [[nodiscard]] QQuickItem* item(const char* name, QQuickItem* from = nullptr)
+    {
+        return require_in(m_Rig, QString::fromLatin1(name), from);
+    }
+
     [[nodiscard]] QQuickItem* row(int index)
     {
         const std::vector<QQuickItem*> rows = swipe_rows(m_Rig);
@@ -530,7 +544,7 @@ struct Screen
     {
         QQuickItem* f = face(index);
         m_Rig.swipe(f, QPointF(f->width() - 60, f->height() / 2), QPointF(60, f->height() / 2));
-        input::play(m_Rig, 400);
+        m_Rig.advance(std::chrono::milliseconds(400));
     }
 
     void tap_action(int index, const char* action)
@@ -545,7 +559,7 @@ struct Screen
     void commit()
     {
         m_Rig.settle();
-        input::play(m_Rig, 100);
+        m_Rig.advance(std::chrono::milliseconds(100));
     }
 
     [[nodiscard]] bool visible(const char* name, QQuickItem* from = nullptr)

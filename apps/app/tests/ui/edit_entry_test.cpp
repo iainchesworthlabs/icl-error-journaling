@@ -37,7 +37,7 @@ struct Editor : Screen
     void open(std::uint64_t entry_number)
     {
         REQUIRE(QMetaObject::invokeMethod(m_Review, "openEdit", Q_ARG(QString, id_text(entry_number))));
-        input::play(m_Rig, 500);
+        m_Rig.advance(std::chrono::milliseconds(500));
     }
 
     [[nodiscard]] QQuickItem* sheet(const char* name = "editSheet")
@@ -49,7 +49,7 @@ struct Editor : Screen
 
     [[nodiscard]] QQuickItem* in(const char* sheet_name, const char* name)
     {
-        return named(name, sheet(sheet_name));
+        return require_in(m_Rig, QString::fromLatin1(name), sheet(sheet_name));
     }
 
     [[nodiscard]] bool is_open()
@@ -80,7 +80,7 @@ struct Editor : Screen
         QQuickItem* field = in("editSheet", "editNote");
         REQUIRE(field != nullptr);
         field->setProperty("text", note);
-        input::play(m_Rig, 50);
+        m_Rig.advance(std::chrono::milliseconds(50));
     }
 
     void tap_in(const char* sheet_name, const char* name)
@@ -88,7 +88,7 @@ struct Editor : Screen
         QQuickItem* item = in(sheet_name, name);
         REQUIRE(item != nullptr);
         m_Rig.tap(item);
-        input::play(m_Rig, 500);
+        m_Rig.advance(std::chrono::milliseconds(500));
     }
 
     void save()
@@ -116,7 +116,7 @@ struct Editor : Screen
             if (row->property("text").toString() == name)
             {
                 m_Rig.tap(row);
-                input::play(m_Rig, 500);
+                m_Rig.advance(std::chrono::milliseconds(500));
                 return;
             }
         }
@@ -134,7 +134,7 @@ struct Editor : Screen
         REQUIRE(minutes != nullptr);
         hours->setProperty("currentIndex", hour);
         minutes->setProperty("currentIndex", minute);
-        input::play(m_Rig, 100);
+        m_Rig.advance(std::chrono::milliseconds(100));
     }
 
     void done_time()
@@ -437,7 +437,7 @@ TEST_CASE("edit.time_format: the tumbler has the columns of the time format and 
     // 11:05 pm: the hour column is 12, 1 ... 11, so index 11 is 11, and the meridiem column says pm.
     e.in("editSheet", "Hours")->setProperty("currentIndex", 11);
     e.in("editSheet", "AM/PM")->setProperty("currentIndex", 1);
-    input::play(e.m_Rig, 100);
+    e.m_Rig.advance(std::chrono::milliseconds(100));
     CHECK(text_in(e.m_Rig, QStringLiteral("editShownTime")) ==
           QStringLiteral("Shown in the log as %1").arg(shown(23, 5)));
     e.done_time();
@@ -565,7 +565,7 @@ struct Alone
     void open(std::uint64_t entry_number)
     {
         REQUIRE(QMetaObject::invokeMethod(m_Sheet, "edit", Q_ARG(QString, id_text(entry_number))));
-        input::play(m_Rig, 500);
+        m_Rig.advance(std::chrono::milliseconds(500));
     }
 
     void tap(const char* name)
@@ -573,7 +573,7 @@ struct Alone
         QQuickItem* item = find_in(m_Rig, QString::fromLatin1(name), m_Sheet);
         REQUIRE(item != nullptr);
         m_Rig.tap(item);
-        input::play(m_Rig, 500);
+        m_Rig.advance(std::chrono::milliseconds(500));
     }
 
     [[nodiscard]] QString page() const
@@ -600,9 +600,9 @@ TEST_CASE("edit.cross_cutting: names, targets, order and text scale, on every pa
     SECTION("the first page with a refusal")
     {
         a.open(3);
-        find_in(a.m_Rig, QStringLiteral("editNote"), a.m_Sheet)->setProperty("text", QString());
-        input::play(a.m_Rig, 50);
-        REQUIRE_FALSE(find_in(a.m_Rig, QStringLiteral("navTrailing"), a.m_Sheet)->isEnabled());
+        require_in(a.m_Rig, QStringLiteral("editNote"), a.m_Sheet)->setProperty("text", QString());
+        a.m_Rig.advance(std::chrono::milliseconds(50));
+        REQUIRE_FALSE(require_in(a.m_Rig, QStringLiteral("navTrailing"), a.m_Sheet)->isEnabled());
         expect_clean(check_everything(a.m_Rig));
     }
 

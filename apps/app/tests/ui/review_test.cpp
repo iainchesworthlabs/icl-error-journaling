@@ -77,10 +77,10 @@ std::vector<QString> coloured_items(UiRig& rig, QQuickItem* list)
         if (node.m_TypeName.startsWith(QLatin1String("QQuickRectangle")))
         {
             check("the fill", node.m_Item->property("color").value<QColor>());
-            if (node.m_Item->property("border").value<QObject*>()->property("width").toDouble() > 0)
+            const QObject* border = input::require_object(node.m_Item, "border");
+            if (border->property("width").toDouble() > 0)
             {
-                check("the border",
-                      node.m_Item->property("border").value<QObject*>()->property("color").value<QColor>());
+                check("the border", border->property("color").value<QColor>());
             }
         }
         else if (node.m_TypeName.startsWith(QLatin1String("QQuickText")))
@@ -171,7 +171,7 @@ TEST_CASE("review.copy: Copy-all and Copy put the export and the line on the cli
         REQUIRE(announced.count() == 1);
         CHECK(announced.at(0).at(0).toString() == QStringLiteral("Copied the whole log"));
         CHECK(s.visible("reviewCopied"));
-        CHECK(QAccessible::queryAccessibleInterface(s.named("reviewCopied"))->text(QAccessible::Name) ==
+        CHECK(input::require_interface(s.item("reviewCopied"))->text(QAccessible::Name) ==
               QStringLiteral("Copied the whole log"));
         QObject* timer = s.m_Review->findChild<QObject*>(QStringLiteral("copiedTimer"));
         REQUIRE(timer != nullptr);
@@ -289,8 +289,8 @@ TEST_CASE("review.empty: an empty log says so and disables Share and Copy-all", 
     Screen s(Options{.entries = std::vector<Entry>{}});
     CHECK(row_lines(s.m_Rig).empty());
     CHECK(s.visible("reviewEmpty"));
-    CHECK_FALSE(s.named("reviewCopyAll")->isEnabled());
-    CHECK_FALSE(s.named("reviewShare")->isEnabled());
+    CHECK_FALSE(s.item("reviewCopyAll")->isEnabled());
+    CHECK_FALSE(s.item("reviewShare")->isEnabled());
 
     s.m_Rig.tap(s.named("reviewCopyAll"));
     s.m_Rig.tap(s.named("reviewShare"));
@@ -312,7 +312,7 @@ TEST_CASE("review.past_log: any TimelineModel, with a back control, the date sha
     CHECK(joined(row_lines(s.m_Rig)) == joined(prd_example_lines()));
     CHECK(text_in(s.m_Rig, QStringLiteral("reviewTitle")) == QStringLiteral("Thu 5 Nov"));
     CHECK(text_in(s.m_Rig, QStringLiteral("reviewShared")) == QStringLiteral("Shared 5 Nov at 16:58"));
-    CHECK(s.named("reviewShare")->property("text").toString() == QStringLiteral("Share log again"));
+    CHECK(s.item("reviewShare")->property("text").toString() == QStringLiteral("Share log again"));
 
     // The back control replaces the summary and goes back.
     QQuickItem* back_button = s.named("reviewBack");
@@ -380,8 +380,7 @@ TEST_CASE("review.voiceover: a row is one button reading the whole line and open
     QObject* editor = s.m_Review->property("editor").value<QObject*>();
     REQUIRE(editor != nullptr);
     CHECK_FALSE(editor->property("isOpen").toBool());
-    QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(s.face(2));
-    iface->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    input::press_action(s.face(2));
     CHECK(editor->property("isOpen").toBool());
     CHECK(editor->property("entryId").toString() == id_text(3));
 }
