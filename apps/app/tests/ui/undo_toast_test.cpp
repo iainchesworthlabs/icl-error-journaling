@@ -7,6 +7,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <QAccessible>
 #include <QObject>
 #include <QQuickItem>
 #include <QSignalSpy>
@@ -289,4 +290,93 @@ TEST_CASE("toast.a11y: names, 44 pt targets, reading order and the text scales, 
         CHECK(line->property("contentHeight").toDouble() <= line->height() + 0.5);
         rig.set_text_scale(1.0);
     }
+}
+
+TEST_CASE("toast.shield: a touch on the toast never reaches the tile under it, and Undo still works", "[ui][toast]")
+{
+    UiRig rig;
+    // A tile under the whole card, as the toast floats over the bottom row of the board.
+    QQuickItem* wrapper = rig.load_source(QByteArrayLiteral(R"(
+        import QtQuick
+        import ErrorJournalingApp
+        Item {
+            id: wrapper
+            property bool shown: true
+            property int undone: 0
+            Tile {
+                objectName: "under"
+                width: 370
+                height: 104
+                typeId: "mute-delay"
+                label: "Mute Delay"
+                colourSlot: 8
+                count: 0
+                hasCount: false
+                isOther: false
+                isEmpty: false
+                accessibleName: "Mute Delay"
+            }
+            UndoToast {
+                objectName: "toast"
+                width: 370
+                active: wrapper.shown
+                text: "Mute Delay logged at 10:20"
+                undoing: false
+                generation: 1
+                windowMs: 5000
+                onUndoRequested: wrapper.undone += 1
+            }
+        })"));
+    REQUIRE(wrapper != nullptr);
+    QQuickItem* under = rig.find_item(QStringLiteral("under"));
+    QQuickItem* toast = rig.find_item(QStringLiteral("toast"));
+    REQUIRE(under != nullptr);
+    REQUIRE(toast != nullptr);
+    advance_through(rig, 240);
+    REQUIRE(toast->isVisible());
+    QSignalSpy pressed(under, SIGNAL(pressed()));
+    QSignalSpy tapped(under, SIGNAL(tapped()));
+
+    // On the text, on the bare card at its left edge and on the card away from any control.
+    QQuickItem* text = rig.find_item(QStringLiteral("toastText"));
+    REQUIRE(text != nullptr);
+    rig.tap(text);
+    rig.tap(rig.find_item(QStringLiteral("toastCard")), QPointF(3, 26));
+    CHECK(pressed.count() == 0);
+    CHECK(tapped.count() == 0);
+
+    // A press alone, held, goes nowhere either; and neither does a press that slides off the card.
+    const int finger = rig.press(text);
+    rig.advance(48ms);
+    CHECK(pressed.count() == 0);
+    rig.release(finger);
+    CHECK(tapped.count() == 0);
+
+    // Undo asks once, and does not press the tile either.
+    QQuickItem* button = rig.find_item(QStringLiteral("toastUndo"));
+    REQUIRE(button != nullptr);
+    rig.tap(button);
+    CHECK(wrapper->property("undone").toInt() == 1);
+    CHECK(pressed.count() == 0);
+    CHECK(tapped.count() == 0);
+
+    // The card is not a control of its own: the only button in the toast is Undo.
+    int buttons = 0;
+    for (const Node& node : rig.accessible_tree(toast))
+    {
+        if (node.m_Role == QAccessible::Button && node.m_InAccessibleTree)
+        {
+            ++buttons;
+            CHECK(node.m_ObjectName == QStringLiteral("toastUndo"));
+        }
+    }
+    CHECK(buttons == 1);
+
+    // Hidden, the tile under it takes touches again.
+    wrapper->setProperty("shown", false);
+    advance_through(rig, 240);
+    REQUIRE_FALSE(toast->isVisible());
+    rig.tap(under, QPointF(200, 26));
+    CHECK(pressed.count() == 1);
+    CHECK(tapped.count() == 1);
 }
