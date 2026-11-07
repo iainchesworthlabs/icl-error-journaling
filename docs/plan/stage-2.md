@@ -641,6 +641,18 @@ inside the window only replace the pending text, and when the timer expires the 
 within 300 ms make one write" still holds; a change at 299 ms is covered by the first write and one at 301 ms makes the next.
 The kill harness checks the bound under real kills.
 
+### A replayed note takes its draft with it (found by the kill harness)
+
+Section 2.8 says that committing a note clears the draft in the same transaction as the entry, "so a kill cannot leave both the
+entry and the draft present". With the decided order (journal first, then the database), a kill between the journal sync and
+the commit leaves the note's record, which recovery replays, and a draft that the aborted transaction would have cleared. The
+draft is not journalled, so replay left it: after the relaunch the note was in the log and its text was still in the note field.
+The harness found it in the crash-point test and in the random kills (one run in four, whenever a draft had been typed before a
+note that was in flight). Replaying a note the database did not have now removes a draft whose last write is no later than the
+note's capture time, and a rebuild decides the salvaged draft by the same rule; a draft typed after the note is the next note's
+and stays. The rule rests on the clocks: a wall clock that stepped back between typing and saving could keep a draft that
+should go, or drop one that should stay, and only in the window of a kill.
+
 ### Launch cost on a year of use (work package 2.6, finding F13)
 
 The plan proposed a launch budget of 100 ms. `libs/storage/tests/perf/test_launch_cost.cpp` builds a year (365 logs, 80,300
