@@ -43,7 +43,7 @@ ctest --preset linux-debug
 | `linux-coverage` | Instrumented build for gcovr |
 | `macos-debug`, `macos-release` | The desktop program on a Mac, for iterating on the user interface; built with tests |
 | `ios-release` | The iPhone and iPad application (`apps/app`), unsigned, for a device, on a Mac with Xcode; no tests |
-| `ios-simulator` | The same for the iOS simulator (Debug, `arm64-ios-simulator`); no tests |
+| `ios-simulator` | The same for the iOS simulator (Release, `arm64-ios-simulator`); no tests |
 | `windows-msvc-release`, `windows-msvc-asan` | The developer machine only. Windows is not a v1 platform and CI has no Windows leg |
 
 Sanitizers, Tracy, coverage and fuzzing exclude each other. The configure step stops with a

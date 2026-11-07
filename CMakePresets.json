@@ -119,12 +119,11 @@
     },
     {
       "name": "ios-simulator",
-      "displayName": "iOS (simulator, Debug, unsigned)",
+      "displayName": "iOS (simulator, Release, unsigned)",
       "inherits": "ios-base",
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "arm64-ios-simulator",
-        "CMAKE_OSX_SYSROOT": "iphonesimulator",
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_OSX_SYSROOT": "iphonesimulator"
       }
     }
   ],
@@ -139,7 +138,7 @@
     { "name": "macos-debug", "configurePreset": "macos-debug" },
     { "name": "macos-release", "configurePreset": "macos-release" },
     { "name": "ios-release", "configurePreset": "ios-release", "configuration": "Release" },
-    { "name": "ios-simulator", "configurePreset": "ios-simulator", "configuration": "Debug" }
+    { "name": "ios-simulator", "configurePreset": "ios-simulator", "configuration": "Release" }
   ],
   "testPresets": [
     { "name": "linux-debug", "configurePreset": "linux-debug", "output": { "outputOnFailure": true } },
