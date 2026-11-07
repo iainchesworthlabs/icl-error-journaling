@@ -78,8 +78,8 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
   qml/                the module ErrorJournalingApp (the URI differs from the executable name). Every .qml under it is
                       found by a glob (qml/qml_files.cmake). theme/ holds the token singleton `Theme` and `SafeFrame`;
-                      components/ and screens/ are filled by Stage 4 (docs/plan/stage-4.md). Main.qml is the Stage 0 window
-  qml/                the module ErrorJournalingApp (the URI differs from the executable name)
+                      components/, screens/ and shell/ are Stage 4 (docs/plan/stage-4.md). Main.qml is the window and
+                      shell/AppShell.qml is everything in it; platform/<ios|desktop>/ holds what differs by platform
   src/                main.cpp (builds the root and hands the models to QML), app_root.* (`ej_app_root`: the composition root,
                       the product's environment and the opening of the store), qt_clipboard.* (the QtGui clipboard)
   src/viewmodel/      ej_viewmodel: the thin QObject layer between the core and storage and QML (Stage 3), namespace
@@ -151,6 +151,24 @@ bridge; nothing else in QML reads the platform (`tools/ci/check_qml_platform.py`
 An executable's resources cannot be linked into another executable, so the module is built twice from the same files:
 into `ej_app`, and into `ej_ui_tests` together with the stubs. `qml/qml_files.cmake` is the one place that lists the files
 (a glob) and marks the singleton, and both `CMakeLists.txt` call it.
+
+**The shell.** `Main.qml` is the window (the colour of the first frame, the title, the required properties from `main.cpp`)
+and holds `shell/AppShell.qml`, which is the shell and which the test rig loads, because it loads an item and not a window.
+It has four tabs on `TabBar`; Log, Review and Settings each have a `PageStack` for the pages they push (Today's details,
+the editors), History keeps the one of its past-log Review, and a tab is made when it is first chosen. One `SheetHost` for the
+window carries the Other picker and the new-day alert, so they cover the tab bar; the Log screen's template prompt and
+Review's edit sheet are put in its layer. The first-launch screen covers the tabs while `settings.configured` is false, and
+`ImportFlow` covers everything. `AppRoot.writeFailed` is one banner at the top (the Log screen shows the failures of its
+own models itself), and the Undo toast is the Log screen's, and the shell's for Review. `Theme.textScale` and
+`Theme.reduceMotion` follow the bridge.
+
+**What differs by platform.** `qml/platform/desktop/FileChooser.qml` (Qt's file dialogs, the one place they are used) and
+`qml/platform/ios/FileChooser.qml` (nothing, until Stage 5's document picker, 5.7, replaces it) have the same type name; the
+build takes the file of its platform (`qml_files.cmake`), so no screen asks which platform it is on. Import and export rows
+emit `importRequested()` and `exportRequested()`; the shell answers them with the chooser, then `ImportFlow.begin(path,
+name)` or `settings.exportTo(path)`. Stage 5 (5.7) keeps the launch tracker (`AppShell.boardEnabled`), the document picker,
+`DayWatcher.check()` on `AppShell.applicationActivated` and the device pass.
+
 ## Composition
 
 `apps/app/src/app_root.*` is the composition root. `main.cpp` and the headless tests (`Rig`, `apps/app/tests/viewmodel/support/rig.hpp`)
