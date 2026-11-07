@@ -40,10 +40,12 @@
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
-            "context": "CI Status"
+            "context": "CI Status",
+            "integration_id": 15368
           },
           {
-            "context": "Scan dependency diff"
+            "context": "Scan dependency diff",
+            "integration_id": 15368
           }
         ]
       }
