@@ -19,16 +19,26 @@ libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespac
     golden.hpp, golden.cpp   the golden comparison helper
     fake_time_zone_provider.hpp  fixed-offset TimeZoneProvider for deterministic tests
     storage_samples.hpp      sample data (fictional stand-ins) shared with the storage tests
-libs/storage/         ej_storage: the repositories behind `LogRepository` (Stage 2); links ej_core, QtSql privately
+libs/storage/         ej_storage: the repositories behind `LogRepository` and the journal files (Stage 2); links ej_core, QtSql
+                      privately
   include/error_journaling/  memory_log_repository.hpp, sqlite_log_repository.hpp (no Qt SQL type in the header),
-                             journal.hpp (the `Journal` the repository appends to; `NullJournal`), crash_point.hpp
+                             journal.hpp (the `Journal` the repository appends to; `NullJournal`), file_journal.hpp
+                             (the journal of record on disk: one file per log, archived ones under journal/archive/),
+                             journal_writer.hpp, journal_reader.hpp (`scan_journal`: the rules of section 5.2),
+                             journal_file.hpp (`JournalFile`, the interface under the writer), crash_point.hpp
                              (`CrashPoint` and `CrashHook`, the places the kill harness ends the process),
                              storage_location.hpp (the folders of one store)
-  src/                       one file per component; the platform pieces (durable sync, file lock, file protection) go in
-                             src/platform/<os>/ with the journal files
+  src/                       one file per component
+  src/platform/              the pieces that differ by operating system, with one directory per system (linux, macos,
+                             ios, windows) defining the same functions from the same headers: durable_sync (`fsync`,
+                             `F_FULLFSYNC`, `FlushFileBuffers`), file_lock (an exclusive lock that refuses a second
+                             writer), file_protection (a no-op until Stage 5). CMake picks the directory
   tests/                     contract_cases.hpp: one typed suite for `LogRepository`, instantiated by
                              test_contract_memory.cpp (`unit`) and test_contract_sqlite.cpp (`integration`);
                              test_sqlite_repository.cpp (schema, settings, the write path W1 to W7, damaged files);
+                             test_journal_reader.cpp (J1 to J12) and test_journal_writer.cpp with lossy_file.hpp (a
+                             file that loses power; `unit`); test_file_journal.cpp and test_platform_files.cpp (real
+                             files, the lock, the repository over the file journal; `integration`);
                              helpers: temp_dir.hpp, raw_db.hpp (a second connection), recording_journal.hpp
 libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, behind interfaces
   src/platform/ios/      Objective-C++ (.mm), built for iOS
@@ -47,7 +57,7 @@ tools/                project scripts, baselines and coverage floors
 | Target | Kind | Depends on |
 |---|---|---|
 | `ej_core` | static library, C++23 | QtCore |
-| `ej_storage` | static library: the in-memory and SQLite repositories (the journal files and recovery follow in Stage 2) | `ej_core`, QtSql |
+| `ej_storage` | static library: the in-memory and SQLite repositories and the journal files (recovery and migrations follow in Stage 2) | `ej_core`, QtSql |
 | `ej_ios_bridge` | static library; Objective-C++ on iOS, a stub elsewhere | nothing (UIKit and Foundation on iOS) |
 | `ej_qml_bridge` | static library; the `qml_bridge` QObject QML calls, over the `ej_ios_bridge` interface | `ej_ios_bridge`, QtCore |
 | `ej_app` | Qt Quick executable (`error-journaling`) | the libraries above, Qt Quick |
