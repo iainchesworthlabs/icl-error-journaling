@@ -58,6 +58,7 @@ struct UiRig::Impl
     test::TestClock* m_Clock = nullptr;
     test::ManualStorageGateway* m_Gateway = nullptr;
     std::function<void()> m_Settle;
+    std::function<void(std::chrono::milliseconds)> m_Advance;
     QPointingDevice* m_Device = nullptr;
     std::map<int, QPoint> m_Down; ///< finger id to its last position in the window
     int m_NextFinger = 1;
@@ -282,13 +283,24 @@ void UiRig::advance(std::chrono::milliseconds by)
     {
         const auto step = std::min<long long>(left, FRAME_MS);
         m_Impl->m_Driver.step(step);
-        if (m_Impl->m_Clock != nullptr)
+        if (m_Impl->m_Advance)
+        {
+            m_Impl->m_Advance(std::chrono::milliseconds(step));
+        }
+        else if (m_Impl->m_Clock != nullptr)
         {
             advance_clock(*m_Impl->m_Clock, std::chrono::milliseconds(step));
         }
         QCoreApplication::processEvents();
+        // A frame for each step: the animators and the compressed touch events are handled when a frame is rendered.
+        layout();
         left -= step;
     }
+}
+
+void UiRig::wait_real(std::chrono::milliseconds by)
+{
+    QTest::qWait(static_cast<int>(by.count()));
     layout();
 }
 
@@ -303,6 +315,11 @@ void UiRig::settle()
         m_Impl->m_Settle();
     }
     QCoreApplication::processEvents();
+}
+
+void UiRig::on_advance(std::function<void(std::chrono::milliseconds)> hook)
+{
+    m_Impl->m_Advance = std::move(hook);
 }
 
 void UiRig::on_settle(std::function<void()> hook)
@@ -344,7 +361,9 @@ Node UiRig::describe(QQuickItem* item, int depth) const
             takes_press = true;
         }
     }
-    node.m_Interactive = takes_press;
+    // A StackView is a Control but a container: its pages are the controls, and it is named (Accessible.name) like any
+    // region, not pressed.
+    node.m_Interactive = takes_press && !inherits_class(item, "QQuickStackView");
 
     if (QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(item))
     {
@@ -439,6 +458,65 @@ QQuickItem* UiRig::find(const QString& name, QQuickItem* from) const
         return start;
     }
     return start->findChild<QQuickItem*>(name);
+}
+
+QQuickItem* UiRig::find_item(const QString& name, QQuickItem* from) const
+{
+    QQuickItem* start = from != nullptr ? from : m_Impl->m_Root;
+    if (start == nullptr)
+    {
+        return nullptr;
+    }
+    if (start->objectName() == name)
+    {
+        return start;
+    }
+    for (QQuickItem* child : start->childItems())
+    {
+        if (QQuickItem* found = find_item(name, child))
+        {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+std::vector<QQuickItem*> UiRig::find_items(const QString& name, QQuickItem* from) const
+{
+    std::vector<QQuickItem*> found;
+    QQuickItem* start = from != nullptr ? from : m_Impl->m_Root;
+    std::function<void(QQuickItem*)> visit = [&](QQuickItem* item)
+    {
+        if (item->objectName() == name)
+        {
+            found.push_back(item);
+        }
+        for (QQuickItem* child : item->childItems())
+        {
+            visit(child);
+        }
+    };
+    if (start != nullptr)
+    {
+        visit(start);
+    }
+    return found;
+}
+
+HideBase::HideBase(QQuickItem* base) : m_Base(base), m_WasVisible(base != nullptr && base->isVisible())
+{
+    if (m_Base != nullptr)
+    {
+        m_Base->setVisible(false);
+    }
+}
+
+HideBase::~HideBase()
+{
+    if (m_Base != nullptr)
+    {
+        m_Base->setVisible(m_WasVisible);
+    }
 }
 
 void UiRig::layout()
