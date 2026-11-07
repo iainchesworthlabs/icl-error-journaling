@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "error_journaling/config_seam.hpp"
 #include "error_journaling/configuration.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -98,10 +97,10 @@ TEST_CASE("Import of an export equals the original, with unicode, retired types 
         {
             for (const bool lower : {false, true})
             {
-                c.m_TimeFormat.m_Style = twelve ? ej::config_seam::TimeStyle::H12 : ej::config_seam::TimeStyle::H24;
+                c.m_TimeFormat.m_Style = twelve ? ej::TimeStyle::H12 : ej::TimeStyle::H24;
                 c.m_TimeFormat.m_Seconds = seconds;
                 c.m_TimeFormat.m_Meridiem =
-                    lower ? ej::config_seam::MeridiemCase::LOWER : ej::config_seam::MeridiemCase::UPPER;
+                    lower ? ej::MeridiemCase::LOWER : ej::MeridiemCase::UPPER;
                 const auto text = ej::export_configuration(c);
                 const auto back = imported(text);
                 CHECK(back.m_Facilitator == c.m_Facilitator);
@@ -277,12 +276,12 @@ TEST_CASE("Unknown keys are rejected", "[config]")
 TEST_CASE("The clock format has defaults and rejects other values", "[config]")
 {
     const auto without_meridiem = edited(sample(), ",\n      \"meridiem\": \"upper\"", "");
-    CHECK(imported(without_meridiem).m_TimeFormat.m_Meridiem == ej::config_seam::MeridiemCase::UPPER);
+    CHECK(imported(without_meridiem).m_TimeFormat.m_Meridiem == ej::MeridiemCase::UPPER);
 
     const auto twelve_lower = edited(edited(sample(), "\"24h\"", "\"12h\""), "\"upper\"", "\"lower\"");
     const auto c = imported(twelve_lower);
-    CHECK(c.m_TimeFormat.m_Style == ej::config_seam::TimeStyle::H12);
-    CHECK(c.m_TimeFormat.m_Meridiem == ej::config_seam::MeridiemCase::LOWER);
+    CHECK(c.m_TimeFormat.m_Style == ej::TimeStyle::H12);
+    CHECK(c.m_TimeFormat.m_Meridiem == ej::MeridiemCase::LOWER);
 
     CHECK(has(errors_of(edited(sample(), "\"24h\"", "\"36h\"")), Code::OUT_OF_RANGE, "/preferences/time_format/style"));
     CHECK(has(errors_of(edited(sample(), "\"upper\"", "\"Title\"")), Code::OUT_OF_RANGE,

@@ -7,10 +7,10 @@
 #include <string_view>
 #include <vector>
 
-#include "error_journaling/config_seam.hpp"
 #include "error_journaling/ids.hpp"
 #include "error_journaling/note_template.hpp"
 #include "error_journaling/result.hpp"
+#include "error_journaling/time_format.hpp"
 
 namespace ej
 {
@@ -21,9 +21,6 @@ inline constexpr int CONFIG_SCHEMA_VERSION = 1;
 inline constexpr std::size_t CONFIG_MAX_BYTES = 1024 * 1024;
 inline constexpr std::size_t CONFIG_MAX_ENTRIES_PER_LIST = 500;
 inline constexpr int CONFIG_BOARD_POSITIONS = 11;
-
-// SEAM (1.7): this alias moves to the real `TimeFormat`.
-using ConfigTimeFormat = config_seam::TimeFormat;
 
 struct ErrorType
 {
@@ -50,7 +47,7 @@ struct Configuration
 {
     std::string m_Facilitator;
     std::string m_UnitPrefix;
-    ConfigTimeFormat m_TimeFormat;
+    TimeFormat m_TimeFormat;
     bool m_IncludeTotals = false;
     std::vector<ErrorType> m_ErrorTypes;
     std::vector<Location> m_Locations;

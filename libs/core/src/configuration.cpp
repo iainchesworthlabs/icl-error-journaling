@@ -292,11 +292,11 @@ void read_time_format(Reader& r, const QJsonObject& preferences, Configuration& 
     {
         if (*style == QLatin1StringView("24h"))
         {
-            out.m_TimeFormat.m_Style = config_seam::TimeStyle::H24;
+            out.m_TimeFormat.m_Style = TimeStyle::H24;
         }
         else if (*style == QLatin1StringView("12h"))
         {
-            out.m_TimeFormat.m_Style = config_seam::TimeStyle::H12;
+            out.m_TimeFormat.m_Style = TimeStyle::H12;
         }
         else
         {
@@ -312,11 +312,11 @@ void read_time_format(Reader& r, const QJsonObject& preferences, Configuration& 
     {
         if (*meridiem == QLatin1StringView("upper"))
         {
-            out.m_TimeFormat.m_Meridiem = config_seam::MeridiemCase::UPPER;
+            out.m_TimeFormat.m_Meridiem = MeridiemCase::UPPER;
         }
         else if (*meridiem == QLatin1StringView("lower"))
         {
-            out.m_TimeFormat.m_Meridiem = config_seam::MeridiemCase::LOWER;
+            out.m_TimeFormat.m_Meridiem = MeridiemCase::LOWER;
         }
         else
         {
@@ -726,8 +726,6 @@ Result<Configuration, std::vector<ConfigError>> import_configuration(std::string
 
 std::string export_configuration(const Configuration& configuration)
 {
-    using config_seam::MeridiemCase;
-    using config_seam::TimeStyle;
 
     std::string out;
     out += "{\n  \"schema_version\": " + std::to_string(CONFIG_SCHEMA_VERSION) + ",\n";
