@@ -71,17 +71,15 @@ no Mac on the machine: every macOS and iOS build is verified in CI on the hosted
 
 Needed now (repository administration, section 12):
 
-1. Apply settings, rulesets and labels, dry run first:
+1. Done: settings, rulesets and labels have been applied. For reference, the commands were (dry run first):
 
    ```bash
    ../icl-common-infra/admin/apply.sh --repo iainchesworthlabs/icl-error-journaling
    RELEASE_BOT_APP_ID=<id> OWNER_USER=iainchesworth ../icl-common-infra/admin/apply.sh --repo iainchesworthlabs/icl-error-journaling --apply
    ```
 
-2. Add `MERGE_QUEUE_TOKEN` as a Dependabot secret, and add the repository to the selected repositories of the organisation
-   secrets (`icl-common-infra/docs/secrets.md`).
-3. Create the `release` environment with yourself as required reviewer.
-4. Create the repository secret `CONFIDENTIAL_TERMS` (one confidential term per line; also as a Dependabot secret if wanted).
+2. Create the `release` environment with yourself as required reviewer.
+3. Create the repository secret `CONFIDENTIAL_TERMS` (one confidential term per line; also as a Dependabot secret if wanted).
    Without it the Confidentiality job fails. Details are in `docs/ci.md`.
 
 Needed before the Stage 0 exit gate (a signed build on TestFlight), in Apple's portal and App Store Connect
@@ -92,6 +90,10 @@ Needed before the Stage 0 exit gate (a signed build on TestFlight), in Apple's p
    `IOS_PROVISIONING_PROFILE_BASE64`.
 3. Create the app record in App Store Connect and an internal TestFlight group with the testers.
 4. Set the repository variable `SIGN_IOS_UPLOAD` to `true`.
+5. Add the repository to the selected repositories of the Apple organisation secrets (`APPSTORE_API_ISSUER_ID`,
+   `APPSTORE_API_KEY_ID`, `APPSTORE_API_PRIVATE_KEY`, `IOS_DIST_CERT_P12_BASE64`, `IOS_DIST_CERT_PASSWORD`). The GPG and
+   release-bot secrets and the Dependabot secret `MERGE_QUEUE_TOKEN` are already visible to every repository
+   (`icl-common-infra/docs/secrets.md`).
 
 ## Pending decisions (from the plan)
 
