@@ -95,15 +95,11 @@ struct BoardRig
     /// The master-list type that is on `row` (position `row + 1`).
     [[nodiscard]] ErrorTypeId type_of(int row) const
     {
-        for (const ErrorType& type : m_Config.configuration().m_ErrorTypes)
-        {
-            if (!type.m_Retired && type.m_BoardPosition == row + 1)
-            {
-                return type.m_Id;
-            }
-        }
-        FAIL("no type on row " << row);
-        return {};
+        const auto& types = m_Config.configuration().m_ErrorTypes;
+        const auto found = std::ranges::find_if(types, [row](const ErrorType& type)
+                                                { return !type.m_Retired && type.m_BoardPosition == row + 1; });
+        REQUIRE(found != types.end());
+        return found->m_Id;
     }
 };
 
