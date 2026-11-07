@@ -29,12 +29,10 @@ import ErrorJournalingApp
 // Given as `required property`, the nine services of AppRoot by their names, AppRoot itself and the bridge (decision 3), so
 // a missing one fails when the shell is made and not on a phone.
 //
-// Left for Stage 5, package 5.7, which keeps what only it can do (the hooks are marked "5.7" below):
-//     the launch tracker      `boardEnabled` is when the 12 tiles accept taps
-//     the document picker     replaces platform/ios/FileChooser.qml
-//     DayWatcher.check()      on `applicationActivated`
-//     the device pass
-// Left for package 4.11 (new day and History): the new-day alert in `sheets`, and `historyPage`.
+// What Stage 5 keeps (5.7) is in C++ and in `platform/ios/FileChooser.qml`: the launch tracker (`boardEnabled` is when the
+// 12 tiles accept taps), the document picker, and the device pass. The day check on becoming active and the haptic
+// policy's active state are done by the lifecycle of `main.cpp`, not here.
+// Left for package 4.11 (new day and History): the new-day alert in `sheets`, and the History tab (`historyPage`).
 Item {
     id: root
 
@@ -52,7 +50,7 @@ Item {
     // The QmlBridge: the haptics, the share sheet and the accessibility settings.
     required property var bridge
     // The file chooser that import and export go through. The platform's own unless the test of the shell gives it another.
-    property Item fileChooser: platformChooser
+    property var fileChooser: platformChooser
 
     // The tabs, in the order of the tab bar.
     readonly property int logIndex: 0
@@ -63,11 +61,14 @@ Item {
     // 5.7: the board is on screen and can be tapped (the Log tab is shown, the session has loaded, the first-launch screen is
     // not covering it). The launch tracker is fed from this, and `board_enabled()` stays with it.
     readonly property bool boardEnabled: logScreen.visible && !logScreen.loading
-    // 5.7: the application became active. `DayWatcher.check()` is called from here, as the window of the spike told the
-    // bridge. The bridge's own `setApplicationActive` is called by the shell below.
-    signal applicationActivated
 
     readonly property int currentTab: tabBar.currentIndex
+    // The screens that a Loader makes, null until their tab has been chosen once.
+    readonly property var reviewStack: reviewTab.item
+    readonly property var historyStack: historyTab.item
+    readonly property var settingsScreen: settingsTab.item
+    // Review is in view and nothing covers it.
+    readonly property bool reviewToastWanted: !detailsOpen && currentTab === reviewIndex
     // The tabs that have been shown, one bit for each, so that a tab is built on its first visit.
     property int visitedTabs: 1
     // Today's details cover the tab bar, as the design draws them; the tab bar is back when the page closes.
@@ -99,7 +100,7 @@ Item {
     }
 
     // Today's details, on the stack of the tab that asked.
-    function showDetails(stack: Item): void {
+    function showDetails(stack: var): void {
         if (detailsOpen)
             return;
         detailsOpen = true;
@@ -114,12 +115,12 @@ Item {
     function popToRoot(tab: int): void {
         if (tab === logIndex)
             logStack.pop(null);
-        else if (tab === reviewIndex && reviewTab.item)
-            reviewTab.item.pop(null);
-        else if (tab === historyIndex && historyTab.item)
-            historyTab.item.pop(null);
-        else if (tab === settingsIndex && settingsTab.item)
-            settingsTab.item.popToRoot();
+        else if (tab === reviewIndex && reviewStack)
+            root.reviewStack.pop(null);
+        else if (tab === historyIndex && historyStack)
+            historyStack.pop(null);
+        else if (tab === settingsIndex && settingsScreen)
+            settingsScreen.popToRoot();
     }
 
     implicitWidth: Theme.frame.width
@@ -142,18 +143,6 @@ Item {
         target: Theme
         property: "reduceMotion"
         value: root.bridge.reduceMotion
-    }
-
-    // The haptic policy needs to know whether the application is active, and the shell tells it.
-    Connections {
-        function onStateChanged(): void {
-            const active = Qt.application.state === Qt.ApplicationActive;
-            root.bridge.setApplicationActive(active);
-            if (active)
-                root.applicationActivated();
-        }
-
-        target: Qt.application
     }
 
     Connections {
@@ -241,6 +230,8 @@ Item {
                 active: root.wasVisited(root.historyIndex)
                 visible: root.currentTab === root.historyIndex
 
+                // 4.11: History (a grouped list of the past logs, with the Review of a past log on a stack of its own)
+                // replaces this page, and `shown()` and `hidden()` are called as the tab is chosen and left.
                 sourceComponent: PageStack {
                     accessibleName: qsTr("History pages")
                     initialItem: historyPage
@@ -270,8 +261,7 @@ Item {
                 }
             }
 
-            // Review's Undo toast; the Log screen has its own. It is announced once, here, because the Log screen is not
-            // shown while Review is.
+            // Review's Undo toast; the Log screen has its own.
             UndoToast {
                 id: reviewToast
 
@@ -282,7 +272,7 @@ Item {
                 anchors.leftMargin: Theme.space.screenMargin
                 anchors.rightMargin: Theme.space.screenMargin
                 anchors.bottomMargin: tabBar.height + Theme.space.sectionGap
-                active: root.undo.active && root.currentTab === root.reviewIndex && !root.detailsOpen
+                active: root.undo.active && root.reviewToastWanted
                 text: root.undo.text
                 undoing: root.undo.undoing
                 generation: root.undo.generation
@@ -369,7 +359,7 @@ Item {
             target: root.fileChooser
         }
 
-        // 4.11: the new-day alert (bound to `day`) goes here, after the Other picker, so that it is over everything.
+        // 4.11: the new-day alert (NewDay, bound to `day`) goes here, after the Other picker, so that it is over everything.
         sheets: [
             OtherPicker {
                 id: otherPicker
@@ -416,7 +406,7 @@ Item {
         }
     }
 
-    // 4.11: History (a grouped list of the past logs; a row pushes the Review of that log on this tab's stack) replaces this.
+    // 4.11: History replaces this.
     Component {
         id: historyPage
 
