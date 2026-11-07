@@ -2,6 +2,7 @@
 #include "journal_seed.hpp"
 
 #include "platform/durable_sync.hpp"
+#include "protect.hpp"
 
 #include <system_error>
 #include <utility>
@@ -64,6 +65,7 @@ Result<void, StorageError> write_journal_file(const std::filesystem::path& path,
         {
             return fail(file.error());
         }
+        protect_path(temporary);  // the rename keeps the file, so the new journal never exists unprotected
         if (std::fwrite(text.data(), 1, text.size(), file->get()) != text.size())
         {
             return fail(make_error(StorageErrorKind::IO, "a new journal could not be written"));

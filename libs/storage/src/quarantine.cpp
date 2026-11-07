@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "quarantine.hpp"
 
+#include "protect.hpp"
+
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -59,6 +61,7 @@ Result<std::filesystem::path, StorageError> Quarantine::folder()
         {
             return fail(io_error("a quarantine folder could not be created", code));
         }
+        protect_path(candidate);
         m_Folder = candidate;
         return m_Folder;
     }
@@ -87,6 +90,7 @@ Result<std::filesystem::path, StorageError> Quarantine::take(const std::filesyst
     {
         return fail(io_error("a file could not be moved to quarantine", code));
     }
+    protect_path(target);
     m_Taken.push_back(std::filesystem::relative(target, m_Location.root(), code).generic_string());
     return target;
 }
@@ -113,6 +117,7 @@ Result<std::filesystem::path, StorageError> Quarantine::take_copy(const std::fil
     {
         return fail(io_error("a file could not be copied to quarantine", code));
     }
+    protect_path(target);
     m_Taken.push_back(std::filesystem::relative(target, m_Location.root(), code).generic_string());
     return target;
 }

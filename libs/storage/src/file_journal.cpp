@@ -2,7 +2,7 @@
 #include "error_journaling/file_journal.hpp"
 
 #include "platform/durable_sync.hpp"
-#include "platform/file_protection.hpp"
+#include "protect.hpp"
 
 #include <algorithm>
 #include <system_error>
@@ -93,10 +93,8 @@ Result<JournalWriter*, StorageError> FileJournal::writer_for(LogId log, bool cre
         {
             return fail(synced.error());
         }
-        if (auto protected_file = platform::apply_file_protection(path); !protected_file)
-        {
-            return fail(protected_file.error());
-        }
+        protect_path(path.parent_path());
+        protect_path(path);
     }
     auto writer = JournalWriter::open(std::move(*file), log, m_Options.m_Hook);
     if (!writer)
@@ -171,6 +169,8 @@ Result<void, StorageError> FileJournal::archive(LogId log)
     {
         return fail(io_error("a journal could not be moved to the archive", code));
     }
+    protect_path(m_Location.archived_journal_dir());
+    protect_path(archived_path(log));
     if (auto synced = platform::sync_directory(m_Location.archived_journal_dir()); !synced)
     {
         return synced;
