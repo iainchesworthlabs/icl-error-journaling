@@ -32,6 +32,9 @@ Item {
     id: root
 
     required property var settings
+    // The footer of the list: the version and platform text, and the timing line behind five taps on it (Stage 4, 4.15).
+    property string aboutText
+    property string timingText
 
     signal errorTypesRequested
     signal templatesRequested
@@ -98,6 +101,8 @@ Item {
 
         SettingsList {
             settings: root.settings
+            aboutText: root.aboutText
+            timingText: root.timingText
             topInset: frame.topInset
             onErrorTypesRequested: root.errorTypesRequested()
             onTemplatesRequested: root.templatesRequested()

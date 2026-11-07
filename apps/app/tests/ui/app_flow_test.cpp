@@ -6,8 +6,9 @@
 // commits, so the order of the feedback is the order of the log. The file chooser is a stub: a real dialog waits for a
 // person.
 //
-// Cases: app.no_services_missing, app.first_frame, app.first_launch, app.import, app.navigation, app.sheets, app.flow,
-// app.settings, app.export, app.messages, app.theme, app.hooks, app.accessibility.
+// Cases: app.no_services_missing, app.first_frame, app.first_launch, app.import, app.navigation, app.sheets,
+// app.new_day, app.history, app.flow, app.settings, app.export, app.messages, app.theme, app.hooks, app.timing,
+// app.accessibility.
 //
 // The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the
 // Windows headers behind Qt Quick define as a macro. clang-format would sort them the other way, so it is switched off.
@@ -65,6 +66,7 @@ class FakeBridge : public QObject
     Q_OBJECT
     Q_PROPERTY(double textScale READ text_scale WRITE set_text_scale NOTIFY textScaleChanged)
     Q_PROPERTY(bool reduceMotion READ reduce_motion WRITE set_reduce_motion NOTIFY reduceMotionChanged)
+    Q_PROPERTY(QString timingSummary READ timing_summary NOTIFY timingChanged)
 
 public:
     explicit FakeBridge(FakePlatform& platform) : m_Platform(platform) {}
@@ -86,6 +88,11 @@ public:
     {
         m_ReduceMotion = reduce;
         emit reduceMotionChanged();
+    }
+
+    [[nodiscard]] QString timing_summary() const
+    {
+        return QStringLiteral("launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms");
     }
 
     Q_INVOKABLE void prepareHaptics()
@@ -115,6 +122,7 @@ public:
 signals:
     void textScaleChanged();
     void reduceMotionChanged();
+    void timingChanged();
 
 private:
     FakePlatform& m_Platform;
@@ -187,7 +195,8 @@ struct App
                            {QStringLiteral("share"), object(*root.share())},
                            {QStringLiteral("appRoot"), object(root)},
                            {QStringLiteral("bridge"), object(bridge)},
-                           {QStringLiteral("fileChooser"), object(*chooser)}};
+                           {QStringLiteral("fileChooser"), object(*chooser)},
+                           {QStringLiteral("aboutText"), QStringLiteral("0.1.0 · test, storage: memory")}};
     }
 
     void load(const QVariantMap& without = {})
@@ -363,7 +372,7 @@ TEST_CASE("app.first_frame: the Log screen is the first page and nothing else ha
     CHECK(app.shown(QStringLiteral("shellTabBar")));
     CHECK(app.ui.find_item(QStringLiteral("reviewScreen")) == nullptr);
     CHECK(app.ui.find_item(QStringLiteral("settingsScreen")) == nullptr);
-    CHECK(app.ui.find_item(QStringLiteral("historyPlaceholderBar")) == nullptr);
+    CHECK(app.ui.find_item(QStringLiteral("historyScreen")) == nullptr);
     CHECK(app.need(QStringLiteral("firstLaunch"))->childItems().isEmpty());
     // The haptic policy was told that the board is on screen.
     REQUIRE_FALSE(app.bridge.m_Visible.empty());
@@ -439,7 +448,7 @@ TEST_CASE("app.navigation: each tab shows its screen, a tab that is tapped again
     CHECK_FALSE(app.bridge.m_Visible.back());
 
     app.choose_tab(HISTORY_TAB);
-    CHECK(app.shown(QStringLiteral("historyPlaceholderBar")));
+    CHECK(app.shown(QStringLiteral("historyScreen")));
     CHECK_FALSE(app.shown(QStringLiteral("reviewScreen")));
 
     app.choose_tab(SETTINGS_TAB);
@@ -645,6 +654,97 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     CHECK(app.count_of(QStringLiteral("Mute Delay")) == 1);
 }
 
+TEST_CASE(
+    "app.new_day: the new-day alert covers the app, shares first on request, starts the new log, and History lists the "
+    "old one",
+    "[ui][app]")
+{
+    App app;
+    app.fill_header();
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+    app.ui.settle();
+    app.choose_tab(HISTORY_TAB);
+    CHECK(app.shown(QStringLiteral("historyScreen")));
+    CHECK_FALSE(app.shown(QStringLiteral("historyRow")));
+    app.choose_tab(LOG_TAB);
+    CHECK_FALSE(app.need(QStringLiteral("newDay"))->property("isOpen").toBool());
+
+    // Midnight passes with the log open: the alert is up, over the tab bar, and the app under it is unavailable.
+    app.services.go_to(8, 8, 5);
+    app.services.day().check();
+    app.ui.settle();
+    app.play();
+    QQuickItem* alert = app.need(QStringLiteral("newDay"));
+    REQUIRE(alert->property("isOpen").toBool());
+    CHECK(parent_name(alert) == QStringLiteral("sheetHostLayer"));
+    CHECK_FALSE(app.need(QStringLiteral("shellTabs"))->isEnabled());
+    CHECK(app.services.day().prompt_visible());
+
+    // "Share first" shares the log and leaves the alert up, without the warning and the button.
+    QQuickItem* const alternate = app.ui.find_item(QStringLiteral("alertAlternate"), alert);
+    REQUIRE(alternate != nullptr);
+    CHECK(alternate->isVisible());
+    app.ui.tap(alternate);
+    app.ui.settle();
+    app.play();
+    CHECK(app.services.platform().sheets_presented() == 1);
+    CHECK(alert->property("isOpen").toBool());
+    CHECK_FALSE(app.services.day().unshared());
+
+    // "Start a new log" archives the open one and the alert goes.
+    app.ui.tap(app.ui.find_item(QStringLiteral("alertConfirm"), alert));
+    app.ui.settle();
+    app.play();
+    CHECK_FALSE(app.services.day().prompt_visible());
+    CHECK_FALSE(alert->property("isOpen").toBool());
+    CHECK(app.need(QStringLiteral("shellTabs"))->isEnabled());
+
+    // History reads its list when the tab is chosen: the old log is in it.
+    app.choose_tab(HISTORY_TAB);
+    app.ui.settle();
+    app.play();
+    CHECK(app.ui.find_items(QStringLiteral("historyRow")).size() == 1);
+    CHECK_FALSE(app.shown(QStringLiteral("logScreen")));
+}
+
+TEST_CASE(
+    "app.history: a row opens the past log on the tab's own stack, its toast is the shell's, and the tab going away "
+    "closes it",
+    "[ui][app]")
+{
+    App app;
+    app.fill_header();
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+    app.ui.settle();
+    app.services.go_to(8, 8, 5);
+    app.services.day().check();
+    app.ui.settle();
+    REQUIRE(app.services.day().acceptNewLog());
+    app.ui.settle();
+    app.play();
+
+    app.choose_tab(HISTORY_TAB);
+    app.ui.settle();
+    app.play();
+    REQUIRE(app.ui.find_items(QStringLiteral("historyRow")).size() == 1);
+    app.ui.tap(app.need(QStringLiteral("historySwipe")));
+    app.ui.settle();
+    app.play();
+    QQuickItem* history = app.need(QStringLiteral("historyScreen"));
+    CHECK(history->property("reviewShown").toBool());
+    CHECK(app.shown(QStringLiteral("reviewList")));
+    CHECK(app.shown(QStringLiteral("shellTabBar")));
+
+    // Another tab, and the log is let go; coming back shows the list.
+    app.choose_tab(SETTINGS_TAB);
+    CHECK_FALSE(history->property("reviewShown").toBool());
+    app.choose_tab(HISTORY_TAB);
+    app.ui.settle();
+    app.play();
+    CHECK_FALSE(history->property("reviewShown").toBool());
+    CHECK(app.shown(QStringLiteral("historyRow")));
+}
+
 TEST_CASE("app.settings: the import and export rows go through the chooser to the importer and the exporter",
           "[ui][app]")
 {
@@ -738,6 +838,45 @@ TEST_CASE("app.hooks: the shell leaves Stage 5 the board-enabled state", "[ui][a
     CHECK_FALSE(shell->property("boardEnabled").toBool());
     app.choose_tab(LOG_TAB);
     CHECK(shell->property("boardEnabled").toBool());
+}
+
+TEST_CASE(
+    "app.timing: five taps on the version text at the foot of Settings show the timing line, and five more hide it",
+    "[ui][app]")
+{
+    App app;
+    app.choose_tab(SETTINGS_TAB);
+
+    // The foot of the list: the version and platform text, and no timing line.
+    QQuickItem* about = app.need(QStringLiteral("settingsAbout"));
+    CHECK(about->property("text").toString() == QStringLiteral("0.1.0 · test, storage: memory"));
+    // It is at the end of a long list: scroll there, as the person does.
+    QQuickItem* flickable = app.need(QStringLiteral("settingsFlickable"));
+    flickable->setProperty("contentY", flickable->property("contentHeight").toDouble() - flickable->height());
+    app.ui.layout();
+    QQuickItem* footer = app.need(QStringLiteral("settingsAboutFooter"));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTiming")));
+
+    // Four taps do nothing; the fifth shows the line the bridge gives, which is the one the gate is read from.
+    for (int i = 0; i < 4; ++i)
+    {
+        app.ui.tap(footer);
+    }
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTiming")));
+    app.ui.tap(footer);
+    app.ui.advance(16ms);
+    REQUIRE(app.shown(QStringLiteral("settingsTiming")));
+    CHECK(app.need(QStringLiteral("settingsTiming"))->property("text").toString() ==
+          QStringLiteral("launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms"));
+    expect_clean(check_names(app.ui));
+
+    // Five more hide it again.
+    for (int i = 0; i < 5; ++i)
+    {
+        app.ui.tap(footer);
+    }
+    app.ui.advance(16ms);
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTiming")));
 }
 
 TEST_CASE("app.accessibility: the tree of each tab is named and in order in light and dark", "[ui][app]")
