@@ -227,8 +227,15 @@ TEST_CASE("tile.press_scale: 0.96 within 120 ms of the press, back on release an
     advance_through(rig, press_ms);
     CHECK(face->scale() == pressed_scale);
     // Two updates: the first outside the tile starts the cancel, the second is the one that completes it.
-    rig.move(second, tile, QPointF(TILE_WIDTH + 120, TILE_HEIGHT / 2));
-    rig.move(second, tile, QPointF(TILE_WIDTH + 200, TILE_HEIGHT / 2));
+    for (const double beyond : {120.0, 200.0})
+    {
+        // Each update is sent three times: the window holds back some touch updates until its frame (see the drag test
+        // of the MiniBoard), and the cancel needs the updates outside to arrive.
+        for (int repeat = 0; repeat < 3; ++repeat)
+        {
+            rig.move(second, tile, QPointF(TILE_WIDTH + beyond, TILE_HEIGHT / 2));
+        }
+    }
     advance_through(rig, press_ms);
     CHECK(face->scale() == 1.0);
     rig.release(second);
