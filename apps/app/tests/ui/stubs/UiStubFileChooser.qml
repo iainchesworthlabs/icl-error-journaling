@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
-import ErrorJournalingApp
 
 // A file chooser that shows no dialog and keeps what it was asked, for the test of the shell (app_flow_test.cpp): a real
 // dialog would block a test run on a desktop. It has the names of platform/<kind>/FileChooser.qml; the test chooses a file by

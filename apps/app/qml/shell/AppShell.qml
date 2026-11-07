@@ -11,9 +11,11 @@ import ErrorJournalingApp
 //     tab bar     Log, Review, History, Settings. Tab state is in memory and starts on Log. Tapping the tab that is
 //                 selected pops it to its root.
 //     pages       a PageStack for each tab: Log and Review push Today's details (HeaderScreen), Settings pushes the editors
-//                 of the error types, locations and note templates. A tab is built when it is first chosen, so the Log
+//                 of the error types, locations and note templates, and History keeps the stack of its own for the Review of a
+//                 past log (`shown()` and `hidden()` are called as the tab is chosen and left). A tab is built when it is first chosen, so the Log
 //                 screen is the only one that is made for the first frame.
-//     sheets      one SheetHost for the window, so a sheet covers the tab bar: the Other picker, and the screens' own sheets
+//     sheets      one SheetHost for the window, so a sheet covers the tab bar: the Other picker, the new-day alert (NewDay,
+//                 which follows `day.promptVisible`), and the screens' own sheets
 //                 (the Log screen's template prompt and the Edit entry sheet of Review are put in its layer). The sheets
 //                 that a screen keeps inside itself (Settings, Today's details, the editors) cover that screen.
 //     first run   while `settings.configured` is false, the first-launch screen (FirstLaunch) covers the tabs.
@@ -34,7 +36,6 @@ import ErrorJournalingApp
 //     the document picker     replaces platform/ios/FileChooser.qml
 //     DayWatcher.check()      on `applicationActivated`
 //     the device pass
-// Left for package 4.11 (new day and History): the new-day alert in `sheets`, and `historyPage`.
 Item {
     id: root
 
@@ -52,7 +53,7 @@ Item {
     // The QmlBridge: the haptics, the share sheet and the accessibility settings.
     required property var bridge
     // The file chooser that import and export go through. The platform's own unless the test of the shell gives it another.
-    property Item fileChooser: platformChooser
+    property var fileChooser: platformChooser
 
     // The tabs, in the order of the tab bar.
     readonly property int logIndex: 0
@@ -68,8 +69,15 @@ Item {
     signal applicationActivated
 
     readonly property int currentTab: tabBar.currentIndex
+    // The screens that a Loader makes, null until their tab has been chosen once.
+    readonly property var reviewStack: reviewTab.item
+    readonly property var historyScreen: historyTab.item
+    readonly property var settingsScreen: settingsTab.item
+    // Review is in view, on its tab or as the past log of History, and nothing covers it.
+    readonly property bool reviewToastWanted: !detailsOpen && (currentTab === reviewIndex || (currentTab === historyIndex && historyScreen !== null && historyScreen.reviewShown))
     // The tabs that have been shown, one bit for each, so that a tab is built on its first visit.
     property int visitedTabs: 1
+    property int previousTab: 0
     // Today's details cover the tab bar, as the design draws them; the tab bar is back when the page closes.
     property bool detailsOpen: false
     // The first-launch screen is up: the settings have loaded and there is no setup yet.
@@ -99,7 +107,7 @@ Item {
     }
 
     // Today's details, on the stack of the tab that asked.
-    function showDetails(stack: Item): void {
+    function showDetails(stack: var): void {
         if (detailsOpen)
             return;
         detailsOpen = true;
@@ -114,18 +122,29 @@ Item {
     function popToRoot(tab: int): void {
         if (tab === logIndex)
             logStack.pop(null);
-        else if (tab === reviewIndex && reviewTab.item)
-            reviewTab.item.pop(null);
-        else if (tab === historyIndex && historyTab.item)
-            historyTab.item.pop(null);
-        else if (tab === settingsIndex && settingsTab.item)
-            settingsTab.item.popToRoot();
+        else if (tab === reviewIndex && reviewStack)
+            root.reviewStack.pop(null);
+        else if (tab === historyIndex && historyScreen) {
+            historyScreen.hidden();
+            historyScreen.shown();
+        } else if (tab === settingsIndex && settingsScreen)
+            settingsScreen.popToRoot();
     }
 
     implicitWidth: Theme.frame.width
     implicitHeight: Theme.frame.height
 
-    onCurrentTabChanged: visitedTabs |= (1 << currentTab)
+    // History reads its list when its tab is shown, and lets the open log go when the tab is left. The first time, the
+    // screen reads it itself when it has been made (`onLoaded` of its Loader).
+    onCurrentTabChanged: {
+        const historyMade = historyScreen !== null;
+        if (historyMade && previousTab === historyIndex)
+            historyScreen.hidden();
+        visitedTabs |= (1 << currentTab);
+        if (historyMade && currentTab === historyIndex)
+            historyScreen.shown();
+        previousTab = currentTab;
+    }
     onFailureMessageChanged: {
         if (failureMessage.length > 0)
             Accessible.announce(qsTr("Not saved. %1").arg(failureMessage));
@@ -147,13 +166,13 @@ Item {
     // The haptic policy needs to know whether the application is active, and the shell tells it.
     Connections {
         function onStateChanged(): void {
-            const active = Qt.application.state === Qt.ApplicationActive;
+            const active = Application.state === Qt.ApplicationActive;
             root.bridge.setApplicationActive(active);
             if (active)
                 root.applicationActivated();
         }
 
-        target: Qt.application
+        target: Application
     }
 
     Connections {
@@ -241,10 +260,16 @@ Item {
                 active: root.wasVisited(root.historyIndex)
                 visible: root.currentTab === root.historyIndex
 
-                sourceComponent: PageStack {
-                    accessibleName: qsTr("History pages")
-                    initialItem: historyPage
+                // History has a stack of its own, for the Review of a past log.
+                sourceComponent: History {
+                    objectName: "historyScreen"
+                    history: root.history
+                    share: root.share
+                    picker: root.picker
+                    settings: root.settings
+                    bottomClearance: tabBar.height
                 }
+                onLoaded: root.historyScreen.shown()
             }
 
             Loader {
@@ -270,8 +295,15 @@ Item {
                 }
             }
 
-            // Review's Undo toast; the Log screen has its own. It is announced once, here, because the Log screen is not
-            // shown while Review is.
+            // The toast floats over the foot of Review, where its Share button is, and a tap that ends on the toast must not
+            // reach the button under it: pointer handlers pass a press on to the items below, so a MouseArea takes it.
+            MouseArea {
+                anchors.fill: reviewToast
+                visible: reviewToast.present
+                Accessible.ignored: true
+            }
+
+            // Review's Undo toast, for Review and for the Review of a past log in History; the Log screen has its own.
             UndoToast {
                 id: reviewToast
 
@@ -282,7 +314,7 @@ Item {
                 anchors.leftMargin: Theme.space.screenMargin
                 anchors.rightMargin: Theme.space.screenMargin
                 anchors.bottomMargin: tabBar.height + Theme.space.sectionGap
-                active: root.undo.active && root.currentTab === root.reviewIndex && !root.detailsOpen
+                active: root.undo.active && root.reviewToastWanted
                 text: root.undo.text
                 undoing: root.undo.undoing
                 generation: root.undo.generation
@@ -369,7 +401,7 @@ Item {
             target: root.fileChooser
         }
 
-        // 4.11: the new-day alert (bound to `day`) goes here, after the Other picker, so that it is over everything.
+        // The new-day alert is after the Other picker, so that it is over everything. It follows `day.promptVisible`.
         sheets: [
             OtherPicker {
                 id: otherPicker
@@ -378,6 +410,10 @@ Item {
                 picker: root.picker
                 session: root.session
                 bridge: root.bridge
+            },
+            NewDay {
+                objectName: "newDay"
+                day: root.day
             }
         ]
     }
@@ -414,13 +450,6 @@ Item {
             // The edit sheet covers the tab bar, as every sheet does.
             Component.onCompleted: editor.parent = root.sheetLayer
         }
-    }
-
-    // 4.11: History (a grouped list of the past logs; a row pushes the Review of that log on this tab's stack) replaces this.
-    Component {
-        id: historyPage
-
-        HistoryPlaceholder {}
     }
 
     Component {
