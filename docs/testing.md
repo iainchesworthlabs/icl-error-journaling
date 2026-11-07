@@ -31,6 +31,14 @@ A fixture is any other input file a test reads, kept in `libs/core/tests/fixture
 `ej::test::fixture_path(name)`. Fixtures and goldens contain only the fictional stand-ins (Sam Example, UNIT, North Site,
 Wrong Response); the confidentiality check runs over them.
 
+## Repository contract tests
+
+`libs/storage/tests/test_repository_contract.cpp` holds one set of cases for `LogRepository` and runs each against every
+implementation listed in `Fixtures` (a `TEMPLATE_LIST_TEST_CASE`). A new repository adds a fixture that builds it with a
+`ScriptedClock`; it gets every case for free. The in-memory repository applies the same `apply_record` rules as the real one,
+so a behaviour that differs between them is a failing case, not a surprise. Sample data comes from
+`libs/core/tests/storage_samples.hpp` and uses only the fictional stand-ins.
+
 ## Coverage
 
 `linux-coverage` builds with instrumentation. CI runs gcovr and `coverage_gate.py` against
