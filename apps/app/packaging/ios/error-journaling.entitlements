@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The one entitlement of the iOS application: the default data protection class of the files it creates. It needs the
+     Data Protection capability on the App ID and a provisioning profile that carries it (docs/releasing.md). No iCloud,
+     app group or associated domain is added. -->
+<plist version="1.0">
+<dict>
+    <key>com.apple.developer.default-data-protection</key>
+    <string>NSFileProtectionCompleteUntilFirstUserAuthentication</string>
+</dict>
+</plist>

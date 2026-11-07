@@ -78,6 +78,9 @@ function(ej_configure_ios_app target)
         MACOSX_BUNDLE_COPYRIGHT "Copyright (C) Iain Chesworth Labs contributors"
         # iPhone and iPad.
         XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
+        # The default data protection class of the application's files. Xcode applies it when it signs; an unsigned build
+        # only carries the reference, and verify_app.sh --signed checks the signature's entitlements.
+        XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS "${ERROR_JOURNALING_PACKAGING_DIR}/ios/error-journaling.entitlements"
         # The icon set Info.plist.in's CFBundleIconName names; without this Xcode has nothing to compile that slot from and
         # the home screen shows a blank icon.
         XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon")

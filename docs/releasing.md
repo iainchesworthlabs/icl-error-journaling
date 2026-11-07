@@ -63,6 +63,13 @@ kit's. The application is portrait only (`Info.plist.in`).
   application uses no encryption beyond the system's. Change it only if that stops being true. The check refuses usage
   text for a permission the application does not ask for. Safe areas are the application's: it reads `SafeArea.margins`
   (Qt 6.9 or later).
+- **Entitlements.** `apps/app/packaging/ios/error-journaling.entitlements` holds one key,
+  `com.apple.developer.default-data-protection` = `NSFileProtectionCompleteUntilFirstUserAuthentication`, referenced by
+  `XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS` in `ios.cmake`. The App ID needs Data Protection set to "Protected Until First
+  User Authentication" and the App Store profile must be regenerated after that; a profile without it makes the signed
+  build fail to sign. `verify_app.sh --signed` checks the profile and the signature for the exact value, and refuses an
+  iCloud, app group or associated domain entitlement. The files also get the class one by one (`libs/storage`), so the
+  entitlement is the declaration in the signed binary, not the only protection.
 - **Signing names.** The signing needs, by name only: the organisation secrets `IOS_DIST_CERT_P12_BASE64`,
   `IOS_DIST_CERT_PASSWORD`, `APPSTORE_API_KEY_ID`, `APPSTORE_API_ISSUER_ID` and `APPSTORE_API_PRIVATE_KEY` (shared with
   the repository), the repository secret `IOS_PROVISIONING_PROFILE_BASE64`, and the repository variable `SIGN_IOS_UPLOAD`.
