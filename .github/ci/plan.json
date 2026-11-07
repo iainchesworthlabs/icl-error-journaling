@@ -1,6 +1,11 @@
 {
   "docs": [
-    "docs/**",
+    "docs/*.md",
+    "docs/*.asc",
+    "docs/plan/**",
+    "docs/media/**",
+    "docs/design/*.md",
+    "docs/design/screens/**",
     "*.md",
     "mkdocs.yml",
     "LICENSE*",
@@ -16,7 +21,8 @@
     ".github/labels.json",
     "REUSE.toml",
     ".editorconfig",
-    "LICENSES/**"
+    "LICENSES/**",
+    "tools/tests/**"
   ],
   "build": [
     "libs/**",
@@ -27,13 +33,15 @@
     "vcpkg.json",
     "cmake/**",
     "tools/coverage-floors.json",
-    "tools/preprocessor-*"
+    "tools/preprocessor-*",
+    "docs/design/tokens.json"
   ],
   "gui": [
     "apps/app/**",
     "libs/core/**",
     "libs/storage/**",
     "**/*.qml",
+    "docs/design/tokens.json",
     "cmake/**",
     "CMakePresets.json"
   ],

@@ -6,6 +6,10 @@
 
 Finds a checkout of icl-common-infra in ICL_COMMON_INFRA, then ../icl-common-infra, and runs
 its scripts/precheck.py with the same arguments. These are the checks the Policy job runs.
+
+Then it runs this repository's checks of the QML that need no Qt (tools/ci/check_qml_*.py: the platform, the literals, the
+strings and the test files; docs/ci.md). CI runs them as the tests qml.platform, theme.no_literals, i18n.strings and
+qml.tests, and qml.format and qml.lint with a Qt kit.
 """
 
 from __future__ import annotations
@@ -17,6 +21,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
+QML_CHECKS = ["check_qml_platform.py", "check_qml_literals.py", "check_qml_strings.py", "check_qml_tests.py"]
 
 
 def find_infra() -> Path | None:
@@ -39,7 +44,14 @@ def main() -> int:
     args = sys.argv[1:]
     if "--root" not in args:
         args += ["--root", str(ROOT)]
-    return subprocess.call([sys.executable, str(infra / "scripts" / "precheck.py"), *args])
+    status = subprocess.call([sys.executable, str(infra / "scripts" / "precheck.py"), *args])
+    root = Path(args[args.index("--root") + 1]).resolve()
+    print()
+    print("QML checks")
+    for script in QML_CHECKS:
+        if subprocess.call([sys.executable, str(HERE / script), "--root", str(root)]) != 0:
+            status = 1
+    return status
 
 
 if __name__ == "__main__":

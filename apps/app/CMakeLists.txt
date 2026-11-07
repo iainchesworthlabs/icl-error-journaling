@@ -43,10 +43,12 @@ set_target_properties(ej_app PROPERTIES OUTPUT_NAME error-journaling)
 # QML is compiled ahead of time by qmlcachegen. The URI must differ from the executable name: the module gets a
 # directory of that name in the build tree, and on a case-insensitive file system (macOS, Windows) two names that differ
 # only in case are the same path.
+include("${CMAKE_CURRENT_SOURCE_DIR}/qml/qml_files.cmake")
+ej_collect_qml_files(ej_qml_files)
 qt_add_qml_module(ej_app
     URI ErrorJournalingApp
     VERSION 1.0
-    QML_FILES qml/Main.qml)
+    QML_FILES ${ej_qml_files})
 
 target_link_libraries(ej_app
     PRIVATE ej_app_root ej_viewmodel ej_core ej_storage ej_ios_bridge ej_qml_bridge Qt6::Quick icl::warnings icl::hardening icl::coverage)
@@ -75,6 +77,9 @@ if(ERROR_JOURNALING_BUILD_TESTS)
         list(APPEND ej_app_test_environment
             "TSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tools/sanitizers/tsan.supp")
     endif()
+
+    # The tests of the QML (Stage 4, docs/plan/stage-4.md), in tests/ui.
+    add_subdirectory(tests/ui)
 
     # Starts the real application without a display, waits for the first frame and exits.
     # It opens a real store, so it is given a folder of its own and leaves the person's data alone.

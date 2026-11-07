@@ -19,3 +19,9 @@ called_from_lib:libQt6OpenGL.so.6
 called_from_lib:libglib-2.0.so.0
 called_from_lib:libgobject-2.0.so.0
 called_from_lib:libgio-2.0.so.0
+
+# The loader that qmlcachegen writes for a QML module (<target>_qmlcache_loader.cpp) keeps its table of compiled files in a
+# function-local static. Qt's QML loading thread reads the table through uninstrumented Qt code, and the static is destroyed
+# at exit in the main thread, after the thread has finished and been joined by Qt; ThreadSanitizer does not see the join.
+# The file is generated, not ours.
+race:qmlcache_loader.cpp
