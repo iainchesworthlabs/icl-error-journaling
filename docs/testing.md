@@ -41,6 +41,14 @@ by `test_contract_memory.cpp` (label `unit`) and `test_contract_sqlite.cpp` (lab
 applies the same `apply_record` rules as the real one, so a behaviour that differs between them is a failing case, not a surprise. Sample data comes from
 `libs/core/tests/storage_samples.hpp` and uses only the fictional stand-ins.
 
+## The journal and power loss
+
+`LossyFile` (`libs/storage/tests/lossy_file.hpp`) is a `JournalFile` that keeps appended bytes apart until `sync`, and
+`after_power_loss` gives the file as a disk might leave it: everything synced and a random prefix of the rest, sometimes
+followed by zeros. `test_journal_writer.cpp` loses power inside 2,000 appends (a different seed each) and checks that every
+earlier record is read back whole and that the one in flight is whole or a torn tail, never a bad line. It models the journal
+only. SQLite does its own file I/O, and the kill harness (work package 2.5) proves the ordering of the two, not the drive.
+
 ## Coverage
 
 `linux-coverage` builds with instrumentation. CI runs gcovr and `coverage_gate.py` against

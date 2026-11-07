@@ -4,6 +4,8 @@
 add_executable(ej_storage_tests
     test_contract_memory.cpp
     test_crash_point.cpp
+    test_journal_reader.cpp
+    test_journal_writer.cpp
     test_storage.cpp)
 target_link_libraries(ej_storage_tests
     PRIVATE ej_storage Catch2::Catch2WithMain icl::warnings icl::coverage)
@@ -16,9 +18,13 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Sql)
 add_executable(ej_storage_integration_tests
     test_main.cpp
     test_contract_sqlite.cpp
+    test_file_journal.cpp
+    test_platform_files.cpp
     test_sqlite_repository.cpp
     test_storage_location.cpp)
 target_link_libraries(ej_storage_integration_tests
     PRIVATE ej_storage Qt6::Sql Catch2::Catch2 icl::warnings icl::coverage)
-target_include_directories(ej_storage_integration_tests PRIVATE "${PROJECT_SOURCE_DIR}/libs/core/tests")
+# platform/*.hpp: the internal headers of the platform pieces, which test_platform_files.cpp calls directly.
+target_include_directories(ej_storage_integration_tests
+    PRIVATE "${PROJECT_SOURCE_DIR}/libs/core/tests" "${PROJECT_SOURCE_DIR}/libs/storage/src")
 catch_discover_tests(ej_storage_integration_tests PROPERTIES LABELS integration)
