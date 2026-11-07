@@ -36,6 +36,7 @@ Window {
     color: Theme.colour.background
 
     AppShell {
+        objectName: "appShell"
         anchors.fill: parent
         session: root.session
         undo: root.undo

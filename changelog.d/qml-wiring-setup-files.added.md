@@ -1,0 +1,1 @@
+**Setup files import and export on the iPhone.** Choosing "Import setup" shows the Files picker, a setup file opened from AirDrop or Files starts the same import, and "Export setup" opens the share sheet. A file that is too large or cannot be read shows the same banner as a failed save.
