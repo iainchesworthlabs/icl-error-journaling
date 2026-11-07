@@ -5,6 +5,7 @@
 #include "error_journaling/time_format.hpp"
 #include "error_journaling/uuid.hpp"
 #include "viewmodel/board_layout_model.hpp"
+#include "viewmodel/board_model.hpp"
 #include "viewmodel/error_type_list_model.hpp"
 #include "viewmodel/location_list_model.hpp"
 #include "viewmodel/template_list_model.hpp"
@@ -196,32 +197,9 @@ bool is_complete(const Configuration& configuration)
     return !configuration.m_Facilitator.empty() && !configuration.m_UnitPrefix.empty();
 }
 
-/// The board as an array of master-list indexes, by position 1 to 11 (index 0 to 10).
-using Layout = std::array<std::optional<std::size_t>, CONFIG_BOARD_POSITIONS>;
-
-Layout layout_of(const Configuration& configuration)
-{
-    Layout layout;
-    for (std::size_t i = 0; i < configuration.m_ErrorTypes.size(); ++i)
-    {
-        const ErrorType& type = configuration.m_ErrorTypes[i];
-        if (type.m_Retired || !type.m_BoardPosition || *type.m_BoardPosition < 1 ||
-            *type.m_BoardPosition > CONFIG_BOARD_POSITIONS)
-        {
-            continue;
-        }
-        auto& slot = layout[static_cast<std::size_t>(*type.m_BoardPosition - 1)];
-        if (!slot)
-        {
-            slot = i;
-        }
-    }
-    return layout;
-}
-
 /// Writes `layout` back: the types in it get their position, the other live types are off the board. A retired type
 /// keeps whatever value it had.
-void write_layout(Configuration& configuration, const Layout& layout)
+void write_layout(Configuration& configuration, const BoardLayout& layout)
 {
     for (ErrorType& type : configuration.m_ErrorTypes)
     {
@@ -837,7 +815,7 @@ QString SettingsModel::moveBoardTile(int fromPosition, int toPosition)
     return change_message(OP_BOARD,
                           [fromPosition, toPosition](Configuration& configuration) -> EditResult
                           {
-                              Layout layout = layout_of(configuration);
+                              BoardLayout layout = viewmodel::board_layout(configuration);
                               const auto from = static_cast<std::ptrdiff_t>(fromPosition - 1);
                               const auto to = static_cast<std::ptrdiff_t>(toPosition - 1);
                               if (!layout[static_cast<std::size_t>(from)])
@@ -885,7 +863,7 @@ QString SettingsModel::assignBoardTile(int position, const QString& errorTypeId)
                                   return std::unexpected(no_such_item());
                               }
                               const auto index = static_cast<std::size_t>(found - configuration.m_ErrorTypes.begin());
-                              Layout layout = layout_of(configuration);
+                              BoardLayout layout = viewmodel::board_layout(configuration);
                               auto& tile = layout[static_cast<std::size_t>(position - 1)];
                               if (tile == index)
                               {

@@ -65,18 +65,18 @@ void BoardLayoutModel::refresh(const Configuration& configuration)
 {
     std::array<Tile, ROWS> next;
     next.back().m_IsOther = true;
-    for (std::size_t i = 0; i < configuration.m_ErrorTypes.size(); ++i)
+    const BoardLayout layout = board_layout(configuration);
+    for (std::size_t position = 0; position < layout.size(); ++position)
     {
-        const ErrorType& type = configuration.m_ErrorTypes[i];
-        if (type.m_Retired || !type.m_BoardPosition || *type.m_BoardPosition < 1 ||
-            *type.m_BoardPosition > CONFIG_BOARD_POSITIONS)
+        if (!layout[position])
         {
             continue;
         }
-        Tile& tile = next[static_cast<std::size_t>(*type.m_BoardPosition - 1)];
+        const ErrorType& type = configuration.m_ErrorTypes[*layout[position]];
+        Tile& tile = next[position];
         tile.m_TypeId = QString::fromStdString(type.m_Id.format());
         tile.m_Label = QString::fromStdString(type.m_Name);
-        tile.m_ColourSlot = colour_slot_for_index(i);
+        tile.m_ColourSlot = tile_colour_slot(*layout[position]);
     }
 
     int first = ROWS;

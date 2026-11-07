@@ -2,7 +2,7 @@
 #pragma once
 
 #include "error_journaling/configuration.hpp"
-#include "viewmodel/colour_slot.hpp"
+#include "viewmodel/board_model.hpp"
 
 #include <QAbstractListModel>
 #include <QByteArray>
@@ -30,7 +30,7 @@ class BoardLayoutModel final : public QAbstractListModel
 
 public:
     /// The tiles of the board, Other included.
-    static constexpr int ROWS = CONFIG_BOARD_POSITIONS + 1;
+    static constexpr int ROWS = BOARD_ROWS;
 
     enum Role
     {
@@ -58,7 +58,7 @@ private:
     {
         QString m_TypeId; // empty for an empty tile and for Other
         QString m_Label;  // empty for an empty tile
-        int m_ColourSlot = NO_COLOUR_SLOT;
+        int m_ColourSlot = NO_TILE_COLOUR;
         bool m_IsOther = false;
 
         friend bool operator==(const Tile&, const Tile&) = default;
