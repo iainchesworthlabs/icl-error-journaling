@@ -113,9 +113,15 @@ Tests (`unit`, against the Qt implementation, run on Linux CI with the system tz
 
 ```cpp
 enum class TimeStyle { H24, H12 };
-struct TimeFormat { TimeStyle m_Style = TimeStyle::H24; bool m_Seconds = false; };
+enum class MeridiemCase { UPPER, LOWER };                // AM and PM, or am and pm; only used with H12
+struct TimeFormat
+{
+    TimeStyle m_Style = TimeStyle::H24;
+    bool m_Seconds = false;
+    MeridiemCase m_Meridiem = MeridiemCase::UPPER;
+};
 
-std::string format_time(const LocalTime&, TimeFormat);   // "10:05", "10:05:09", "10:05 am", "10:05:09 am"
+std::string format_time(const LocalTime&, TimeFormat);   // "10:05", "10:05:09", "10:05 AM", "10:05:09 am"
 ```
 
 Pure formatting of an already-localised time. Output is locale-independent so the export never changes with the phone's
@@ -124,8 +130,11 @@ language.
 Tests (`unit`):
 
 - 24-hour: `00:00`, `00:05`, `09:07`, `12:00`, `23:59`.
-- 12-hour: `12:00 am`, `12:05 am`, `9:07 am`, `12:00 pm`, `11:59 pm` (see open question 2 for the proposed wording).
-- With seconds: `09:07:03` and `9:07:03 am`.
+- 12-hour, upper case (the 12-hour default): `12:00 AM`, `12:05 AM`, `09:07 AM`, `12:00 PM`, `01:15 PM`, `11:59 PM`. The hour
+  keeps its leading zero.
+- 12-hour, lower case: the same times with `am` and `pm`.
+- With seconds: `09:07:03`, `09:07:03 AM` and `09:07:03 am`.
+- All eight combinations of style (2), seconds (2) and meridiem case (2) are covered; the case option has no effect on 24-hour.
 - Zero-padding of minutes and seconds; no locale dependency (the test sets a non-English `LC_ALL` and expects identical
   output).
 
@@ -342,6 +351,8 @@ Tests (`unit`):
 - Several faults in one file are all reported, in file order.
 - A retired type keeps its board position out of the layout, and still round-trips.
 - Unknown keys are rejected with `UNKNOWN_FIELD` (decided).
+- `time_format` is `{ "style": "24h"|"12h", "seconds": bool, "meridiem": "upper"|"lower" }`; all eight combinations round-trip,
+  an omitted `meridiem` takes the default, and any other value is `OUT_OF_RANGE`.
 - Unicode names round-trip; a file with a byte-order mark is accepted.
 - Limits: files over 1 MiB, or with over 500 error types, are rejected before parsing deeply (no unbounded work on an
   imported file).
@@ -403,8 +414,8 @@ the PRD at all and is a third provisional item (open question 1).
 | `totals-on.txt` | The same log with totals on: blank line, then the totals line; includes a type used three times, once, and a retired type. | yes | yes | yes |
 | `totals-on-empty.txt` | Totals on with no errors (decides whether a totals line appears at all). | yes | no | yes |
 | `deleted-entries.txt` | A deleted error, a deleted note and a deleted header change are excluded; the totals and header history ignore them. | yes | yes | no |
-| `twelve-hour.txt` | 12-hour time, including noon, midnight and a pm change line. | yes | yes | no |
-| `with-seconds.txt` | 24-hour with seconds, and 12-hour with seconds. | yes | yes | no |
+| `twelve-hour.txt` | 12-hour time, upper and lower case, including noon, midnight and a PM change line. | yes | yes | no |
+| `with-seconds.txt` | 24-hour with seconds, and 12-hour with seconds in both cases. | yes | yes | no |
 | `custom-prefix.txt` | Prefix `DEMO`: label `DEMO #:` and value `DEMO-9`, and the same prefix on the unit-number change line. | yes | yes | no |
 | `same-minute-order.txt` | Several entries in the same minute and the same millisecond: ordering by UTC, ties by insertion. | yes | yes | no |
 | `past-midnight.txt` | Log dated 7 Nov with entries at 23:50 and 00:10 the next day; `Date:` stays 7 Nov. | yes | yes | no |
@@ -487,7 +498,10 @@ Stage 5.
   constants in `export_format.hpp`, so a later finding from the indexer is a one-line change and a golden regeneration.
 - Correct fixes the value currently in force, and a change line's "old" value is derived from history, not stored.
 - Digit limits stand: nine digits for unit numbers and for each version component; `0` is not a unit number.
-- Clock format is a preference (PRF-07) and 24-hour `HH:mm` is the default; the 12-hour and seconds styles are options.
+- Every part of the clock format is a user preference (PRF-07), and the export uses whatever is set: 24-hour or 12-hour,
+  seconds on or off, and `AM`/`PM` or `am`/`pm`. The defaults are 24-hour `HH:mm`, no seconds, and upper-case meridiem
+  when 12-hour is chosen. The hour keeps its leading zero (`09:07 AM`). The meridiem case is an addition to PRF-07, so
+  the PRD wording needs one phrase added and `time_format` in the configuration file gains a `meridiem` key.
 - Unknown keys in a configuration file are rejected.
 - Free-text line breaks are collapsed to a single space. Confirmed: the indexer never needs the line breaks.
 - A trailing newline after the last export line does not matter; the plan keeps none.
@@ -500,5 +514,3 @@ Stage 5.
    then master-list order, types with zero left out, and no totals line at all when there are no errors. The owner will ask
    whether the downstream ticket indexer reads this line. Blocks only the totals goldens (`totals-on.txt`,
    `totals-on-empty.txt`); work package 1.5 can land the rest first.
-2. **12-hour and seconds style.** Proposed `9:07 am` / `1:15 pm` and `HH:mm:ss`. Any preference on `am`/`pm` versus
-   `AM`/`PM`, or a leading zero? Blocks only `twelve-hour.txt` and the 12-hour half of `with-seconds.txt`.
