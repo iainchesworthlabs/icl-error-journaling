@@ -54,7 +54,6 @@ jobs:
       matrix:
         include:
           - {name: device, preset: ios-release}
-          - {name: simulator, preset: ios-simulator}
     runs-on: macos-26
     timeout-minutes: 90
     permissions:
