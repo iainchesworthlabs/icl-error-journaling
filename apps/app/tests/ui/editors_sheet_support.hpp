@@ -9,13 +9,13 @@ namespace ej::ui::editors
 /// The panel of the sheet that is in the screen, or null.
 [[nodiscard]] inline QQuickItem* panel(World& world)
 {
-    return item(world, QStringLiteral("sheetPanel"));
+    return find_item(world.m_Ui.root(), QStringLiteral("sheetPanel"));
 }
 
 /// The item with the objectName inside the sheet.
 [[nodiscard]] inline QQuickItem* in_sheet(World& world, const QString& name)
 {
-    return find_item(panel(world), name);
+    return child(require(panel(world)), name);
 }
 
 /// Whether the sheet is presented (from `open()` to the end of its dismissal).

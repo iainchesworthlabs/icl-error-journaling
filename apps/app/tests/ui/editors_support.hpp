@@ -132,11 +132,26 @@ struct World
     return nullptr;
 }
 
+/// `found`, which has to be there: the test fails here and goes no further when it is not, so the caller may use it.
+[[nodiscard]] inline QQuickItem* require(QQuickItem* found)
+{
+    REQUIRE(found != nullptr);
+    return found;
+}
+
 /// The first item under the loaded one whose objectName is `name`, found by the visual tree (a delegate of a Repeater
-/// is not under its QObject parent). Null when there is none.
+/// is not under its QObject parent). The test fails when there is none.
 [[nodiscard]] inline QQuickItem* item(World& world, const QString& name)
 {
-    return find_item(world.m_Ui.root(), name);
+    INFO(name.toStdString());
+    return require(find_item(world.m_Ui.root(), name));
+}
+
+/// The first item at or under `from` with the objectName; the test fails when there is none.
+[[nodiscard]] inline QQuickItem* child(QQuickItem* from, const QString& name)
+{
+    INFO(name.toStdString());
+    return require(find_item(from, name));
 }
 
 /// Every item under `from` whose objectName is `name`, in visual order.

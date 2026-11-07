@@ -38,7 +38,7 @@ QString preview(World& world)
 
 bool save_enabled(QQuickItem* page)
 {
-    return find_item(page, QStringLiteral("navTrailing"))->isEnabled();
+    return child(page, QStringLiteral("navTrailing"))->isEnabled();
 }
 
 void tap_save(World& world, QQuickItem* page)
@@ -217,8 +217,6 @@ TEST_CASE("editor.voiceover: the template fields are named, the invalid state is
     // The same page with a pattern refused.
     enter_text(world, QStringLiteral("patternField"), QStringLiteral("Played"));
     world.m_Ui.layout();
-    CHECK(find_item(item(world, QStringLiteral("patternField")), QStringLiteral("formInput"))
-              ->property("text")
-              .toString() == QStringLiteral("Played"));
+    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played"));
     expect_clean(check_everything(world.m_Ui));
 }

@@ -59,8 +59,9 @@ TEST_CASE("editor.error_types: the types are listed in board order with their ti
     CHECK(names(world).back() == QStringLiteral("Echo Delay"));
     CHECK(item(world, QStringLiteral("otherGroup"))->isVisible());
     QQuickItem* twelfth = row_with(world, TYPES, QStringLiteral("Echo Delay"));
+    REQUIRE(twelfth != nullptr);
     CHECK(twelfth->property("detail").toString() == QStringLiteral("Not on the board"));
-    CHECK(find_item(twelfth, QStringLiteral("editorMoveEarlier"))->isVisible() == false);
+    CHECK(child(twelfth, QStringLiteral("editorMoveEarlier"))->isVisible() == false);
 }
 
 TEST_CASE("editor.error_types: adding a type asks for a name, refuses a duplicate or empty one inline, then saves",
@@ -181,8 +182,8 @@ TEST_CASE("editor.error_types: the arrows move a type along the board and its co
     QQuickItem* first = row_with(world, TYPES, QStringLiteral("Wrong Response"));
     REQUIRE(first != nullptr);
     // The first type cannot move earlier and the arrow is dimmed.
-    CHECK_FALSE(find_item(first, QStringLiteral("editorMoveEarlier"))->isEnabled());
-    CHECK(find_item(first, QStringLiteral("editorMoveLater"))->isEnabled());
+    CHECK_FALSE(child(first, QStringLiteral("editorMoveEarlier"))->isEnabled());
+    CHECK(child(first, QStringLiteral("editorMoveLater"))->isEnabled());
 
     world.m_Ui.tap(find_item(first, QStringLiteral("editorMoveLater")));
     world.settle();
@@ -191,6 +192,7 @@ TEST_CASE("editor.error_types: the arrows move a type along the board and its co
     CHECK(moved.at(0) == QStringLiteral("Sequence Out of Order"));
     CHECK(moved.at(1) == QStringLiteral("Wrong Response"));
     QQuickItem* row = row_with(world, TYPES, QStringLiteral("Wrong Response"));
+    REQUIRE(row != nullptr);
     CHECK(row->property("detail").toString() == QStringLiteral("Board tile 2"));
     CHECK(row->property("swatchSlot").toInt() == 1);
 
@@ -202,7 +204,7 @@ TEST_CASE("editor.error_types: the arrows move a type along the board and its co
 
     // The last type cannot move later.
     QQuickItem* last = row_with(world, TYPES, QStringLiteral("Navigation Failure"));
-    CHECK_FALSE(find_item(last, QStringLiteral("editorMoveLater"))->isEnabled());
+    CHECK_FALSE(child(last, QStringLiteral("editorMoveLater"))->isEnabled());
 }
 
 TEST_CASE("editor.error_types: a refused move and a failed save are shown in a banner", "[ui][editor]")

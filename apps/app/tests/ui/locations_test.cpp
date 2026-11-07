@@ -178,7 +178,7 @@ TEST_CASE("editor.locations: the arrows reorder with 0-based rows, and the ends 
     world.m_Ui.layout();
 
     QQuickItem* north = row_with(world, LOCATIONS, QStringLiteral("North Site"));
-    CHECK_FALSE(find_item(north, QStringLiteral("editorMoveEarlier"))->isEnabled());
+    CHECK_FALSE(child(north, QStringLiteral("editorMoveEarlier"))->isEnabled());
     world.m_Ui.tap(find_item(north, QStringLiteral("editorMoveLater")));
     world.settle();
     world.m_Ui.layout();
@@ -186,7 +186,7 @@ TEST_CASE("editor.locations: the arrows reorder with 0-based rows, and the ends 
     CHECK(names_in_model(world) == names(world));
 
     QQuickItem* last = row_with(world, LOCATIONS, QStringLiteral("North Site"));
-    CHECK_FALSE(find_item(last, QStringLiteral("editorMoveLater"))->isEnabled());
+    CHECK_FALSE(child(last, QStringLiteral("editorMoveLater"))->isEnabled());
     world.m_Ui.tap(find_item(last, QStringLiteral("editorMoveEarlier")));
     world.settle();
     world.m_Ui.layout();
