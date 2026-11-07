@@ -21,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -51,6 +52,38 @@ struct Options
     HeaderValues m_Header = sample_header();
     const TimeZoneProvider* m_Zones = nullptr; // the fixed-offset zones when null
     StartupResult m_Startup;
+
+    // Chained setters, because a designated initializer that leaves a field out is a warning for Clang.
+    Options& unconfigured()
+    {
+        m_Configured = false;
+        return *this;
+    }
+    Options& existing()
+    {
+        m_ExistingLog = true;
+        return *this;
+    }
+    Options& no_load()
+    {
+        m_Load = false;
+        return *this;
+    }
+    Options& header(HeaderValues header)
+    {
+        m_Header = std::move(header);
+        return *this;
+    }
+    Options& zones(const TimeZoneProvider* zones)
+    {
+        m_Zones = zones;
+        return *this;
+    }
+    Options& startup(StartupResult startup)
+    {
+        m_Startup = std::move(startup);
+        return *this;
+    }
 };
 
 /// The environment of a rig with its zone provider replaced.
@@ -162,7 +195,7 @@ const NoteEntry* note_of(const Entry& entry)
 
 TEST_CASE("A first start with a configuration creates today's log with three empty fields", "[viewmodel][session]")
 {
-    SessionRig rig({.m_Load = false});
+    SessionRig rig(Options().no_load());
     QSignalSpy state(rig.session.get(), &LogSession::stateChanged);
     CHECK(rig.session->state() == LogSession::State::LOADING);
 
@@ -190,7 +223,7 @@ TEST_CASE("A first start with a configuration creates today's log with three emp
 TEST_CASE("Without a configuration the session needs setup and creates nothing, until one arrives",
           "[viewmodel][session]")
 {
-    SessionRig rig({.m_Configured = false});
+    SessionRig rig(Options().unconfigured());
     CHECK(rig.session->state() == LogSession::State::NEEDS_SETUP);
     CHECK(rig.session->open_log() == nullptr);
     CHECK(rig.calls(RepositoryOp::CREATE_LOG) == 0);
@@ -207,7 +240,7 @@ TEST_CASE("Without a configuration the session needs setup and creates nothing, 
 
 TEST_CASE("An open log is opened as it was, with its draft", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true, .m_Load = false});
+    SessionRig rig(Options().existing().no_load());
     REQUIRE(rig.storage.memory().add_entry(rig.log_id, sample_error(1, 10)));
     REQUIRE(rig.storage.memory().add_entry(rig.log_id, sample_note(2, 11, "a note")));
     REQUIRE(rig.storage.memory().set_draft("half a thought", sample_time(12)));
@@ -233,13 +266,13 @@ TEST_CASE("A location chosen from the list shows its name", "[viewmodel][session
 {
     HeaderValues header = sample_header();
     header.m_Location = LocationValue{LocationId(Uuid::parse(NORTH_SITE.toStdString()).value()), {}};
-    SessionRig rig({.m_ExistingLog = true, .m_Header = header});
+    SessionRig rig(Options().existing().header(header));
     CHECK(rig.session->location_text() == QStringLiteral("North Site"));
 }
 
 TEST_CASE("A store that cannot be read fails the session and says so", "[viewmodel][session]")
 {
-    SessionRig rig({.m_Load = false});
+    SessionRig rig(Options().no_load());
     QSignalSpy failed(rig.session.get(), &LogSession::writeFailed);
     rig.storage.repository().fail_next(RepositoryOp::OPEN_LOG);
 
@@ -257,7 +290,7 @@ TEST_CASE("The recovery notice comes from the start-up report and is constant", 
     RecoveryReport report;
     report.m_Outcome = RecoveryOutcome::REBUILT;
     report.m_RebuiltRecords = 12;
-    SessionRig recovered({.m_Startup = StartupResult{report}});
+    SessionRig recovered(Options().startup(StartupResult{report}));
     CHECK(recovered.session->recovery_notice().contains(QStringLiteral("12")));
 
     SessionRig clean;
@@ -266,7 +299,7 @@ TEST_CASE("The recovery notice comes from the start-up report and is constant", 
 
 TEST_CASE("The open log is announced to the models that follow it", "[viewmodel][session]")
 {
-    SessionRig rig({.m_Load = false});
+    SessionRig rig(Options().no_load());
     FakeOpenLogObserver observer;
     rig.session->add_observer(observer);
     rig.session->load();
@@ -395,7 +428,7 @@ TEST_CASE("Taps for an unknown or a retired type are refused and write nothing",
 
 TEST_CASE("A tap while the session is loading is refused", "[viewmodel][session]")
 {
-    SessionRig rig({.m_Load = false});
+    SessionRig rig(Options().no_load());
     CHECK_FALSE(rig.session->recordError(WRONG_RESPONSE));
     rig.session->load();
     CHECK_FALSE(rig.session->recordError(WRONG_RESPONSE)); // still loading: the job has not run
@@ -486,7 +519,7 @@ TEST_CASE("An empty header lists its three missing fields and taps still work", 
 
 TEST_CASE("Header values are checked inline and a refused value writes nothing", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     const auto valid = [&rig](const char* key, const char* text)
     { return rig.session->validateHeaderValue(QString::fromLatin1(key), QString::fromUtf8(text)); };
 
@@ -518,7 +551,7 @@ TEST_CASE("Header values are checked inline and a refused value writes nothing",
 
 TEST_CASE("Correct rewrites the value in force and adds no entry; a first fill is a Correct", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     QSignalSpy header(rig.session.get(), &LogSession::headerChanged);
     REQUIRE(rig.session->correctHeader(QStringLiteral("software_version"), QStringLiteral("1.4.3")));
     rig.gateway.run_all();
@@ -542,7 +575,7 @@ TEST_CASE("Correct rewrites the value in force and adds no entry; a first fill i
 
 TEST_CASE("Change adds an entry and moves the value in force but not the start value", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     QSignalSpy failed(rig.session.get(), &LogSession::writeFailed);
     rig.world.m_Clock.advance(10min); // 09:05
     const int when = LOCAL_0855 + 10 * 60;
@@ -573,7 +606,7 @@ TEST_CASE("Change adds an entry and moves the value in force but not the start v
 
 TEST_CASE("A change at an earlier instant sorts before the entry it precedes", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     REQUIRE(rig.session->recordError(WRONG_RESPONSE)); // 08:55
     rig.gateway.run_all();
 
@@ -588,7 +621,7 @@ TEST_CASE("A change at an earlier instant sorts before the entry it precedes", "
 
 TEST_CASE("The change at a UTC instant is the same change, and zero is now", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     const auto instant =
         std::chrono::duration_cast<std::chrono::milliseconds>(rig.world.m_Clock.now().time_since_epoch());
     REQUIRE(
@@ -607,7 +640,7 @@ TEST_CASE("The change at a UTC instant is the same change, and zero is now", "[v
 
 TEST_CASE("The local time of the version sheet defaults to the clock", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     CHECK(rig.session->now_local_seconds() == LOCAL_0855);
     rig.world.m_Clock.advance(90s);
     CHECK(rig.session->now_local_seconds() == LOCAL_0855 + 90);
@@ -621,7 +654,7 @@ TEST_CASE("The local time of the version sheet defaults to the clock", "[viewmod
 
 TEST_CASE("A local time out of range is refused", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     const auto posted = rig.gateway.posted();
     CHECK_FALSE(rig.session->changeHeader(QStringLiteral("software_version"), QStringLiteral("1.5.0"), -1));
     CHECK_FALSE(rig.session->changeHeader(QStringLiteral("software_version"), QStringLiteral("1.5.0"), 86'400));
@@ -641,7 +674,7 @@ UtcMillis change_instant(std::chrono::year_month_day date, int local_seconds)
     const auto zones = make_qt_time_zone_provider();
     HeaderValues header = sample_header();
     header.m_LocalDate = date;
-    SessionRig rig({.m_ExistingLog = true, .m_Header = header, .m_Zones = zones.get()});
+    SessionRig rig(Options().existing().header(header).zones(zones.get()));
     REQUIRE(rig.session->changeHeader(QStringLiteral("software_version"), QStringLiteral("1.5.0"), local_seconds));
     rig.gateway.run_all();
     const auto entries = rig.entries();
@@ -696,7 +729,7 @@ TEST_CASE("The preview is the line that the change then saves, and writes nothin
     for (const auto& scenario : scenarios)
     {
         INFO(scenario.m_Field);
-        SessionRig rig({.m_ExistingLog = true});
+        SessionRig rig(Options().existing());
         REQUIRE(rig.session->recordError(WRONG_RESPONSE));
         rig.world.m_Clock.advance(1min);
         rig.gateway.run_all();
@@ -728,7 +761,7 @@ TEST_CASE("The preview is the line that the change then saves, and writes nothin
 
 TEST_CASE("The preview shows the old value, the new value and the time", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     const QString line =
         rig.session->previewHeaderChange(QStringLiteral("software_version"), QStringLiteral(" 1.5.0 "), LOCAL_0855);
     CHECK(line.contains(QStringLiteral("08:55")));
@@ -740,7 +773,7 @@ TEST_CASE("The preview shows the old value, the new value and the time", "[viewm
 
 TEST_CASE("The preview of an invalid or an unchanged value is the refusal message", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     const auto posted = rig.gateway.posted();
     const QString invalid =
         rig.session->previewHeaderChange(QStringLiteral("software_version"), QStringLiteral("1.4"), LOCAL_0855);
@@ -944,7 +977,7 @@ TEST_CASE("A draft that could not be stored is reported", "[viewmodel][session]"
 TEST_CASE("A new log archives the open one with all its entries and starts one with the facilitator and the date",
           "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     REQUIRE(rig.session->recordError(WRONG_RESPONSE));
     rig.world.m_Clock.advance(1min);
     REQUIRE(rig.session->addNote(QStringLiteral("a note")));
@@ -1026,7 +1059,7 @@ TEST_CASE("A new log archives the open one with all its entries and starts one w
 
 TEST_CASE("A new log waits for the writes that were accepted before it", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     QSignalSpy started(rig.session.get(), &LogSession::newLogStarted);
     QSignalSpy failed(rig.session.get(), &LogSession::writeFailed);
     REQUIRE(rig.session->recordError(WRONG_RESPONSE));
@@ -1064,7 +1097,7 @@ TEST_CASE("A new log waits for the writes that were accepted before it", "[viewm
 
 TEST_CASE("A new log that fails leaves the old log open", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     QSignalSpy started(rig.session.get(), &LogSession::newLogStarted);
     QSignalSpy failed(rig.session.get(), &LogSession::writeFailed);
     REQUIRE(rig.session->recordError(WRONG_RESPONSE));
@@ -1094,15 +1127,15 @@ TEST_CASE("A new log that fails leaves the old log open", "[viewmodel][session]"
 
 TEST_CASE("A new log cannot be started before there is a log", "[viewmodel][session]")
 {
-    SessionRig unconfigured({.m_Configured = false});
+    SessionRig unconfigured(Options().unconfigured());
     CHECK_FALSE(unconfigured.session->startNewLog());
-    SessionRig loading({.m_Load = false});
+    SessionRig loading(Options().no_load());
     CHECK_FALSE(loading.session->startNewLog());
 }
 
 TEST_CASE("The new log of an unconfigured session keeps the facilitator of the log it replaces", "[viewmodel][session]")
 {
-    SessionRig rig({.m_ExistingLog = true});
+    SessionRig rig(Options().existing());
     rig.config.clear();
     REQUIRE(rig.session->startNewLog());
     rig.gateway.run_all();
