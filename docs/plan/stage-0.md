@@ -58,3 +58,8 @@ After the owner's Apple steps (bootstrap plan, owner actions): rehearse `release
 
 The development machine has no Mac. macOS and iOS builds are verified on the hosted runners; the spikes and the
 TestFlight install are verified only on a device, and each pull request says which parts have not run on one.
+
+## Exit gate
+
+Passed on 7 Nov 2026. TestFlight 0.1.0 (2) and (3) installed and ran on the owner's iPhone 17, and CI was green on every
+tier. Build 3 carried the spike controls; the device results are in [spikes](spikes.md#device-results).
