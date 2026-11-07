@@ -174,17 +174,33 @@ private:
     void make_logs()
     {
         const LocationId north = location_named(m_Configuration, "North Site");
-        make(LAST_YEAR, 2025, 11, 7,
-             {review::error_at(m_Configuration, 11, 9, 0), review::error_at(m_Configuration, 12, 9, 10)}, true,
-             LocationValue{north, {}});
-        make(YESTERDAY, 2026, 11, 6, {review::error_at(m_Configuration, 21, 9, 0)}, true,
-             LocationValue{std::nullopt, "South Elsewhere"});
+        make(LAST_YEAR, 2025, 11, 7, taps({{11, 9, 0}, {12, 9, 10}}), true, LocationValue{north, {}});
+        make(YESTERDAY, 2026, 11, 6, taps({{21, 9, 0}}), true, LocationValue{std::nullopt, "South Elsewhere"});
         make(MORNING, 2026, 11, 7, review::prd_example(m_Configuration), true, LocationValue{north, {}});
         REQUIRE(m_Storage.memory().mark_shared(test::sample_id<LogId>(MORNING), test::utc(2026, 11, 7, 6, 42)));
-        make(EVENING, 2026, 11, 7, {review::error_at(m_Configuration, 41, 16, 0)}, true, LocationValue{north, {}});
-        make(OPEN, 2026, 11, 8, {review::error_at(m_Configuration, 51, 9, 0)}, false, LocationValue{north, {}});
+        make(EVENING, 2026, 11, 7, taps({{41, 16, 0}}), true, LocationValue{north, {}});
+        make(OPEN, 2026, 11, 8, taps({{51, 9, 0}}), false, LocationValue{north, {}});
         m_Events.clear();
         m_Storage.repository().clear_records();
+    }
+
+    /// One error entry of the sample configuration: its number, and the hour and minute of 7 Nov. A list of these, not
+    /// of entries, because GCC reports a string of a copied initializer list as maybe uninitialised.
+    struct Tap
+    {
+        std::uint64_t m_Number;
+        int m_Hour;
+        int m_Minute;
+    };
+
+    [[nodiscard]] std::vector<Entry> taps(const std::vector<Tap>& list) const
+    {
+        std::vector<Entry> entries;
+        for (const Tap& tap : list)
+        {
+            entries.push_back(review::error_at(m_Configuration, tap.m_Number, tap.m_Hour, tap.m_Minute));
+        }
+        return entries;
     }
 
     void make(std::uint64_t number, int year, unsigned month, unsigned day, const std::vector<Entry>& entries,
