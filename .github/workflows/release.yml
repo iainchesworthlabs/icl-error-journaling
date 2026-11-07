@@ -46,7 +46,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
       - name: Check the release has notes
-        uses: iainchesworthlabs/icl-common-infra/actions/release-notes@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/release-notes@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           version: ${{ steps.tag.outputs.version }}
           prerelease: ${{ steps.tag.outputs.prerelease }}
@@ -74,18 +74,18 @@ jobs:
           persist-credentials: false
       - name: Install GCC
         if: runner.os == 'Linux'
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Set up Qt
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Load the MSVC environment
         if: runner.os == 'Windows'
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-msvc-env@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-msvc-env@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Set up ccache
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           key: release-${{ matrix.name }}
       - name: Configure, build and install
@@ -107,13 +107,13 @@ jobs:
       # start on Ubuntu 24.04 (glibc 2.39) or Debian 13. The action fails when a program or library in it needs more.
       - name: Check the glibc the package needs
         if: runner.os == 'Linux'
-        uses: iainchesworthlabs/icl-common-infra/actions/check-glibc-floor@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.16 plus #34
+        uses: iainchesworthlabs/icl-common-infra/actions/check-glibc-floor@e15f14812b7446517252d6677abf755698d57986 # v0.1.16 plus #34
         with:
           folder: stage
       - name: Sign the Windows binaries
         id: sign
         if: runner.os == 'Windows'
-        uses: iainchesworthlabs/icl-common-infra/actions/sign-windows@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/sign-windows@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           mode: ${{ vars.SIGN_WINDOWS || 'false' }}
           files: stage/bin/icl-template.exe
@@ -286,7 +286,7 @@ jobs:
       contents: write
       id-token: write
       attestations: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/release-publish.yml@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/release-publish.yml@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
     secrets:
       REPO_GPG_PRIVATE_KEY: ${{ secrets.REPO_GPG_PRIVATE_KEY }}
       REPO_GPG_PASSPHRASE: ${{ secrets.REPO_GPG_PASSPHRASE }}

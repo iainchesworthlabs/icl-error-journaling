@@ -31,7 +31,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/policy.yml@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/policy.yml@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
 
   plan:
     name: Plan
@@ -49,7 +49,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Check out the shared scripts
-        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Check the vendored CMake modules
         run: python3 tools/ci/sync_cmake.py --check --infra .icl-infra
       - name: Decide scope
@@ -71,7 +71,7 @@ jobs:
     if: needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
     with:
       legs: >-
         [
@@ -85,7 +85,7 @@ jobs:
     if: needs.plan.outputs.build == 'true' && github.event_name != 'pull_request'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
     with:
       legs: >-
         [
@@ -111,17 +111,17 @@ jobs:
         with:
           persist-credentials: false
       - name: Check out the shared scripts
-        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Install GCC
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Set up Qt
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
       - name: Set up ccache
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           key: coverage
       - name: Configure and build
@@ -129,7 +129,7 @@ jobs:
           cmake --preset linux-coverage
           cmake --build --preset linux-coverage
       - name: Test
-        uses: iainchesworthlabs/icl-common-infra/actions/run-ctest@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/run-ctest@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           build-dir: build/linux-coverage
       - name: Report and gate
@@ -142,14 +142,14 @@ jobs:
       - name: Save caches
         if: always()
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
 
   zizmor:
     name: Workflow analysis
     permissions:
       contents: read
       security-events: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/zizmor.yml@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/zizmor.yml@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
 
   dependency-scan:
     name: Scan dependency diff
@@ -166,7 +166,7 @@ jobs:
           persist-credentials: false
       - name: Dependency review
         if: github.event_name == 'pull_request'
-        uses: iainchesworthlabs/icl-common-infra/actions/dependency-review@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/dependency-review@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
 
   ci-status:
     name: CI Status
@@ -178,7 +178,7 @@ jobs:
       contents: read
     steps:
       - name: Aggregate
-        uses: iainchesworthlabs/icl-common-infra/actions/ci-status@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        uses: iainchesworthlabs/icl-common-infra/actions/ci-status@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           needs: ${{ toJSON(needs) }}
           expected: >-
