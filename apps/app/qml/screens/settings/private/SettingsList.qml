@@ -17,6 +17,9 @@ SettingsPage {
     id: root
 
     required property var settings
+    // The footer of the list: the version and platform text, and the timing line behind five taps on it. Empty hides it.
+    property string aboutText
+    property string timingText
 
     signal errorTypesRequested
     signal templatesRequested
@@ -244,5 +247,11 @@ SettingsPage {
                 onToggled: wanted => root.show(root.settings.setIncludeTotals(wanted))
             }
         }
+    }
+
+    SettingsAbout {
+        objectName: "settingsAboutFooter"
+        aboutText: root.aboutText
+        timingText: root.timingText
     }
 }

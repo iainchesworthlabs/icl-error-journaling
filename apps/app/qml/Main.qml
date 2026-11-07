@@ -23,8 +23,7 @@ Window {
     required property QtObject share
     required property QtObject appRoot
     required property QtObject bridge
-    // The version of the core library and which bridge and storage are linked, for a diagnostic. The shell does not show
-    // them.
+    // The version of the core library and which bridge and storage are linked. They are at the foot of Settings.
     required property string versionText
     required property string platformText
 
@@ -48,5 +47,6 @@ Window {
         share: root.share
         appRoot: root.appRoot
         bridge: root.bridge
+        aboutText: qsTr("%1 · %2").arg(root.versionText).arg(root.platformText)
     }
 }
