@@ -29,6 +29,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -227,9 +228,12 @@ class TempDirectory
 public:
     TempDirectory()
     {
+        // Tests run as separate processes in parallel (ctest -j), each starting its counter at 1, so a random part
+        // keeps their directories apart.
         static std::atomic<unsigned> counter{0};
-        m_Path = fs::current_path() / "ej-bridge-test-tmp" / std::to_string(++counter);
-        fs::remove_all(m_Path);
+        std::random_device device;
+        m_Path =
+            fs::current_path() / "ej-bridge-test-tmp" / (std::to_string(device()) + "-" + std::to_string(++counter));
         fs::create_directories(m_Path);
     }
     TempDirectory(const TempDirectory&) = delete;
