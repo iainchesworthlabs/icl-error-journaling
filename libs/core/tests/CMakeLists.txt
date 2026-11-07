@@ -4,7 +4,9 @@ add_executable(ej_core_tests
     test_configuration.cpp
     golden_scenarios.cpp
     test_day_prompt.cpp
-    test_export_skeleton.cpp
+    test_export_header.cpp
+    test_export_golden.cpp
+    test_export_rules.cpp
     test_foundations.cpp
     test_header_history.cpp
     test_log.cpp

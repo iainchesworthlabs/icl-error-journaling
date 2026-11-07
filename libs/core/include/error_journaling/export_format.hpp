@@ -22,4 +22,23 @@ inline constexpr std::string_view MONTH_NAMES[12] = {"Jan", "Feb", "Mar", "Apr",
 
 inline constexpr char LINE_END = '\n';
 
+// Timeline lines. <time> is formatted by format_time.
+
+/// After the time on an error line, including the space after the marker (accepted: "10:05 T| Wrong Response").
+inline constexpr std::string_view ERROR_MARKER = "T| ";
+/// Between an error name and its attached note (an en dash with a space each side).
+inline constexpr std::string_view ATTACHED_NOTE_SEPARATOR = " \xE2\x80\x93 ";
+/// After the time on a note line.
+inline constexpr std::string_view NOTE_MARKER = "(Free Text)";
+/// After the field label on a header-change line, and between the old and the new value (an arrow).
+inline constexpr std::string_view CHANGED_SUFFIX = " changed: ";
+inline constexpr std::string_view CHANGE_ARROW = " \xE2\x86\x92 ";
+
+// Totals line (PRF-10). PROVISIONAL: the PRD does not give the wording (plan, open question 1), so this is the plan's
+// proposal: "Totals: Wrong Response 3, Mute Delay 1". Changing it means editing these three constants and regenerating
+// totals-on.txt, totals-on-empty.txt and deleted-entries.txt.
+inline constexpr std::string_view TOTALS_PREFIX = "Totals: ";
+inline constexpr std::string_view TOTALS_SEPARATOR = ", ";
+inline constexpr std::string_view TOTALS_COUNT_SEPARATOR = " ";
+
 }  // namespace ej::export_format

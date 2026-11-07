@@ -1,0 +1,13 @@
+Facilitator: Sam Example
+Date: 7 Nov 2026
+UNIT #: UNIT-27
+Location: North Site
+Software Version: 1.4.2
+
+10:00 (Free Text) Line one line two line four
+10:05 (Free Text) tab separated values
+10:10 (Free Text) double spaces inside
+10:15 (Free Text) trailing spaces
+10:20 (Free Text) leading spaces and CRLF
+10:25 (Free Text)
+10:30 (Free Text) Played Two Lines
