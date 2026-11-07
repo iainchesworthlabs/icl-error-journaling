@@ -79,8 +79,8 @@ Needed now (repository administration, section 12):
    ```
 
 2. Create the `release` environment with yourself as required reviewer.
-3. Create the repository secret `CONFIDENTIAL_TERMS` (one confidential term per line; also as a Dependabot secret if wanted).
-   Without it the Confidentiality job fails. Details are in `docs/ci.md`.
+3. Optional: create the repository secret `CONFIDENTIAL_TERMS` (one confidential term per line; also as a Dependabot secret
+   if wanted). Without it the term check warns and is skipped. Details are in `docs/ci.md`.
 
 Needed before the Stage 0 exit gate (a signed build on TestFlight), in Apple's portal and App Store Connect
 (`docs/releasing.md`, "iOS and TestFlight"):

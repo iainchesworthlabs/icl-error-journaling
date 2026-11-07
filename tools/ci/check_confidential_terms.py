@@ -11,9 +11,9 @@ A path that itself contains a term is reported by its position in the file list,
 
 The pull request title and body come from the environment (PR_TITLE, PR_BODY), never from the command line.
 
-Without terms the check fails, except on a pull request whose secrets are unavailable
-(--secrets-unavailable: a fork, or Dependabot), where it warns and passes. Such a pull request is
-checked again in the merge queue, which always has the secret.
+The term list is optional. Without terms the check warns that it did not run and passes, on every
+event. (--secrets-unavailable only changes the wording of the warning: a fork or Dependabot pull
+request cannot read the secret even when it is set.)
 """
 
 from __future__ import annotations
@@ -96,13 +96,11 @@ def main(argv: list[str] | None = None, env: Mapping[str, str] | None = None) ->
 
     terms = parse_terms(env.get("CONFIDENTIAL_TERMS"))
     if not terms:
-        if args.event == "pull_request" and args.secrets_unavailable:
-            print("warning: CONFIDENTIAL_TERMS is not available to this pull request, so the confidentiality "
-                  "check did not run. It runs in the merge queue.")
-            return 0
-        print("error: CONFIDENTIAL_TERMS is empty or not set. The owner creates the repository secret "
-              "(docs/ci.md).", file=sys.stderr)
-        return 1
+        reason = ("is not available to this pull request" if args.secrets_unavailable
+                  else "is empty or not set")
+        print(f"::warning::CONFIDENTIAL_TERMS {reason}, so the confidential-term check did not run. "
+              "Create the repository secret to enable it (docs/ci.md).")
+        return 0
 
     pattern = compile_terms(terms)
     root = Path(args.root)

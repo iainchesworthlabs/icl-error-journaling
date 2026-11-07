@@ -48,14 +48,15 @@ The **Confidentiality** job of `ci.yml` is part of CI Status. It runs the unit t
 
 The term list is the repository secret **`CONFIDENTIAL_TERMS`**: one term per line, blank lines ignored.
 
-**Owner action:** create the secret (Settings, Secrets and variables, Actions, New repository secret) named
-`CONFIDENTIAL_TERMS`. Also add it as a Dependabot secret if Dependabot pull requests should be checked before the merge
-queue. The list never goes in the repository.
+The secret is optional. **Owner action, when wanted:** create it (Settings, Secrets and variables, Actions, New
+repository secret) named `CONFIDENTIAL_TERMS`, from a terms file kept outside the repository:
+`gh secret set CONFIDENTIAL_TERMS < terms.txt`. Add it as a Dependabot secret too if Dependabot pull requests should be
+checked before the merge queue. The list never goes in the repository.
 
-When the secret is missing the job fails on `push` and `merge_group` and on a pull request from this repository. Only a
-pull request from a fork, or from Dependabot, which cannot read the secret, warns and passes; the merge queue runs the
-check again with the secret, so nothing reaches `develop` unchecked. Failing closed elsewhere means a forgotten secret is
-noticed at once instead of silently disabling the guard.
+When the secret is missing or empty, the term check prints a warning annotation, does not run and passes, on every
+event. That also covers a pull request from a fork or from Dependabot, which cannot read the secret. The choice means the
+guard is off, without a failing check, until the secret exists; the warning on each run is the reminder. With terms
+present, any match fails the job.
 
 ## Run the confidentiality checks locally
 

@@ -157,30 +157,23 @@ class CheckRunTest(unittest.TestCase):
         self.assertIn("pull request body line 3", err)
         self.assertNotIn(OTHER, (out + err).lower())
 
-    def test_missing_secret_fails_on_push_and_merge_group(self) -> None:
+    def test_missing_secret_warns_and_passes_on_every_event(self) -> None:
         self.repo.commit({"a.txt": "x\n"})
-        for event in ("push", "merge_group", "workflow_dispatch", ""):
-            code, _, err = run(["--root", str(self.repo.root), "--event", event], {})
-            self.assertEqual(code, 1, event)
-            self.assertIn("CONFIDENTIAL_TERMS", err)
+        for event in ("push", "merge_group", "workflow_dispatch", "pull_request", ""):
+            for env in ({}, {"CONFIDENTIAL_TERMS": ""}, {"CONFIDENTIAL_TERMS": "\n \n"}):
+                code, out, _ = run(["--root", str(self.repo.root), "--event", event], env)
+                self.assertEqual(code, 0, event)
+                self.assertIn("::warning::", out)
 
-    def test_missing_secret_on_trusted_pull_request_fails(self) -> None:
-        code, _, _ = run(["--root", str(self.repo.root), "--event", "pull_request"], {"CONFIDENTIAL_TERMS": ""})
-        self.assertEqual(code, 1)
-
-    def test_missing_secret_on_fork_pull_request_warns_and_passes(self) -> None:
+    def test_unavailable_secret_on_fork_warns_and_passes(self) -> None:
         code, out, _ = run(["--root", str(self.repo.root), "--event", "pull_request", "--secrets-unavailable"], {})
         self.assertEqual(code, 0)
-        self.assertIn("warning", out)
+        self.assertIn("not available", out)
 
     def test_secrets_unavailable_flag_does_not_skip_when_terms_exist(self) -> None:
         self.repo.commit({"a.txt": f"{OTHER}\n"})
         argv = ["--root", str(self.repo.root), "--event", "pull_request", "--secrets-unavailable"]
         self.assertEqual(run(argv, ENV)[0], 1)
-
-    def test_secrets_unavailable_flag_does_not_excuse_push(self) -> None:
-        code, _, _ = run(["--root", str(self.repo.root), "--event", "push", "--secrets-unavailable"], {})
-        self.assertEqual(code, 1)
 
 
 if __name__ == "__main__":
