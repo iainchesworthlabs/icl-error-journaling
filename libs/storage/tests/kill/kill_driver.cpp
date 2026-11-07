@@ -73,10 +73,15 @@ std::optional<std::string> env_text(const char* name)
     return value.toStdString();
 }
 
+std::uint64_t parse_number(const std::string& text)
+{
+    return static_cast<std::uint64_t>(std::stoull(text, nullptr, 0));
+}
+
 std::uint64_t env_number(const char* name, std::uint64_t fallback)
 {
     const auto text = env_text(name);
-    return text ? std::stoull(*text, nullptr, 0) : fallback;
+    return text ? parse_number(*text) : fallback;
 }
 
 std::string hex(std::uint64_t value)
@@ -101,7 +106,7 @@ void print(const std::string& line)
 /// its first iteration, so a failure can always be repeated.
 std::uint64_t master_seed()
 {
-    static const std::uint64_t seed = []
+    static const std::uint64_t seed = []() -> std::uint64_t
     {
         if (g_CommandLine.m_Seed)
         {
@@ -109,7 +114,7 @@ std::uint64_t master_seed()
         }
         if (const auto text = env_text("EJ_KILL_SEED"))
         {
-            return std::stoull(*text, nullptr, 0);
+            return parse_number(*text);
         }
         std::random_device device;
         return (static_cast<std::uint64_t>(device()) << 32) ^ device();
@@ -278,7 +283,8 @@ private:
 
     void parse(const std::string& line)
     {
-        const auto number_after = [&line](std::size_t skip) { return std::stoull(line.substr(skip)); };
+        const auto number_after = [&line](std::size_t skip)
+        { return static_cast<std::uint64_t>(std::stoull(line.substr(skip))); };
         if (line.starts_with("ACK "))
         {
             m_Output.m_Acked = std::max(m_Output.m_Acked, number_after(4));
@@ -918,7 +924,10 @@ TEST_CASE("kill: recovery killed at random moments recovers again to the same re
         {
             spin_for(delay);
             worker.kill_now();
-            killed_mid_run += worker.output().m_Recovered ? 0 : 1;
+            if (!worker.output().m_Recovered)
+            {
+                ++killed_mid_run;
+            }
         }
         CHECK(worker.output().m_Error.empty());
         // The next launch.
@@ -941,7 +950,7 @@ int main(int argc, char* argv[])
         const std::string name = argv[i];
         if ((name == "--seed" || name == "--iteration") && i + 1 < argc)
         {
-            const std::uint64_t value = std::stoull(argv[++i], nullptr, 0);
+            const std::uint64_t value = parse_number(argv[++i]);
             (name == "--seed" ? g_CommandLine.m_Seed : g_CommandLine.m_Iteration) = value;
         }
         else

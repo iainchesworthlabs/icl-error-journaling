@@ -58,7 +58,7 @@ struct Operation
     std::uint64_t m_Number = 0; // 1 for the first operation
     LogId m_Log;                // the log the call is about (the old one for START_NEW_LOG)
     LogId m_NewLog;             // START_NEW_LOG only
-    HeaderValues m_Header;      // CREATE_LOG and START_NEW_LOG
+    HeaderValues m_Header{};    // CREATE_LOG and START_NEW_LOG
     Entry m_Entry;              // ADD_ENTRY and EDIT_ENTRY; SET_DELETED names its entry by m_Entry.m_Id
     bool m_Deleted = false;     // SET_DELETED
     HeaderField m_Field = HeaderField::UNIT_NUMBER; // CORRECT_HEADER
