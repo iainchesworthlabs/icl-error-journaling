@@ -1038,7 +1038,7 @@ TEST_CASE("A share that is not recorded changes no row", "[viewmodel][history][u
     fixture.load();
     HistoryModel& history = fixture.history();
     QSignalSpy changed(&history, &QAbstractItemModel::dataChanged);
-    fixture.platform().answer_with(FakePlatform::share_outcome::cancelled);
+    fixture.platform().answer_with(FakePlatform::share_outcome::CANCELLED);
 
     REQUIRE(fixture.share().shareLog(text_of(EVENING)));
     fixture.settle();

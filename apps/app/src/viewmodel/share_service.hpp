@@ -2,8 +2,8 @@
 #pragma once
 
 #include "error_journaling/ids.hpp"
-#include "error_journaling/ios_bridge.hpp"
 #include "error_journaling/result.hpp"
+#include "error_journaling/share.hpp"
 #include "error_journaling/storage_error.hpp"
 #include "error_journaling/timestamp.hpp"
 #include "viewmodel/configuration_source.hpp"
@@ -27,7 +27,7 @@ namespace ej::viewmodel
 /// Copy uses, so Share and Copy cannot differ. The mirror holds committed changes only, so an edit that is still
 /// waiting in the document's queue is not in the text.
 ///
-/// What counts as shared (Stage 3 decision 10): the platform reported `shared`, which on a phone includes the sheet's
+/// What counts as shared (Stage 3 decision 10): the platform reported `SHARED`, which on a phone includes the sheet's
 /// own Copy action. A dismissed sheet (`cancelled`), a platform without a sheet (`unavailable`) and a failure record
 /// nothing. The in-app Copy buttons never reach this class. The share time is the time the sheet completed, read when
 /// the platform calls back and never earlier, and is committed through `LogDocument::mark_shared`; an archived log
@@ -37,10 +37,9 @@ namespace ej::viewmodel
 /// second `shareOpenLog` or `shareLog` returns `false` and does nothing: it emits no signal, and the share under way
 /// is not touched. It is not queued; the facilitator taps again once the first has ended.
 ///
-/// Sharing fires no haptic: the platform object is used for `present_share_sheet` and for nothing else. The platform
-/// dependency is `platform_services`, behind the 3.1 interface; Stage 5 (5.1) adapts it to the final bridge.
+/// Sharing fires no haptic: the only platform dependency is the bridge's `Share` (Stage 5, 5.1).
 ///
-/// The completion of the sheet may run before `present_share_sheet` returns (the desktop stub) or after (a phone); both
+/// The completion of the sheet may run before `Share::present` returns (the desktop stub) or after (a phone); both
 /// are handled. A completion that arrives after the service is gone is ignored. GUI thread only.
 class ShareService : public QObject
 {
@@ -53,8 +52,8 @@ public:
     /// sheet at all, which the composition root knows (false on the desktop stub, so that QML hides the control); the
     /// service does not stop a share on it, it passes the platform's `unavailable` on.
     ShareService(const Environment& environment, OpenLogSource& open_log, DocumentRegistry& registry,
-                 const ConfigurationSource& configuration, error_journaling::bridge::platform_services& platform,
-                 bool available, QObject* parent = nullptr);
+                 const ConfigurationSource& configuration, ej::bridge::Share& share, bool available,
+                 QObject* parent = nullptr);
     ~ShareService() override;
 
     [[nodiscard]] bool available() const noexcept
@@ -94,7 +93,7 @@ private:
 
     bool begin(LogId id);
     void acquired(LogId id, Loaded loaded);
-    void sheet_ended(LogId id, const error_journaling::bridge::share_result& result);
+    void sheet_ended(LogId id, const ej::bridge::ShareResult& result);
     void end(LogId id, const QString& outcome);
     void record(const std::shared_ptr<LogDocument>& document, LogId id, UtcMillis when);
     void recorded(const LogDocument* document, LogId id, const Result<void, StorageError>& result);
@@ -105,7 +104,7 @@ private:
     OpenLogSource& m_OpenLog;
     DocumentRegistry& m_Registry;
     const ConfigurationSource& m_Configuration;
-    error_journaling::bridge::platform_services& m_Platform;
+    ej::bridge::Share& m_Share;
     bool m_Available;
     bool m_Sharing = false;
 

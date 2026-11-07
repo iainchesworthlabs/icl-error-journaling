@@ -11,28 +11,41 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace ej;
 using namespace ej::test;
-namespace bridge = error_journaling::bridge;
+namespace bridge = ej::bridge;
 using viewmodel::LogChange;
 
 // ---------------------------------------------------------------------------------------------------------- platform
+
+namespace
+{
+
+bridge::ShareRequest share_request(std::string text)
+{
+    bridge::ShareRequest request;
+    request.m_Text = std::move(text);
+    return request;
+}
+
+} // namespace
 
 TEST_CASE("The fake platform ends a sheet at once, as the desktop stub does", "[viewmodel][support][platform]")
 {
     EventLog events;
     FakePlatform platform(&events);
-    platform.answer_with(bridge::share_outcome::cancelled);
+    platform.answer_with(bridge::ShareOutcome::CANCELLED);
     std::vector<std::string> outcomes;
 
-    platform.present_share_sheet("Sam Example logged a Wrong Response",
-                                 [&](const bridge::share_result& result)
-                                 {
-                                     outcomes.emplace_back(share_outcome_name(result.outcome));
-                                     CHECK_FALSE(platform.sheet_open());
-                                 });
+    platform.present(share_request("Sam Example logged a Wrong Response"),
+                     [&](const bridge::ShareResult& result)
+                     {
+                         outcomes.emplace_back(share_outcome_name(result.m_Outcome));
+                         CHECK_FALSE(platform.sheet_open());
+                     });
 
     CHECK(outcomes == std::vector<std::string>{"cancelled"});
     CHECK(platform.shared_texts() == std::vector<std::string>{"Sam Example logged a Wrong Response"});
@@ -45,23 +58,23 @@ TEST_CASE("The fake platform can hold a sheet open until the test ends it, as iO
     FakePlatform platform;
     platform.hold_completion();
     int calls = 0;
-    bridge::share_result seen;
+    bridge::ShareResult seen;
 
-    platform.present_share_sheet("text",
-                                 [&](const bridge::share_result& result)
-                                 {
-                                     ++calls;
-                                     seen = result;
-                                 });
+    platform.present(share_request("text"),
+                     [&](const bridge::ShareResult& result)
+                     {
+                         ++calls;
+                         seen = result;
+                     });
     CHECK(calls == 0);
     CHECK(platform.sheet_open());
 
-    CHECK(platform.complete_share_sheet(bridge::share_outcome::shared, "com.apple.UIKit.activity.CopyToPasteboard"));
+    CHECK(platform.complete_share_sheet(bridge::ShareOutcome::SHARED, "com.apple.UIKit.activity.CopyToPasteboard"));
     CHECK(calls == 1);
-    CHECK(seen.outcome == bridge::share_outcome::shared);
-    CHECK(seen.activity_type == "com.apple.UIKit.activity.CopyToPasteboard");
+    CHECK(seen.m_Outcome == bridge::ShareOutcome::SHARED);
+    CHECK(seen.m_ActivityType == "com.apple.UIKit.activity.CopyToPasteboard");
     CHECK_FALSE(platform.sheet_open());
-    CHECK_FALSE(platform.complete_share_sheet(bridge::share_outcome::shared));
+    CHECK_FALSE(platform.complete_share_sheet(bridge::ShareOutcome::SHARED));
 }
 
 TEST_CASE("The fake platform records haptics and wake-ups", "[viewmodel][support][platform]")
@@ -69,14 +82,14 @@ TEST_CASE("The fake platform records haptics and wake-ups", "[viewmodel][support
     EventLog events;
     FakePlatform platform(&events);
 
-    platform.prepare_haptics();
-    platform.fire_haptic(bridge::haptic_kind::impact);
-    platform.fire_haptic(bridge::haptic_kind::success);
-    platform.fire_haptic(bridge::haptic_kind::impact);
+    platform.prepare();
+    platform.fire(bridge::HapticKind::IMPACT);
+    platform.fire(bridge::HapticKind::SUCCESS);
+    platform.fire(bridge::HapticKind::IMPACT);
 
     CHECK(platform.prepared() == 1);
-    CHECK(platform.haptic_count(bridge::haptic_kind::impact) == 2);
-    CHECK(platform.haptic_count(bridge::haptic_kind::success) == 1);
+    CHECK(platform.haptic_count(bridge::HapticKind::IMPACT) == 2);
+    CHECK(platform.haptic_count(bridge::HapticKind::SUCCESS) == 1);
     CHECK(events.details(EventKind::HAPTIC) == std::vector<std::string>{"impact", "success", "impact"});
 }
 
@@ -93,11 +106,11 @@ TEST_CASE("The product feedback sink fires the impact haptic for a touch and the
     sink.acknowledge_touch();
     sink.entry_recorded(entry);
     CHECK(platform.prepared() == 1);
-    CHECK(platform.haptics() == std::vector<bridge::haptic_kind>{bridge::haptic_kind::impact});
+    CHECK(platform.haptics() == std::vector<bridge::HapticKind>{bridge::HapticKind::IMPACT});
 
     sink.note_saved(entry);
     CHECK(platform.haptics() ==
-          std::vector<bridge::haptic_kind>{bridge::haptic_kind::impact, bridge::haptic_kind::success});
+          std::vector<bridge::HapticKind>{bridge::HapticKind::IMPACT, bridge::HapticKind::SUCCESS});
 }
 
 TEST_CASE("A recorded error entry makes no haptic of its own", "[viewmodel][support][feedback]")

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
-#include "error_journaling/ios_bridge.hpp"
+#include "error_journaling/haptics.hpp"
+#include "error_journaling/share.hpp"
 #include "support/event_log.hpp"
 
 #include <cstddef>
@@ -13,24 +14,28 @@
 namespace ej::test
 {
 
-/// `platform_services` for the tests: the share sheet and the haptics, recorded. A sheet ends the way the test says,
-/// either at once, before `present_share_sheet` returns (the desktop stub does), or later, from
+/// The bridge's `Share` and `Haptics` for the tests, recorded. A sheet ends the way the test says,
+/// either at once, before `present` returns (the desktop stub does), or later, from
 /// `complete_share_sheet` (iOS does). Haptics and sheet events go into the `EventLog` when there is one.
-class FakePlatform final : public error_journaling::bridge::platform_services
+class FakePlatform final : public ej::bridge::Share, public ej::bridge::Haptics
 {
 public:
-    using share_result = error_journaling::bridge::share_result;
-    using share_outcome = error_journaling::bridge::share_outcome;
-    using haptic_kind = error_journaling::bridge::haptic_kind;
+    using share_result = ej::bridge::ShareResult;
+    using share_outcome = ej::bridge::ShareOutcome;
+    using haptic_kind = ej::bridge::HapticKind;
 
     explicit FakePlatform(EventLog* log = nullptr) : m_Log(log) {}
 
-    void present_share_sheet(std::string_view text, error_journaling::bridge::share_callback done) override;
-    void prepare_haptics() override
+    [[nodiscard]] bool available() const noexcept override
+    {
+        return true;
+    }
+    void present(ej::bridge::ShareRequest request, ej::bridge::ShareCallback done) override;
+    void prepare() override
     {
         ++m_Prepared;
     }
-    void fire_haptic(haptic_kind kind) override;
+    void fire(haptic_kind kind) override;
 
     /// How the sheets that follow end, immediately. The default is `shared`.
     void answer_with(share_outcome outcome, std::string activity_type = {});
@@ -67,18 +72,18 @@ public:
     }
 
 private:
-    void finish(error_journaling::bridge::share_callback done, const share_result& result);
+    void finish(ej::bridge::ShareCallback done, const share_result& result);
 
     EventLog* m_Log;
-    share_result m_Next{share_outcome::shared, {}};
+    share_result m_Next{share_outcome::SHARED, {}, {}};
     bool m_Hold = false;
-    std::optional<error_journaling::bridge::share_callback> m_Held;
+    std::optional<ej::bridge::ShareCallback> m_Held;
     std::vector<std::string> m_Texts;
     std::vector<haptic_kind> m_Haptics;
     int m_Prepared = 0;
 };
 
-[[nodiscard]] std::string_view haptic_name(error_journaling::bridge::haptic_kind kind);
-[[nodiscard]] std::string_view share_outcome_name(error_journaling::bridge::share_outcome outcome);
+[[nodiscard]] std::string_view haptic_name(ej::bridge::HapticKind kind);
+[[nodiscard]] std::string_view share_outcome_name(ej::bridge::ShareOutcome outcome);
 
 } // namespace ej::test

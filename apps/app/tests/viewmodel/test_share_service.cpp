@@ -193,7 +193,7 @@ TEST_CASE("The text is what the screen showed: a committed edit is in it, one st
                                         Origin::USER, {}));
     REQUIRE(fixture.document->pending() == 1);
 
-    fixture.m_Platform.answer_with(FakePlatform::share_outcome::cancelled);
+    fixture.m_Platform.answer_with(FakePlatform::share_outcome::CANCELLED);
     REQUIRE(fixture.service->shareOpenLog());
     REQUIRE(fixture.m_Platform.sheets_presented() == 1);
     CHECK(fixture.m_Platform.shared_texts()[0].find("14:03") == std::string::npos); // the entry has not committed
@@ -224,7 +224,7 @@ TEST_CASE("A share records the time the sheet completed, and only after the comm
     const UtcMillis completed = clock.now();
     REQUIRE(completed != opened);
     // The sheet's own Copy action reports as shared, with its activity type.
-    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::shared,
+    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::SHARED,
                                                     "com.apple.UIKit.activity.CopyToPasteboard"));
 
     CHECK_FALSE(fixture.service->sharing());
@@ -250,8 +250,8 @@ TEST_CASE("A share records the time the sheet completed, and only after the comm
 TEST_CASE("A share that is not shared records nothing", "[viewmodel][share]")
 {
     Fixture fixture;
-    const auto outcome = GENERATE(FakePlatform::share_outcome::cancelled, FakePlatform::share_outcome::unavailable,
-                                  FakePlatform::share_outcome::failed);
+    const auto outcome = GENERATE(FakePlatform::share_outcome::CANCELLED, FakePlatform::share_outcome::UNAVAILABLE,
+                                  FakePlatform::share_outcome::FAILED);
     fixture.m_Platform.answer_with(outcome);
     QSignalSpy finished(fixture.service.get(), &ShareService::shareFinished);
     QSignalSpy recorded(fixture.service.get(), &ShareService::shareRecorded);
@@ -276,10 +276,10 @@ TEST_CASE("A share never fires a haptic", "[viewmodel][share]")
     fixture.m_Platform.hold_completion();
 
     REQUIRE(fixture.service->shareOpenLog());
-    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::shared));
+    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::SHARED));
     fixture.m_Rig.gateway().run_all();
     REQUIRE(fixture.service->shareOpenLog());
-    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::cancelled));
+    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::CANCELLED));
 
     CHECK(fixture.m_Platform.haptics().empty());
     CHECK(fixture.m_Platform.prepared() == 0);
@@ -317,7 +317,7 @@ TEST_CASE("A completion before the call returns and one after it both work", "[v
 
     SECTION("before: the desktop stub")
     {
-        fixture.m_Platform.answer_with(FakePlatform::share_outcome::unavailable);
+        fixture.m_Platform.answer_with(FakePlatform::share_outcome::UNAVAILABLE);
         REQUIRE(fixture.service->shareOpenLog());
         CHECK_FALSE(fixture.service->sharing());
         REQUIRE(finished.count() == 1);
@@ -330,7 +330,7 @@ TEST_CASE("A completion before the call returns and one after it both work", "[v
         REQUIRE(fixture.service->shareOpenLog());
         CHECK(fixture.service->sharing());
         CHECK(finished.count() == 0);
-        REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::cancelled));
+        REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::CANCELLED));
         CHECK_FALSE(fixture.service->sharing());
         REQUIRE(finished.count() == 1);
         CHECK(text_of(finished.at(0).at(1)) == "cancelled");
@@ -345,7 +345,7 @@ TEST_CASE("A completion after the service is destroyed is ignored", "[viewmodel]
     const auto posted = fixture.m_Rig.gateway().posted();
 
     fixture.service.reset();
-    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::shared));
+    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::SHARED));
 
     CHECK(fixture.m_Rig.gateway().posted() == posted); // nothing was recorded
     CHECK(fixture.stored_share(Fixture::day()) == std::nullopt);
@@ -364,7 +364,7 @@ TEST_CASE("The sheet of a log that a new day replaced records on the log that wa
     clock.advance(10s);
     const UtcMillis completed = clock.now();
 
-    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::shared));
+    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::SHARED));
     CHECK(fixture.m_Rig.gateway().pending() == 1); // the shared log is loaded for the write
     fixture.m_Rig.gateway().run_all();
 
@@ -394,7 +394,7 @@ TEST_CASE("A second call during a share returns false, and works again after the
     CHECK(changed.count() == 1);
     CHECK(fixture.service->sharing());
 
-    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::cancelled));
+    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::CANCELLED));
     CHECK(finished.count() == 1); // the first share was not disturbed
     CHECK(changed.count() == 2);
     CHECK_FALSE(fixture.service->sharing());
@@ -590,7 +590,7 @@ TEST_CASE("available is what the composition root says and does not stop a share
 {
     Fixture stub(true, false);
     CHECK_FALSE(stub.service->available());
-    stub.m_Platform.answer_with(FakePlatform::share_outcome::unavailable);
+    stub.m_Platform.answer_with(FakePlatform::share_outcome::UNAVAILABLE);
     QSignalSpy finished(stub.service.get(), &ShareService::shareFinished);
 
     CHECK(stub.service->shareOpenLog());

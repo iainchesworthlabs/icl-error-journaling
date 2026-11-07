@@ -1,169 +1,444 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "error_journaling/ios_bridge.hpp"
+#include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
+#include "error_journaling/share_presenter.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <QCoreApplication>
 #include <QList>
 #include <QObject>
 #include <QString>
-
+#include <atomic>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
-namespace bridge = error_journaling::bridge;
+namespace bridge = ej::bridge;
+namespace fs = std::filesystem;
 
 namespace
 {
 
-// Records the calls and ends the share sheet with a chosen outcome.
-class fake_services final : public bridge::platform_services
+// Records the requests and ends each sheet with a chosen outcome, at once or when the test says.
+class FakeShare final : public bridge::Share
 {
 public:
-    bridge::share_result next_result;
-    std::vector<bridge::haptic_kind> fired;
-    int prepared{0};
-    std::string shared_text;
+    bridge::ShareResult m_Next{bridge::ShareOutcome::SHARED, "com.example.activity", {}};
+    bool m_Hold = false;
+    std::vector<bridge::ShareRequest> m_Requests;
+    bridge::ShareCallback m_Held;
 
-    void present_share_sheet(std::string_view text, bridge::share_callback done) override
+    [[nodiscard]] bool available() const noexcept override
     {
-        shared_text = std::string(text);
-        done(next_result);
+        return true;
     }
-    void prepare_haptics() override { ++prepared; }
-    void fire_haptic(bridge::haptic_kind kind) override { fired.push_back(kind); }
+
+    void present(bridge::ShareRequest request, bridge::ShareCallback done) override
+    {
+        m_Requests.push_back(std::move(request));
+        if (m_Hold)
+        {
+            m_Held = std::move(done);
+            return;
+        }
+        done(m_Next);
+    }
+
+    void complete(const bridge::ShareResult& result)
+    {
+        auto done = std::move(m_Held);
+        m_Held = nullptr;
+        done(result);
+    }
 };
 
-class deferred_services final : public bridge::platform_services
+class FakeHaptics final : public bridge::Haptics
 {
 public:
-    bridge::share_callback held;
-    void present_share_sheet(std::string_view, bridge::share_callback done) override { held = std::move(done); }
-    void prepare_haptics() override {}
-    void fire_haptic(bridge::haptic_kind) override {}
+    std::vector<bridge::HapticKind> m_Fired;
+    int m_Prepared = 0;
+
+    void prepare() override
+    {
+        ++m_Prepared;
+    }
+    void fire(bridge::HapticKind kind) override
+    {
+        m_Fired.push_back(kind);
+    }
 };
+
+struct Fakes
+{
+    FakeShare* m_Share = nullptr;
+    FakeHaptics* m_Haptics = nullptr;
+};
+
+bridge::PlatformServices fake_services(Fakes& fakes)
+{
+    bridge::PlatformServices services;
+    auto share = std::make_unique<FakeShare>();
+    auto haptics = std::make_unique<FakeHaptics>();
+    fakes.m_Share = share.get();
+    fakes.m_Haptics = haptics.get();
+    services.m_Share = std::move(share);
+    services.m_Haptics = std::move(haptics);
+    return services;
+}
 
 // Records every shareFinished: {outcome, activity type}.
-struct share_log
+struct ShareLog
 {
     QList<std::pair<QString, QString>> m_Entries;
-    explicit share_log(bridge::qml_bridge& qml)
+    explicit ShareLog(bridge::QmlBridge& qml)
     {
-        QObject::connect(&qml, &bridge::qml_bridge::shareFinished, &qml, [this](const QString& o, const QString& a) {
-            m_Entries.append({o, a});
-        });
+        QObject::connect(&qml, &bridge::QmlBridge::shareFinished, &qml,
+                         [this](const QString& o, const QString& a) { m_Entries.append({o, a}); });
     }
 };
 
 // QCoreApplication wants an argc that outlives it.
-struct app_fixture
+struct AppFixture
 {
     int m_Argc{0};
     QCoreApplication m_App{m_Argc, nullptr};
+
+    void drain()
+    {
+        QCoreApplication::sendPostedEvents(nullptr, 0);
+    }
 };
 
-}  // namespace
-
-TEST_CASE("The bridge reports the implementation CMake linked", "[ios_bridge]")
+// A fresh directory under the working directory (the build tree), removed afterwards.
+class TempDirectory
 {
-    // The tests run on a desktop, so the stub is the one linked.
-    CHECK(bridge::implementation_name() == "desktop-stub");
+public:
+    TempDirectory()
+    {
+        static std::atomic<unsigned> counter{0};
+        m_Path = fs::current_path() / "ej-bridge-test-tmp" / std::to_string(++counter);
+        fs::remove_all(m_Path);
+        fs::create_directories(m_Path);
+    }
+    TempDirectory(const TempDirectory&) = delete;
+    TempDirectory& operator=(const TempDirectory&) = delete;
+    ~TempDirectory()
+    {
+        std::error_code ignored;
+        fs::remove_all(m_Path, ignored);
+    }
+    [[nodiscard]] const fs::path& path() const
+    {
+        return m_Path;
+    }
+
+private:
+    fs::path m_Path;
+};
+
+void write_file(const fs::path& path, const std::string& content)
+{
+    std::ofstream out(path, std::ios::binary);
+    out << content;
 }
 
-TEST_CASE("The desktop stub reports the share sheet as unavailable", "[ios_bridge]")
+std::string read_file(const fs::path& path)
 {
-    const auto services = bridge::make_platform_services();
+    std::ifstream in(path, std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+}
+
+} // namespace
+
+TEST_CASE("share.stub: the desktop stub reports UNAVAILABLE and calls back once", "[unit][share]")
+{
+    const auto share = bridge::make_share();
+    CHECK_FALSE(share->available());
     int calls = 0;
-    bridge::share_result seen{bridge::share_outcome::shared, "x"};
-    services->present_share_sheet(bridge::spike_share_text, [&](const bridge::share_result& r) {
-        ++calls;
-        seen = r;
-    });
+    bridge::ShareResult seen{bridge::ShareOutcome::SHARED, "x", "y"};
+    bridge::ShareRequest request;
+    request.m_Text = "Sam Example logged a Wrong Response on UNIT at North Site.";
+    share->present(std::move(request),
+                   [&](const bridge::ShareResult& result)
+                   {
+                       ++calls;
+                       seen = result;
+                   });
     CHECK(calls == 1);
-    CHECK(seen.outcome == bridge::share_outcome::unavailable);
-    CHECK(seen.activity_type.empty());
+    CHECK(seen.m_Outcome == bridge::ShareOutcome::UNAVAILABLE);
+    CHECK(seen.m_ActivityType.empty());
 }
 
-TEST_CASE("The desktop stub accepts haptic calls and does nothing", "[ios_bridge]")
+TEST_CASE("haptics.stub: the desktop stub does nothing for either kind", "[unit][haptics]")
 {
-    const auto services = bridge::make_platform_services();
-    services->prepare_haptics();
-    services->fire_haptic(bridge::haptic_kind::impact);
-    services->fire_haptic(bridge::haptic_kind::success);
+    const auto haptics = bridge::make_haptics();
+    haptics->prepare();
+    haptics->fire(bridge::HapticKind::IMPACT);
+    haptics->fire(bridge::HapticKind::SUCCESS);
     SUCCEED();
 }
 
-TEST_CASE("The spike text is the fictional stand-in", "[ios_bridge]")
+TEST_CASE("The factory makes every capability", "[unit][share]")
 {
-    CHECK(bridge::spike_share_text.find("Sam Example") != std::string_view::npos);
+    const bridge::PlatformServices services = bridge::make_platform_services();
+    CHECK(services.m_Share != nullptr);
+    CHECK(services.m_Haptics != nullptr);
 }
 
-TEST_CASE("QML sees the stub as having no share sheet and gets 'unavailable'", "[ios_bridge][qml]")
+TEST_CASE("share.wrapper: the stub gives 'unavailable' on a queued call", "[unit][share]")
 {
-    app_fixture app;
-    bridge::qml_bridge qml(bridge::make_platform_services());
+    AppFixture app;
+    bridge::QmlBridge qml(bridge::make_platform_services());
     CHECK_FALSE(qml.share_available());
+    ShareLog spy(qml);
 
-    share_log spy(qml);
-    qml.shareSpikeText();
+    qml.shareText(QStringLiteral("x"));
+    CHECK(spy.m_Entries.isEmpty()); // queued: nothing before the event loop turns
+    app.drain();
     REQUIRE(spy.m_Entries.size() == 1);
     CHECK(spy.m_Entries[0].first == "unavailable");
     CHECK(spy.m_Entries[0].second.isEmpty());
+    CHECK_FALSE(qml.sharing());
 }
 
-TEST_CASE("QML maps each share outcome and the activity type to the signal", "[ios_bridge][qml]")
+TEST_CASE("share.wrapper: each outcome maps to its QML string and the activity type passes through", "[unit][share]")
 {
-    app_fixture app;
-    auto owned = std::make_unique<fake_services>();
-    auto* fake = owned.get();
-    bridge::qml_bridge qml(std::move(owned));
-    share_log spy(qml);
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    ShareLog spy(qml);
 
-    fake->next_result = {bridge::share_outcome::shared, "com.example.activity"};
-    qml.shareSpikeText();
-    fake->next_result = {bridge::share_outcome::cancelled, {}};
-    qml.shareSpikeText();
-    fake->next_result = {bridge::share_outcome::failed, {}};
-    qml.shareSpikeText();
+    fakes.m_Share->m_Next = {bridge::ShareOutcome::SHARED, "com.example.activity", {}};
+    qml.shareText(QStringLiteral("a"));
+    fakes.m_Share->m_Next = {bridge::ShareOutcome::CANCELLED, {}, {}};
+    qml.shareText(QStringLiteral("b"));
+    fakes.m_Share->m_Next = {bridge::ShareOutcome::UNAVAILABLE, {}, {}};
+    qml.shareText(QStringLiteral("c"));
+    fakes.m_Share->m_Next = {bridge::ShareOutcome::FAILED, {}, {}};
+    qml.shareText(QStringLiteral("d"));
+    app.drain();
 
-    REQUIRE(spy.m_Entries.size() == 3);
+    REQUIRE(spy.m_Entries.size() == 4);
     CHECK(spy.m_Entries[0].first == "shared");
     CHECK(spy.m_Entries[0].second == "com.example.activity");
     CHECK(spy.m_Entries[1].first == "cancelled");
-    CHECK(spy.m_Entries[2].first == "failed");
-    CHECK(fake->shared_text == bridge::spike_share_text);
+    CHECK(spy.m_Entries[2].first == "unavailable");
+    CHECK(spy.m_Entries[3].first == "failed");
 }
 
-TEST_CASE("QML haptic calls reach the services, impact and success apart", "[ios_bridge][qml]")
+TEST_CASE("share.wrapper: a deferred completion is delivered queued and clears sharing", "[unit][share]")
 {
-    app_fixture app;
-    auto owned = std::make_unique<fake_services>();
-    auto* fake = owned.get();
-    bridge::qml_bridge qml(std::move(owned));
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    fakes.m_Share->m_Hold = true;
+    ShareLog spy(qml);
+    int changes = 0;
+    QObject::connect(&qml, &bridge::QmlBridge::sharingChanged, &qml, [&] { ++changes; });
+
+    qml.shareText(QStringLiteral("x"));
+    CHECK(qml.sharing());
+    CHECK(changes == 1);
+    fakes.m_Share->complete({bridge::ShareOutcome::SHARED, "a", {}});
+    CHECK(spy.m_Entries.isEmpty());
+    app.drain();
+    REQUIRE(spy.m_Entries.size() == 1);
+    CHECK_FALSE(qml.sharing());
+    CHECK(changes == 2);
+}
+
+TEST_CASE("share.wrapper: a completion after the bridge is gone does nothing", "[unit][share]")
+{
+    AppFixture app;
+    bridge::ShareCallback late;
+    {
+        Fakes fakes;
+        bridge::QmlBridge qml(fake_services(fakes));
+        fakes.m_Share->m_Hold = true;
+        qml.shareText(QStringLiteral("x"));
+        late = fakes.m_Share->m_Held;
+    }
+    late({bridge::ShareOutcome::SHARED, {}, {}});
+    app.drain();
+    SUCCEED();
+}
+
+TEST_CASE("share.single_flight: a second request is FAILED and never reaches the share", "[unit][share]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    fakes.m_Share->m_Hold = true;
+    ShareLog spy(qml);
+
+    qml.shareText(QStringLiteral("first"));
+    qml.shareText(QStringLiteral("second"));
+    CHECK(fakes.m_Share->m_Requests.size() == 1);
+    app.drain();
+    REQUIRE(spy.m_Entries.size() == 1);
+    CHECK(spy.m_Entries[0].first == "failed");
+    CHECK(qml.sharing()); // the first sheet is still up
+
+    fakes.m_Share->complete({bridge::ShareOutcome::CANCELLED, {}, {}});
+    app.drain();
+    REQUIRE(spy.m_Entries.size() == 2);
+    CHECK(spy.m_Entries[1].first == "cancelled");
+    CHECK_FALSE(qml.sharing());
+
+    // The flag clears after a completion, and after a FAILED one.
+    fakes.m_Share->m_Hold = false;
+    fakes.m_Share->m_Next = {bridge::ShareOutcome::FAILED, {}, {}};
+    qml.shareText(QStringLiteral("third"));
+    qml.shareText(QStringLiteral("fourth"));
+    CHECK(fakes.m_Share->m_Requests.size() == 3);
+}
+
+TEST_CASE("share.bytes: the PRD example reaches the share byte for byte", "[unit][share]")
+{
+    const std::string expected = read_file(fs::path(EJ_GOLDEN_DIR) / "prd-example.txt");
+    REQUIRE_FALSE(expected.empty());
+    CHECK(expected.find("\xE2\x80\x93") != std::string::npos); // the en dash
+    CHECK(expected.find("\xE2\x86\x92") != std::string::npos); // the arrow
+
+    FakeShare share;
+    bridge::SharePresenter presenter(share);
+    bridge::ShareRequest request;
+    request.m_Text = expected;
+    presenter.present(std::move(request), [](const bridge::ShareResult&) {});
+    REQUIRE(share.m_Requests.size() == 1);
+    CHECK(share.m_Requests[0].m_Text == expected);
+}
+
+TEST_CASE("share.bytes: through QML the same text arrives as UTF-8", "[unit][share]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    const QString text = QString::fromUtf8("T|a \xE2\x80\x93 b \xE2\x86\x92 c\n");
+    qml.shareText(text);
+    REQUIRE(fakes.m_Share->m_Requests.size() == 1);
+    CHECK(fakes.m_Share->m_Requests[0].m_Text == text.toStdString());
+}
+
+TEST_CASE("share.bytes: invalid UTF-8, both members or neither give FAILED and no call", "[unit][share]")
+{
+    FakeShare share;
+    bridge::SharePresenter presenter(share);
+    std::vector<bridge::ShareOutcome> outcomes;
+    const auto note = [&](const bridge::ShareResult& result) { outcomes.push_back(result.m_Outcome); };
+
+    bridge::ShareRequest lone;
+    lone.m_Text = "ok \xFF";
+    presenter.present(lone, note);
+
+    bridge::ShareRequest truncated;
+    truncated.m_Text = "caf\xC3";
+    presenter.present(truncated, note);
+
+    bridge::ShareRequest both;
+    both.m_Text = "text";
+    both.m_File = "a.ejconfig";
+    presenter.present(both, note);
+
+    presenter.present(bridge::ShareRequest{}, note);
+
+    CHECK(share.m_Requests.empty());
+    REQUIRE(outcomes.size() == 4);
+    for (const auto outcome : outcomes)
+    {
+        CHECK(outcome == bridge::ShareOutcome::FAILED);
+    }
+    CHECK_FALSE(presenter.in_flight());
+}
+
+TEST_CASE("is_valid_utf8 tells good bytes from bad", "[unit][share]")
+{
+    CHECK(bridge::is_valid_utf8(""));
+    CHECK(bridge::is_valid_utf8("plain"));
+    CHECK(bridge::is_valid_utf8("\xC3\xA9 \xE2\x80\x93 \xF0\x9F\x98\x80"));
+    CHECK_FALSE(bridge::is_valid_utf8("\x80"));             // a lone continuation byte
+    CHECK_FALSE(bridge::is_valid_utf8("\xC0\xAF"));         // overlong
+    CHECK_FALSE(bridge::is_valid_utf8("\xED\xA0\x80"));     // a surrogate
+    CHECK_FALSE(bridge::is_valid_utf8("\xF4\x90\x80\x80")); // above U+10FFFF
+    CHECK_FALSE(bridge::is_valid_utf8("\xE2\x80"));         // truncated
+    CHECK_FALSE(bridge::is_valid_utf8("\xE2\x28\xA1"));     // a bad continuation
+}
+
+TEST_CASE("haptics.wrapper: the QML calls reach the haptics, impact and success apart", "[unit][haptics]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
 
     qml.prepareHaptics();
     qml.hapticImpact();
     qml.hapticSuccess();
 
-    CHECK(fake->prepared == 1);
-    REQUIRE(fake->fired.size() == 2);
-    CHECK(fake->fired[0] == bridge::haptic_kind::impact);
-    CHECK(fake->fired[1] == bridge::haptic_kind::success);
+    CHECK(fakes.m_Haptics->m_Prepared == 1);
+    REQUIRE(fakes.m_Haptics->m_Fired.size() == 2);
+    CHECK(fakes.m_Haptics->m_Fired[0] == bridge::HapticKind::IMPACT);
+    CHECK(fakes.m_Haptics->m_Fired[1] == bridge::HapticKind::SUCCESS);
 }
 
-TEST_CASE("A share that ends after the bridge is gone does not signal or crash", "[ios_bridge][qml]")
+TEST_CASE("share.config_file: a shared file is gone after every outcome", "[integration][share]")
 {
-    app_fixture app;
-    bridge::share_callback late;
-    {
-        auto owned = std::make_unique<deferred_services>();
-        auto* raw = owned.get();
-        bridge::qml_bridge qml(std::move(owned));
-        qml.shareSpikeText();
-        late = raw->held;
-    }
-    late({bridge::share_outcome::shared, {}});
-    SUCCEED();
+    AppFixture app;
+    TempDirectory directory;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    ShareLog spy(qml);
+
+    const auto outcome =
+        GENERATE(bridge::ShareOutcome::SHARED, bridge::ShareOutcome::CANCELLED, bridge::ShareOutcome::FAILED);
+    const fs::path file = directory.path() / "Error Journaling setup.ejconfig";
+    write_file(file, "{\"schema_version\":1}");
+    fakes.m_Share->m_Hold = true;
+    fakes.m_Share->m_Next = {outcome, {}, {}};
+
+    qml.shareTemporaryFile(QString::fromStdU16String(file.u16string()));
+    REQUIRE(fakes.m_Share->m_Requests.size() == 1);
+    CHECK(fakes.m_Share->m_Requests[0].m_File == file);
+    CHECK(fs::exists(file)); // still there while the sheet is up
+
+    fakes.m_Share->complete(fakes.m_Share->m_Next);
+    CHECK_FALSE(fs::exists(file));
+    app.drain();
+    CHECK(spy.m_Entries.size() == 1);
+}
+
+TEST_CASE("share.config_file: a refused request still removes its file", "[integration][share]")
+{
+    AppFixture app;
+    TempDirectory directory;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    fakes.m_Share->m_Hold = true;
+
+    qml.shareText(QStringLiteral("first"));
+    const fs::path file = directory.path() / "second.ejconfig";
+    write_file(file, "{}");
+    qml.shareTemporaryFile(QString::fromStdU16String(file.u16string()));
+
+    CHECK(fakes.m_Share->m_Requests.size() == 1);
+    CHECK_FALSE(fs::exists(file));
+}
+
+TEST_CASE("share.config_file: the launch purge removes stale files and nothing else", "[integration][share]")
+{
+    TempDirectory directory;
+    write_file(directory.path() / "stale-one.ejconfig", "{}");
+    write_file(directory.path() / "stale-two.ejconfig", "{}");
+    fs::create_directories(directory.path() / "kept");
+    write_file(directory.path() / "kept" / "inner.txt", "x");
+
+    CHECK(bridge::purge_directory(directory.path()) == 2);
+    CHECK_FALSE(fs::exists(directory.path() / "stale-one.ejconfig"));
+    CHECK(fs::exists(directory.path() / "kept" / "inner.txt"));
+    CHECK(bridge::purge_directory(directory.path() / "missing") == 0);
 }

@@ -4,16 +4,16 @@
 namespace ej::viewmodel
 {
 
-namespace bridge = error_journaling::bridge;
+namespace bridge = ej::bridge;
 
 void PlatformFeedbackSink::prepare_haptics()
 {
-    m_Platform.prepare_haptics();
+    m_Haptics.prepare();
 }
 
 void PlatformFeedbackSink::acknowledge_touch()
 {
-    m_Platform.fire_haptic(bridge::haptic_kind::impact);
+    m_Haptics.fire(bridge::HapticKind::IMPACT);
 }
 
 void PlatformFeedbackSink::entry_recorded(EntryId)
@@ -23,7 +23,7 @@ void PlatformFeedbackSink::entry_recorded(EntryId)
 
 void PlatformFeedbackSink::note_saved(EntryId)
 {
-    m_Platform.fire_haptic(bridge::haptic_kind::success);
+    m_Haptics.fire(bridge::HapticKind::SUCCESS);
 }
 
 } // namespace ej::viewmodel

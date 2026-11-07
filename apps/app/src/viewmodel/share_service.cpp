@@ -11,22 +11,22 @@
 namespace ej::viewmodel
 {
 
-namespace bridge = error_journaling::bridge;
+namespace bridge = ej::bridge;
 
 namespace
 {
 
-QString outcome_name(bridge::share_outcome outcome)
+QString outcome_name(bridge::ShareOutcome outcome)
 {
     switch (outcome)
     {
-    case bridge::share_outcome::shared:
+    case bridge::ShareOutcome::SHARED:
         return QStringLiteral("shared");
-    case bridge::share_outcome::cancelled:
+    case bridge::ShareOutcome::CANCELLED:
         return QStringLiteral("cancelled");
-    case bridge::share_outcome::unavailable:
+    case bridge::ShareOutcome::UNAVAILABLE:
         return QStringLiteral("unavailable");
-    case bridge::share_outcome::failed:
+    case bridge::ShareOutcome::FAILED:
         break;
     }
     return QStringLiteral("failed");
@@ -40,10 +40,10 @@ QString id_text(LogId id)
 } // namespace
 
 ShareService::ShareService(const Environment& environment, OpenLogSource& open_log, DocumentRegistry& registry,
-                           const ConfigurationSource& configuration, bridge::platform_services& platform,
-                           bool available, QObject* parent)
+                           const ConfigurationSource& configuration, bridge::Share& share, bool available,
+                           QObject* parent)
     : QObject(parent), m_Environment(environment), m_OpenLog(open_log), m_Registry(registry),
-      m_Configuration(configuration), m_Platform(platform), m_Available(available)
+      m_Configuration(configuration), m_Share(share), m_Available(available)
 {
 }
 
@@ -116,24 +116,26 @@ void ShareService::acquired(LogId id, Loaded loaded)
 
     m_Shown = std::move(document);
     // The completion may run before this call returns (the desktop stub) or later (a phone): the state is set above.
-    m_Platform.present_share_sheet(*text,
-                                   [self = QPointer<ShareService>(this), id](const bridge::share_result& result)
-                                   {
-                                       if (self)
-                                       {
-                                           self->sheet_ended(id, result);
-                                       }
-                                   });
+    bridge::ShareRequest request;
+    request.m_Text = *text;
+    m_Share.present(std::move(request),
+                    [self = QPointer<ShareService>(this), id](const bridge::ShareResult& result)
+                    {
+                        if (self)
+                        {
+                            self->sheet_ended(id, result);
+                        }
+                    });
 }
 
-void ShareService::sheet_ended(LogId id, const bridge::share_result& result)
+void ShareService::sheet_ended(LogId id, const bridge::ShareResult& result)
 {
     // The time the sheet completed, read before anything else (a load for a past log can take a while).
     const UtcMillis when = m_Environment.m_Clock.now();
     std::shared_ptr<LogDocument> document = std::move(m_Shown);
     m_Shown.reset();
 
-    if (result.outcome == bridge::share_outcome::shared && document)
+    if (result.m_Outcome == bridge::ShareOutcome::SHARED && document)
     {
         if (document->id() == id)
         {
@@ -161,7 +163,7 @@ void ShareService::sheet_ended(LogId id, const bridge::share_result& result)
                                });
         }
     }
-    end(id, outcome_name(result.outcome));
+    end(id, outcome_name(result.m_Outcome));
 }
 
 void ShareService::record(const std::shared_ptr<LogDocument>& document, LogId id, UtcMillis when)

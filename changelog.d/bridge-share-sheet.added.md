@@ -1,0 +1,1 @@
+**Share sheet bridge.** The bridge can now share a log's text, or a temporary file such as the setup export, through the system share sheet, one sheet at a time, and reports whether it was shared. It is not on a screen yet. It has not run on a device.

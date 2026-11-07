@@ -35,6 +35,14 @@ There is no Windows leg and no desktop package: Windows, Android and desktop pac
 branch with `gh workflow run ci.yml --ref <branch>`, and the iOS build with `gh workflow run ios-build.yml --ref <branch>`.
 Nothing in CI runs on a device or in the simulator: the bundle is built and inspected, not started.
 
+## Platform layout check
+
+The **Plan** job of `ci.yml` runs `tools/ci/check_platform_layout.py`. For a `src/platform` directory that holds both
+`ios/` and `desktop/` (the bridge), every `ios/<name>.mm` needs a `desktop/<name>.cpp` and the reverse; a `.mm` file may
+exist only under `src/platform/ios`; and the library's CMake must compile that directory with `-fobjc-arc`. A helper
+private to the iOS directory (`top_view_controller`) is listed in the script and needs no stub. Its unit tests are in
+`tools/tests/test_platform_layout.py`.
+
 ## Confidentiality check
 
 The **Confidentiality** job of `ci.yml` is part of CI Status. It runs the unit tests of the two checks in

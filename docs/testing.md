@@ -8,7 +8,7 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 
 | Kind | Where | Example |
 |---|---|---|
-| unit | `libs/*/tests` | `ej_core_tests`, `ej_storage_tests`, `ej_ios_bridge_tests` (the desktop stub and the QML-facing wiring, against a fake; the iOS code is only compiled in CI) |
+| unit | `libs/*/tests` | `ej_core_tests`, `ej_storage_tests`, `ej_ios_bridge_tests` (the desktop stubs, the portable share presenter and the QML-facing wiring, against fakes; the tests that use real files are tagged `[integration]` and get that label; the iOS code is only compiled in CI) |
 | integration | `libs/storage/tests` | `ej_storage_integration_tests`: real SQLite and real files, each test in a directory of its own under the build tree (never the system temp folder). It has its own `main` because Qt SQL loads its drivers through a `QCoreApplication` |
 | unit | `apps/app/tests/viewmodel/test_*.cpp` | `ej_viewmodel_tests`: the view-model layer on `MemoryLogRepository`, the fakes and `ManualStorageGateway` |
 | integration | `apps/app/tests/viewmodel/integration/*.cpp` | `ej_viewmodel_integration_tests`: `ThreadedStorageGateway` on a real thread (and, in work package 3.11, the real store and the threading tests; TSan runs them in CI) |

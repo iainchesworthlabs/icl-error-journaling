@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# What Qt does not cover on an iPhone (the share sheet, haptics), behind interfaces. CMake chooses the implementation,
-# not the source: src/platform/ios/ (Objective-C++) for iOS, src/platform/desktop/ (a stub) for everything else.
+# What Qt does not cover on an iPhone (the share sheet, haptics), one small interface per capability. CMake chooses the
+# implementation, not the source: src/platform/ios/ (Objective-C++) for iOS, src/platform/desktop/ (a stub) for everything
+# else. The portable code (the factory and the decisions around each capability) is in src/.
 
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     file(GLOB bridge_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/ios/*.mm")
@@ -8,7 +9,10 @@ else()
     file(GLOB bridge_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/desktop/*.cpp")
 endif()
 
-add_library(ej_ios_bridge ${bridge_sources})
+add_library(ej_ios_bridge
+    src/platform_services.cpp
+    src/share_presenter.cpp
+    ${bridge_sources})
 add_library(error_journaling::ios_bridge ALIAS ej_ios_bridge)
 
 target_include_directories(ej_ios_bridge PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")

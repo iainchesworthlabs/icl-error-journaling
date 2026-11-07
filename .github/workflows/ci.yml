@@ -52,6 +52,8 @@ jobs:
         uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
       - name: Check the vendored CMake modules
         run: python3 tools/ci/sync_cmake.py --check --infra .icl-infra
+      - name: Check the platform layout
+        run: python3 tools/ci/check_platform_layout.py
       - name: Decide scope
         id: plan
         env:
