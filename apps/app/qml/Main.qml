@@ -9,6 +9,17 @@ Window {
     // Given by main.cpp: the version of the core library, and which bridge and storage are linked.
     required property string versionText
     required property string platformText
+    // The models, from AppRoot (Stage 3, 3.11). The placeholder below does not use them yet; Stage 4 replaces this window
+    // with the screens that bind to them.
+    required property QtObject session
+    required property QtObject undo
+    required property QtObject board
+    required property QtObject picker
+    required property QtObject timeline
+    required property QtObject history
+    required property QtObject day
+    required property QtObject settings
+    required property QtObject share
     // The bridge to what Qt does not cover on an iPhone (the share sheet, haptics); see docs/plan/spikes.md.
     required property QtObject bridge
     // The fixed fictional text the share test sends.

@@ -86,7 +86,8 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
   src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
   qml/                the module ErrorJournalingApp (the URI differs from the executable name)
-  src/                main.cpp
+  src/                main.cpp (builds the root and hands the models to QML), app_root.* (`ej_app_root`: the composition root,
+                      the product's environment and the opening of the store), qt_clipboard.* (the QtGui clipboard)
   src/viewmodel/      ej_viewmodel: the thin QObject layer between the core and storage and QML (Stage 3), namespace
                       `ej::viewmodel`; every .cpp and .hpp here is picked up by a glob (see below). Headers are
                       included as "viewmodel/<name>.hpp"
@@ -123,6 +124,7 @@ tools/                project scripts, baselines and coverage floors (ci/check_i
 | `ej_ios_bridge` | static library; Objective-C++ on iOS, a stub elsewhere | nothing (UIKit and Foundation on iOS) |
 | `ej_qml_bridge` | static library; the `QmlBridge` QObject QML calls, over the `ej_ios_bridge` capabilities | `ej_ios_bridge`, QtCore |
 | `ej_viewmodel` | static library: the view-model layer of Stage 3; no Qt Quick and no QtGui, so its tests run without a display | `ej_core`, `ej_storage`, `ej_ios_bridge`, QtCore |
+| `ej_app_root` | static library: `app::AppRoot` (the composition root), `ProductionEnvironment`, `start_sqlite_storage`; QtCore only, so the headless tests build the app the way `main.cpp` does | `ej_viewmodel`, QtCore |
 | `ej_app` | Qt Quick executable (`error-journaling`) | the libraries above, `ej_viewmodel`, Qt Quick |
 
 `apps/app/CMakeLists.txt` finds the sources of `ej_viewmodel` with `file(GLOB ... CONFIGURE_DEPENDS)` over `src/viewmodel/`,
@@ -132,10 +134,53 @@ destructor, because Apple libc++ keeps `std::jthread` behind an experimental fla
 store are used only on that thread; the GUI thread keeps a mirror of what it shows and changes it when a commit has
 succeeded.
 
-Each library has tests with the `unit` label; the application has two `ui` tests (`app.smoke` starts it
+Each library has tests with the `unit` label; the application has two `ui` tests (`app.smoke` starts it, with a data folder of its own,
 without a display and waits for the first frame, `app.version` answers `--version`). The application is the iPhone
 application on iOS (portrait only, laid out inside `SafeArea.margins`) and a desktop program on macOS and Linux, built
 to iterate on the user interface and to be tested in CI; no desktop package is released.
+
+## Composition
+
+`apps/app/src/app_root.*` is the composition root. `main.cpp` and the headless tests (`Rig`, `apps/app/tests/viewmodel/support/rig.hpp`)
+build the application through the same `app::AppRoot`, so the full-day test runs the wiring the phone runs.
+
+```text
+main.cpp                                   Rig (tests)
+  QmlBridge(PlatformServices)                FakePlatform (Share and Haptics), FakeClipboard
+  ProductionEnvironment (clock, QtScheduler,   TestClock, SequentialIds, FakeDeviceZone, the fixed or the Qt zones
+    RandomIds, SystemDeviceZone, Qt zones)
+  QtClipboard
+  start_sqlite_storage(StoreOptions)         the same, with a RecordingRepository around the repository;
+    -> StartedStorage                          RigStore::MEMORY: ManualStorageGateway over MemoryStorage instead
+  AppRoot(Environment, AppPlatform, StartedStorage)
+```
+
+**The store.** `start_sqlite_storage` starts the `ThreadedStorageGateway`. Its factory runs on the storage thread: it makes
+the folders, runs `Recovery::run`, opens the `FileJournal`, the `SqliteLogRepository` and the `FileConfigStore`, and hands the
+`RecoveryReport` back. This is the one place the GUI thread waits for the store, because Stage 2 puts recovery before the
+board appears and the session reads the report once. Everything after it goes through the gateway. A store that cannot be
+opened (a newer schema, a file that is not ours) is repository calls that all answer with the reason; nothing is written.
+
+**Order.** `AppRoot` builds, and destroys in the reverse order: the gateway, `SettingsModel` (then `load()`),
+`DocumentRegistry`, `PlatformFeedbackSink` (over the bridge's haptics), `LogSession` (then `load()`), `UndoController`, the
+follower that keeps the controller on the open document, `BoardModel`, `ErrorPickerModel`, `TimelineModel` (which follows the
+open log), `ShareService`, `DayWatcher` and `HistoryModel`.
+
+**Lifetime contract.** A model dies before the documents it observes. The open document is held by `LogSession`, which is
+built before every model; an archived log is held by `HistoryModel`, which is built after `UndoController`. `LogSession` tells
+its followers "no document" before it lets one go, and the controller stops observing then. `HistoryModel::reviewOpened` and
+`reviewClosing` bracket the review document: the root calls `UndoController::observe` and `stop_observing`.
+
+**Connections.** Every `writeFailed` (`LogSession`, `UndoController`, `TimelineModel` and the review timeline, `ShareService`,
+`SettingsModel`, and a failed delete in `HistoryModel`) arrives at `AppRoot::writeFailed`, the one place the banner of Stage 4
+listens. An undone note goes back to the composer through `LogSession`'s draft. `AppRoot::drain()` is called once from
+`aboutToQuit`.
+
+**What QML sees.** The window takes the services as `required property` (Stage 4, decision 3): `session`
+(`LogSession`), `undo` (`UndoController`), `board` (`BoardModel`), `picker` (`ErrorPickerModel`), `timeline`
+(`TimelineModel`), `history` (`HistoryModel`), `day` (`DayWatcher`), `settings` (`SettingsModel`), `share` (`ShareService`) and
+`bridge` (`QmlBridge`). `AppRoot` has the first nine as constant properties, and `main.cpp` passes them, with `bridge`, as the
+initial properties of the engine. The engine is declared after the root and the bridge, so QML is destroyed first.
 
 ## Platform code
 

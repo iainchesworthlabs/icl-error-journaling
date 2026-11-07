@@ -24,7 +24,19 @@ target_link_libraries(ej_viewmodel
     PRIVATE icl::warnings icl::hardening icl::tracy icl::coverage)
 icl_relax_generated_warnings(ej_viewmodel)
 
-qt_add_executable(ej_app src/main.cpp)
+# The composition root (Stage 3, 3.11): AppRoot builds the services and wires them, and start_sqlite_storage opens the
+# real store. QtCore only, so the headless tests build the app the way main.cpp does (tests/viewmodel/support/rig.hpp).
+add_library(ej_app_root STATIC src/app_root.cpp src/app_root.hpp)
+add_library(error_journaling::app_root ALIAS ej_app_root)
+target_include_directories(ej_app_root PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
+target_compile_features(ej_app_root PUBLIC cxx_std_23)
+target_link_libraries(ej_app_root
+    PUBLIC ej_viewmodel ej_core ej_storage ej_ios_bridge Qt6::Core
+    PRIVATE icl::warnings icl::hardening icl::tracy icl::coverage)
+icl_relax_generated_warnings(ej_app_root)
+
+# qt_clipboard needs QtGui (Qt6::Quick brings it), which ej_viewmodel and ej_app_root do not link.
+qt_add_executable(ej_app src/main.cpp src/qt_clipboard.cpp src/qt_clipboard.hpp)
 # The executable is named error-journaling while the target is ej_app.
 set_target_properties(ej_app PROPERTIES OUTPUT_NAME error-journaling)
 
@@ -37,7 +49,7 @@ qt_add_qml_module(ej_app
     QML_FILES qml/Main.qml)
 
 target_link_libraries(ej_app
-    PRIVATE ej_viewmodel ej_core ej_storage ej_ios_bridge ej_qml_bridge Qt6::Quick icl::warnings icl::hardening icl::coverage)
+    PRIVATE ej_app_root ej_viewmodel ej_core ej_storage ej_ios_bridge ej_qml_bridge Qt6::Quick icl::warnings icl::hardening icl::coverage)
 # qmlcachegen, rcc and moc write C++ files that the strict warning set rejects with some compilers.
 icl_relax_generated_warnings(ej_app)
 
@@ -65,7 +77,8 @@ if(ERROR_JOURNALING_BUILD_TESTS)
     endif()
 
     # Starts the real application without a display, waits for the first frame and exits.
-    add_test(NAME app.smoke COMMAND ej_app --smoke-test)
+    # It opens a real store, so it is given a folder of its own and leaves the person's data alone.
+    add_test(NAME app.smoke COMMAND ej_app --smoke-test --data-dir "${CMAKE_CURRENT_BINARY_DIR}/smoke-data")
     set_tests_properties(app.smoke PROPERTIES LABELS ui TIMEOUT 60 ENVIRONMENT "${ej_app_test_environment}")
 
     # The signing identity is the distribution certificate unless the build is told otherwise (a script test: nothing
