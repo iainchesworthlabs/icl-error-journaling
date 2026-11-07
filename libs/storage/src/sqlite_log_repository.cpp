@@ -1585,6 +1585,19 @@ Result<ReplayCounts, StorageError> SqliteLogRepository::replay(const std::vector
                 {
                     return Failure(persisted.error());
                 }
+                if (add != nullptr && std::holds_alternative<NoteEntry>(add->m_Entry.m_Body))
+                {
+                    // The commit of this note never reached the database, and the same transaction would have taken out
+                    // the draft it was made from (NOTE-01, W5): a kill between the journal and the commit must not leave
+                    // both the note and its draft. A draft written after the note was captured is the next note's, and
+                    // stays. The draft is not journalled, so the times are what tell them apart.
+                    if (auto cleared = m_Impl->exec(QStringLiteral("DELETE FROM draft WHERE updated_utc <= ?"),
+                                                    {millis_value(add->m_Entry.m_Captured.m_Utc)});
+                        !cleared)
+                    {
+                        return Failure(cleared.error());
+                    }
+                }
                 loaded.m_Stored = std::move(after);
                 loaded.m_AppliedSeq = record.m_Seq;
                 ++counts.m_Applied;

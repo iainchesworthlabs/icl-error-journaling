@@ -107,7 +107,9 @@ public:
     /// it). The records are in the order they must be applied, a log's `create_log` before anything else of it. A
     /// record at or below what the database holds for its log is skipped, and so is an `add_entry` of an entry that is
     /// there already and the `archive` of a log that is archived, so applying the same records twice leaves the same
-    /// log (idempotence). Records are applied with `ApplyMode::REPLAY`.
+    /// log (idempotence). Records are applied with `ApplyMode::REPLAY`. Replaying a note that the database did not have
+    /// also removes a draft written no later than the note was captured: the commit that never reached the database would
+    /// have cleared it in the same transaction, and the draft is not journalled.
     [[nodiscard]] Result<ReplayCounts, StorageError> replay(const std::vector<JournalRecord>& records);
 
     /// Replaces everything the database holds about `log` with `log`, and records `applied_seq` for it. Used where the
