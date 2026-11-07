@@ -6,7 +6,7 @@ import ErrorJournalingApp
 // problems when it is not. It fills its parent and shows nothing until a file has been read, so the shell puts one over
 // the whole window, above the first-launch screen and above Settings alike.
 //
-// The shell routes `importRequested()` (from FirstLaunch or ImportExport) to the platform's file dialog, then calls
+// The shell routes `importRequested()` (from FirstLaunch or from Settings) to the platform's file dialog, then calls
 // `begin(path, name)` with the chosen file. The flow calls `settings.loadImport(path)` and waits for the model:
 //
 //   importPrepared(...)   shows ImportConfirm with the counts. "Replace my setup" calls `applyImport`; the flow closes when
