@@ -69,7 +69,10 @@ UiRig::UiRig(QSize window_size) : m_Impl(std::make_unique<Impl>())
     m_Impl->m_Window->resize(window_size);
     m_Impl->m_Window->setColor(Qt::white);
     m_Impl->m_Window->show();
-    m_Impl->m_Device = QTest::createTouchDevice();
+    // QTest makes a device that is never deleted. One for the whole run, held by a static, is still reachable at exit,
+    // which LeakSanitizer does not report; one for each rig, lost with it, is.
+    static QPointingDevice* const touch_screen = QTest::createTouchDevice();
+    m_Impl->m_Device = touch_screen;
 }
 
 UiRig::~UiRig()
