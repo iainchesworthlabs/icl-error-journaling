@@ -16,6 +16,7 @@ nav:
       - Bootstrap: design/bootstrap-plan.md
       - Stage 0: plan/stage-0.md
       - Stage 0 spikes: plan/spikes.md
+      - Stage 4: plan/stage-4.md
   - Design: design/README.md
   - Building: building.md
   - Architecture: architecture.md
