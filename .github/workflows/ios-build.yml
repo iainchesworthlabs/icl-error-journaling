@@ -126,4 +126,5 @@ jobs:
           set -euo pipefail
           app="$(find build/ios-release -name error-journaling.app -type d | head -n 1)"
           [ -n "$app" ] || { echo "::error::no error-journaling.app under build/ios-release"; exit 1; }
+          plutil -lint apps/app/packaging/ios/error-journaling.entitlements
           apps/app/packaging/ios/verify_app.sh "$app" --bundle-id "$BUNDLE_ID" --executable error-journaling

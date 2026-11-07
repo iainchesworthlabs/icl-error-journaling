@@ -19,7 +19,9 @@
 #   * with --signed: the code signature verifies, the profile is embedded, it is an
 #     ad-hoc one (it names devices and does not allow a debugger to attach) and it
 #     belongs to this bundle identifier. With --store it must be an App Store one
-#     instead: no devices, and no debugger.
+#     instead: no devices, and no debugger. The profile and the signature carry the
+#     default data protection entitlement with its exact value, and no iCloud, app
+#     group or associated domain entitlement.
 #
 # macOS only (plutil, otool, codesign, security).
 set -euo pipefail
@@ -37,7 +39,7 @@ while [ $# -gt 0 ]; do
     --version) version="${2:?}"; shift 2 ;;
     --signed) signed=true; shift ;;
     --store) store=true; shift ;;
-    -h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "verify_app.sh: unknown argument '$1'" >&2; exit 2 ;;
     *) target="$1"; shift ;;
   esac
@@ -114,8 +116,20 @@ if $signed; then
     [ "$devices" -gt 0 ] || fail "the profile names no devices: it is not an ad-hoc profile"
   fi
   [ "$(pkey Entitlements:get-task-allow)" = "false" ] || fail "the profile allows a debugger to attach (get-task-allow): it is a development profile"
+  # The entitlements in the signature: the default data protection class, and nothing for iCloud, app groups or
+  # associated domains. The profile must carry the same class, or the signed build is refused.
+  protection_key="com.apple.developer.default-data-protection"
+  protection_class="NSFileProtectionCompleteUntilFirstUserAuthentication"
+  [ "$(pkey "Entitlements:$protection_key")" = "$protection_class" ] || fail "the profile does not carry $protection_key = $protection_class"
+  signed_entitlements="$(mktemp)"
+  codesign -d --entitlements :- "$app" > "$signed_entitlements" 2>/dev/null || fail "cannot read the entitlements of the signature"
+  [ "$(/usr/libexec/PlistBuddy -c "Print :$protection_key" "$signed_entitlements" 2>/dev/null || true)" = "$protection_class" ]     || fail "the signature does not carry $protection_key = $protection_class"
+  if grep -Eq 'com\.apple\.developer\.icloud|com\.apple\.security\.application-groups|com\.apple\.developer\.associated-domains' "$signed_entitlements"; then
+    fail "the signature carries an iCloud, app group or associated domain entitlement: the application uses none"
+  fi
+  rm -f "$signed_entitlements"
   kind="ad-hoc"; $store && kind="App Store"
-  echo "    signed: the signature verifies; $kind profile '$(pkey Name)' ($devices device(s)), expires $(pkey ExpirationDate)"
+  echo "    signed: the signature verifies; $kind profile '$(pkey Name)' ($devices device(s)), default data protection $protection_class, expires $(pkey ExpirationDate)"
   rm -f "$decoded"
 fi
 echo "OK: $target"
