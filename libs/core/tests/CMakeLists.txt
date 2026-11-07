@@ -2,9 +2,12 @@
 add_executable(ej_core_tests
     golden.cpp
     golden_scenarios.cpp
+    test_day_prompt.cpp
     test_export_skeleton.cpp
     test_foundations.cpp
     test_log.cpp
+    test_time_format.cpp
+    test_time_zone.cpp
     test_uuid.cpp
     test_validators.cpp
     test_version.cpp)
