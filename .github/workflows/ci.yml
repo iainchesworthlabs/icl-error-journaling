@@ -73,10 +73,12 @@ jobs:
       contents: read
     uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
     with:
+      # "tests": true is written on every leg: build.yml skips its Test step when the key is absent (an absent key is null,
+      # and `null != false` is false in a workflow expression), although its header says the default is to test.
       legs: >-
         [
-          {"name": "linux-gcc-release", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-release", "qt": true},
-          {"name": "linux-clang-asan-ubsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-asan-ubsan", "qt": true}
+          {"name": "linux-gcc-release", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-release", "qt": true, "tests": true},
+          {"name": "linux-clang-asan-ubsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-asan-ubsan", "qt": true, "tests": true}
         ]
 
   build-full:
@@ -89,11 +91,11 @@ jobs:
     with:
       legs: >-
         [
-          {"name": "linux-gcc-debug", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-debug", "qt": true, "vcpkg_features": "profiling"},
-          {"name": "linux-clang-tsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-tsan", "qt": true},
-          {"name": "macos-debug", "runner": ["macos-26"], "preset": "macos-debug", "qt": true},
-          {"name": "macos-release", "runner": ["macos-26"], "preset": "macos-release", "qt": true},
-          {"name": "macos-xcode27-release", "runner": ["xcode-27"], "preset": "macos-release", "qt": true, "experimental": true}
+          {"name": "linux-gcc-debug", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-debug", "qt": true, "tests": true, "vcpkg_features": "profiling"},
+          {"name": "linux-clang-tsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-tsan", "qt": true, "tests": true},
+          {"name": "macos-debug", "runner": ["macos-26"], "preset": "macos-debug", "qt": true, "tests": true},
+          {"name": "macos-release", "runner": ["macos-26"], "preset": "macos-release", "qt": true, "tests": true},
+          {"name": "macos-xcode27-release", "runner": ["xcode-27"], "preset": "macos-release", "qt": true, "tests": true, "experimental": true}
         ]
 
   coverage:
