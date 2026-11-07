@@ -3,10 +3,9 @@
 Work packages 0.4 and 0.5 of the [Stage 0 plan](stage-0.md). Both run on the empty application behind the
 `ej_ios_bridge` interface.
 
-!!! warning "Unverified on a device"
-    Nothing on this page has run on an iPhone. The development machine has no Mac, and the hosted runners only
-    compile the Objective-C++ and run the desktop stub. Every statement about how the sheet or the haptic *behaves* is
-    from Apple's documented API and is a prediction until someone runs the checklist at the end.
+!!! note "First device run, 7 Nov 2026"
+    The owner ran TestFlight 0.1.0 (3) on an iPhone 17: both haptics and the share sheet work. The rest of the
+    checklist below is still open; see [Device results](#device-results).
 
 ## What was built
 
@@ -84,3 +83,21 @@ branch):
 8. **No haptic on the simulator** is expected; the simulator proves only that nothing crashes.
 
 Record the results (device, iOS version, numbers) in this file when they exist.
+
+## Device results
+
+TestFlight 0.1.0 (3), built from `develop` at `8b02a96`, on an iPhone 17, run by the owner on 7 Nov 2026.
+
+| Check | Result |
+|---|---|
+| 1. The sheet appears and is dismissible | Works |
+| 2. `shared` and `cancelled` reported | Not recorded |
+| 3. Posting to Slack | Not tried |
+| 4. Share survives rotation and backgrounding | Not tried |
+| 5. Haptic fires on touch-down | Works; the owner is happy with it |
+| 6. Haptic latency under 100 ms | Open: measured with the in-app timing line of Stage 5 (5.3), not Instruments (owner decision, 7 Nov 2026) |
+| 7. Success haptic differs and fires once per tap | Works; the owner is happy with it |
+| 8. Simulator | Not applicable |
+
+The approach stands: the Stage 5 bridge keeps the root-view-controller sheet and the prepared impact generator fired
+on the press. Rows 2 to 4 are part of the Stage 5 device checklist.
