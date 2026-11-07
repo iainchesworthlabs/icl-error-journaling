@@ -1,5 +1,6 @@
 {
   "scene": {
-    "UiStubGood": { "items": 16, "delegates": 0 }
+    "UiStubGood": { "items": 16, "delegates": 0 },
+    "LogScreen": { "items": 320, "delegates": 12 }
   }
 }
