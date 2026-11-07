@@ -6,3 +6,7 @@
 *.png binary
 *.jpg binary
 *.ico binary
+
+# Golden export files and test fixtures are compared byte for byte: no line-ending or encoding conversion.
+libs/core/tests/golden/*.txt -text eol=lf
+libs/core/tests/fixtures/* -text eol=lf

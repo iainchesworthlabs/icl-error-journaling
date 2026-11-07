@@ -1,10 +1,14 @@
 # Architecture
 
 ```text
-libs/core/            ej_core: QtCore only; the version for now, the domain model from Stage 1
-  include/error_journaling/
-  src/
-  tests/
+libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespace `ej`
+  include/error_journaling/  public headers: uuid.hpp, ids.hpp (EntryId, ErrorTypeId, NoteTemplateId, LocationId),
+                             header_field.hpp, result.hpp (the std::expected conventions), version.hpp
+  src/                       implementation files, one per component
+  tests/                     Catch2 tests, all labelled `unit`
+    golden/                  expected export files, compared byte for byte (docs/testing.md)
+    fixtures/                other input files for tests
+    golden.hpp, golden.cpp   the golden comparison helper
 libs/storage/         ej_storage: empty until Stage 2; links ej_core
 libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, behind interfaces
   src/platform/ios/      Objective-C++ (.mm), built for iOS
