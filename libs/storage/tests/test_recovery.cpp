@@ -965,7 +965,10 @@ TEST_CASE("Quarantine folders are never reused, however the clock moves, and onl
     std::size_t folders = 0;
     for (const auto& entry : std::filesystem::directory_iterator(store.root() / "quarantine"))
     {
-        folders += entry.is_directory() ? 1 : 0;
+        if (entry.is_directory())
+        {
+            ++folders;
+        }
     }
     CHECK(folders == 5);
 }
