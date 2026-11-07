@@ -15,6 +15,14 @@ called_from_lib:libQt6Quick.so.6
 called_from_lib:libQt6Network.so.6
 called_from_lib:libQt6OpenGL.so.6
 
+# Qt Quick Controls. QQuickTheme is created on a Qt thread and freed on the main thread when a
+# Basic StackView is torn down, which made a UI test fail under TSan intermittently.
+called_from_lib:libQt6QuickTemplates2.so.6
+called_from_lib:libQt6QuickControls2.so.6
+called_from_lib:libQt6QuickControls2Impl.so.6
+called_from_lib:libQt6QuickControls2Basic.so.6
+called_from_lib:libQt6QuickControls2BasicStyleImpl.so.6
+
 # Qt's event dispatcher runs on the system GLib on Linux, which is also not instrumented.
 called_from_lib:libglib-2.0.so.0
 called_from_lib:libgobject-2.0.so.0
