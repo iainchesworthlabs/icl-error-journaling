@@ -53,15 +53,14 @@ class SourceTest(unittest.TestCase):
         self.assertEqual(source.snake_case("SafeFrame"), "safe_frame")
         self.assertEqual(source.snake_case("HeaderCard2"), "header_card2")
 
-    def test_the_theme_and_the_legacy_window_are_set_apart(self) -> None:
+    def test_the_theme_is_set_apart(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             make(root, {"apps/app/qml/Main.qml": "", "apps/app/qml/theme/Theme.qml": "",
                         "apps/app/qml/components/Tile.qml": ""})
             names = lambda **kw: [p.name for p in source.qml_files(root, **kw)]  # noqa: E731
-            self.assertEqual(names(), ["Tile.qml"])
-            self.assertEqual(names(include_theme=True), ["Tile.qml", "Theme.qml"])
-            self.assertEqual(sorted(names(include_theme=True, include_legacy=True)), ["Main.qml", "Theme.qml", "Tile.qml"])
+            self.assertEqual(sorted(names()), ["Main.qml", "Tile.qml"])
+            self.assertEqual(sorted(names(include_theme=True)), ["Main.qml", "Theme.qml", "Tile.qml"])
 
 
 class PlatformTest(unittest.TestCase):
@@ -127,7 +126,6 @@ class LiteralsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             make(root, {"apps/app/qml/theme/Theme.qml": component('color: "#123456"\nwidth: 40'),
-                        "apps/app/qml/Main.qml": component("width: 40"),
                         "apps/app/qml/components/Tile.qml": component("width: 40")})
             problems, _ = literals.check(root)
             self.assertEqual(len(problems), 1)
@@ -196,8 +194,11 @@ class TestFilesTest(unittest.TestCase):
     def test_a_private_part_is_tested_through_its_neighbour(self) -> None:
         self.assertEqual(self.check({"apps/app/qml/screens/log/private/Strip.qml": ""}), [])
 
-    def test_the_legacy_window_has_no_test_yet(self) -> None:
-        self.assertEqual(self.check({"apps/app/qml/Main.qml": ""}), [])
+    def test_the_window_and_the_shell_are_tested_by_the_app_flow(self) -> None:
+        files = {"apps/app/qml/Main.qml": "", "apps/app/qml/shell/AppShell.qml": ""}
+        self.assertEqual(len(self.check(files)), 2)
+        tested = {**files, "apps/app/tests/ui/app_flow_test.cpp": "TEST_CASE(x)\n"}
+        self.assertEqual(self.check(tested), [])
 
 
 class RepositoryTest(unittest.TestCase):

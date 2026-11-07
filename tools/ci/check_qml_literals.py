@@ -14,8 +14,7 @@ except as a `Theme.*` value. This finds
     A number that scales (`* 2`, `/ 2`, `* 0.5`) is a ratio and is allowed.
 
 A line may end in `// literal-ok: <reason>` when a literal is right (a layout that is fixed by the platform, not the
-design); the reason is required and the list of them is printed so that a review sees each one. The theme and the Stage 0
-window (`Main.qml`) are not checked.
+design); the reason is required and the list of them is printed so that a review sees each one. The theme is not checked.
 """
 
 from __future__ import annotations
