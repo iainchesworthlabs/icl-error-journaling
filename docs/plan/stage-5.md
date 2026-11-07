@@ -300,7 +300,7 @@ std::unique_ptr<DocumentPicker> make_document_picker();   // ios/document_picker
 - Whether an import replaces the whole setup, and the confirmation sheet before it, are Stage 3 and Stage 4 (the PRD says
   "imported", and the earlier plans treat it as whole-file). Stage 5 delivers the file and the errors.
 - **Export** (the other direction of PRF-08) is the share sheet with a file item ([Share sheet](#share-sheet)), writing
-  `CS Bingo Board setup.ejconfig`. It is not in the Stage 5 table, but PRF-08 needs it and it costs one call; it is
+  `cs-bingo-board-setup.ejconfig`. It is not in the Stage 5 table, but PRF-08 needs it and it costs one call; it is
   included in Stage 5 (decision 9).
 
 The repository side: `.gitignore` and `tools/ci/check_config_files.py` gain `*.ejconfig`, so a real setup file renamed for
