@@ -122,8 +122,9 @@ the pull request. `python tools/ci/precheck.py` runs the first four after the sh
 | `qml.format` | `check_qml_format.py` | `qmlformat` would change (`apps/app/qml/.qmlformat.ini`; fix with `qmlformat -i`). Skipped, with a message at configure time, by a Qt kit without `qmlformat` |
 | `qml.lint` | the `ej_ui_tests_qmllint` target | `qmllint` warns about: `apps/app/qml/.qmllint.ini` sets the maximum to 0 |
 
-The theme and the Stage 0 window `Main.qml` are held to less (the theme is where literals live; `Main.qml` is replaced by
-package 4.15, which removes the exception in `tools/ci/qml_source.py` and the lint skip in `apps/app/qml/qml_files.cmake`).
+The theme is held to less (it is where literals live). `Main.qml` and `shell/AppShell.qml` are tested together by
+`app_flow_test.cpp`, which drives the whole app. A file in `qml/platform/ios/` or `qml/platform/desktop/` has a twin of the
+same name in the other folder, and the build takes the one for its platform (`qml_files.cmake`).
 The unit tests of the scripts are `tools/tests/test_qml_checks.py`, run by the Confidentiality job with the others.
 
 ## Platform layout check

@@ -6,7 +6,7 @@
 
 qmlformat has no verify mode, so each file is formatted to text and compared with itself (line endings aside). The settings
 are `apps/app/qml/.qmlformat.ini`. The checked files are the module's (the theme, components and screens) and the test
-stubs; the Stage 0 window (`Main.qml`) is not. To fix a file: `qmlformat -i <file>`.
+stubs. To fix a file: `qmlformat -i <file>`.
 """
 
 from __future__ import annotations

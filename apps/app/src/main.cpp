@@ -95,8 +95,8 @@ int main(int argc, char* argv[])
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(1); },
         Qt::QueuedConnection);
-    // The window reads the models as required properties (Stage 4, decision 3). The placeholder also reads the version
-    // and platform text, which shows the libraries are linked.
+    // The window reads the models as required properties (Stage 4, decision 3), and the root itself for its one
+    // write-failed signal, which the shell shows as a banner. The version and platform text show the libraries are linked.
     const auto backend = error_journaling::storage::backend_name();
     engine.setInitialProperties({{QStringLiteral("bridge"), QVariant::fromValue(&platform_bridge)},
                                  {QStringLiteral("versionText"), error_journaling::version_text()},
@@ -112,7 +112,8 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("history"), QVariant::fromValue(root.history())},
                                  {QStringLiteral("day"), QVariant::fromValue(root.day())},
                                  {QStringLiteral("settings"), QVariant::fromValue(root.settings())},
-                                 {QStringLiteral("share"), QVariant::fromValue(root.share())}});
+                                 {QStringLiteral("share"), QVariant::fromValue(root.share())},
+                                 {QStringLiteral("appRoot"), QVariant::fromValue(&root)}});
     engine.loadFromModule("ErrorJournalingApp", "Main");
     launch.qml_loaded();
     // Recovery has finished: the store was opened above, before the window was made. The shell of Stage 5, 5.7 calls
