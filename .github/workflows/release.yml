@@ -1,8 +1,9 @@
 name: Release
 
-# Runs on a tag pushed from develop. Builds the packages for each platform, signs the Windows
-# ones according to the SIGN_WINDOWS repository variable, then hands them to the shared
-# publish workflow, which checks the tag, signs, attests and publishes.
+# Runs on a tag pushed from develop. Builds the iPhone application, signs it and sends it to TestFlight, then hands the
+# release (the source archive) to the shared publish workflow, which checks the tag, signs, attests and publishes. No
+# desktop package is built: the macOS and Linux builds are for development and the pull request gate only
+# (docs/releasing.md).
 
 on:
   push:
@@ -52,89 +53,34 @@ jobs:
           prerelease: ${{ steps.tag.outputs.prerelease }}
           output-file: ${{ runner.temp }}/notes.md
 
-  package:
-    name: Package (${{ matrix.name }})
+  # The only asset of the GitHub release: the source at the tag, which the licence asks to be offered. The application
+  # itself goes to TestFlight (the ios job) and is never put on the release. The publish job checksums, signs and attests
+  # whatever this uploads.
+  source:
+    name: Package (source)
     needs: version
     if: ${{ !cancelled() && (needs.version.result == 'success' || needs.version.result == 'skipped') }}
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: read
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - {name: linux-x86_64, runner: ubuntu-26.04, preset: linux-release, config: ""}
-          - {name: macos-arm64, runner: macos-26, preset: macos-release, config: ""}
-          - {name: windows-x86_64, runner: windows-2025, preset: windows-msvc-release, config: Release}
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install GCC
-        if: runner.os == 'Linux'
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
-      - name: Set up Qt
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
-      - name: Load the MSVC environment
-        if: runner.os == 'Windows'
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-msvc-env@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
-      - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
-      - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
-      - name: Set up ccache
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
-        with:
-          key: release-${{ matrix.name }}
-      - name: Configure, build and install
-        shell: bash
-        env:
-          PRESET: ${{ matrix.preset }}
-          CONFIG: ${{ matrix.config }}
-        run: |
-          set -euo pipefail
-          cmake --preset "$PRESET"
-          if [ -n "$CONFIG" ]; then
-            cmake --build --preset "$PRESET" --config "$CONFIG"
-            cmake --install "build/$PRESET" --config "$CONFIG" --prefix stage
-          else
-            cmake --build --preset "$PRESET"
-            cmake --install "build/$PRESET" --prefix stage
-          fi
-      # The package is built on the newest runner, which links against the newest glibc: a package that starts here may not
-      # start on Ubuntu 24.04 (glibc 2.39) or Debian 13. The action fails when a program or library in it needs more.
-      - name: Check the glibc the package needs
-        if: runner.os == 'Linux'
-        uses: iainchesworthlabs/icl-common-infra/actions/check-glibc-floor@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19 plus #34
-        with:
-          folder: stage
-      - name: Sign the Windows binaries
-        id: sign
-        if: runner.os == 'Windows'
-        uses: iainchesworthlabs/icl-common-infra/actions/sign-windows@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
-        with:
-          mode: ${{ vars.SIGN_WINDOWS || 'false' }}
-          files: stage/bin/error-journaling.exe
-          pfx-base64: ${{ secrets.WIN_TESTSIGN_PFX_BASE64 }}
-          pfx-password: ${{ secrets.WIN_TESTSIGN_PFX_PASSWORD }}
       - name: Archive
         shell: bash
         env:
-          NAME: error-journaling-${{ github.ref_type == 'tag' && github.ref_name || 'dry-run' }}-${{ matrix.name }}
+          NAME: error-journaling-${{ github.ref_type == 'tag' && github.ref_name || 'dry-run' }}-source
         run: |
           set -euo pipefail
           mkdir -p dist
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            7z a "dist/$NAME.zip" ./stage/*
-          else
-            tar -C stage -czf "dist/$NAME.tar.gz" .
-          fi
+          git archive --format=tar.gz --prefix="$NAME/" --output="dist/$NAME.tar.gz" HEAD
       - name: Upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: release-${{ matrix.name }}
+          name: release-source
           path: dist/*
           if-no-files-found: error
 
@@ -149,7 +95,7 @@ jobs:
     needs: version
     if: ${{ !cancelled() && (needs.version.result == 'success' || needs.version.result == 'skipped') && vars.SIGN_IOS_UPLOAD == 'true' }}
     runs-on: macos-26
-    timeout-minutes: 90
+    timeout-minutes: 120
     permissions:
       contents: read
     env:
@@ -180,7 +126,35 @@ jobs:
       - name: Set up CMake
         uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
-      # Signed for the application alone (apps/ios/CMakeLists.txt says why). CMake makes no Xcode scheme unless asked,
+      # Qt's iOS kit, and the macOS kit that aqtinstall's --autodesktop installs beside it for the host tools a cross build
+      # runs (moc, rcc, qmlcachegen, qsb). The version is the `qt` key of .github/toolchain-versions.json, as for every
+      # other build. Not cached: the iOS kit is several gigabytes, and the repository's cache quota is better spent on the
+      # builds that run on every push.
+      - name: Read the Qt version
+        id: qt
+        shell: bash
+        run: echo "version=$(jq -r .qt .github/toolchain-versions.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Qt (iOS kit and macOS host kit)
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: ${{ steps.qt.outputs.version }}
+          host: mac
+          target: ios
+          arch: ios
+          dir: ${{ runner.temp }}
+          aqtsource: "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7"
+          cache: false
+
+      - name: Name the Qt kits
+        shell: bash
+        env:
+          QT_VERSION: ${{ steps.qt.outputs.version }}
+        run: |
+          echo "QT_ROOT_DIR=$RUNNER_TEMP/Qt/$QT_VERSION/ios" >> "$GITHUB_ENV"
+          echo "QT_HOST_PATH=$RUNNER_TEMP/Qt/$QT_VERSION/macos" >> "$GITHUB_ENV"
+
+      # Signed for the application alone (apps/app/packaging/ios.cmake says why). CMake makes no Xcode scheme unless asked,
       # and `xcodebuild archive` takes only a scheme.
       - name: Configure (signed)
         shell: bash
@@ -216,7 +190,7 @@ jobs:
         uses: iainchesworthlabs/icl-common-infra/actions/export-ios-ipa@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           project: ${{ steps.name.outputs.project }}
-          scheme: error_journaling_ios
+          scheme: ej_app
           bundle-id: ${{ env.BUNDLE_ID }}
           team-id: ${{ steps.signing.outputs.team-id }}
           profile-name: ${{ steps.signing.outputs.profile-name }}
@@ -235,7 +209,7 @@ jobs:
           set -euo pipefail
           args=(--bundle-id "$BUNDLE_ID" --executable "$EXECUTABLE" --signed --store)
           if [ "$REF_TYPE" = tag ]; then args+=(--version "${VERSION%%-*}"); fi
-          apps/ios/packaging/verify_app.sh "$IPA" "${args[@]}"
+          apps/app/packaging/ios/verify_app.sh "$IPA" "${args[@]}"
 
       # Apple's own check of the icon, the property list, the signature and the privacy declarations; and, for a tag or a
       # manual run that asks, the upload to TestFlight.
@@ -280,8 +254,8 @@ jobs:
 
   publish:
     name: Publish
-    needs: [package, ios]
-    if: ${{ !cancelled() && github.ref_type == 'tag' && needs.package.result == 'success' && (needs.ios.result == 'success' || needs.ios.result == 'skipped') }}
+    needs: [source, ios]
+    if: ${{ !cancelled() && github.ref_type == 'tag' && needs.source.result == 'success' && (needs.ios.result == 'success' || needs.ios.result == 'skipped') }}
     permissions:
       contents: write
       id-token: write

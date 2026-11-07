@@ -1,0 +1,21 @@
+# ThreadSanitizer suppressions. Each entry has a reason.
+#
+# The Qt kit comes from aqtinstall and is not built with -fsanitize=thread. Qt hands objects
+# between threads (QQmlThread, the render thread) through its own atomics and locks, which
+# ThreadSanitizer cannot see, so it reports races on memory it did not see being published.
+# Code in this repository is still instrumented; only reports whose stacks run through the
+# Qt libraries are dropped.
+called_from_lib:libQt6Core.so.6
+called_from_lib:libQt6Gui.so.6
+called_from_lib:libQt6Qml.so.6
+called_from_lib:libQt6QmlMeta.so.6
+called_from_lib:libQt6QmlModels.so.6
+called_from_lib:libQt6QmlWorkerScript.so.6
+called_from_lib:libQt6Quick.so.6
+called_from_lib:libQt6Network.so.6
+called_from_lib:libQt6OpenGL.so.6
+
+# Qt's event dispatcher runs on the system GLib on Linux, which is also not instrumented.
+called_from_lib:libglib-2.0.so.0
+called_from_lib:libgobject-2.0.so.0
+called_from_lib:libgio-2.0.so.0
