@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <string_view>
 
 namespace ej
 {
@@ -57,5 +58,8 @@ struct StoredLog
 
 /// Checks a header against the length rules.
 [[nodiscard]] Result<void, StorageError> validate_header(const HeaderValues& header);
+
+/// Checks the note draft: well-formed UTF-8 and no longer than a note may be.
+[[nodiscard]] Result<void, StorageError> validate_draft(std::string_view text);
 
 }  // namespace ej

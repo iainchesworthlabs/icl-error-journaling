@@ -9,6 +9,7 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 | Kind | Where | Example |
 |---|---|---|
 | unit | `libs/*/tests` | `ej_core_tests`, `ej_storage_tests`, `ej_ios_bridge_tests` (the desktop stub and the QML-facing wiring, against a fake; the iOS code is only compiled in CI) |
+| integration | `libs/storage/tests` | `ej_storage_integration_tests`: real SQLite and real files, each test in a directory of its own under the build tree (never the system temp folder). It has its own `main` because Qt SQL loads its drivers through a `QCoreApplication` |
 | ui | `apps/app` | `app.smoke` starts the application off-screen and waits for a frame; `app.version` |
 
 ## Golden tests and fixtures
@@ -33,10 +34,11 @@ Wrong Response); the confidentiality check runs over them.
 
 ## Repository contract tests
 
-`libs/storage/tests/test_repository_contract.cpp` holds one set of cases for `LogRepository` and runs each against every
-implementation listed in `Fixtures` (a `TEMPLATE_LIST_TEST_CASE`). A new repository adds a fixture that builds it with a
-`ScriptedClock`; it gets every case for free. The in-memory repository applies the same `apply_record` rules as the real one,
-so a behaviour that differs between them is a failing case, not a surprise. Sample data comes from
+`libs/storage/tests/contract_cases.hpp` holds one set of cases for `LogRepository` and runs each against every
+fixture listed in `Fixtures` (a `TEMPLATE_LIST_TEST_CASE`). A new repository adds a fixture that builds it with a
+`ScriptedClock` (and a `fill_entries` for the size-limit case); it gets every case for free. `contract_cases.hpp` is included
+by `test_contract_memory.cpp` (label `unit`) and `test_contract_sqlite.cpp` (label `integration`). The in-memory repository
+applies the same `apply_record` rules as the real one, so a behaviour that differs between them is a failing case, not a surprise. Sample data comes from
 `libs/core/tests/storage_samples.hpp` and uses only the fictional stand-ins.
 
 ## Coverage

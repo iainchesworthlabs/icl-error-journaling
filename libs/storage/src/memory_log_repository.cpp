@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/memory_log_repository.hpp"
 
-#include "error_journaling/utf8.hpp"
-
 #include <algorithm>
 
 namespace ej
@@ -236,14 +234,9 @@ Result<void, StorageError> MemoryLogRepository::hard_delete_log(LogId id, const 
 
 Result<void, StorageError> MemoryLogRepository::set_draft(std::string_view text, UtcMillis when)
 {
-    const auto count = utf8_code_points(text);
-    if (!count)
+    if (auto valid = validate_draft(text); !valid)
     {
-        return Failure(make_error(StorageErrorKind::INVALID_ARGUMENT, "the draft is not well-formed UTF-8"));
-    }
-    if (*count > MAX_NOTE_CODE_POINTS)
-    {
-        return Failure(make_error(StorageErrorKind::LIMIT_EXCEEDED, "the draft is longer than a note may be"));
+        return valid;
     }
     if (text.empty())
     {

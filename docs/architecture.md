@@ -19,10 +19,17 @@ libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespac
     golden.hpp, golden.cpp   the golden comparison helper
     fake_time_zone_provider.hpp  fixed-offset TimeZoneProvider for deterministic tests
     storage_samples.hpp      sample data (fictional stand-ins) shared with the storage tests
-libs/storage/         ej_storage: the repositories behind `LogRepository` (Stage 2); links ej_core
-  include/error_journaling/  memory_log_repository.hpp
-  src/                       memory_log_repository.cpp
-  tests/                     test_repository_contract.cpp runs every repository through one typed contract suite
+libs/storage/         ej_storage: the repositories behind `LogRepository` (Stage 2); links ej_core, QtSql privately
+  include/error_journaling/  memory_log_repository.hpp, sqlite_log_repository.hpp (no Qt SQL type in the header),
+                             journal.hpp (the `Journal` the repository appends to; `NullJournal`), crash_point.hpp
+                             (`CrashPoint` and `CrashHook`, the places the kill harness ends the process),
+                             storage_location.hpp (the folders of one store)
+  src/                       one file per component; the platform pieces (durable sync, file lock, file protection) go in
+                             src/platform/<os>/ with the journal files
+  tests/                     contract_cases.hpp: one typed suite for `LogRepository`, instantiated by
+                             test_contract_memory.cpp (`unit`) and test_contract_sqlite.cpp (`integration`);
+                             test_sqlite_repository.cpp (schema, settings, the write path W1 to W7, damaged files);
+                             helpers: temp_dir.hpp, raw_db.hpp (a second connection), recording_journal.hpp
 libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, behind interfaces
   src/platform/ios/      Objective-C++ (.mm), built for iOS
   src/platform/desktop/  stub, built everywhere else
@@ -40,7 +47,7 @@ tools/                project scripts, baselines and coverage floors
 | Target | Kind | Depends on |
 |---|---|---|
 | `ej_core` | static library, C++23 | QtCore |
-| `ej_storage` | static library: the repositories (in memory now; SQLite, the journal and recovery follow in Stage 2) | `ej_core` |
+| `ej_storage` | static library: the in-memory and SQLite repositories (the journal files and recovery follow in Stage 2) | `ej_core`, QtSql |
 | `ej_ios_bridge` | static library; Objective-C++ on iOS, a stub elsewhere | nothing (UIKit and Foundation on iOS) |
 | `ej_qml_bridge` | static library; the `qml_bridge` QObject QML calls, over the `ej_ios_bridge` interface | `ej_ios_bridge`, QtCore |
 | `ej_app` | Qt Quick executable (`error-journaling`) | the libraries above, Qt Quick |
