@@ -91,18 +91,22 @@ stub, so work packages touch different files and each fake is a few lines.
 ```text
 libs/ios_bridge/include/error_journaling/
   share.hpp  haptics.hpp  document_picker.hpp  perf_marks.hpp  background_tasks.hpp   interfaces and value types
+  accessibility_settings.hpp                  text scale and Reduce Motion; owned by Stage 4, package 4.3
   document_types.hpp                          the exported type's identifier and extension, one constant each
-  platform_services.hpp                       struct of unique_ptr to the five; make_platform_services()
-  qml_bridge.hpp                              the QObject QML sees (Q_INVOKABLE and signals), over the five
-libs/ios_bridge/src/platform/ios/             share.mm  haptics.mm  document_picker.mm  perf_marks.mm  background_tasks.mm
+  platform_services.hpp                       struct of unique_ptr to the capabilities; make_platform_services()
+  qml_bridge.hpp                              the QObject QML sees (Q_INVOKABLE and signals), over the capabilities
+libs/ios_bridge/src/platform/ios/             share.mm  haptics.mm  document_picker.mm  perf_marks.mm  background_tasks.mm  accessibility_settings.mm (4.3)
                                               (+ top_view_controller.mm/.hpp, internal, shared by share and picker)
-libs/ios_bridge/src/platform/desktop/         share.cpp haptics.cpp document_picker.cpp perf_marks.cpp background_tasks.cpp
+libs/ios_bridge/src/platform/desktop/         share.cpp haptics.cpp document_picker.cpp perf_marks.cpp background_tasks.cpp  accessibility_settings.cpp (4.3)
 libs/ios_bridge/src/platform_services.cpp     portable: calls make_share(), make_haptics(), ...; one line per capability
 libs/storage/src/platform/<ios dir>/          file_protection.mm (Stage 2 declared the interface and the desktop no-op)
 ```
 
 `make_platform_services()` is the only place a package edits that another package also edits, and each edit is one line.
 The qml_bridge file is shared in the same way: each package adds its own section and the second to merge rebases.
+`AccessibilitySettings` (text scale from the content size category, Reduce Motion, and their change signals) is a capability
+of this bridge that Stage 4 owns as its package 4.3, because NFR-07 needs Dynamic Type and no Stage 5 package covers it
+(Stage 4, decision 5). It follows the same pattern and merges after 5.1.
 
 ## Share sheet
 
@@ -228,9 +232,9 @@ the change is the one line that calls `hapticImpact`. This is decision 1.
 - `unit` `haptics.policy`: the portable `HapticPolicy` calls `prepare` on board visible, on application active, and on
   the keep-alive tick when enabled, and on none of them when the application is inactive or the board is hidden. A fake
   clock drives the keep-alive; there are no sleeps.
-- `ui` `haptics.on_press` (written in 5.7 against the real Tile): a synthetic press with no release, in the offscreen
+- `ui` `haptics.on_press` (written in Stage 4, 4.5 and 4.7, against the real Tile): a synthetic press with no release, in the offscreen
   app, reaches the fake `Haptics` once, and a release alone reaches it never.
-- `perf` `haptics.press_path` (5.7): from the synthetic press to the fake's `fire`, p95 over 200 presses under 16 ms on
+- `perf` `haptics.press_path` (Stage 4, 4.5 and 4.7): from the synthetic press to the fake's `fire`, p95 over 200 presses under 16 ms on
   the CI runner. This is not the device figure; it fails if someone puts synchronous work (a write, a model update) in the
   press handler ahead of the haptic.
 - A source check in the `ui` suite: QML calls `hapticImpact` only from a press handler.
@@ -747,7 +751,7 @@ work.
 | 5.4 | File protection (5.4b: the entitlement) | Stage 2 | Yes (5.4b after owner action O1) |
 | 5.5 | Configuration import | 5.1; Stage 3 `SettingsModel` | Yes |
 | 5.6 | Lifecycle | Stage 2 `DraftStore`; Stage 3 `DayWatcher` | Yes |
-| 5.7 | QML wiring | 5.2, 5.5, 5.6; the Stage 4 Tile, Review, Settings and first-launch screens | No: needs the screens |
+| 5.7 | Launch tracker, picker hookup and the device pass of the wiring | 5.2, 5.5, 5.6; the Stage 4 shell (4.15) | No: needs the screens |
 | 5.8 | Launch screen | 5.7; Stage 4 Log screen and dark tokens | No: needs the final geometry and tokens |
 | 5.9 | Device pass and the gate record | 5.1 to 5.8; owner actions | No |
 
@@ -797,11 +801,17 @@ its interface here. Tests: those under [Lifecycle](#lifecycle).
 
 ### 5.7 QML wiring
 
-In the Stage 4 screens, and no logic: the tile's press handler calls `hapticImpact`, the board calls `prepareHaptics` when
-visible, the note's saved signal calls `hapticSuccess`, the Review screen's Share button calls the share and shows
-the result, Settings' export and import rows and the first-launch offer call the importer (the desktop build uses Qt's
-file dialog through the same importer), the window's first frame and enabled board feed `LaunchTracker`. The
-tests that need the real Tile land here.
+Stage 4 decided (decision 6, owner, 2026-11-07) to write the haptic, share and import call lines itself, in the screens it
+builds, against the `qml_bridge` methods that exist from the spike: the tile's press handler calls `hapticImpact`, the
+board calls `prepareHaptics` when visible, the note's saved signal calls `hapticSuccess`, the Review screen's Share button
+calls the share and shows the result, and Settings' export and import rows and the first-launch offer emit
+`importRequested()` and `exportRequested()`. The `ui` tests that need the real Tile (`haptics.on_press` and the
+`perf` `haptics.press_path`) are written in Stage 4, packages 4.5 and 4.7.
+
+5.7 keeps what only Stage 5 can do: the **launch tracker** (the window's first frame and enabled board feed
+`LaunchTracker`), the **picker hookup** (the shell answers `importRequested()` and `exportRequested()` with the iOS document
+picker and the importer; the desktop build uses Qt's file dialog through the same importer), and the **device pass** of the
+haptic, share and import rows of the checklist.
 
 ### 5.8 Launch screen
 
