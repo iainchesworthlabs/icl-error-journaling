@@ -1,0 +1,1 @@
+**Export renderer.** `ej_core` can now render a whole log as the export text: header block, timeline of errors, notes and header changes in the zone each was captured in, and an optional totals line. Twenty-seven golden files pin the format. Nothing changes for the person using the app yet.

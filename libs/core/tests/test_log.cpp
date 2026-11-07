@@ -177,7 +177,7 @@ TEST_CASE("A log is copyable and copies diverge", "[log]")
 
 TEST_CASE("The PRD example scenario has the expected entry kinds", "[log]")
 {
-    const Log log = test::prd_example_log();
+    const Log log = test::make_scenario("prd-example").m_Log;
     REQUIRE(log.entries().size() == 6);
     CHECK(std::holds_alternative<ErrorEntry>(log.entries()[0].m_Body));
     CHECK(std::holds_alternative<NoteEntry>(log.entries()[2].m_Body));

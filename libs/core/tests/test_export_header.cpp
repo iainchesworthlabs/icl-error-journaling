@@ -33,7 +33,8 @@ ExportContext demo_context()
 
 TEST_CASE("The header block shows all five lines, values at the start of the log", "[export][header]")
 {
-    const auto header = render_header(test::prd_example_log(), test::prd_example_context());
+    const auto scenario = test::make_scenario("prd-example");
+    const auto header = render_header(scenario.m_Log, scenario.m_Context);
     REQUIRE(header.has_value());
     CHECK(*header
           == "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\n"
@@ -67,22 +68,15 @@ TEST_CASE("An unknown location id is an error and renders nothing", "[export][he
     const auto header = render_header(Log(values), context);
     REQUIRE_FALSE(header.has_value());
     CHECK(header.error() == RenderError::UNKNOWN_LOCATION);
-    CHECK(render_export(Log(values), ExportContext{"DEMO", nullptr}).error() == RenderError::UNKNOWN_LOCATION);
+    CHECK(render_export(Log(values), ExportContext{}).error() == RenderError::UNKNOWN_LOCATION);
 }
 
 TEST_CASE("The header block of the PRD example is the first five lines of the golden", "[export][golden]")
 {
     const auto golden = test::read_bytes(std::filesystem::path(EJ_GOLDEN_DIR) / "prd-example.txt");
     REQUIRE(golden.has_value());
-    const auto header = render_header(test::prd_example_log(), test::prd_example_context());
+    const auto scenario = test::make_scenario("prd-example");
+    const auto header = render_header(scenario.m_Log, scenario.m_Context);
     REQUIRE(header.has_value());
     CHECK(golden->starts_with(*header + "\n\n"));
-}
-
-// Work package 1.5 adds the timeline and removes the [!shouldfail] tag, so this test then has to pass.
-TEST_CASE("The PRD example export matches the golden byte for byte", "[export][golden][!shouldfail]")
-{
-    const auto text = render_export(test::prd_example_log(), test::prd_example_context());
-    REQUIRE(text.has_value());
-    test::check_golden("prd-example", *text);
 }

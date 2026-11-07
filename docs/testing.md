@@ -21,6 +21,12 @@ names the first differing line and the helper writes the actual output to `<name
 in the pull request. `.gitattributes` marks the golden and fixture files `-text eol=lf`, so a checkout on Windows cannot
 convert line endings.
 
+Every golden is built by a scenario of the same name in `libs/core/tests/golden_scenarios.cpp`, which also fixes the
+context (unit prefix, clock format, totals, time zones). `test_export_golden.cpp` renders every scenario and compares it,
+and fails when a file in `golden/` has no scenario. The two daylight-saving goldens use the platform's time zone database
+(`melbourne-dst-spring`, `melbourne-dst-autumn`); the others use fixed offsets. The totals line wording is provisional
+(`export_format.hpp`): changing it means regenerating `totals-on.txt`, `totals-on-empty.txt` and `deleted-entries.txt`.
+
 A fixture is any other input file a test reads, kept in `libs/core/tests/fixtures/` and found with
 `ej::test::fixture_path(name)`. Fixtures and goldens contain only the fictional stand-ins (Sam Example, UNIT, North Site,
 Wrong Response); the confidentiality check runs over them.

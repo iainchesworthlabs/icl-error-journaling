@@ -93,11 +93,7 @@ std::optional<std::string> compare_golden(std::string_view name, std::string_vie
 {
     const auto expected_path = std::filesystem::path(EJ_GOLDEN_DIR) / (std::string(name) + ".txt");
     const auto expected = read_bytes(expected_path);
-    if (!expected)
-    {
-        return "golden file not found: " + expected_path.string();
-    }
-    const auto difference = first_difference(*expected, actual);
+    const auto difference = expected ? first_difference(*expected, actual) : std::optional<std::string>("golden file not found");
     if (!difference)
     {
         return std::nullopt;
@@ -109,8 +105,7 @@ std::optional<std::string> compare_golden(std::string_view name, std::string_vie
         std::ofstream out(actual_path, std::ios::binary);
         out.write(actual.data(), static_cast<std::streamsize>(actual.size()));
     }
-    return "golden " + std::string(name) + " differs at " + *difference + "; actual output written to "
-           + actual_path.string();
+    return "golden " + std::string(name) + ": " + *difference + "; actual output written to " + actual_path.string();
 }
 
 void check_golden(std::string_view name, std::string_view actual)
