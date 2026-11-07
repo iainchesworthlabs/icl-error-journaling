@@ -1,8 +1,13 @@
 name: CI
 
 # The pull request gate. Pull requests (drafts included) run the static checks. Ready pull
-# requests and merge-queue entries also build. The full set of platforms and sanitizers runs
-# in the merge queue and on pushes to develop, so a pull request stays fast.
+# requests and merge-queue entries also build. Linux debug and TSan run in the merge queue. The
+# macOS builds run after the merge, on the push to develop, unless the queue entry touches Apple
+# paths or its pull request carries the `deep` label (docs/ci.md).
+#
+# CI reuse (docs/ci-many-agents.md in icl-common-infra) is in shadow mode: the `reuse` job looks for
+# earlier results and logs what it would skip, and every group still runs. `CI Status` records a
+# proof of each run for later lookups.
 #
 # Required status checks are the two jobs defined here by name: "CI Status" and
 # "Scan dependency diff". A check from a called workflow carries the caller's job name as
@@ -39,9 +44,11 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read
     outputs:
       build: ${{ steps.plan.outputs.build }}
       docs_only: ${{ steps.plan.outputs.docs_only }}
+      macos: ${{ steps.macos.outputs.macos }}
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,10 +69,75 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$EVENT" = "pull_request" ] || [ "$EVENT" = "merge_group" ]; then
-            git diff --name-only "$BASE_SHA"...HEAD | python3 .icl-infra/scripts/plan_gate.py --config .github/ci/plan.json >> "$GITHUB_OUTPUT"
+            git diff --name-only "$BASE_SHA"...HEAD | python3 .icl-infra/scripts/plan_gate.py --config .github/ci/plan.json --groups > "$RUNNER_TEMP/plan.out"
           else
-            python3 .icl-infra/scripts/plan_gate.py --config .github/ci/plan.json --force-all >> "$GITHUB_OUTPUT"
+            python3 .icl-infra/scripts/plan_gate.py --config .github/ci/plan.json --groups --force-all < /dev/null > "$RUNNER_TEMP/plan.out"
           fi
+          cat "$RUNNER_TEMP/plan.out" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/plan.out"
+      # Where the macOS groups run (decision 1 of docs/ci-many-agents.md, section 9). They run after the merge (the push run)
+      # and on a manual run. A queue entry also runs them when its diff promotes build-macos (an Apple path) or its pull
+      # request carries `deep`. A pull request run never does. If the label cannot be read, the groups run.
+      - name: Place the macOS groups
+        id: macos
+        env:
+          EVENT: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.merge_group.head_ref }}
+          BUILD: ${{ steps.plan.outputs.build }}
+        run: |
+          set -uo pipefail
+          macos=false
+          if [ "$BUILD" = "true" ]; then
+            case "$EVENT" in
+              push|workflow_dispatch) macos=true ;;
+              merge_group)
+                if grep -q '^promoted=.*build-macos' "$RUNNER_TEMP/plan.out"; then
+                  macos=true
+                  echo "The change touches Apple paths: macOS runs in the queue."
+                else
+                  number="$(printf '%s' "$HEAD_REF" | sed -n 's|.*/pr-\([0-9][0-9]*\)-.*|\1|p')"
+                  if [ -n "$number" ] && deep="$(gh api "repos/$REPO/pulls/$number" --jq '[.labels[].name] | index("deep") != null')"; then
+                    if [ "$deep" = "true" ]; then macos=true; echo "Pull request $number carries deep: macOS runs in the queue."; fi
+                  else
+                    macos=true
+                    echo "::warning::could not read the labels of the pull request; macOS runs in the queue"
+                  fi
+                fi ;;
+            esac
+          fi
+          echo "macos=$macos" >> "$GITHUB_OUTPUT"
+
+  # Looks for earlier runs that already passed a group on a tree that differs only in paths the group does not read.
+  # CI_REUSE_MODE is unset, which means shadow: the lookup is logged in the job summary and `reused` stays empty, so
+  # every group still runs. It cannot fail the workflow (continue-on-error, and find-proof falls back on any error).
+  reuse:
+    name: Reuse
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.find.outputs.run }}
+      reused: ${{ steps.find.outputs.reused }}
+      would_reuse: ${{ steps.find.outputs.would_reuse }}
+      mode: ${{ steps.find.outputs.mode }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Look for reusable results
+        id: find
+        uses: iainchesworthlabs/icl-common-infra/actions/find-proof@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        with:
+          mode: ${{ vars.CI_REUSE_MODE }}
+          base-sha: ${{ github.event_name == 'push' && github.event.before || '' }}
 
   build-fast:
     name: Build (fast)
@@ -79,12 +151,12 @@ jobs:
       # and `null != false` is false in a workflow expression), although its header says the default is to test.
       legs: >-
         [
-          {"name": "linux-gcc-release", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-release", "qt": true, "tests": true},
-          {"name": "linux-clang-asan-ubsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-asan-ubsan", "qt": true, "tests": true}
+          {"name": "linux-gcc-release", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-release", "qt": true, "tests": true, "timeout_minutes": 30},
+          {"name": "linux-clang-asan-ubsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-asan-ubsan", "qt": true, "tests": true, "timeout_minutes": 30}
         ]
 
-  build-full:
-    name: Build (full)
+  build-linux-full:
+    name: Build (Linux full)
     needs: plan
     if: needs.plan.outputs.build == 'true' && github.event_name != 'pull_request'
     permissions:
@@ -93,11 +165,37 @@ jobs:
     with:
       legs: >-
         [
-          {"name": "linux-gcc-debug", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-debug", "qt": true, "tests": true, "vcpkg_features": "profiling"},
-          {"name": "linux-clang-tsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-tsan", "qt": true, "tests": true},
-          {"name": "macos-debug", "runner": ["macos-26"], "preset": "macos-debug", "qt": true, "tests": true},
-          {"name": "macos-release", "runner": ["macos-26"], "preset": "macos-release", "qt": true, "tests": true},
-          {"name": "macos-xcode27-release", "runner": ["xcode-27"], "preset": "macos-release", "qt": true, "tests": true, "experimental": true}
+          {"name": "linux-gcc-debug", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-debug", "qt": true, "tests": true, "vcpkg_features": "profiling", "timeout_minutes": 30},
+          {"name": "linux-clang-tsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-tsan", "qt": true, "tests": true, "timeout_minutes": 30}
+        ]
+
+  build-macos:
+    name: Build (macOS)
+    needs: plan
+    if: needs.plan.outputs.macos == 'true'
+    permissions:
+      contents: read
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+    with:
+      legs: >-
+        [
+          {"name": "macos-debug", "runner": ["macos-26"], "preset": "macos-debug", "qt": true, "tests": true, "timeout_minutes": 30},
+          {"name": "macos-release", "runner": ["macos-26"], "preset": "macos-release", "qt": true, "tests": true, "timeout_minutes": 30}
+        ]
+
+  # Experimental: it reports and cannot fail the run, and it is not a reuse group. The design puts it in a nightly run;
+  # ci.yml has none, so it runs after the merge and on a manual run until one exists.
+  macos-xcode27:
+    name: Build (Xcode 27)
+    needs: plan
+    if: needs.plan.outputs.build == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+    with:
+      legs: >-
+        [
+          {"name": "macos-xcode27-release", "runner": ["xcode-27"], "preset": "macos-release", "qt": true, "tests": true, "experimental": true, "timeout_minutes": 30}
         ]
 
   # The kill harness (docs/plan/stage-2.md, section 4.4): 100 random kills, the crash points, and the random kills of
@@ -243,7 +341,7 @@ jobs:
   ci-status:
     name: CI Status
     if: always()
-    needs: [policy, plan, build-fast, build-full, kill-queue, coverage, zizmor, dependency-scan, confidentiality]
+    needs: [policy, plan, reuse, build-fast, build-linux-full, build-macos, macos-xcode27, kill-queue, coverage, zizmor, dependency-scan, confidentiality]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -253,12 +351,76 @@ jobs:
         uses: iainchesworthlabs/icl-common-infra/actions/ci-status@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
         with:
           needs: ${{ toJSON(needs) }}
+          # Shadow mode: the reuse job's `reused` output is empty, so nothing counts as reused and every group must have run.
+          reused: ${{ needs.reuse.outputs.reused }}
           expected: >-
             {
               "build-fast": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }},
               "coverage": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }},
-              "build-full": ${{ needs.plan.outputs.build == 'true' && github.event_name != 'pull_request' }},
+              "build-linux-full": ${{ needs.plan.outputs.build == 'true' && github.event_name != 'pull_request' }},
+              "build-macos": ${{ needs.plan.outputs.macos == 'true' }},
+              "macos-xcode27": ${{ needs.plan.outputs.build == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }},
               "kill-queue": ${{ needs.plan.outputs.build == 'true' && github.event_name != 'pull_request' }},
               "dependency-scan": ${{ github.event_name != 'push' }},
               "confidentiality": true
             }
+      # The proof of this run, for the lookups of later runs (docs/ci.md). It runs only infra code and never fails the job.
+      - name: Check out
+        if: always()
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Record the proof
+        if: always()
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/record-proof@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        with:
+          needs: ${{ toJSON(needs) }}
+          reused: ${{ needs.reuse.outputs.reused }}
+          head-sha: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || '' }}
+          base-sha: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
+
+  # After a merge: name the suspects of a group that failed. It reports and reverts nothing, and a red develop does not block
+  # the queue (decision 3). It must finish before mark-green, which moves the refs it reads.
+  report-red:
+    name: Report red
+    if: always() && github.event_name == 'push'
+    needs: [reuse, build-fast, build-linux-full, build-macos, coverage]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Report
+        uses: iainchesworthlabs/icl-common-infra/actions/report-red@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        with:
+          needs: ${{ toJSON(needs) }}
+          reused: ${{ needs.reuse.outputs.reused }}
+
+  # Moves refs/ci/green/<group> forward for each group that passed on this commit.
+  mark-green:
+    name: Mark green
+    if: always() && github.event_name == 'push'
+    needs: [report-red, reuse, build-fast, build-linux-full, build-macos, coverage]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Mark
+        uses: iainchesworthlabs/icl-common-infra/actions/mark-green@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        with:
+          needs: ${{ toJSON(needs) }}
+          reused: ${{ needs.reuse.outputs.reused }}
