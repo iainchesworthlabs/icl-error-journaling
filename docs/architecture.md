@@ -213,19 +213,19 @@ into `ej_app`, and into `ej_ui_tests` together with the stubs. `qml/qml_files.cm
 **The shell.** `Main.qml` is the window (the colour of the first frame, the title, the required properties from `main.cpp`)
 and holds `shell/AppShell.qml`, which is the shell and which the test rig loads, because it loads an item and not a window.
 It has four tabs on `TabBar`; Log, Review and Settings each have a `PageStack` for the pages they push (Today's details,
-the editors), History keeps the one of its past-log Review, and a tab is made when it is first chosen. One `SheetHost` for the
-window carries the Other picker and the new-day alert, so they cover the tab bar; the Log screen's template prompt and
+the editors), and a tab is made when it is first chosen. History is a placeholder page until package 4.11 is wired in. One
+`SheetHost` for the window carries the Other picker (and, with 4.11, the new-day alert), so it covers the tab bar; the Log screen's template prompt and
 Review's edit sheet are put in its layer. The first-launch screen covers the tabs while `settings.configured` is false, and
 `ImportFlow` covers everything. `AppRoot.writeFailed` is one banner at the top (the Log screen shows the failures of its
 own models itself), and the Undo toast is the Log screen's, and the shell's for Review. `Theme.textScale` and
 `Theme.reduceMotion` follow the bridge.
 
 **What differs by platform.** `qml/platform/desktop/FileChooser.qml` (Qt's file dialogs, the one place they are used) and
-`qml/platform/ios/FileChooser.qml` (nothing, until Stage 5's document picker, 5.7, replaces it) have the same type name; the
+`qml/platform/ios/FileChooser.qml` (nothing, until Stage 5's document picker, 5.7, replaces it; the C++ side exists as `ConfigImporter` and `ConfigExporter`) have the same type name; the
 build takes the file of its platform (`qml_files.cmake`), so no screen asks which platform it is on. Import and export rows
 emit `importRequested()` and `exportRequested()`; the shell answers them with the chooser, then `ImportFlow.begin(path,
-name)` or `settings.exportTo(path)`. Stage 5 (5.7) keeps the launch tracker (`AppShell.boardEnabled`), the document picker,
-`DayWatcher.check()` on `AppShell.applicationActivated` and the device pass.
+name)` or `settings.exportTo(path)`. Stage 5 (5.7) keeps the launch tracker (`AppShell.boardEnabled`), the document picker
+and the device pass; the day check and the haptic policy's active state are done by the lifecycle of `main.cpp`.
 
 ## Platform code
 

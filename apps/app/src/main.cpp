@@ -149,7 +149,8 @@ int main(int argc, char* argv[])
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(1); },
         Qt::QueuedConnection);
     // The window reads the models as required properties (Stage 4, decision 3), and the root itself for its one
-    // write-failed signal, which the shell shows as a banner. The version and platform text show the libraries are linked.
+    // write-failed signal, which the shell shows as a banner. The version and platform text show the libraries are
+    // linked.
     const auto backend = error_journaling::storage::backend_name();
     engine.setInitialProperties({{QStringLiteral("bridge"), QVariant::fromValue(&platform_bridge)},
                                  {QStringLiteral("versionText"), error_journaling::version_text()},

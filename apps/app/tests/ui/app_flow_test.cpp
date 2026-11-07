@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The app shell (docs/plan/stage-4.md, 4.15): the whole app, driven through the screens. The services are the ones
-// `app::AppRoot` builds for the phone, over the in-memory store and the fake clock and platform (Stage 3's `Rig`), and the
-// shell is the item that `Main.qml` holds, so what is tested here is what runs on the phone short of the window itself.
-// The bridge is a small QObject with the names of the QmlBridge; its haptics go into the same EventLog as the commits, so
-// the order of the feedback is the order of the log. The file chooser is a stub: a real dialog waits for a person.
+// `app::AppRoot` builds for the phone, over the in-memory store and the fake clock and platform (Stage 3's `Rig`), and
+// the shell is the item that `Main.qml` holds, so what is tested here is what runs on the phone short of the window
+// itself. The bridge is a small QObject with the names of the QmlBridge; its haptics go into the same EventLog as the
+// commits, so the order of the feedback is the order of the log. The file chooser is a stub: a real dialog waits for a
+// person.
 //
 // Cases: app.no_services_missing, app.first_frame, app.first_launch, app.import, app.navigation, app.sheets, app.flow,
 // app.settings, app.export, app.messages, app.theme, app.hooks, app.accessibility.
 //
-// The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the Windows
-// headers behind Qt Quick define as a macro. clang-format would sort them the other way, so it is switched off.
+// The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the
+// Windows headers behind Qt Quick define as a macro. clang-format would sort them the other way, so it is switched off.
 // clang-format off
 #include "support/rig.hpp"
 #include "viewmodel/board_model.hpp"
@@ -56,8 +57,9 @@ constexpr int REVIEW_TAB = 1;
 constexpr int HISTORY_TAB = 2;
 constexpr int SETTINGS_TAB = 3;
 
-/// The part of the bridge the shell and the screens call, with the names of `QmlBridge`: the haptics go through the rig's
-/// `FakePlatform`, which writes them into the event log; the accessibility settings are properties a test changes.
+/// The part of the bridge the shell and the screens call, with the names of `QmlBridge`: the haptics go through the
+/// rig's `FakePlatform`, which writes them into the event log; the accessibility settings are properties a test
+/// changes.
 class FakeBridge : public QObject
 {
     Q_OBJECT
@@ -86,11 +88,26 @@ public:
         emit reduceMotionChanged();
     }
 
-    Q_INVOKABLE void prepareHaptics() { m_Platform.prepare(); }
-    Q_INVOKABLE void setBoardVisible(bool visible) { m_Visible.push_back(visible); }
-    Q_INVOKABLE void setApplicationActive(bool active) { m_Active.push_back(active); }
-    Q_INVOKABLE void hapticImpact(double /*pressTimestamp*/ = 0) { m_Platform.fire(FakePlatform::haptic_kind::IMPACT); }
-    Q_INVOKABLE void hapticSuccess() { m_Platform.fire(FakePlatform::haptic_kind::SUCCESS); }
+    Q_INVOKABLE void prepareHaptics()
+    {
+        m_Platform.prepare();
+    }
+    Q_INVOKABLE void setBoardVisible(bool visible)
+    {
+        m_Visible.push_back(visible);
+    }
+    Q_INVOKABLE void setApplicationActive(bool active)
+    {
+        m_Active.push_back(active);
+    }
+    Q_INVOKABLE void hapticImpact(double /*pressTimestamp*/ = 0)
+    {
+        m_Platform.fire(FakePlatform::haptic_kind::IMPACT);
+    }
+    Q_INVOKABLE void hapticSuccess()
+    {
+        m_Platform.fire(FakePlatform::haptic_kind::SUCCESS);
+    }
 
     std::vector<bool> m_Visible;
     std::vector<bool> m_Active;
@@ -134,7 +151,8 @@ int row_with_label(const QAbstractItemModel& model, const QString& label, const 
 /// dialog. `configured` false is a first launch.
 struct App
 {
-    explicit App(bool configured = true, bool load_shell = true) : services(RigStore::MEMORY), bridge(services.platform())
+    explicit App(bool configured = true, bool load_shell = true)
+        : services(RigStore::MEMORY), bridge(services.platform())
     {
         if (configured)
         {
@@ -240,9 +258,9 @@ struct App
         return row < 0 ? -1 : role_of(*services.root().board(), row, "count").toInt();
     }
 
-    [[nodiscard]] QObject* stub() const
+    [[nodiscard]] QObject& stub() const
     {
-        return chooser.get();
+        return *chooser;
     }
 
     /// A file the person could choose, in the store the rig reads files from (the fake of the in-memory kind).
@@ -294,6 +312,12 @@ struct App
     QQuickItem* shell = nullptr;
 };
 
+/// The objectName of the item's parent, empty when there is none.
+QString parent_name(const QQuickItem* item)
+{
+    return item != nullptr && item->parentItem() != nullptr ? item->parentItem()->objectName() : QString();
+}
+
 /// The index in the event log of the first event of this kind after `from`; -1 when there is none.
 int first_after(EventLog& log, EventKind kind, std::size_t from)
 {
@@ -317,10 +341,10 @@ TEST_CASE("app.no_services_missing: the shell is made with every required proper
         App app;
         CHECK(app.shell != nullptr);
     }
-    // (A missing `picker` is left out: Qt's SortFilterProxyModel crashes on an undefined source while the Other picker is
-    // being made, before the required property is reported. The property is declared required in the same way.)
-    for (const char* missing : {"session", "undo", "board", "timeline", "history", "day", "settings", "share", "appRoot",
-                                "bridge"})
+    // (A missing `picker` is left out: Qt's SortFilterProxyModel crashes on an undefined source while the Other picker
+    // is being made, before the required property is reported. The property is declared required in the same way.)
+    for (const char* missing :
+         {"session", "undo", "board", "timeline", "history", "day", "settings", "share", "appRoot", "bridge"})
     {
         CAPTURE(missing);
         App app(true, false);
@@ -340,7 +364,7 @@ TEST_CASE("app.first_frame: the Log screen is the first page and nothing else ha
     CHECK(app.ui.find_item(QStringLiteral("reviewScreen")) == nullptr);
     CHECK(app.ui.find_item(QStringLiteral("settingsScreen")) == nullptr);
     CHECK(app.ui.find_item(QStringLiteral("historyPlaceholderBar")) == nullptr);
-    CHECK(app.ui.find_item(QStringLiteral("firstLaunch"))->childItems().isEmpty());
+    CHECK(app.need(QStringLiteral("firstLaunch"))->childItems().isEmpty());
     // The haptic policy was told that the board is on screen.
     REQUIRE_FALSE(app.bridge.m_Visible.empty());
     CHECK(app.bridge.m_Visible.back());
@@ -359,7 +383,7 @@ TEST_CASE("app.first_launch: with no setup the first-launch screen covers the ta
 
     // The import card asks the chooser for a file, once.
     app.tap(QStringLiteral("importCard"));
-    CHECK(app.stub()->property("opens").toInt() == 1);
+    CHECK(app.stub().property("opens").toInt() == 1);
 
     // The chosen file is read and the confirmation shows what it holds, over the first-launch screen.
     app.add_file("sample-config.json", App::sample_setup());
@@ -396,7 +420,7 @@ TEST_CASE("app.import: a file that cannot be read shows the core's messages and 
     REQUIRE(QMetaObject::invokeMethod(app.need(QStringLiteral("importErrors")), "chooseAnotherRequested"));
     app.play();
     CHECK_FALSE(app.shown(QStringLiteral("importErrors")));
-    CHECK(app.stub()->property("opens").toInt() == 1);
+    CHECK(app.stub().property("opens").toInt() == 1);
 }
 
 TEST_CASE("app.navigation: each tab shows its screen, a tab that is tapped again goes back to its first page, and the "
@@ -432,12 +456,12 @@ TEST_CASE("app.navigation: each tab shows its screen, a tab that is tapped again
     CHECK_FALSE(app.shown(QStringLiteral("addRow")));
     CHECK(app.shown(QStringLiteral("settingsFacilitator")));
 
-    // The editors are pages too: the list rows of Locations and the note templates open the same way, and their own "back"
-    // returns to Settings.
+    // The editors are pages too: the list rows of Locations and the note templates open the same way, and their own
+    // "back" returns to Settings.
     app.tap(QStringLiteral("settingsLocations"));
     app.play();
     CHECK_FALSE(app.shown(QStringLiteral("settingsFacilitator")));
-    REQUIRE(QMetaObject::invokeMethod(app.ui.find_item(QStringLiteral("settingsScreen")), "popPage"));
+    REQUIRE(QMetaObject::invokeMethod(app.need(QStringLiteral("settingsScreen")), "popPage"));
     app.play();
     CHECK(app.shown(QStringLiteral("settingsFacilitator")));
     app.tap(QStringLiteral("settingsTemplates"));
@@ -479,7 +503,7 @@ TEST_CASE("app.sheets: Today's details covers the tab bar and closes on \"Start 
     app.play();
     QQuickItem* picker = app.need(QStringLiteral("otherPicker"));
     CHECK(picker->property("isOpen").toBool());
-    CHECK(picker->parentItem()->objectName() == QStringLiteral("sheetHostLayer"));
+    CHECK(parent_name(picker) == QStringLiteral("sheetHostLayer"));
     CHECK(app.services.session().live_entry_count() == 0);
     // While it is open the screen below is disabled.
     CHECK_FALSE(app.need(QStringLiteral("shellTabs"))->isEnabled());
@@ -497,7 +521,7 @@ TEST_CASE("app.sheets: Today's details covers the tab bar and closes on \"Start 
     app.play();
     QQuickItem* editor = app.need(QStringLiteral("editSheet"));
     CHECK(editor->property("isOpen").toBool());
-    CHECK(editor->parentItem()->objectName() == QStringLiteral("sheetHostLayer"));
+    CHECK(parent_name(editor) == QStringLiteral("sheetHostLayer"));
     CHECK_FALSE(app.need(QStringLiteral("shellTabs"))->isEnabled());
     REQUIRE(QMetaObject::invokeMethod(editor, "close"));
     app.play();
@@ -621,7 +645,8 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     CHECK(app.count_of(QStringLiteral("Mute Delay")) == 1);
 }
 
-TEST_CASE("app.settings: the import and export rows go through the chooser to the importer and the exporter", "[ui][app]")
+TEST_CASE("app.settings: the import and export rows go through the chooser to the importer and the exporter",
+          "[ui][app]")
 {
     App app;
     app.choose_tab(SETTINGS_TAB);
@@ -630,8 +655,8 @@ TEST_CASE("app.settings: the import and export rows go through the chooser to th
     app.tap(QStringLiteral("settingsImportExport"));
     app.play();
     app.tap(QStringLiteral("settingsExport"));
-    CHECK(app.stub()->property("saves").toInt() == 1);
-    CHECK(app.stub()->property("suggestedName").toString() == QStringLiteral("cs-bingo-board-setup.ejconfig"));
+    CHECK(app.stub().property("saves").toInt() == 1);
+    CHECK(app.stub().property("suggestedName").toString() == QStringLiteral("cs-bingo-board-setup.ejconfig"));
     const QString target = QStringLiteral("exports/cs-bingo-board-setup.ejconfig");
     app.choose_to_save(target);
     const auto& files = app.services.memory().config().files();
@@ -641,7 +666,7 @@ TEST_CASE("app.settings: the import and export rows go through the chooser to th
     // Import: the row asks for a file; the chosen file is read, the confirmation covers the tab bar, and Cancel changes
     // nothing.
     app.tap(QStringLiteral("settingsImport"));
-    CHECK(app.stub()->property("opens").toInt() == 1);
+    CHECK(app.stub().property("opens").toInt() == 1);
     app.choose_to_open(target, QStringLiteral("cs-bingo-board-setup.ejconfig"));
     CHECK(app.shown(QStringLiteral("importConfirm")));
     CHECK_FALSE(app.need(QStringLiteral("shellTabs"))->isEnabled());
@@ -737,8 +762,9 @@ TEST_CASE("app.accessibility: the tree of each tab is named and in order in ligh
             app.ui.layout();
             expect_clean(check_names(app.ui));
             expect_clean(check_targets(app.ui, minimum));
-            // The rig reads the rows of the Settings list that are scrolled out of the view (below the tab bar) as items in
-            // view, and so finds them out of order after the tab bar; the order of the list itself is the screen's test.
+            // The rig reads the rows of the Settings list that are scrolled out of the view (below the tab bar) as
+            // items in view, and so finds them out of order after the tab bar; the order of the list itself is the
+            // screen's test.
             if (tab != SETTINGS_TAB)
             {
                 expect_clean(check_reading_order(app.ui));
