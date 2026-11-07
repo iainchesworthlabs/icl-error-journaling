@@ -13,8 +13,8 @@ namespace ej::ui
 {
 
 // The two calls that `UiRig` makes on the Stage 3 test support. They are in a file of their own because the headers of
-// the core define a name (`STRICT`) that the Windows headers behind Qt Quick define as a macro, so the two must not meet
-// in one translation unit.
+// the core define a name (`STRICT`) that the Windows headers behind Qt Quick define as a macro, so the two must not
+// meet in one translation unit.
 
 /// Moves the wall and the monotonic clock of `clock` forward by `by` and fires the timers that fall due.
 void advance_clock(test::TestClock& clock, std::chrono::milliseconds by);

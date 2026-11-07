@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The Theme singleton against docs/design/tokens.json: theme.matches_tokens, theme.dark_resolves and the rules of the text
-// scale, the tile colours and the motion values.
+// The Theme singleton against docs/design/tokens.json: theme.matches_tokens, theme.dark_resolves and the rules of the
+// text scale, the tile colours and the motion values.
 #include "rig/ui_rig.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -16,7 +16,6 @@
 #include <QMetaProperty>
 #include <QObject>
 #include <QSet>
-
 #include <cmath>
 
 using namespace ej::ui;
@@ -59,7 +58,8 @@ QString property_name(QString key)
 QSet<QString> own_properties(const QObject* object)
 {
     QSet<QString> names;
-    // A QML object's own properties belong to its generated meta object and to the ones it derives from, down to QObject.
+    // A QML object's own properties belong to its generated meta object and to the ones it derives from, down to
+    // QObject.
     for (const QMetaObject* meta = object->metaObject(); meta != nullptr && meta != &QObject::staticMetaObject;
          meta = meta->superClass())
     {
@@ -139,7 +139,8 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
         for (const bool dark : {false, true})
         {
             rig.set_dark(dark);
-            const QJsonObject expected = colours.value(dark ? QStringLiteral("dark") : QStringLiteral("light")).toObject();
+            const QJsonObject expected =
+                colours.value(dark ? QStringLiteral("dark") : QStringLiteral("light")).toObject();
             REQUIRE_FALSE(expected.isEmpty());
             for (auto it = expected.begin(); it != expected.end(); ++it)
             {
@@ -198,13 +199,18 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
         check_numbers(json.value(QStringLiteral("radius")).toObject(), child(theme, "radius"));
         check_numbers(json.value(QStringLiteral("spacing")).toObject(), child(theme, "space"));
         check_numbers(json.value(QStringLiteral("frame")).toObject(), child(theme, "frame"));
-        const QJsonObject scale = json.value(QStringLiteral("typography")).toObject().value(QStringLiteral("textScale")).toObject();
-        CHECK_THAT(number(child(theme, "size"), QStringLiteral("textScaleMin")), WithinAbs(scale.value(QStringLiteral("min")).toDouble(), 1e-9));
-        CHECK_THAT(number(child(theme, "size"), QStringLiteral("textScaleMax")), WithinAbs(scale.value(QStringLiteral("max")).toDouble(), 1e-9));
-        CHECK_THAT(number(theme, QStringLiteral("textScale")), WithinAbs(scale.value(QStringLiteral("default")).toDouble(), 1e-9));
+        const QJsonObject scale =
+            json.value(QStringLiteral("typography")).toObject().value(QStringLiteral("textScale")).toObject();
+        CHECK_THAT(number(child(theme, "size"), QStringLiteral("textScaleMin")),
+                   WithinAbs(scale.value(QStringLiteral("min")).toDouble(), 1e-9));
+        CHECK_THAT(number(child(theme, "size"), QStringLiteral("textScaleMax")),
+                   WithinAbs(scale.value(QStringLiteral("max")).toDouble(), 1e-9));
+        CHECK_THAT(number(theme, QStringLiteral("textScale")),
+                   WithinAbs(scale.value(QStringLiteral("default")).toDouble(), 1e-9));
 
         // Nothing in the singleton that the contract does not have.
-        for (const auto& [group, key] : {std::pair{"size", "size"}, std::pair{"radius", "radius"}, std::pair{"space", "spacing"}})
+        for (const auto& [group, key] :
+             {std::pair{"size", "size"}, std::pair{"radius", "radius"}, std::pair{"space", "spacing"}})
         {
             QSet<QString> have;
             for (const QString& name : json.value(QString::fromLatin1(key)).toObject().keys())
@@ -239,16 +245,24 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
             INFO("role " << it.key().toStdString());
             REQUIRE(own_properties(fonts).contains(it.key()));
             QObject* role = child(fonts, it.key().toLatin1().constData());
-            CHECK_THAT(number(role, QStringLiteral("basePt")), WithinAbs(json_role.value(QStringLiteral("sizePt")).toDouble(), 1e-9));
-            CHECK(static_cast<int>(number(role, QStringLiteral("weight"))) == json_role.value(QStringLiteral("weight")).toInt(400));
-            CHECK_THAT(number(role, QStringLiteral("letterSpacing")), WithinAbs(json_role.value(QStringLiteral("letterSpacingPt")).toDouble(0), 1e-9));
-            CHECK_THAT(number(role, QStringLiteral("lineHeight")), WithinAbs(json_role.value(QStringLiteral("lineHeight")).toDouble(1.0), 1e-9));
-            CHECK(static_cast<int>(number(role, QStringLiteral("maxLines"))) == json_role.value(QStringLiteral("maxLines")).toInt(0));
-            CHECK_THAT(number(role, QStringLiteral("scaleCap")), WithinAbs(json_role.value(QStringLiteral("scaleCap")).toDouble(0), 1e-9));
+            CHECK_THAT(number(role, QStringLiteral("basePt")),
+                       WithinAbs(json_role.value(QStringLiteral("sizePt")).toDouble(), 1e-9));
+            CHECK(static_cast<int>(number(role, QStringLiteral("weight"))) ==
+                  json_role.value(QStringLiteral("weight")).toInt(400));
+            CHECK_THAT(number(role, QStringLiteral("letterSpacing")),
+                       WithinAbs(json_role.value(QStringLiteral("letterSpacingPt")).toDouble(0), 1e-9));
+            CHECK_THAT(number(role, QStringLiteral("lineHeight")),
+                       WithinAbs(json_role.value(QStringLiteral("lineHeight")).toDouble(1.0), 1e-9));
+            CHECK(static_cast<int>(number(role, QStringLiteral("maxLines"))) ==
+                  json_role.value(QStringLiteral("maxLines")).toInt(0));
+            CHECK_THAT(number(role, QStringLiteral("scaleCap")),
+                       WithinAbs(json_role.value(QStringLiteral("scaleCap")).toDouble(0), 1e-9));
             CHECK(static_cast<int>(number(role, QStringLiteral("selectedWeight"))) ==
-                  json_role.value(QStringLiteral("selectedWeight")).toInt(json_role.value(QStringLiteral("weight")).toInt(400)));
+                  json_role.value(QStringLiteral("selectedWeight"))
+                      .toInt(json_role.value(QStringLiteral("weight")).toInt(400)));
             CHECK(role->property("upperCase").toBool() == json_role.value(QStringLiteral("uppercase")).toBool(false));
-            CHECK(role->property("tabularNumbers").toBool() == (json_role.value(QStringLiteral("numerals")).toString() == QStringLiteral("tabular")));
+            CHECK(role->property("tabularNumbers").toBool() ==
+                  (json_role.value(QStringLiteral("numerals")).toString() == QStringLiteral("tabular")));
         }
         QSet<QString> declared = own_properties(fonts);
         declared.remove(QStringLiteral("textScale"));
@@ -260,12 +274,16 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
         const QJsonObject motion = json.value(QStringLiteral("motion")).toObject();
         QObject* values = child(theme, "motion");
         const QJsonObject press = motion.value(QStringLiteral("tilePress")).toObject();
-        CHECK_THAT(number(values, QStringLiteral("tilePressScale")), WithinAbs(press.value(QStringLiteral("scale")).toDouble(), 1e-9));
-        CHECK(static_cast<int>(number(values, QStringLiteral("tilePressMs"))) == press.value(QStringLiteral("durationMs")).toInt());
-        for (const char* key : {"undoToastVisibleMs", "reducedMotionMs", "sheetPresentMs", "toastMs", "pageMs", "swipeReleaseMs"})
+        CHECK_THAT(number(values, QStringLiteral("tilePressScale")),
+                   WithinAbs(press.value(QStringLiteral("scale")).toDouble(), 1e-9));
+        CHECK(static_cast<int>(number(values, QStringLiteral("tilePressMs"))) ==
+              press.value(QStringLiteral("durationMs")).toInt());
+        for (const char* key :
+             {"undoToastVisibleMs", "reducedMotionMs", "sheetPresentMs", "toastMs", "pageMs", "swipeReleaseMs"})
         {
             INFO(key);
-            CHECK(static_cast<int>(number(values, QString::fromLatin1(key))) == motion.value(QString::fromLatin1(key)).toInt());
+            CHECK(static_cast<int>(number(values, QString::fromLatin1(key))) ==
+                  motion.value(QString::fromLatin1(key)).toInt());
         }
     }
 
@@ -278,7 +296,8 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
     }
 }
 
-TEST_CASE("theme.dark_resolves: switching the scheme changes the colours, and switching back restores them", "[ui][theme]")
+TEST_CASE("theme.dark_resolves: switching the scheme changes the colours, and switching back restores them",
+          "[ui][theme]")
 {
     UiRig rig;
     QObject* theme = rig.theme();
@@ -308,7 +327,7 @@ TEST_CASE("theme.dark_resolves: switching the scheme changes the colours, and sw
     unchanged.sort();
     INFO("the same in both schemes: " << unchanged.join(QStringLiteral(", ")).toStdString());
     // The plum header card and the white text on fills are the same in both, by design; nothing else may be.
-    const QStringList expected_same{QStringLiteral("headerCard"),       QStringLiteral("headerCardTextSecondary"),
+    const QStringList expected_same{QStringLiteral("headerCard"),        QStringLiteral("headerCardTextSecondary"),
                                     QStringLiteral("textOnDestructive"), QStringLiteral("textOnHeaderCard"),
                                     QStringLiteral("textOnPrimary"),     QStringLiteral("toastAccent"),
                                     QStringLiteral("toastText")};

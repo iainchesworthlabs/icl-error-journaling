@@ -45,6 +45,11 @@ target_link_libraries(ej_ui_tests PRIVATE ej_ui_test_support Qt6::Quick Qt6::Tes
 icl_relax_generated_warnings(ej_ui_tests)
 
 set(ej_ui_test_properties ENVIRONMENT "${ej_app_test_environment}")
+# Timings in a build with sanitizers, coverage or no optimisation are several times slower; the perf cases scale their budget.
+set(ej_perf_budget_factor 1)
+if(ICL_SANITIZERS OR ICL_ENABLE_COVERAGE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(ej_perf_budget_factor 10)
+endif()
 # Cases tagged [perf] have the label perf and run in the last phase; the others are ui.
 catch_discover_tests(ej_ui_tests
     TEST_SPEC "~[perf]"
@@ -52,7 +57,7 @@ catch_discover_tests(ej_ui_tests
 catch_discover_tests(ej_ui_tests
     TEST_SPEC "[perf]"
     TEST_SUFFIX " (perf)"
-    PROPERTIES LABELS perf TIMEOUT 120 ${ej_ui_test_properties})
+    PROPERTIES LABELS perf TIMEOUT 120 ENVIRONMENT "${ej_app_test_environment};EJ_PERF_BUDGET_FACTOR=${ej_perf_budget_factor}")
 
 # ---- the checks that keep the QML honest (tools/ci/check_qml_*.py, docs/ci.md) ----
 

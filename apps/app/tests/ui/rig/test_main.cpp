@@ -16,8 +16,6 @@ int main(int argc, char* argv[])
     }
     qputenv("QT_QUICK_BACKEND", "software");
     qputenv("QSG_RENDER_LOOP", "basic");
-    // A screen reader is not running, but the accessibility tree is read through the same interface it would use.
-    qputenv("QT_LINUX_ACCESSIBILITY_ALWAYS_ON", "1");
 
     const QGuiApplication application(argc, argv);
     return Catch::Session().run(argc, argv);

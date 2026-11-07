@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // a11y.contrast (docs/plan/stage-4.md, "Tests"): every pair of Theme.contrastPairs in both schemes, the 11 tile colours
-// under the tile text, and the rules for colour that is not a contrast ratio: no red or green tile hue, and tiles that stay
-// apart for a person with deuteranopia.
+// under the tile text, and the rules for colour that is not a contrast ratio: no red or green tile hue, and tiles that
+// stay apart for a person with deuteranopia.
 #include "rig/color_math.hpp"
 #include "rig/ui_rig.hpp"
 
@@ -12,7 +12,6 @@
 #include <QObject>
 #include <QStringList>
 #include <QVariant>
-
 #include <algorithm>
 
 using namespace ej::ui;
@@ -78,7 +77,8 @@ TEST_CASE("a11y.contrast: the formula is WCAG's", "[ui][a11y][contrast]")
     CHECK(contrast_ratio(QColor("#1E5B7A"), QColor("#F2F4F7")) == contrast_ratio(QColor("#F2F4F7"), QColor("#1E5B7A")));
 }
 
-TEST_CASE("a11y.contrast: every pair of Theme.contrastPairs reaches its ratio, in light and in dark", "[ui][a11y][contrast]")
+TEST_CASE("a11y.contrast: every pair of Theme.contrastPairs reaches its ratio, in light and in dark",
+          "[ui][a11y][contrast]")
 {
     UiRig rig;
     QObject* theme = rig.theme();
@@ -92,9 +92,10 @@ TEST_CASE("a11y.contrast: every pair of Theme.contrastPairs reaches its ratio, i
         {
             const QVariantMap pair = entry.toMap();
             const double minimum = pair.value("minimum").toDouble();
-            const double ratio = contrast_ratio(pair.value("foreground").value<QColor>(), pair.value("background").value<QColor>());
-            INFO((dark ? "dark: " : "light: ") << pair.value("label").toString().toStdString() << " is " << ratio
-                                               << " to 1, needs " << minimum);
+            const double ratio =
+                contrast_ratio(pair.value("foreground").value<QColor>(), pair.value("background").value<QColor>());
+            INFO((dark ? "dark: " : "light: ")
+                 << pair.value("label").toString().toStdString() << " is " << ratio << " to 1, needs " << minimum);
             CHECK(ratio >= minimum);
             if (pair.contains("exception"))
             {
@@ -159,9 +160,9 @@ TEST_CASE("a11y.contrast: no tile is red or green", "[ui][a11y][contrast]")
 TEST_CASE("a11y.contrast: any two tiles differ for a person with deuteranopia", "[ui][a11y][contrast]")
 {
     // CIE76 distance after the Machado deuteranopia matrix; two colours under about 2 look the same. The light pastels
-    // are close (aqua and steel, slots 4 and 7, are 0.3 apart), so the floor for light is only that no two are identical
-    // to the eye of the simulation, and it is reported to the owner; the label carries the meaning of a tile, never the
-    // colour. The dark tiles are all at least 1.4 apart. A palette change that makes either worse fails here.
+    // are close (aqua and steel, slots 4 and 7, are 0.3 apart), so the floor for light is only that no two are
+    // identical to the eye of the simulation, and it is reported to the owner; the label carries the meaning of a tile,
+    // never the colour. The dark tiles are all at least 1.4 apart. A palette change that makes either worse fails here.
     constexpr double LIGHT_FLOOR = 0.25;
     constexpr double DARK_FLOOR = 1.4;
 
@@ -171,8 +172,8 @@ TEST_CASE("a11y.contrast: any two tiles differ for a person with deuteranopia", 
     {
         rig.set_dark(dark);
         const Closest closest = closest_tiles(theme);
-        INFO((dark ? "dark" : "light") << ": the closest pair is slots " << closest.m_First << " and " << closest.m_Second
-                                       << " at " << closest.m_Distance);
+        INFO((dark ? "dark" : "light") << ": the closest pair is slots " << closest.m_First << " and "
+                                       << closest.m_Second << " at " << closest.m_Distance);
         CHECK(closest.m_Distance >= (dark ? DARK_FLOOR : LIGHT_FLOOR));
     }
 }

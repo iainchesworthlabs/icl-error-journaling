@@ -2,7 +2,6 @@
 #pragma once
 
 #include <QColor>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -10,8 +9,8 @@
 namespace ej::ui
 {
 
-/// The colour arithmetic of the accessibility tests: WCAG 2.x contrast, the hue of a colour, and the distance between two
-/// colours as a person with deuteranopia (no medium-wavelength cones) sees them.
+/// The colour arithmetic of the accessibility tests: WCAG 2.x contrast, the hue of a colour, and the distance between
+/// two colours as a person with deuteranopia (no medium-wavelength cones) sees them.
 
 [[nodiscard]] inline double linear_channel(double value)
 {
@@ -21,8 +20,9 @@ namespace ej::ui
 /// WCAG relative luminance, 0 (black) to 1 (white).
 [[nodiscard]] inline double relative_luminance(const QColor& colour)
 {
-    return 0.2126 * linear_channel(colour.redF()) + 0.7152 * linear_channel(colour.greenF()) +
-           0.0722 * linear_channel(colour.blueF());
+    return 0.2126 * linear_channel(static_cast<double>(colour.redF())) +
+           0.7152 * linear_channel(static_cast<double>(colour.greenF())) +
+           0.0722 * linear_channel(static_cast<double>(colour.blueF()));
 }
 
 /// WCAG contrast ratio, 1 to 21, whichever colour is the lighter.
@@ -36,16 +36,16 @@ namespace ej::ui
 /// Hue in degrees, 0 to 360.
 [[nodiscard]] inline double hue_degrees(const QColor& colour)
 {
-    return colour.hslHueF() * 360.0;
+    return static_cast<double>(colour.hslHueF()) * 360.0;
 }
 
 /// A colour seen with deuteranopia, by the Machado, Oliveira and Fernandes (2009) matrix at full severity, applied in
 /// linear light. Returns linear RGB.
 [[nodiscard]] inline std::array<double, 3> deuteranopia_linear(const QColor& colour)
 {
-    const double r = linear_channel(colour.redF());
-    const double g = linear_channel(colour.greenF());
-    const double b = linear_channel(colour.blueF());
+    const double r = linear_channel(static_cast<double>(colour.redF()));
+    const double g = linear_channel(static_cast<double>(colour.greenF()));
+    const double b = linear_channel(static_cast<double>(colour.blueF()));
     const auto clamp = [](double v) { return std::clamp(v, 0.0, 1.0); };
     return {clamp(0.367322 * r + 0.860646 * g - 0.227968 * b), clamp(0.280085 * r + 0.672501 * g + 0.047413 * b),
             clamp(-0.011820 * r + 0.042940 * g + 0.968881 * b)};

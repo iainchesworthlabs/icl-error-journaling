@@ -15,6 +15,79 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 | perf | `apps/app/tests/viewmodel/perf/*.cpp` | `ej_viewmodel_perf_tests`, built only when the directory has files. The timing checks of the threading section (no gap over 30 ms while a 40 ms commit runs) are in `integration/test_threading.cpp` so that TSan runs them; the final budgets are set from a device in Stage 5 |
 | system | `libs/storage/tests/kill` | `ej_kill_driver`: the kill harness. It starts `ej_kill_worker` as a separate process, kills it, and checks the store (see below) |
 | ui | `apps/app` | `app.smoke` starts the application off-screen and waits for a frame; `app.version` |
+| ui | `apps/app/tests/ui/*_test.cpp` | `ej_ui_tests`: Catch2 cases that load the QML offscreen and drive it from C++ (below) |
+| perf | `apps/app/tests/ui/*_test.cpp`, cases tagged `[perf]` | the same program: `perf.press_path`, `perf.scene` and `perf.first_frame` (below) |
+| unit | `tools/ci/check_qml_*.py` | `qml.platform`, `theme.no_literals`, `i18n.strings`, `qml.tests`, `qml.format` and `qml.lint`: the checks that keep the QML honest (`docs/ci.md`) |
+
+## Tests of the QML
+
+The QML is tested with Catch2 and not with Qt Quick Test (`docs/plan/stage-4.md`, decision 1): a case loads a component
+or a screen in an offscreen window (`QT_QPA_PLATFORM=offscreen`, the software renderer, as `app.smoke`), injects its
+required properties, drives it with synthesised touch and key events and asserts on the item tree. The program is
+`ej_ui_tests` (`apps/app/tests/ui/`); every `*_test.cpp` in that directory is found by a glob, and a package adds its
+file and nothing else. A test file is named after what it tests in snake case (`Tile` is `tile_test.cpp`,
+`qml/theme/Theme.qml` is `theme_test.cpp`), and `qml.tests` fails a QML file without one. A case tagged `[perf]` has the
+label `perf`; the others are `ui`. The module `ErrorJournalingApp` is compiled into the test program from the same files
+as the application, plus the stubs in `tests/ui/stubs/` that only the rig's own tests use.
+
+```cpp
+#include "rig/ui_checks.hpp"   // project and Stage 3 headers first, Qt headers after (see the note below)
+#include "rig/ui_rig.hpp"
+
+#include <catch2/catch_test_macros.hpp>
+#include <QQuickItem>
+
+TEST_CASE("tile: a press records on touch-down", "[ui][tile]")
+{
+    ej::ui::UiRig rig;
+    QQuickItem* tile = rig.load("Tile", {{"typeId", "mute-delay"}, {"label", "Mute Delay"} /* required properties */});
+    REQUIRE(tile != nullptr);                     // rig.errors() says why not
+    const int finger = rig.press(tile);           // touch-down: the handler has run
+    rig.advance(120ms);                           // animations and the attached TestClock
+    rig.release(finger);
+    ej::ui::expect_clean(ej::ui::check_everything(rig, [](const ej::ui::Node&) { return 88.0; }));
+}
+```
+
+| `UiRig` | What it is for |
+|---|---|
+| `load(type, properties)`, `load_source(qml, properties)`, `errors()`, `root()` | Creates a type of the module (or QML text) with its required properties, sized to the window (402 by 874 pt, an iPhone 17). Each call replaces the last item. One rig is one engine, so `Theme` is a new singleton in each |
+| `set_dark`, `set_text_scale`, `set_reduce_motion`, `theme()` | The three inputs of `Theme`, as the shell sets them from the bridge |
+| `press`, `move`, `release`, `tap`, `drag`, `swipe`, `type`, `key` | Touch (several fingers may be down at once; a press is delivered at touch-down) and keys, in the item's coordinates |
+| `advance(ms)`, `settle()`, `attach(TestClock&)`, `attach(ManualStorageGateway&)` | Time is manual. The animation clock is replaced by `ManualAnimationDriver`, so an animation of 120 ms is finished after `advance(120ms)` and not before, and a test never sleeps. `advance` also moves an attached `TestClock`; `settle` runs the jobs that wait in an attached `ManualStorageGateway` |
+| `tree()`, `accessible_tree()`, `geometry(item)`, `find(objectName)`, `layout()`, `grab()` | The item tree with each item's rectangle in points, whether it takes a press, whether a screen reader reaches it, and its accessible role, name, description and value; the tree in the order a screen reader reads it |
+
+The cross-cutting tests of the plan are functions in `rig/ui_checks.hpp` that each component and screen test calls on what it
+loaded, in the states it can be in. Each returns the faults, one line for each, and `expect_clean` fails the case with them.
+A check that cannot fail proves nothing, so `rig_test.cpp` runs each against a stub that follows the rule and a stub that
+breaks it (`stubs/UiStubBad*.qml`).
+
+| Function (test name) | What it finds |
+|---|---|
+| `check_names` (`a11y.names`) | An interactive item that is shown and has no `Accessible.role` or `Accessible.name`, or that a screen reader does not reach, and two controls under one parent with the same name and value |
+| `check_targets` (`a11y.targets`) | A target under 44 pt (or what the caller says, 88 for a tile), counting the `margin` of its pointer handlers |
+| `check_reading_order` (`a11y.reading_order`) | An item read before one that is above it, or before one to its left in the same row |
+| `check_text_scale` (`a11y.text_scale`) | A `Text` that is cut off, taller or (without wrapping) wider than its box, or that leaves the window; `check_everything` runs it at 1.0, 1.3 and 3.1 |
+| `check_safe_area(top, bottom)` (`a11y.safe_area`) | Anything interactive or readable inside an inset or outside the window |
+| `check_motion_reduced` (`motion.reduce`) | An animation over 100 ms or a slide, with Reduce Motion on |
+| `time_each`, `percentile` (`perf.press_path`) | The time of each press, p95 under 16 ms over 200 |
+| `measure_scene` (`perf.scene`) | The number of items and delegates, against `tests/ui/perf-budget.json` |
+| `snapshot_geometry`, `moved_items` (`perf.first_frame`) | A rectangle that moved between two states, for the Log screen in `LOADING` and after the labels arrive |
+
+`contrast_test.cpp` is `a11y.contrast`: every pair of `Theme.contrastPairs` (4.5 to 1 for text, 3 to 1 for a non-text
+indicator) in light and in dark, the 11 tile colours under the tile text, no red or green tile hue, and a floor on how far
+apart two tiles are for a person with deuteranopia. The approved light palette has four pairs under the rule (the Other
+tile border and the placeholder, on two backgrounds each); they are listed in `Theme` with the ratio they have, so that
+they cannot get worse. `theme_test.cpp` is `theme.matches_tokens` (every value of `docs/design/tokens.json` against the
+singleton, both ways) and `theme.dark_resolves`; `safe_frame_test.cpp` is `safe_frame.insets` and `safe_frame.override`.
+
+The core defines a name (`STRICT`) that the Windows headers behind Qt Quick define as a macro, so in a test file the
+project and Stage 3 headers come before any `<Q...>` header, which clang-format's include order gives. The headers of the
+rig declare the Qt Quick classes and do not include them, so they can be first.
+
+Not proved by these tests: how it looks, what VoiceOver says, the real insets, Dynamic Type and the appearance switch as iOS
+delivers them, the frame rate, a real finger. The plan lists them under "What cannot be verified here"; they are the device
+checklist.
 
 ## Golden tests and fixtures
 
