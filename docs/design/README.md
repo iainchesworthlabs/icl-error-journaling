@@ -1,6 +1,6 @@
 # ICL Error Journaling – design package v1
 
-The facilitator approved the eight light-mode screens (1 to 8 below) on 7 Nov 2026. They are the visual reference for Stage 4 of the implementation plan. Package 4.2 of Stage 4 added the screens that package lacked (9 to 34) and the dark palette; those are **drafts that the owner reviews and the facilitator then approves** (see [Review of the 4.2 drafts](#review-of-the-42-drafts)). All names, sites and error types shown are fictional placeholders; the real values come only from the configuration file at runtime.
+The facilitator approved the eight light-mode screens (1 to 8 below) on 7 Nov 2026. They are the visual reference for Stage 4 of the implementation plan. Package 4.2 of Stage 4 added the screens that package lacked (9 to 34) and the dark palette; the owner reviewed every light and dark screen on 7 Nov 2026 and accepted them; they **wait for the facilitator's approval**, which comes when she tries them (see [Review of the 4.2 drafts](#review-of-the-42-drafts)). All names, sites and error types shown are fictional placeholders; the real values come only from the configuration file at runtime.
 
 ## What is here
 
