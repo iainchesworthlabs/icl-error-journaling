@@ -109,14 +109,14 @@ public:
     void open_page(const QString& row)
     {
         tap(row);
-        advance_frames(m_Ui, 400ms);
+        m_Ui.advance(400ms);
     }
 
     /// Taps the Back of the page that is on top, and waits.
     void go_back()
     {
         tap(QStringLiteral("navLeading"));
-        advance_frames(m_Ui, 400ms);
+        m_Ui.advance(400ms);
     }
 
     /// Whether a text with this wording is shown anywhere.
@@ -140,14 +140,14 @@ public:
 
     [[nodiscard]] QString tile_label(int row)
     {
-        QQuickItem* tile = find_item(m_Ui, QStringLiteral("miniTile%1").arg(row));
-        REQUIRE(tile != nullptr);
-        return tile->findChild<QQuickItem*>(QStringLiteral("miniLabel"))->property("text").toString();
+        QQuickItem* tile = require_item(m_Ui, QStringLiteral("miniTile%1").arg(row));
+        return require_child(tile, QStringLiteral("miniLabel"))->property("text").toString();
     }
 
     [[nodiscard]] QString model_label(int row)
     {
         QAbstractItemModel* layout = m_Models.m_Settings.property("boardLayout").value<QAbstractItemModel*>();
+        REQUIRE(layout != nullptr);
         return layout->data(layout->index(row, 0), Qt::DisplayRole).toString();
     }
 
@@ -201,7 +201,7 @@ int hold_and_drag(Fixture& fixture, int from_row, int to_row)
     QQuickItem* source = fixture.require(QStringLiteral("miniTile%1").arg(from_row));
     QQuickItem* target = fixture.require(QStringLiteral("miniTile%1").arg(to_row));
     const int finger = rig.press(source);
-    QTest::qWait(ShortHold::HOLD_MS + 80);
+    rig.wait_real(std::chrono::milliseconds(ShortHold::HOLD_MS + 80));
     rig.advance(16ms);
     const QPointF from = target->mapFromScene(source->mapToScene(QPointF(10, 10)));
     const QPointF to(target->width() / 2, target->height() / 2);
@@ -280,7 +280,7 @@ TEST_CASE("settings.rows: the pages the screen has itself are pushed, and Back r
     // The shell goes back to the list from any depth.
     fixture.open_page(QStringLiteral("settingsTimeFormat"));
     QMetaObject::invokeMethod(fixture.m_Screen, "popToRoot");
-    advance_frames(fixture.m_Ui, 400ms);
+    fixture.m_Ui.advance(400ms);
     CHECK(fixture.depth() == 1);
 }
 
@@ -315,7 +315,7 @@ TEST_CASE("settings.facilitator: Save asks the model once, a refusal shows inlin
     CHECK_FALSE(field->property("invalid").toBool());
     CHECK(fixture.require(QStringLiteral("navTrailing"))->isEnabled());
     fixture.tap(QStringLiteral("navTrailing"));
-    advance_frames(fixture.m_Ui, 400ms);
+    fixture.m_Ui.advance(400ms);
     CHECK(fixture.depth() == 1);
     // The name shows in the list when it has been saved, and not before.
     CHECK(fixture.require(QStringLiteral("settingsFacilitator"))->property("value").toString() == "Sam Example");
@@ -343,7 +343,7 @@ TEST_CASE("settings.prefix: Save asks the model once and a refusal shows inline"
 
     replace_text(fixture, QStringLiteral("CELL"));
     fixture.tap(QStringLiteral("navTrailing"));
-    advance_frames(fixture.m_Ui, 400ms);
+    fixture.m_Ui.advance(400ms);
     fixture.m_Ui.settle();
     CHECK(fixture.depth() == 1);
     CHECK(fixture.saves() == before + 1);
@@ -407,9 +407,10 @@ TEST_CASE("settings.totals: the switch calls setIncludeTotals and moves when the
     CHECK(fixture.settings().include_totals());
     CHECK(row->property("checked").toBool());
     // The knob is on the other side, so the state is not shown by colour alone.
-    QQuickItem* knob = find_item(row, QStringLiteral("settingsSwitchKnob"));
-    QQuickItem* track = find_item(row, QStringLiteral("settingsSwitchTrack"));
+    QQuickItem* knob = fixture.m_Ui.find_item(QStringLiteral("settingsSwitchKnob"), row);
+    QQuickItem* track = fixture.m_Ui.find_item(QStringLiteral("settingsSwitchTrack"), row);
     REQUIRE(knob != nullptr);
+    REQUIRE(track != nullptr);
     CHECK(knob->x() + knob->width() / 2 > track->width() / 2);
 
     fixture.tap(QStringLiteral("settingsTotals"));
@@ -487,7 +488,7 @@ TEST_CASE("settings.board_layout: Replace type opens the picker, a choice calls 
 
     fixture.tap(QStringLiteral("miniTile0"));
     fixture.tap(QStringLiteral("miniReplace"));
-    advance_frames(fixture.m_Ui, 500ms);
+    fixture.m_Ui.advance(500ms);
     QQuickItem* panel = fixture.shown(QStringLiteral("sheetPanel"));
     REQUIRE(panel != nullptr);
     CHECK(fixture.shows(QStringLiteral("Not on the board")));
@@ -500,7 +501,7 @@ TEST_CASE("settings.board_layout: Replace type opens the picker, a choice calls 
     // A type that is on the board elsewhere swaps places with the tile's.
     fixture.m_Ui.tap(fixture.require(QStringLiteral("settingsPickerType_%1").arg(MUTE_DELAY)));
     fixture.m_Ui.settle();
-    advance_frames(fixture.m_Ui, 500ms);
+    fixture.m_Ui.advance(500ms);
     CHECK(fixture.saves() == before + 1);
     CHECK(fixture.tile_label(0) == "Mute Delay");
     CHECK(fixture.tile_label(7) == "Wrong Response");
@@ -508,7 +509,7 @@ TEST_CASE("settings.board_layout: Replace type opens the picker, a choice calls 
 
     // A type that is not on the board takes the tile and sends the tile's type off it.
     fixture.tap(QStringLiteral("miniReplace"));
-    advance_frames(fixture.m_Ui, 500ms);
+    fixture.m_Ui.advance(500ms);
     REQUIRE(fixture.shown(QStringLiteral("sheetPanel")) != nullptr);
     for (const Node& node : fixture.m_Ui.tree())
     {
@@ -520,7 +521,7 @@ TEST_CASE("settings.board_layout: Replace type opens the picker, a choice calls 
         }
     }
     fixture.m_Ui.settle();
-    advance_frames(fixture.m_Ui, 500ms);
+    fixture.m_Ui.advance(500ms);
     CHECK(fixture.saves() == before + 2);
     CHECK(fixture.tile_label(0) == "Echo Delay");
     CHECK(fixture.shown(QStringLiteral("sheetPanel")) == nullptr);
@@ -532,10 +533,10 @@ TEST_CASE("settings.board_layout: Cancel closes the picker and changes nothing",
     const std::size_t before = fixture.saves();
     fixture.tap(QStringLiteral("miniTile1"));
     fixture.tap(QStringLiteral("miniReplace"));
-    advance_frames(fixture.m_Ui, 500ms);
+    fixture.m_Ui.advance(500ms);
     REQUIRE(fixture.shown(QStringLiteral("sheetPanel")) != nullptr);
     fixture.tap(QStringLiteral("navLeading"));
-    advance_frames(fixture.m_Ui, 500ms);
+    fixture.m_Ui.advance(500ms);
     CHECK(fixture.shown(QStringLiteral("sheetPanel")) == nullptr);
     fixture.m_Ui.settle();
     CHECK(fixture.saves() == before);
@@ -570,9 +571,9 @@ TEST_CASE("settings.board_limit: a change the model refuses shows its words inli
     fixture.tap(QStringLiteral("miniMoveEarlier"));
     CHECK(fixture.settings().saving());
     fixture.tap(QStringLiteral("miniReplace"));
-    advance_frames(fixture.m_Ui, 500ms);
+    fixture.m_Ui.advance(500ms);
     fixture.m_Ui.tap(fixture.require(QStringLiteral("settingsPickerType_%1").arg(MUTE_DELAY)));
-    advance_frames(fixture.m_Ui, 500ms);
+    fixture.m_Ui.advance(500ms);
     CHECK(fixture.shown(QStringLiteral("sheetPanel")) != nullptr);
     CHECK(fixture.shown(QStringLiteral("settingsPickerMessage")) != nullptr);
     CHECK(fixture.shows(QStringLiteral("still being saved")));
@@ -721,7 +722,7 @@ TEST_CASE("settings.voiceover: rows read their label and value, the switch reads
 
     // The pages: rows are buttons, a choice reads as checked.
     CHECK(accessible_press(fixture.require(QStringLiteral("settingsTimeFormat"))));
-    advance_frames(fixture.m_Ui, 400ms);
+    fixture.m_Ui.advance(400ms);
     CHECK(name_of(QStringLiteral("settingsTime24")).m_Role == QAccessible::Button);
     QAccessibleInterface* choice =
         QAccessible::queryAccessibleInterface(fixture.require(QStringLiteral("settingsTime24")));
@@ -789,7 +790,7 @@ TEST_CASE("settings.a11y: the picker sheet passes the checks on its own, in ligh
         REQUIRE(picker != nullptr);
         INFO(rig.errors().toStdString());
         QMetaObject::invokeMethod(picker, "openFor", Q_ARG(int, 3), Q_ARG(QString, QString(MUTE_DELAY)));
-        advance_frames(rig, 500ms);
+        rig.advance(500ms);
         expect_clean(check_everything(rig, min_target));
         expect_clean(check_safe_area(rig, 59, 0));
     }
@@ -825,6 +826,6 @@ TEST_CASE("settings.motion: with Reduce Motion the pages fade in 100 ms and the 
     fixture.go_back();
     fixture.tap(QStringLiteral("miniTile1"));
     fixture.tap(QStringLiteral("miniReplace"));
-    advance_frames(fixture.m_Ui, 200ms);
+    fixture.m_Ui.advance(200ms);
     expect_clean(check_motion_reduced(fixture.m_Ui));
 }
