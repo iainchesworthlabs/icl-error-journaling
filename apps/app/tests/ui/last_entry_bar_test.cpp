@@ -50,7 +50,7 @@ TEST_CASE("last_bar.line: shows the latest line and the count of today", "[ui][l
     CHECK(text_of(rig, "lastBarLine") == QStringLiteral("10:20  T| Mute Delay"));
     CHECK(text_of(rig, "lastBarCount") == QStringLiteral("7 today"));
     CHECK(text_of(rig, "lastBarCaption") == QStringLiteral("LAST"));
-    CHECK(rig.find(QStringLiteral("lastBarCount"))->isVisible());
+    CHECK(require_item(rig, QStringLiteral("lastBarCount"))->isVisible());
     CHECK(rig.geometry(bar).width() == 370);
     CHECK(rig.geometry(bar).height() == 44);
 
@@ -78,7 +78,7 @@ TEST_CASE("last_bar.line: with no entry it says so", "[ui][last_bar]")
     UiRig rig;
     QQuickItem* bar = load_bar(rig, QString(), 0);
     CHECK(text_of(rig, "lastBarLine") == QStringLiteral("No entries yet"));
-    CHECK_FALSE(rig.find(QStringLiteral("lastBarCount"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("lastBarCount"))->isVisible());
 
     bool named = false;
     for (const Node& node : rig.accessible_tree())
@@ -138,10 +138,10 @@ TEST_CASE("last_bar.skeleton: the shape only, with no text, role or touch", "[ui
     UiRig rig;
     QQuickItem* bar = load_bar(rig, QStringLiteral("10:20  T| Mute Delay"), 7, true);
     CHECK(rig.geometry(bar).height() == 44);
-    CHECK_FALSE(rig.find(QStringLiteral("lastBarLine"))->isVisible());
-    CHECK_FALSE(rig.find(QStringLiteral("lastBarCaption"))->isVisible());
-    CHECK_FALSE(rig.find(QStringLiteral("lastBarCount"))->isVisible());
-    CHECK(rig.find(QStringLiteral("lastBarBackground"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("lastBarLine"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("lastBarCaption"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("lastBarCount"))->isVisible());
+    CHECK(require_item(rig, QStringLiteral("lastBarBackground"))->isVisible());
 
     QSignalSpy tapped(bar, SIGNAL(tapped()));
     rig.tap(bar);

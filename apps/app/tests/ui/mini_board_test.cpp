@@ -174,7 +174,7 @@ QQuickItem* tile(UiRig& rig, int row)
 
 QString label_of(UiRig& rig, int row)
 {
-    return tile(rig, row)->findChild<QQuickItem*>(QStringLiteral("miniLabel"))->property("text").toString();
+    return require_child(tile(rig, row), QStringLiteral("miniLabel"))->property("text").toString();
 }
 
 /// The hold is a QML Timer, which runs on the wall clock and not on the animation clock of the rig, so a test waits for
@@ -262,7 +262,7 @@ TEST_CASE("mini_board.geometry: twelve small tiles in three columns, the size of
     CHECK(label_of(rig, 1) == QStringLiteral("Sequence Out of Order"));
     CHECK(label_of(rig, OTHER_ROW) == QStringLiteral("Other"));
     // Nothing is selected, so there is no panel.
-    CHECK_FALSE(rig.find_item(QStringLiteral("miniPanel"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("miniPanel"))->isVisible());
     CHECK(board->property("selectedPosition").toInt() == 0);
 }
 
@@ -279,21 +279,21 @@ TEST_CASE("mini_board.swap: a tap selects a tile and Replace type asks for a typ
     CHECK(board->property("selectedPosition").toInt() == 5);
     QQuickItem* panel = rig.find_item(QStringLiteral("miniPanel"));
     REQUIRE(panel->isVisible());
-    CHECK(rig.find_item(QStringLiteral("miniSelectedName"))->property("text").toString() == layout.label(4));
-    CHECK(rig.find_item(QStringLiteral("miniSelectedPlace"))->property("text").toString() ==
+    CHECK(require_item(rig, QStringLiteral("miniSelectedName"))->property("text").toString() == layout.label(4));
+    CHECK(require_item(rig, QStringLiteral("miniSelectedPlace"))->property("text").toString() ==
           QStringLiteral("Position 5 of 11"));
     // Selected is shown by more than colour: a tick, and the tile is lifted and larger.
-    QQuickItem* face = tile(rig, 4)->findChild<QQuickItem*>(QStringLiteral("miniFace4"));
-    CHECK(tile(rig, 4)->findChild<QQuickItem*>(QStringLiteral("miniTick"))->isVisible());
+    QQuickItem* face = require_child(tile(rig, 4), QStringLiteral("miniFace4"));
+    CHECK(require_child(tile(rig, 4), QStringLiteral("miniTick"))->isVisible());
     CHECK(face->scale() > 1.0);
     CHECK(face->y() < 0.0);
-    CHECK_FALSE(tile(rig, 5)->findChild<QQuickItem*>(QStringLiteral("miniTick"))->isVisible());
+    CHECK_FALSE(require_child(tile(rig, 5), QStringLiteral("miniTick"))->isVisible());
     CHECK(face->parentItem() == tile(rig, 4));
 
     // Another tile takes the selection.
     tap_item(rig, tile(rig, 8));
     CHECK(board->property("selectedPosition").toInt() == 9);
-    CHECK_FALSE(tile(rig, 4)->findChild<QQuickItem*>(QStringLiteral("miniTick"))->isVisible());
+    CHECK_FALSE(require_child(tile(rig, 4), QStringLiteral("miniTick"))->isVisible());
 
     tap_item(rig, rig.find_item(QStringLiteral("miniReplace")));
     REQUIRE(replace.count() == 1);
@@ -319,12 +319,12 @@ TEST_CASE("mini_board.swap: Other is fixed, an empty position can be filled", "[
     // Other is shown and named, and neither selected nor moved.
     tap_item(rig, tile(rig, OTHER_ROW));
     CHECK(board->property("selectedPosition").toInt() == 0);
-    CHECK_FALSE(rig.find_item(QStringLiteral("miniPanel"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("miniPanel"))->isVisible());
 
     // The empty position (6) is selected, named as empty, cannot move, and can be given a type.
     tap_item(rig, tile(rig, 5));
     CHECK(board->property("selectedPosition").toInt() == 6);
-    CHECK(rig.find_item(QStringLiteral("miniSelectedName"))->property("text").toString() ==
+    CHECK(require_item(rig, QStringLiteral("miniSelectedName"))->property("text").toString() ==
           QStringLiteral("Empty tile"));
     QQuickItem* earlier = rig.find_item(QStringLiteral("miniMoveEarlier"));
     QQuickItem* later = rig.find_item(QStringLiteral("miniMoveLater"));
@@ -357,8 +357,8 @@ TEST_CASE("mini_board.buttons: Move earlier and Move later do what the drag does
     CHECK(label_of(rig, 3) == third);
     CHECK(label_of(rig, 2) == fourth);
     CHECK(board->property("selectedPosition").toInt() == 4);
-    CHECK(rig.find_item(QStringLiteral("miniSelectedName"))->property("text").toString() == third);
-    CHECK(rig.find_item(QStringLiteral("miniSelectedPlace"))->property("text").toString() ==
+    CHECK(require_item(rig, QStringLiteral("miniSelectedName"))->property("text").toString() == third);
+    CHECK(require_item(rig, QStringLiteral("miniSelectedPlace"))->property("text").toString() ==
           QStringLiteral("Position 4 of 11"));
 
     tap_item(rig, rig.find_item(QStringLiteral("miniMoveEarlier")));
@@ -395,16 +395,16 @@ TEST_CASE("mini_board.buttons: the first and the last position cannot move past 
 
     tap_item(rig, tile(rig, 0));
     REQUIRE(board->property("selectedPosition").toInt() == 1);
-    CHECK_FALSE(rig.find_item(QStringLiteral("miniMoveEarlier"))->isEnabled());
-    CHECK(rig.find_item(QStringLiteral("miniMoveLater"))->isEnabled());
+    CHECK_FALSE(require_item(rig, QStringLiteral("miniMoveEarlier"))->isEnabled());
+    CHECK(require_item(rig, QStringLiteral("miniMoveLater"))->isEnabled());
     tap_item(rig, rig.find_item(QStringLiteral("miniMoveEarlier")));
     (void)accessible_press(rig.find_item(QStringLiteral("miniMoveEarlier")));
     CHECK(relay.m_Calls.empty());
 
     tap_item(rig, tile(rig, 10));
     REQUIRE(board->property("selectedPosition").toInt() == 11);
-    CHECK(rig.find_item(QStringLiteral("miniMoveEarlier"))->isEnabled());
-    CHECK_FALSE(rig.find_item(QStringLiteral("miniMoveLater"))->isEnabled());
+    CHECK(require_item(rig, QStringLiteral("miniMoveEarlier"))->isEnabled());
+    CHECK_FALSE(require_item(rig, QStringLiteral("miniMoveLater"))->isEnabled());
     tap_item(rig, rig.find_item(QStringLiteral("miniMoveLater")));
     CHECK(relay.m_Calls.empty());
 }
@@ -473,10 +473,10 @@ TEST_CASE("mini_board.drag: a refusal leaves the tile where it was", "[ui][mini_
     REQUIRE(relay.m_Calls.size() == 1);
     CHECK(relay.m_Calls.back() == std::make_pair(3, 7));
     CHECK_FALSE(board->property("dragging").toBool());
-    CHECK_FALSE(rig.find_item(QStringLiteral("miniDragProxy"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("miniDragProxy"))->isVisible());
     CHECK(label_of(rig, 2) == dragged);
     CHECK(label_of(rig, 6) == at_seven);
-    CHECK(tile(rig, 2)->findChild<QQuickItem*>(QStringLiteral("miniFace2"))->opacity() == 1.0);
+    CHECK(require_child(tile(rig, 2), QStringLiteral("miniFace2"))->opacity() == 1.0);
 }
 
 TEST_CASE("mini_board.drag: the selection follows a selected tile that is dragged", "[ui][mini_board]")

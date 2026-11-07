@@ -74,13 +74,13 @@ TEST_CASE(
     QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Mute Delay logged at 10:20"), 1));
     rig.advance(300ms);
 
-    CHECK(rig.find(QStringLiteral("toastText"))->property("text").toString() ==
+    CHECK(require_item(rig, QStringLiteral("toastText"))->property("text").toString() ==
           QStringLiteral("Mute Delay logged at 10:20"));
     auto* animator = object_named(toast, QStringLiteral("toastBarAnimator"));
     CHECK(animator->property("duration").toInt() == WINDOW_MS);
     CHECK(animator->property("running").toBool());
     CHECK(toast->property("barRestarts").toInt() == 1);
-    CHECK(rig.find(QStringLiteral("toastBarTrack"))->isVisible());
+    CHECK(require_item(rig, QStringLiteral("toastBarTrack"))->isVisible());
 
     // Three seconds in, the bar is still running; the same generation with another line does not restart it.
     rig.advance(3000ms);
@@ -88,7 +88,7 @@ TEST_CASE(
     toast->setProperty("text", QStringLiteral("Mute Delay logged at 10:21"));
     rig.advance(16ms);
     CHECK(toast->property("barRestarts").toInt() == 1);
-    CHECK(rig.find(QStringLiteral("toastText"))->property("text").toString() ==
+    CHECK(require_item(rig, QStringLiteral("toastText"))->property("text").toString() ==
           QStringLiteral("Mute Delay logged at 10:21"));
 
     // A new generation restarts it: three more seconds is six since the start, and the bar is still running.
@@ -179,7 +179,7 @@ TEST_CASE("toast.repeat: a repeat changes the text in place, without the toast c
         CHECK_FALSE(fadeOut->property("running").toBool());
         CHECK_FALSE(fadeIn->property("running").toBool());
     }
-    CHECK(rig.find(QStringLiteral("toastText"))->property("text").toString() ==
+    CHECK(require_item(rig, QStringLiteral("toastText"))->property("text").toString() ==
           QStringLiteral("Mute Delay logged ×2 at 10:21"));
     CHECK(rig.find(QStringLiteral("toastCard")) == card);
 
@@ -262,7 +262,7 @@ TEST_CASE("toast.lifecycle: with Reduce Motion it fades and does not move, and t
     advance_through(rig, 100);
     CHECK(card->opacity() == 1.0);
     CHECK(card->y() == 0.0);
-    CHECK_FALSE(rig.find(QStringLiteral("toastBarTrack"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("toastBarTrack"))->isVisible());
     CHECK(object_named(toast, QStringLiteral("toastSlideIn"))->property("from").toReal() == 0.0);
     CHECK(object_named(toast, QStringLiteral("toastFadeIn"))->property("duration").toInt() == 100);
     expect_clean(check_motion_reduced(rig));

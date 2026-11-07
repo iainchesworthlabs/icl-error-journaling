@@ -208,7 +208,7 @@ TEST_CASE("grid.binding: each tile shows its row of the model", "[ui][grid]")
         CHECK_FALSE(tile->property("hasCount").toBool());
         if (row != OTHER_ROW)
         {
-            QQuickItem* background = tile->findChild<QQuickItem*>(QStringLiteral("tileBackground"));
+            QQuickItem* background = require_child(tile, QStringLiteral("tileBackground"));
             REQUIRE(background != nullptr);
             CHECK(background->property("color").value<QColor>() ==
                   theme_tile_colour(rig, board.value(row, "colourSlot").toInt()));
@@ -270,7 +270,7 @@ TEST_CASE("grid.signals: an empty position is inert", "[ui][grid]")
     CHECK(tapped.count() == 0);
 
     // It is drawn as an empty slot and VoiceOver does not read it as a button.
-    CHECK(tile_at(rig, 4)->findChild<QQuickItem*>(QStringLiteral("tileEmptySlot"))->isVisible());
+    CHECK(require_child(tile_at(rig, 4), QStringLiteral("tileEmptySlot"))->isVisible());
     const std::vector<Node> nodes = rig.accessible_tree();
     const auto empty = std::ranges::find_if(
         nodes, [](const Node& node)
@@ -312,8 +312,8 @@ TEST_CASE("grid.model_updates: a change in one row updates one tile, and a press
     // Only row 3 changed: its badge and name, and nothing else.
     CHECK(tile_at(rig, 3)->property("hasCount").toBool());
     CHECK(tile_at(rig, 3)->property("count").toInt() == 1);
-    CHECK(tile_at(rig, 3)->findChild<QQuickItem*>(QStringLiteral("tileBadge"))->isVisible());
-    CHECK(tile_at(rig, 3)->findChild<QQuickItem*>(QStringLiteral("tileBadgeText"))->property("text").toString() ==
+    CHECK(require_child(tile_at(rig, 3), QStringLiteral("tileBadge"))->isVisible());
+    CHECK(require_child(tile_at(rig, 3), QStringLiteral("tileBadgeText"))->property("text").toString() ==
           QStringLiteral("1"));
     CHECK(tile_at(rig, 3)->property("accessibleName").toString().endsWith(QStringLiteral(", 1 today")));
     for (int row = 0; row < ROWS; ++row)
@@ -322,17 +322,17 @@ TEST_CASE("grid.model_updates: a change in one row updates one tile, and a press
         {
             INFO("row " << row);
             CHECK_FALSE(tile_at(rig, row)->property("hasCount").toBool());
-            CHECK_FALSE(tile_at(rig, row)->findChild<QQuickItem*>(QStringLiteral("tileBadge"))->isVisible());
+            CHECK_FALSE(require_child(tile_at(rig, row), QStringLiteral("tileBadge"))->isVisible());
         }
     }
 
     // The press on row 0 is still running, and finishes as it would have.
     CHECK(pressIn->property("running").toBool());
     rig.advance(ANIMATOR_SETTLE);
-    CHECK(held->findChild<QQuickItem*>(QStringLiteral("tileFace"))->scale() == 0.96);
+    CHECK(require_child(held, QStringLiteral("tileFace"))->scale() == 0.96);
     rig.release(finger);
     rig.advance(ANIMATOR_SETTLE);
-    CHECK(held->findChild<QQuickItem*>(QStringLiteral("tileFace"))->scale() == 1.0);
+    CHECK(require_child(held, QStringLiteral("tileFace"))->scale() == 1.0);
 
     // The tile objects are the same ones: nothing was created again.
     CHECK(tile_at(rig, 0) == held);
@@ -359,9 +359,9 @@ TEST_CASE("grid.skeleton: twelve neutral shapes with no text, count or type colo
         INFO("row " << row);
         CHECK(tile->width() == 118);
         CHECK(tile->height() == 104);
-        CHECK_FALSE(tile->findChild<QQuickItem*>(QStringLiteral("tileLabel"))->isVisible());
-        CHECK_FALSE(tile->findChild<QQuickItem*>(QStringLiteral("tileBadge"))->isVisible());
-        QQuickItem* background = tile->findChild<QQuickItem*>(QStringLiteral("tileBackground"));
+        CHECK_FALSE(require_child(tile, QStringLiteral("tileLabel"))->isVisible());
+        CHECK_FALSE(require_child(tile, QStringLiteral("tileBadge"))->isVisible());
+        QQuickItem* background = require_child(tile, QStringLiteral("tileBackground"));
         CHECK(background->isVisible());
         CHECK(background->property("color").value<QColor>() == colour->property("swatch").value<QColor>());
     }

@@ -384,9 +384,9 @@ TEST_CASE("tile.empty: an empty position has no handler, no role and is not anno
     const std::vector<Node> nodes = rig.accessible_tree();
     const auto self = std::ranges::find_if(nodes, [tile](const Node& node) { return node.m_Item == tile; });
     CHECK((self == nodes.end() || !self->m_InAccessibleTree));
-    CHECK(rig.find(QStringLiteral("tileEmptySlot"))->isVisible());
-    CHECK_FALSE(rig.find(QStringLiteral("tileLabel"))->isVisible());
-    CHECK_FALSE(rig.find(QStringLiteral("tileBadge"))->isVisible());
+    CHECK(require_item(rig, QStringLiteral("tileEmptySlot"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("tileLabel"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("tileBadge"))->isVisible());
 }
 
 TEST_CASE("tile.other: neutral fill, a dashed border of the token width, and the name", "[ui][tile]")
@@ -402,15 +402,15 @@ TEST_CASE("tile.other: neutral fill, a dashed border of the token width, and the
         QObject* border = theme_group(rig, "border");
         INFO((dark ? "dark" : "light"));
 
-        CHECK(rig.find(QStringLiteral("tileOtherBorder"))->isVisible());
-        CHECK_FALSE(rig.find(QStringLiteral("tileBackground"))->isVisible());
+        CHECK(require_item(rig, QStringLiteral("tileOtherBorder"))->isVisible());
+        CHECK_FALSE(require_item(rig, QStringLiteral("tileBackground"))->isVisible());
         CHECK(path->property("strokeWidth").toDouble() == border->property("otherWidth").toDouble());
         CHECK(border->property("otherWidth").toDouble() == 1.5);
         // ShapePath.DashLine is 2; SolidLine is 1.
         CHECK(path->property("strokeStyle").toInt() == 2);
         CHECK(path->property("strokeColor").value<QColor>() == colour->property("otherTileBorder").value<QColor>());
         CHECK(path->property("fillColor").value<QColor>() == colour->property("otherTileFill").value<QColor>());
-        CHECK(rig.find(QStringLiteral("tileOtherIcon"))->isVisible());
+        CHECK(require_item(rig, QStringLiteral("tileOtherIcon"))->isVisible());
         // Neutral: no type colour is used.
         CHECK(path->property("fillColor").value<QColor>() == theme_tile_colour(rig, 0));
 
@@ -425,14 +425,14 @@ TEST_CASE("tile.other: neutral fill, a dashed border of the token width, and the
 TEST_CASE("tile.other: the other tile draws a count too, and a type tile has no dashed border", "[ui][tile]")
 {
     UiRig rig;
-    QQuickItem* tile = load_tile(rig, other_properties(4));
-    CHECK(rig.find(QStringLiteral("tileBadge"))->isVisible());
-    CHECK(rig.find(QStringLiteral("tileBadgeText"))->property("text").toString() == QStringLiteral("4"));
+    load_tile(rig, other_properties(4));
+    CHECK(require_item(rig, QStringLiteral("tileBadge"))->isVisible());
+    CHECK(require_item(rig, QStringLiteral("tileBadgeText"))->property("text").toString() == QStringLiteral("4"));
 
-    tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
-    CHECK_FALSE(rig.find(QStringLiteral("tileOtherBorder"))->isVisible());
-    CHECK(rig.find(QStringLiteral("tileBackground"))->isVisible());
-    CHECK_FALSE(rig.find(QStringLiteral("tileOtherIcon"))->isVisible());
+    load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    CHECK_FALSE(require_item(rig, QStringLiteral("tileOtherBorder"))->isVisible());
+    CHECK(require_item(rig, QStringLiteral("tileBackground"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("tileOtherIcon"))->isVisible());
 }
 
 TEST_CASE("tile.colour: each slot is the Theme colour of the slot, in light and dark", "[ui][tile]")
@@ -461,9 +461,9 @@ TEST_CASE("tile.skeleton: shapes only, in a neutral colour, with no text, badge,
     QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8, 7));
     tile->setProperty("skeleton", true);
     rig.layout();
-    CHECK_FALSE(rig.find(QStringLiteral("tileLabel"))->isVisible());
-    CHECK_FALSE(rig.find(QStringLiteral("tileBadge"))->isVisible());
-    CHECK(rig.find(QStringLiteral("tileBackground"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("tileLabel"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("tileBadge"))->isVisible());
+    CHECK(require_item(rig, QStringLiteral("tileBackground"))->isVisible());
     CHECK(colour_of(rig.find(QStringLiteral("tileBackground"))) ==
           theme_group(rig, "colour")->property("swatch").value<QColor>());
     CHECK(colour_of(rig.find(QStringLiteral("tileBackground"))) != theme_tile_colour(rig, 8));
@@ -483,8 +483,8 @@ TEST_CASE("tile.skeleton: shapes only, in a neutral colour, with no text, badge,
     // The Other tile as a skeleton is a plain neutral shape as well: no dashes, no icon.
     tile->setProperty("isOther", true);
     rig.layout();
-    CHECK_FALSE(rig.find(QStringLiteral("tileOtherBorder"))->isVisible());
-    CHECK_FALSE(rig.find(QStringLiteral("tileOtherIcon"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("tileOtherBorder"))->isVisible());
+    CHECK_FALSE(require_item(rig, QStringLiteral("tileOtherIcon"))->isVisible());
 }
 
 TEST_CASE("tile.voiceover: an activation sends the same pressed and tapped pair as a touch", "[ui][tile]")
