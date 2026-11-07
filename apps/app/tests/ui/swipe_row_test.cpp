@@ -72,11 +72,12 @@ double face_x(UiRig& rig, QQuickItem* row)
     return face->x();
 }
 
-/// A left swipe on the face of `row`, from `from` to `to` (x in the row's coordinates), in the middle of the row.
+/// A swipe on `row` from `from` to `to` (x in the row's coordinates), in the middle of the row. The finger's path is in
+/// the coordinates of the row, which does not move; in those of the face, which slides with the finger, each step would
+/// move the next one further.
 void swipe_left(UiRig& rig, QQuickItem* row, double from, double to)
 {
-    QQuickItem* face = face_of(rig, row);
-    rig.swipe(face, QPointF(from, face->height() / 2), QPointF(to, face->height() / 2));
+    rig.swipe(row, QPointF(from, row->height() / 2), QPointF(to, row->height() / 2));
 }
 
 } // namespace
@@ -123,7 +124,7 @@ TEST_CASE("swipe_row.reveal: a swipe past the threshold reveals Copy and Delete,
         swipe_left(rig, row, 340, 10);
         rig.advance(std::chrono::milliseconds(400));
         CHECK(face_x(rig, row) == -reveal);
-        swipe_left(rig, row, 250, 450);
+        swipe_left(rig, row, 64, 264);
         rig.advance(std::chrono::milliseconds(400));
         CHECK(face_x(rig, row) == 0);
         CHECK_FALSE(row->property("revealed").toBool());
@@ -246,7 +247,7 @@ TEST_CASE("swipe_row.reveal: a tap activates a closed row and only closes an ope
 
     swipe_left(rig, row, 340, 140);
     rig.advance(std::chrono::milliseconds(400));
-    rig.tap(face_of(rig, row), QPointF(300, 24));
+    rig.tap(row, QPointF(100, 24));
     CHECK(activated.count() == 1);
     CHECK_FALSE(row->property("revealed").toBool());
     rig.advance(std::chrono::milliseconds(400));
@@ -264,9 +265,9 @@ TEST_CASE("swipe_row.reveal: a vertical drag scrolls the list and does not open 
     QSignalSpy activated(row, SIGNAL(activated()));
     REQUIRE(flick->property("contentY").toDouble() == 0);
 
-    QQuickItem* face = face_of(rig, row);
-    // Down the list with a little drift to the left, which is how a thumb scrolls.
-    rig.drag(face, QPointF(200, 40), QPointF(185, -100), 10);
+    // Along the list with a little drift to the left, which is how a thumb scrolls, starting on row 3 (48 pt high, so
+    // 144 to 192 in the list). The path is in the coordinates of the list, which does not move as it scrolls.
+    rig.drag(flick, QPointF(200, 170), QPointF(185, 30), 10);
     rig.advance(std::chrono::milliseconds(400));
     CHECK(flick->property("contentY").toDouble() > 0);
     CHECK_FALSE(row->property("revealed").toBool());
@@ -286,7 +287,7 @@ TEST_CASE("swipe_row.reveal: with Reduce Motion the row jumps and nothing slides
     CHECK(face_x(rig, row) == -row->property("revealWidth").toDouble());
     expect_clean(check_motion_reduced(rig));
 
-    rig.tap(face_of(rig, row), QPointF(300, 24));
+    rig.tap(row, QPointF(100, 24));
     CHECK(face_x(rig, row) == 0);
 }
 
