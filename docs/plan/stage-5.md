@@ -154,7 +154,7 @@ What changes from the spike:
   (see [Data protection](#data-protection)), shares it, and removes it on every outcome. Any file left in that directory
   is removed at launch.
 - **What marks a log shared.** Stage 3's `ShareService` records the share time when, and only when, the outcome is
-  `SHARED`. Which activities count is open question 2; the recommendation is every activity that completes, Copy
+  `SHARED`. Which activities count was decided in question 2 (owner, 2026-11-07): every activity that completes, Copy
   included, because the PRD lists Copy as a share target and the sheet cannot tell a paste from no paste.
 - Each outcome is logged as one line, `share: shared com.apple.UIKit.activity.CopyToPasteboard` (outcome and activity type,
   no content), so that what Slack, Mail and Files report is known after the first device pass. The dynamic parts use the
@@ -214,11 +214,11 @@ the touch's event timestamp, used only for the timing marks of 5.3.
 **The conflict with DS-01.** DS-01 says an entry is committed "before any feedback is shown", and BRD-03 says each tap gives
 "a haptic, a tile press animation and the new entry appearing". A haptic at touch-down comes before the commit; the
 journal and database writes include full syncs on Apple platforms and may not fit the 100 ms budget with the haptic
-behind them. The proposal is that the impact haptic and the press animation are feedback that the *touch* landed, the
+behind them. The decision (owner, 2026-11-07) is that the impact haptic and the press animation are feedback that the *touch* landed, the
 strip, badge and toast are the feedback that the *entry* is saved and appear only after the commit, and a failed commit
-shows an error (and fires nothing). That means DS-01 should say "any confirmation that an entry is saved" instead of "any
-feedback". M3 in the checklist measures press-to-commit on the device, so if the owner prefers the haptic after the commit
-the data to decide is there, and the change is the one line that calls `hapticImpact`. This is open question 1.
+shows an error (and fires nothing). DS-01 therefore says "any confirmation that an entry is saved" instead of "any
+feedback". M3 in the checklist measures press-to-commit on the device; should the haptic ever be moved after the commit,
+the change is the one line that calls `hapticImpact`. This is decision 1.
 
 **Tests that run in CI**
 
@@ -296,8 +296,8 @@ std::unique_ptr<DocumentPicker> make_document_picker();   // ios/document_picker
 - Whether an import replaces the whole setup, and the confirmation sheet before it, are Stage 3 and Stage 4 (the PRD says
   "imported", and the earlier plans treat it as whole-file). Stage 5 delivers the file and the errors.
 - **Export** (the other direction of PRF-08) is the share sheet with a file item ([Share sheet](#share-sheet)), writing
-  `Error Journaling setup.ejconfig`. It is not in the Stage 5 table, but PRF-08 needs it and it costs one call; open
-  question 9 asks to confirm.
+  `Error Journaling setup.ejconfig`. It is not in the Stage 5 table, but PRF-08 needs it and it costs one call; it is
+  included in Stage 5 (decision 9).
 
 The repository side: `.gitignore` and `tools/ci/check_config_files.py` gain `*.ejconfig`, so a real setup file renamed for
 AirDrop cannot be committed (Stage 0.3 only knew `*-config.json`). The CI test copies `config/sample-config.json` to a
@@ -360,8 +360,8 @@ The portable part is `protect_store(StorageLocation, FileProtection&)` in `ej_st
    14 complete-until-first-user-authentication`. This is what the checklist reads on a device, TestFlight build included.
 
 A failure to apply or read back is **not fatal**. Refusing to open the store because a protection call failed would turn a
-privacy hardening into a risk to the open log. It is returned as a warning list, logged, and shown by Stage 4 in the
-recovery or diagnostics text if the owner wants it (open question 11).
+privacy hardening into a risk to the open log. It is returned as a warning list and logged, and is visible in Stage 4's diagnostics text
+if it has one; it is not shown to the user (decision 11).
 
 **Locked is not corrupt.** Stage 2 classifies a permission or protected-file error as `locked`, never as corruption, so
 nothing rebuilds a healthy database. Nothing the application declares (no background mode, notification or push) launches
@@ -698,8 +698,8 @@ Taptic Engine's own delay, which is Apple's and is not documented; the feel test
 
 ### M3: press to commit (informative)
 
-From M2: median and 95th percentile of `TAP_TO_COMMIT`. If it is well under 100 ms the owner may prefer the haptic after
-the commit (open question 1); if it is not, the touch-down haptic stays.
+From M2: median and 95th percentile of `TAP_TO_COMMIT`. The touch-down haptic stays (decision 1) whatever
+the figure; it is recorded for information.
 
 ### Functional rows
 
@@ -731,7 +731,7 @@ the commit (open question 1); if it is not, the touch-down haptic stays.
 | K3 | Open the app from the switcher and from a notification-free cold start | Same background colour as the board at every frame |
 
 Record each row as: pass or fail, the figure where there is one, anything unexpected. A row that fails becomes a fix
-before the gate, or an entry in the open questions with an owner decision.
+before the gate, or an entry in the decisions list with an owner decision.
 
 ## Work packages
 
@@ -831,7 +831,7 @@ pull request.
 | O2 | For Instruments: register the iPhone 17 (device ID) in the portal; an Apple Development certificate on the Mac; a development profile for the App ID with the same capability; Developer Mode on the phone (Settings > Privacy & Security); Xcode on the Mac at the version in `.github/toolchain-versions.json` | M1, M2 | Before 5.9 |
 | O3 | A private Slack test channel and the Slack app signed in on the iPhone 17. Only the fictional log is posted | S3 | Before 5.9 |
 | O4 | A Mac and AirDrop between it and the phone. The test file is the fictional sample renamed, not the facilitator's real setup, which is used in Stage 6 | C1 to C3 | Before 5.9 |
-| O5 | Answer the open questions below. Questions 1, 3, 4 and 5 block packages (marked) | 5.7, 5.5, 5.8, 5.4b | Before those packages |
+| O5 | Answered on 2026-11-07: all twelve decisions below are accepted as recommended. Nothing further is needed, except O1 for decision 5 | 5.7, 5.5, 5.8, 5.4b | Done |
 | O6 | Run, or be present for, the checklist; sign the gate | 5.9 | After 5.8 |
 | O7 | A TestFlight build of the final commit (Stage 0.6 pipeline, `SIGN_IOS_UPLOAD` already true) | B2 | Before 5.9 |
 
@@ -862,9 +862,9 @@ The agent does none of the Apple portal, secret or signing steps (`AGENTS.md`).
 - The actuator delay of the haptic is not measurable with Instruments.
 - Each pull request says what has not run on a device.
 
-## Decisions and open questions
+## Decisions (decided by the owner, 2026-11-07)
 
-**Decided by the plan** (the owner may overturn any in review)
+**Decided by the plan** (accepted by the owner, 2026-11-07)
 
 - The Stage 0 spike's recommendation stands: a Qt-free bridge created once and owned by a thin QObject, haptics fired from
   the press and prepared ahead, tests against fakes.
@@ -876,50 +876,42 @@ The agent does none of the Apple portal, secret or signing steps (`AGENTS.md`).
 - A failure to apply file protection warns and does not stop the store opening.
 - The files stay in the device backup (Stage 2 decision 8).
 
-**Wording this page changes** (applied in 5.9 if accepted)
+**Wording this page changes** (accepted by the owner on 2026-11-07; applied in 5.9)
 
 - Implementation plan, Stage 5, Haptics: "prepared on touch-down" becomes "prepared ahead of the touch and fired on the
   touch-down".
 - Implementation plan and Stage 2: the constant is `NSFileProtectionCompleteUntilFirstUserAuthentication`.
 - Implementation plan exit gate: "measured with Instruments" gains "on a development-signed build".
-- PRD DS-01: "before any feedback is shown" becomes "before any confirmation that the entry is saved is shown" (question 1).
-- PRD PRF-08: the file has the extension `.ejconfig` and a plain `.json` is also accepted (question 3).
+- PRD DS-01: "before any feedback is shown" becomes "before any confirmation that the entry is saved is shown" (decision 1).
+- PRD PRF-08: the file has the extension `.ejconfig` and a plain `.json` is also accepted (decision 3).
 
-**Open questions**
+**Decided** (the owner accepted every recommendation, 2026-11-07; numbering kept so "open question N" references
+resolve to decision N)
 
 1. **Haptic before the commit (DS-01).** The impact haptic fires on touch-down, before the entry is committed, and the
-   commit confirmation (strip, badge, toast) follows. Recommendation: accept that, and reword DS-01 to speak of
-   confirmation. Alternative: fire after the commit, which M3 shows is possible only if the commit is fast. Blocks the
-   wiring in 5.7, not 5.2. Related, for Stage 3 and 4: if a tap records on release and the finger slides off, a haptic
-   fires without an entry; recording on press avoids it.
-2. **What counts as shared.** Recommendation: any activity that completes, Copy included, because the sheet cannot tell
-   a paste from none and the PRD lists Copy as a share target. The alternative excludes Copy and shows the
-   unshared warning after a copy-and-paste. If Slack reports cancelled although the post arrives (A3), the fix is a rule
-   on activity type, and S3 gives the value to base it on.
-3. **The file type.** Recommendation: a dedicated extension `.ejconfig` that only this app handles, with plain `.json`
-   accepted as an alternate choice. The cost is renaming the prepared file; without the alternate, forgetting to rename
-   it means the phone does not offer the app. The alternative of `.json` alone makes the app appear for every JSON file.
-   Blocks 5.5.
-4. **Launch screen technique.** Recommendation: a generated image, exact on the iPhone 17 and checked in CI. A storyboard
-   adapts to other iPhone sizes at the cost of two copies of the layout. Blocks 5.8.
-5. **The default-data-protection entitlement.** Recommendation: add it, for the declaration in the signed binary. It costs
-   owner action O1 and has to be in place before any signed build. Without it the operating system already gives new files
-   this class and the per-file calls and read-back stand. Blocks 5.4b only.
-6. **What the 100 ms figure is.** Recommendation: touch to the haptic call returning, read in Instruments, plus the feel
-   test. A physical measurement (a high-speed camera and an audio or contact sensor) would include the actuator and is
-   not in this plan; say so if you want it.
-7. **Cold-start dataset.** Recommendation: the 365-day dataset is the gate, the 30-day and empty cases are reported.
-   If you would rather gate on the 30-day case, the one-year figure becomes informative.
-8. **Instruments on a development build.** The plan's gate says "measured with Instruments" and a TestFlight build
-   cannot be profiled. Recommendation: accept the development build for the figures and the TestFlight build for the
-   functional rows and the in-app timing line.
-9. **Configuration export.** Included here as a share with a file item, because PRF-08 needs both directions and the table
-   lists only import. Confirm, or defer it to a later stage.
-10. **App switcher snapshot.** iOS keeps a picture of the screen when the app goes inactive, and it shows the day's log text.
-    The PRD leaves a lock and any privacy screen out of scope. Not planned here; the inactive handler is where a blur would
-    go. Say if you want it.
-11. **Protection warnings.** Should a failure to protect a file be shown to the user (in the recovery or an About
-    text), or only logged? Recommendation: logged, and visible in the diagnostics text if Stage 4 has one.
-12. **Order against Stage 3.** 5.1 changes the interface Stage 3's `ShareService` uses. Recommendation: keep to the plan
-    (Stage 5 after Stage 3) and let 5.1 adapt the service. Alternative: land 5.1 first so Stage 3 writes to the final
-    shape.
+   commit confirmation (strip, badge, toast) follows. DS-01 is reworded to speak of confirmation. This unblocks the wiring
+   in 5.7, not 5.2. For Stage 3 and 4: record on press, so that a finger sliding off cannot fire a haptic without an
+   entry. (owner, 2026-11-07)
+2. **What counts as shared.** Any activity that completes, Copy included, because the sheet cannot tell a paste from
+   none and the PRD lists Copy as a share target. If Slack reports cancelled although the post arrives (A3), the fix is
+   a rule on activity type, and S3 gives the value to base it on. (owner, 2026-11-07)
+3. **The file type.** A dedicated extension `.ejconfig` that only this app handles, with plain `.json` accepted as an
+   alternate choice, so forgetting to rename the prepared file does not stop the phone offering the app. This unblocks
+   5.5. (owner, 2026-11-07)
+4. **Launch screen technique.** A generated image, exact on the iPhone 17 and checked in CI, not a storyboard. This
+   unblocks 5.8. (owner, 2026-11-07)
+5. **The default-data-protection entitlement.** Add it, for the declaration in the signed binary. It needs owner action
+   O1 before 5.4b and before any signed build with it. (owner, 2026-11-07)
+6. **What the 100 ms figure is.** Touch to the haptic call returning, read in Instruments, plus the feel test. A
+   physical measurement of the actuator is not in this plan. (owner, 2026-11-07)
+7. **Cold-start dataset.** The 365-day dataset is the gate; the 30-day and empty cases are reported. (owner, 2026-11-07)
+8. **Instruments on a development build.** The figures come from a development-signed build; the TestFlight build is
+   used for the functional rows and the in-app timing line. (owner, 2026-11-07)
+9. **Configuration export.** Included in Stage 5 as a share with a file item, because PRF-08 needs both directions.
+   (owner, 2026-11-07)
+10. **App switcher snapshot.** No blur or privacy screen is planned; the inactive handler is where one would go if it is
+    wanted later. (owner, 2026-11-07)
+11. **Protection warnings.** A failure to protect a file is logged only, and is visible in the diagnostics text if Stage 4
+    has one; it is not shown to the user. (owner, 2026-11-07)
+12. **Order against Stage 3.** Stage 5 follows Stage 3, as the plan has it, and 5.1 adapts `ShareService`.
+    (owner, 2026-11-07)
