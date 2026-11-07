@@ -2,14 +2,21 @@
 // BoardGrid (docs/plan/stage-4.md, 4.5): grid.geometry and grid.model_updates, against the real BoardModel over an open
 // log with the sample configuration, so the roles the grid binds to are the ones the model has. The signals of the
 // tiles through the grid, the skeleton, the accessibility checks and the scene size are here too.
-#include "board_test_support.hpp"
-#include "rig/ui_checks.hpp"
-#include "rig/ui_rig.hpp"
+//
+// The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the
+// Windows headers behind Qt Quick define as a macro. clang-format would sort board_test_support.hpp first, so it is
+// switched off.
+// clang-format off
 #include "storage_samples.hpp"
 #include "support/document_rig.hpp"
 #include "support/fake_sources.hpp"
 #include "support/test_environment.hpp"
 #include "viewmodel/board_model.hpp"
+
+#include "board_test_support.hpp"
+#include "rig/ui_checks.hpp"
+#include "rig/ui_rig.hpp"
+// clang-format on
 
 #include <catch2/catch_test_macros.hpp>
 
