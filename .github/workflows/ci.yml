@@ -1,0 +1,190 @@
+name: CI
+
+# The pull request gate. Pull requests (drafts included) run the static checks. Ready pull
+# requests and merge-queue entries also build. The full set of platforms and sanitizers runs
+# in the merge queue and on pushes to develop, so a pull request stays fast.
+#
+# Required status checks are the two jobs defined here by name: "CI Status" and
+# "Scan dependency diff". A check from a called workflow carries the caller's job name as
+# a prefix, so it cannot be required by its plain name.
+
+on:
+  pull_request:
+    branches: [develop]
+    types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+  push:
+    branches: [develop]
+  # Runs every leg on the chosen branch (`gh workflow run ci.yml --ref <branch>`), so a change to
+  # threading, the standard library or platform code can be tried on macOS and Windows before it is queued.
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  policy:
+    name: Policy
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/policy.yml@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+
+  plan:
+    name: Plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      build: ${{ steps.plan.outputs.build }}
+      docs_only: ${{ steps.plan.outputs.docs_only }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out the shared scripts
+        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+      - name: Check the vendored CMake modules
+        run: python3 tools/ci/sync_cmake.py --check --infra .icl-infra
+      - name: Decide scope
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ] || [ "$EVENT" = "merge_group" ]; then
+            git diff --name-only "$BASE_SHA"...HEAD | python3 .icl-infra/scripts/plan_gate.py --config .github/ci/plan.json >> "$GITHUB_OUTPUT"
+          else
+            python3 .icl-infra/scripts/plan_gate.py --config .github/ci/plan.json --force-all >> "$GITHUB_OUTPUT"
+          fi
+
+  build-fast:
+    name: Build (fast)
+    needs: plan
+    if: needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
+    permissions:
+      contents: read
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+    with:
+      legs: >-
+        [
+          {"name": "linux-gcc-release", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-release", "qt": true},
+          {"name": "linux-clang-asan-ubsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-asan-ubsan", "qt": true}
+        ]
+
+  build-full:
+    name: Build (full)
+    needs: plan
+    if: needs.plan.outputs.build == 'true' && github.event_name != 'pull_request'
+    permissions:
+      contents: read
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+    with:
+      legs: >-
+        [
+          {"name": "linux-gcc-debug", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-debug", "qt": true, "vcpkg_features": "profiling"},
+          {"name": "linux-clang-tsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-tsan", "qt": true},
+          {"name": "macos-release", "runner": ["macos-26"], "preset": "macos-release", "qt": true},
+          {"name": "macos-xcode27-release", "runner": ["xcode-27"], "preset": "macos-release", "qt": true, "experimental": true},
+          {"name": "windows-msvc-release", "runner": ["windows-2025"], "preset": "windows-msvc-release", "qt": true, "config": "Release", "msvc": true},
+          {"name": "windows-msvc-asan", "runner": ["windows-2025"], "preset": "windows-msvc-asan", "qt": true, "config": "Debug", "msvc": true}
+        ]
+
+  coverage:
+    name: Coverage
+    needs: plan
+    if: needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check out the shared scripts
+        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+      - name: Install GCC
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+      - name: Set up Qt
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+      - name: Set up CMake
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+      - name: Set up ccache
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        with:
+          key: coverage
+      - name: Configure and build
+        run: |
+          cmake --preset linux-coverage
+          cmake --build --preset linux-coverage
+      - name: Test
+        uses: iainchesworthlabs/icl-common-infra/actions/run-ctest@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        with:
+          build-dir: build/linux-coverage
+      - name: Report and gate
+        run: |
+          python3 -m pip install --quiet gcovr==8.7
+          gcovr --root . --object-directory build/linux-coverage --json coverage.json \
+            --exclude-throw-branches --exclude-unreachable-branches \
+            --filter 'libs/' --filter 'apps/' --exclude '.*/tests/'
+          python3 .icl-infra/scripts/coverage_gate.py --report coverage.json --floors tools/coverage-floors.json
+      - name: Save caches
+        if: always()
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+
+  zizmor:
+    name: Workflow analysis
+    permissions:
+      contents: read
+      security-events: write
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/zizmor.yml@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+
+  dependency-scan:
+    name: Scan dependency diff
+    if: github.event_name != 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: iainchesworthlabs/icl-common-infra/actions/dependency-review@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+
+  ci-status:
+    name: CI Status
+    if: always()
+    needs: [policy, plan, build-fast, build-full, coverage, zizmor, dependency-scan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Aggregate
+        uses: iainchesworthlabs/icl-common-infra/actions/ci-status@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8
+        with:
+          needs: ${{ toJSON(needs) }}
+          expected: >-
+            {
+              "build-fast": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }},
+              "coverage": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }},
+              "build-full": ${{ needs.plan.outputs.build == 'true' && github.event_name != 'pull_request' }},
+              "dependency-scan": ${{ github.event_name != 'push' }}
+            }

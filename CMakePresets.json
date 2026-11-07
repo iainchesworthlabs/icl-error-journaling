@@ -1,0 +1,119 @@
+{
+  "version": 8,
+  "cmakeMinimumRequired": { "major": 4, "minor": 0, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+      "cacheVariables": { "VCPKG_TARGET_TRIPLET": "x64-linux" }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux, Debug, Tracy on",
+      "inherits": "linux-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "ICL_ENABLE_TRACY": "ON", "VCPKG_MANIFEST_FEATURES": "profiling" }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux, Release",
+      "inherits": "linux-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "linux-asan-ubsan",
+      "displayName": "Linux, AddressSanitizer and UBSan, -O1",
+      "inherits": "linux-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "ICL_SANITIZERS": "address,undefined" }
+    },
+    {
+      "name": "linux-tsan",
+      "displayName": "Linux, ThreadSanitizer, -O1",
+      "inherits": "linux-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "ICL_SANITIZERS": "thread" }
+    },
+    {
+      "name": "linux-coverage",
+      "displayName": "Linux, coverage",
+      "inherits": "linux-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "ICL_ENABLE_COVERAGE": "ON" }
+    },
+    {
+      "name": "macos-release",
+      "displayName": "macOS, Release",
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "VCPKG_TARGET_TRIPLET": "arm64-osx" }
+    },
+    {
+      "name": "windows-msvc-release",
+      "displayName": "Windows, MSVC, Release",
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "x64-windows",
+        "CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": "Embedded",
+        "CMAKE_POLICY_DEFAULT_CMP0141": "NEW"
+      }
+    },
+    {
+      "name": "windows-msvc-asan",
+      "displayName": "Windows, MSVC, AddressSanitizer, /O1",
+      "inherits": "windows-msvc-release",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "ICL_SANITIZERS": "address" }
+    },
+    {
+      "name": "ios-release",
+      "displayName": "iOS (device, Release, unsigned)",
+      "description": "An iPhone or iPad (arm64), built by Xcode on a Mac. Unsigned: it needs no Apple account (a signed build is the release workflow's). vcpkg's toolchain is the toolchain file, as everywhere (VCPKG_ROOT is a vcpkg checkout at the baseline of vcpkg.json; CI's setup-vcpkg action sets it). No tests and no command-line program are built: nothing runs on a device here.",
+      "inherits": "base",
+      "generator": "Xcode",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_SYSTEM_NAME": "iOS",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "OFF",
+        "VCPKG_TARGET_TRIPLET": "arm64-ios",
+        "CMAKE_OSX_SYSROOT": "iphoneos",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "18.0",
+        "CMAKE_XCODE_GENERATE_SCHEME": "ON",
+        "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED": "NO",
+        "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED": "NO",
+        "CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY": "",
+        "ICL_TEMPLATE_BUILD_TESTS": "OFF",
+        "ICL_TEMPLATE_BUILD_CLI": "OFF",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "linux-debug", "configurePreset": "linux-debug" },
+    { "name": "linux-release", "configurePreset": "linux-release" },
+    { "name": "linux-asan-ubsan", "configurePreset": "linux-asan-ubsan" },
+    { "name": "linux-tsan", "configurePreset": "linux-tsan" },
+    { "name": "linux-coverage", "configurePreset": "linux-coverage" },
+    { "name": "macos-release", "configurePreset": "macos-release" },
+    { "name": "windows-msvc-release", "configurePreset": "windows-msvc-release", "configuration": "Release" },
+    { "name": "windows-msvc-asan", "configurePreset": "windows-msvc-asan" },
+    { "name": "ios-release", "configurePreset": "ios-release", "configuration": "Release" }
+  ],
+  "testPresets": [
+    { "name": "linux-debug", "configurePreset": "linux-debug", "output": { "outputOnFailure": true } },
+    { "name": "linux-release", "configurePreset": "linux-release", "output": { "outputOnFailure": true } },
+    { "name": "linux-asan-ubsan", "configurePreset": "linux-asan-ubsan", "output": { "outputOnFailure": true } },
+    { "name": "linux-tsan", "configurePreset": "linux-tsan", "output": { "outputOnFailure": true } },
+    { "name": "linux-coverage", "configurePreset": "linux-coverage", "output": { "outputOnFailure": true } }
+  ]
+}

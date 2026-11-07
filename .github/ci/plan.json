@@ -1,0 +1,10 @@
+{
+  "docs": ["docs/**", "*.md", "mkdocs.yml", "LICENSE*", "changelog.d/**", "requirements/docs.txt"],
+  "no_build": [".github/PULL_REQUEST_TEMPLATE*", ".github/CODEOWNERS", ".github/dependabot.yml",
+               ".github/rulesets/**", ".github/repo-settings.json", ".github/labels.json",
+               "REUSE.toml", ".editorconfig", "LICENSES/**"],
+  "build": ["libs/**", "apps/**", "tests/**", "CMakeLists.txt", "CMakePresets.json", "vcpkg.json", "cmake/**",
+            "tools/coverage-floors.json", "tools/preprocessor-*"],
+  "gui": [],
+  "machinery": [".github/workflows/**", ".github/ci/**", ".github/toolchain-versions.json", "tools/ci/**"]
+}

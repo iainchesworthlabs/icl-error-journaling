@@ -1,0 +1,1 @@
+**The shared modules include `icl_install_qt_app`.** The pin moves to icl-common-infra v0.1.8, which adds `IclQtApp.cmake` and `IclNotices.cmake` to `cmake/icl`. A Qt application installs, deploys and documents itself with one call, and writes `THIRD-PARTY-NOTICES.txt` and `SOURCE.txt` into the package. The template has no Qt application, so nothing else changes.

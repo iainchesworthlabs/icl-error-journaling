@@ -1,0 +1,1 @@
+**Starting a project from the template leaves nothing of the template behind.** `tools/instantiate.py` now rewrites the README, the documentation index, mkdocs.yml, the CMake description and the repository settings for the new project (new `--repo` option), and removes the page about starting a project.

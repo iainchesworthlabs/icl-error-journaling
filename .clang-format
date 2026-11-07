@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++23
+BreakBeforeBraces: Allman
+IndentWidth: 4
+ColumnLimit: 120
+PointerAlignment: Left
+AccessModifierOffset: -4
+NamespaceIndentation: None
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+IncludeBlocks: Regroup
+SortIncludes: CaseSensitive
+IncludeCategories:
+  - Regex: '^"'
+    Priority: 1
+  - Regex: '^<[a-z_]+/.*>'
+    Priority: 2
+  - Regex: '^<[a-z_]+>$'
+    Priority: 4
+  - Regex: '.*'
+    Priority: 3
+---
+# Objective-C++ (.mm files for phone services): the same layout as the C++ above.
+Language: ObjC
+BasedOnStyle: LLVM
+BreakBeforeBraces: Allman
+IndentWidth: 4
+ColumnLimit: 120
+PointerAlignment: Left
+AccessModifierOffset: -4
+NamespaceIndentation: None
+AllowShortFunctionsOnASingleLine: Empty
+SortIncludes: Never

@@ -1,0 +1,1 @@
+**A release cannot go out with placeholder notes.** The Release workflow now checks the notes in its first job. A final release needs a section for its version in `CHANGELOG.md`, and a pre-release uses the fragments in `changelog.d/` when there is no section. The shared workflows are pinned to icl-common-infra v0.1.7.

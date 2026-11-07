@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "icl-template",
+  "version": "0.1.0",
+  "builtin-baseline": "9eec002df1cd109f8f104cd966a763daf9751489",
+  "dependencies": [
+    { "name": "catch2", "platform": "!(android | ios)" }
+  ],
+  "features": {
+    "profiling": {
+      "description": "Tracy profiler client",
+      "dependencies": [ "tracy" ]
+    }
+  }
+}

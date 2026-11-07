@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The iOS application's Info.plist. CMake fills the MACOSX_BUNDLE_ names in from the target's properties
+     (apps/ios/CMakeLists.txt). CMake substitutes inside comments too, so no comment here may write a dollar sign
+     and a brace. -->
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
+    <key>CFBundleIdentifier</key>
+    <string>${MACOSX_BUNDLE_GUI_IDENTIFIER}</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>${MACOSX_BUNDLE_BUNDLE_NAME}</string>
+    <key>CFBundleDisplayName</key>
+    <string>${MACOSX_BUNDLE_BUNDLE_NAME}</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
+    <!-- The build number. TestFlight refuses a build whose number is not higher than every earlier one for the same
+         version, so the release workflow gives the number of its run (ICL_TEMPLATE_IOS_BUILD_NUMBER). -->
+    <key>CFBundleVersion</key>
+    <string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
+    <!-- The icon: the AppIcon set in Assets.xcassets, compiled by Xcode (the target's
+         ASSETCATALOG_COMPILER_APPICON_NAME names the same set). -->
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+    <!-- The application uses no encryption of its own, and what the system gives it is exempt: without this key
+         TestFlight asks about encryption for every build. Change it only if that stops being true. -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>arm64</string>
+    </array>
+    <key>NSHumanReadableCopyright</key>
+    <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
+
+    <!-- No usage text for any permission: the application asks for none. Add the text with the first permission the
+         application asks for; the check in packaging/verify_app.sh refuses the keys it lists until then. -->
+
+    <!-- A launch screen in the property list: without one iOS runs the program in a legacy 320 x 480 window and scales
+         it up. The colour is in Assets.xcassets (LaunchBackground). -->
+    <key>UILaunchScreen</key>
+    <dict>
+        <key>UIColorName</key>
+        <string>LaunchBackground</string>
+    </dict>
+
+    <!-- Upright or on its side. The application takes the whole screen on an iPad, with no split view or slide over,
+         which is what TestFlight asks of an iPad application that is not available in every orientation. -->
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UIRequiresFullScreen</key>
+    <true/>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+</dict>
+</plist>

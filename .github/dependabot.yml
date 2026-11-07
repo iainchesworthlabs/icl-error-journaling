@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    rebase-strategy: disabled
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: vcpkg
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    rebase-strategy: disabled
+  - package-ecosystem: pip
+    directory: /requirements
+    target-branch: develop
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    rebase-strategy: disabled

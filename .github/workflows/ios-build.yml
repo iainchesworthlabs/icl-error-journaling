@@ -1,0 +1,89 @@
+name: iOS build
+
+# An unsigned compile check of the iPhone and iPad application (apps/ios): the `ios-release` preset, and a look inside the
+# .app Xcode made (apps/ios/packaging/verify_app.sh). It needs no Apple account and no secret; a signed build is the
+# release workflow's, with the owner's account.
+#
+# Not a required check, and not on the merge queue: it runs only when something the iOS build reads changes (a required
+# check that a path filter keeps from running never reports, which would hold every unrelated pull request), and a macOS
+# runner is billed at a multiple. Dispatch it by hand to run it anywhere:
+#   gh workflow run ios-build.yml --ref <branch>
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "libs/**"
+      - "apps/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "vcpkg.json"
+      - ".github/workflows/ios-build.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "libs/**"
+      - "apps/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "vcpkg.json"
+      - ".github/workflows/ios-build.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/main' }}
+
+# No job gets more than it names below.
+permissions: {}
+
+env:
+  VCPKG_DISABLE_METRICS: "1"
+  # The bundle identifier of CMakeLists.txt (ICL_TEMPLATE_APPLICATION_ID), which the check of the bundle compares.
+  BUNDLE_ID: com.iainchesworthlabs.icltemplate
+
+jobs:
+  ios-build:
+    name: iOS (device, unsigned compile)
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The vcpkg toolchain is the toolchain file of every preset, iOS's included. The manifest has no dependency for a
+      # device (the tests are not built there).
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+
+      - name: Set up CMake
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+
+      - name: Show the toolchain
+        shell: bash
+        run: |
+          cmake --version | head -n 1
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Configure
+        run: cmake --preset ios-release
+
+      - name: Build
+        run: cmake --build --preset ios-release
+
+      # What Xcode made, from the bundle alone: the identifier, the icon, the launch screen, no permission text, arm64 and no
+      # link to the build machine. (An unsigned build: no --signed.)
+      - name: Check the application bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="$(find build/ios-release -name icl-template.app -type d | head -n 1)"
+          [ -n "$app" ] || { echo "::error::no icl-template.app under build/ios-release"; exit 1; }
+          apps/ios/packaging/verify_app.sh "$app" --bundle-id "$BUNDLE_ID" --executable icl-template

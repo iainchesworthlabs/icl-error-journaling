@@ -1,0 +1,1 @@
+**CI builds with the floor compilers.** The Linux legs install GCC 16 and Clang 23 on Ubuntu 26.04, Windows checks for MSVC 14.51 or newer, and macOS builds with the newest Apple Clang on macos-26 (Xcode 27 is tried in a leg that cannot fail the run). The versions are pins in `.github/toolchain-versions.json`. CI and the release packaging can be started from a branch.

@@ -1,0 +1,16 @@
+name: zizmor
+
+on:
+  schedule:
+    - cron: "41 19 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  zizmor:
+    name: Workflow analysis
+    permissions:
+      contents: read
+      security-events: write
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/zizmor.yml@721426d0ced1522f7c690d4ebd3e0d66f550bb8b # v0.1.8

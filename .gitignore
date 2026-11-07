@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+/build/
+/stage/
+/dist/
+/.icl-infra/
+/coverage.json
+/site/
+CMakeUserPresets.json
+.vs/
+.vscode/
+.idea/
+*.user
+__pycache__/
+*.pyc
+.venv/
+.cache/
+compile_commands.json

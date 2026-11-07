@@ -1,0 +1,1 @@
+**MSVC AddressSanitizer builds link against vcpkg packages.** The vendored sanitizer module now defines the STL annotation opt-outs, which removes the LNK2038 mismatch with libraries built without AddressSanitizer.
