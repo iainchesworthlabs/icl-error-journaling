@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "error_journaling/launch_tracker.hpp"
 #include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/storage.hpp"
 #include "error_journaling/version.hpp"
@@ -9,6 +10,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
+#include <utility>
 
 namespace
 {
@@ -46,7 +48,11 @@ int main(int argc, char* argv[])
 
     QQmlApplicationEngine engine;
     // What Qt does not cover on an iPhone: the share sheet and the haptics (the Stage 0 spikes).
-    ej::bridge::QmlBridge platform_bridge(ej::bridge::make_platform_services());
+    ej::bridge::PlatformServices services = ej::bridge::make_platform_services();
+    // The marks the exit gate is measured by (NFR-04). The tracker reports the launch once, when the board is usable.
+    ej::bridge::LaunchTracker launch(*services.m_PerfMarks);
+    launch.process_started();
+    ej::bridge::QmlBridge platform_bridge(std::move(services));
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(1); },
         Qt::QueuedConnection);
@@ -60,6 +66,20 @@ int main(int argc, char* argv[])
                    QString::fromUtf8(error_journaling::storage::backend_name().data(),
                                      static_cast<qsizetype>(error_journaling::storage::backend_name().size())))}});
     engine.loadFromModule("ErrorJournalingApp", "Main");
+    launch.qml_loaded();
+    // The application does not open storage yet, so the board has nothing to wait for; the shell that opens it (Stage
+    // 5, 5.7) calls storage_ready() when recovery is done and board_enabled() when the 12 tiles accept taps, and these
+    // two lines go.
+    launch.storage_ready();
+    launch.board_enabled();
+    {
+        const auto roots = engine.rootObjects();
+        if (auto* window = roots.isEmpty() ? nullptr : qobject_cast<QQuickWindow*>(roots.first()))
+        {
+            QObject::connect(window, &QQuickWindow::frameSwapped, &platform_bridge,
+                             [&launch] { launch.frame_swapped(); });
+        }
+    }
 
     if (parser.isSet(smoke_test))
     {

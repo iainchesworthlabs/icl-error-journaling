@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/haptic_policy.hpp"
+#include "error_journaling/launch_tracker.hpp"
+#include "error_journaling/perf_marks.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/share_presenter.hpp"
@@ -76,10 +78,70 @@ public:
     }
 };
 
+// Records the marks in order, as text, against a clock the test moves.
+class FakePerfMarks final : public bridge::PerfMarks
+{
+public:
+    std::vector<std::string> m_Calls;
+    std::vector<std::string> m_Lines;
+    double m_SinceStart = 0;
+    double m_Uptime = 100000;
+
+    void begin(bridge::Mark mark) override
+    {
+        m_Calls.push_back("begin " + name(mark));
+    }
+    void end(bridge::Mark mark) override
+    {
+        m_Calls.push_back("end " + name(mark));
+    }
+    void event(bridge::Mark mark, double ms) override
+    {
+        m_Calls.push_back("event " + name(mark) + " " + std::to_string(static_cast<long long>(ms)));
+    }
+    double ms_since_process_start() override
+    {
+        return m_SinceStart;
+    }
+    double uptime_ms() override
+    {
+        return m_Uptime;
+    }
+    void log(std::string_view line) override
+    {
+        m_Lines.emplace_back(line);
+    }
+
+    static std::string name(bridge::Mark mark)
+    {
+        switch (mark)
+        {
+        case bridge::Mark::PROCESS_START:
+            return "process";
+        case bridge::Mark::STORAGE_READY:
+            return "storage";
+        case bridge::Mark::QML_LOADED:
+            return "qml";
+        case bridge::Mark::FIRST_FRAME:
+            return "frame";
+        case bridge::Mark::BOARD_USABLE:
+            return "usable";
+        case bridge::Mark::TAP_TO_HAPTIC:
+            return "tap_to_haptic";
+        case bridge::Mark::TOUCH_AGE:
+            return "touch_age";
+        case bridge::Mark::TAP_TO_COMMIT:
+            return "tap_to_commit";
+        }
+        return "?";
+    }
+};
+
 struct Fakes
 {
     FakeShare* m_Share = nullptr;
     FakeHaptics* m_Haptics = nullptr;
+    FakePerfMarks* m_Marks = nullptr;
 };
 
 bridge::PlatformServices fake_services(Fakes& fakes)
@@ -89,6 +151,9 @@ bridge::PlatformServices fake_services(Fakes& fakes)
     auto haptics = std::make_unique<FakeHaptics>();
     fakes.m_Share = share.get();
     fakes.m_Haptics = haptics.get();
+    auto marks = std::make_unique<FakePerfMarks>();
+    fakes.m_Marks = marks.get();
+    services.m_PerfMarks = std::move(marks);
     services.m_Share = std::move(share);
     services.m_Haptics = std::move(haptics);
     return services;
@@ -552,4 +617,106 @@ TEST_CASE("haptics.policy: the keep-alive is off by default", "[unit][haptics]")
 {
     CHECK_FALSE(bridge::HAPTIC_KEEPALIVE);
     CHECK_FALSE(bridge::HapticPolicyConfig{}.m_KeepAlive);
+}
+
+TEST_CASE("perf_marks.stub: the desktop version never throws and time does not go back", "[unit][perf]")
+{
+    const auto marks = bridge::make_perf_marks();
+    marks->begin(bridge::Mark::TAP_TO_HAPTIC);
+    marks->end(bridge::Mark::TAP_TO_HAPTIC);
+    marks->event(bridge::Mark::BOARD_USABLE, 1.5);
+    marks->log("launch: usable at 1 ms");
+    const double first = marks->ms_since_process_start();
+    const double second = marks->ms_since_process_start();
+    CHECK(first >= 0);
+    CHECK(second >= first);
+    CHECK(marks->uptime_ms() > 0);
+}
+
+TEST_CASE("launch_tracker.order: the board is usable once, after storage, QML, the board and a frame", "[unit][perf]")
+{
+    FakePerfMarks marks;
+    bridge::LaunchTracker tracker(marks);
+
+    marks.m_SinceStart = 20;
+    tracker.process_started();
+    marks.m_SinceStart = 140;
+    tracker.storage_ready();
+    marks.m_SinceStart = 380;
+    tracker.qml_loaded();
+
+    // A frame before the board is enabled is the first frame and nothing more.
+    marks.m_SinceStart = 610;
+    tracker.frame_swapped();
+    CHECK_FALSE(tracker.usable());
+    CHECK(marks.m_Lines.empty());
+
+    marks.m_SinceStart = 700;
+    tracker.board_enabled();
+    CHECK_FALSE(tracker.usable()); // the next frame, not this call
+
+    marks.m_SinceStart = 812;
+    tracker.frame_swapped();
+    CHECK(tracker.usable());
+    marks.m_SinceStart = 900;
+    tracker.frame_swapped();
+    tracker.frame_swapped();
+
+    const std::vector<std::string> expected{"event process 20", "event storage 140", "event qml 380", "event frame 610",
+                                            "event usable 812"};
+    CHECK(marks.m_Calls == expected);
+    REQUIRE(marks.m_Lines.size() == 1);
+    CHECK(marks.m_Lines[0] == "launch: usable at 812 ms (storage 140, qml 380, first frame 610)");
+}
+
+TEST_CASE("launch_tracker.order: no frame is usable before storage is ready, and repeats do nothing", "[unit][perf]")
+{
+    FakePerfMarks marks;
+    bridge::LaunchTracker tracker(marks);
+    tracker.qml_loaded();
+    tracker.board_enabled();
+    tracker.frame_swapped();
+    CHECK_FALSE(tracker.usable());
+
+    marks.m_SinceStart = 50;
+    tracker.storage_ready();
+    tracker.storage_ready(); // once
+    CHECK_FALSE(tracker.usable());
+    tracker.frame_swapped();
+    CHECK(tracker.usable());
+    CHECK(marks.m_Lines.size() == 1);
+}
+
+TEST_CASE("perf_marks.wrapper: the impact is bracketed by the interval and carries the touch age", "[unit][perf]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    fakes.m_Marks->m_Uptime = 5000;
+
+    qml.hapticImpact(4955.0);
+    const std::vector<std::string> expected{"event touch_age 45", "begin tap_to_haptic", "end tap_to_haptic"};
+    CHECK(fakes.m_Marks->m_Calls == expected);
+    CHECK(fakes.m_Haptics->m_Fired.size() == 1);
+}
+
+TEST_CASE("perf_marks.wrapper: no timestamp, or one on another time base, gives no touch age", "[unit][perf]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    fakes.m_Marks->m_Uptime = 5000;
+    const std::vector<std::string> plain{"begin tap_to_haptic", "end tap_to_haptic"};
+
+    qml.hapticImpact();
+    CHECK(fakes.m_Marks->m_Calls == plain);
+
+    fakes.m_Marks->m_Calls.clear();
+    qml.hapticImpact(9'000'000.0); // in the future of the uptime clock
+    CHECK(fakes.m_Marks->m_Calls == plain);
+
+    fakes.m_Marks->m_Calls.clear();
+    fakes.m_Marks->m_Uptime = 5'000'000.0;
+    qml.hapticImpact(100.0); // hours old: another time base
+    CHECK(fakes.m_Marks->m_Calls == plain);
 }

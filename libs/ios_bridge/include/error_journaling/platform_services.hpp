@@ -2,6 +2,7 @@
 #pragma once
 
 #include "error_journaling/haptics.hpp"
+#include "error_journaling/perf_marks.hpp"
 #include "error_journaling/share.hpp"
 
 #include <memory>
@@ -15,6 +16,7 @@ struct PlatformServices
 {
     std::unique_ptr<Share> m_Share;
     std::unique_ptr<Haptics> m_Haptics;
+    std::unique_ptr<PerfMarks> m_PerfMarks;
 };
 
 /// The implementations for the platform CMake linked.
