@@ -20,7 +20,9 @@ namespace
 // The subsystem is the bundle identifier, so the marks show in Instruments' Points of Interest with no configuration.
 const char* subsystem()
 {
-    static NSString* const identifier = NSBundle.mainBundle.bundleIdentifier ?: @"com.iainchesworthlabs.errorjournaling";
+    static NSString* const identifier =
+        NSBundle.mainBundle.bundleIdentifier != nil ? NSBundle.mainBundle.bundleIdentifier
+                                                    : @"com.iainchesworthlabs.errorjournaling";
     return identifier.UTF8String;
 }
 
