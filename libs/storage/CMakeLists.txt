@@ -15,6 +15,7 @@ add_library(ej_storage
     src/journal_writer.cpp
     src/memory_log_repository.cpp
     src/migrator.cpp
+    src/protect.cpp
     src/quarantine.cpp
     src/recovery.cpp
     src/sqlite_log_repository.cpp
@@ -23,6 +24,11 @@ add_library(ej_storage
 # The pieces that differ by operating system (durable sync, the file lock, file protection): the files of
 # src/platform/<os>/ are compiled and no others. Every directory defines the same functions from the same headers.
 icl_platform_sources(ej_storage)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    # file_protection.mm is Objective-C++ with reference counting, over Foundation's NSFileManager.
+    set_source_files_properties(src/platform/ios/file_protection.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+    target_link_libraries(ej_storage PRIVATE "$<LINK_LIBRARY:FRAMEWORK,Foundation>")
+endif()
 add_library(error_journaling::storage ALIAS ej_storage)
 
 target_include_directories(ej_storage

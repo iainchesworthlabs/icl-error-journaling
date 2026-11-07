@@ -3,6 +3,7 @@
 
 #include "error_journaling/sqlite_log_repository.hpp"
 #include "platform/durable_sync.hpp"
+#include "protect.hpp"
 #include "quarantine.hpp"
 
 #include <QCoreApplication>
@@ -271,6 +272,7 @@ Result<void, StorageError> write_durably(const std::filesystem::path& path, cons
         {
             return Failure(file.error());
         }
+        protect_path(temporary);
         if (std::fwrite(text.data(), 1, text.size(), file->get()) != text.size())
         {
             return Failure(make_error(StorageErrorKind::IO, "the migration marker could not be written"));
@@ -297,6 +299,7 @@ Result<void, StorageError> copy_durably(const std::filesystem::path& from, const
     {
         return Failure(io_error("the database could not be copied", code));
     }
+    protect_path(to);
     {
         auto file = platform::open_for_append(to);
         if (!file)
@@ -631,6 +634,7 @@ Result<MigrationReport, StorageError> Migrator::run()
     {
         return Failure(io_error("the backup folder could not be made", code));
     }
+    protect_path(m_Location.backup_dir());
     std::filesystem::path backup;
     for (unsigned counter = 1;; ++counter)
     {

@@ -39,7 +39,8 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
   src/platform/              the pieces that differ by operating system, with one directory per system (linux, macos,
                              ios, windows) defining the same functions from the same headers: durable_sync (`fsync`,
                              `F_FULLFSYNC`, `FlushFileBuffers`), file_lock (an exclusive lock that refuses a second
-                             writer), file_protection (a no-op until Stage 5). CMake picks the directory
+                             writer), file_protection (data protection on iOS, a stub
+                             elsewhere; `protect.hpp` decides which paths get it). CMake picks the directory
   tests/                     contract_cases.hpp: one typed suite for `LogRepository`, instantiated by
                              test_contract_memory.cpp (`unit`) and test_contract_sqlite.cpp (`integration`);
                              test_sqlite_repository.cpp (schema, settings, the write path W1 to W7, damaged files);
