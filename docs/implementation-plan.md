@@ -69,9 +69,9 @@ Persistence is proven against forced kills before the UI depends on it, because 
 
 - WAL mode with synchronous FULL. A write returns only after commit; the caller shows feedback after that (DS-01).
 
-- Append-only journal file for the open log: one JSON line per change, flushed and fsynced after the database commit (DS-02).
+- Append-only journal file for the open log: one JSON line per change, flushed and fsynced before the database commit, with the write acknowledged only after both (DS-02). Finished logs keep their journals.
 
-- Recovery on launch: integrity check, replay the journal over the database for any change missing from it, and rebuild from the journal alone if the database fails the check (DS-03, DS-04). Recovery returns a summary for the UI message.
+- Recovery on launch: quick integrity check, replay the journal over the database for any change missing from it, and rebuild from the journal alone if the database fails the check (DS-03, DS-04). Recovery returns a summary for the UI message.
 
 - Archive, never delete, when a new log starts. Hard delete only from History, with confirmation (DS-05).
 
