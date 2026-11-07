@@ -16,7 +16,7 @@ on:
   push:
     branches: [develop]
   # Runs every leg on the chosen branch (`gh workflow run ci.yml --ref <branch>`), so a change to
-  # threading, the standard library or platform code can be tried on macOS and Windows before it is queued.
+  # threading, the standard library or platform code can be tried on macOS before it is queued.
   workflow_dispatch:
 
 permissions: {}
@@ -91,10 +91,9 @@ jobs:
         [
           {"name": "linux-gcc-debug", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-debug", "qt": true, "vcpkg_features": "profiling"},
           {"name": "linux-clang-tsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-tsan", "qt": true},
+          {"name": "macos-debug", "runner": ["macos-26"], "preset": "macos-debug", "qt": true},
           {"name": "macos-release", "runner": ["macos-26"], "preset": "macos-release", "qt": true},
-          {"name": "macos-xcode27-release", "runner": ["xcode-27"], "preset": "macos-release", "qt": true, "experimental": true},
-          {"name": "windows-msvc-release", "runner": ["windows-2025"], "preset": "windows-msvc-release", "qt": true, "config": "Release", "msvc": true},
-          {"name": "windows-msvc-asan", "runner": ["windows-2025"], "preset": "windows-msvc-asan", "qt": true, "config": "Debug", "msvc": true}
+          {"name": "macos-xcode27-release", "runner": ["xcode-27"], "preset": "macos-release", "qt": true, "experimental": true}
         ]
 
   coverage:

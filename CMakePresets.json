@@ -49,15 +49,8 @@
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "ICL_ENABLE_COVERAGE": "ON" }
     },
     {
-      "name": "macos-release",
-      "displayName": "macOS, Release",
-      "inherits": "base",
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "VCPKG_TARGET_TRIPLET": "arm64-osx" }
-    },
-    {
       "name": "windows-msvc-release",
-      "displayName": "Windows, MSVC, Release",
+      "displayName": "Windows, MSVC, Release (the developer machine only; CI has no Windows leg)",
       "inherits": "base",
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
       "cacheVariables": {
@@ -74,18 +67,37 @@
       "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "ICL_SANITIZERS": "address" }
     },
     {
-      "name": "ios-release",
-      "displayName": "iOS (device, Release, unsigned)",
-      "description": "An iPhone or iPad (arm64), built by Xcode on a Mac. Unsigned: it needs no Apple account (a signed build is the release workflow's). vcpkg's toolchain is the toolchain file, as everywhere (VCPKG_ROOT is a vcpkg checkout at the baseline of vcpkg.json; CI's setup-vcpkg action sets it). No tests and no command-line program are built: nothing runs on a device here.",
+      "name": "macos-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
+      "cacheVariables": { "VCPKG_TARGET_TRIPLET": "arm64-osx" }
+    },
+    {
+      "name": "macos-debug",
+      "displayName": "macOS desktop, Debug",
+      "description": "The desktop program for iterating on the user interface. Nothing is released from it.",
+      "inherits": "macos-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "macos-release",
+      "displayName": "macOS desktop, Release",
+      "inherits": "macos-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "ios-base",
+      "hidden": true,
       "inherits": "base",
       "generator": "Xcode",
+      "description": "An iPhone or iPad (arm64), built by Xcode on a Mac with Qt's iOS kit (QT_ROOT_DIR) and a desktop Qt of the same version for its host tools (QT_HOST_PATH). Unsigned: it needs no Apple account (a signed build is the release workflow's). vcpkg's toolchain is the toolchain file, as everywhere, and chains to Qt's kit (VCPKG_CHAINLOAD_TOOLCHAIN_FILE); VCPKG_ROOT is a vcpkg checkout at the baseline of vcpkg.json (CI's setup-vcpkg action sets it). No tests are built: nothing runs on a device or a simulator here.",
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
-        "CMAKE_SYSTEM_NAME": "iOS",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "OFF",
-        "VCPKG_TARGET_TRIPLET": "arm64-ios",
-        "CMAKE_OSX_SYSROOT": "iphoneos",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{QT_ROOT_DIR}/lib/cmake/Qt6/qt.toolchain.cmake",
+        "QT_HOST_PATH": "$env{QT_HOST_PATH}",
         "CMAKE_OSX_ARCHITECTURES": "arm64",
         "CMAKE_OSX_DEPLOYMENT_TARGET": "18.0",
         "CMAKE_XCODE_GENERATE_SCHEME": "ON",
@@ -93,8 +105,26 @@
         "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED": "NO",
         "CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY": "",
         "ERROR_JOURNALING_BUILD_TESTS": "OFF",
-        "ERROR_JOURNALING_BUILD_CLI": "OFF",
         "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "ios-release",
+      "displayName": "iOS (device, Release, unsigned)",
+      "inherits": "ios-base",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "arm64-ios",
+        "CMAKE_OSX_SYSROOT": "iphoneos"
+      }
+    },
+    {
+      "name": "ios-simulator",
+      "displayName": "iOS (simulator, Debug, unsigned)",
+      "inherits": "ios-base",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "arm64-ios-simulator",
+        "CMAKE_OSX_SYSROOT": "iphonesimulator",
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     }
   ],
@@ -104,16 +134,20 @@
     { "name": "linux-asan-ubsan", "configurePreset": "linux-asan-ubsan" },
     { "name": "linux-tsan", "configurePreset": "linux-tsan" },
     { "name": "linux-coverage", "configurePreset": "linux-coverage" },
-    { "name": "macos-release", "configurePreset": "macos-release" },
     { "name": "windows-msvc-release", "configurePreset": "windows-msvc-release", "configuration": "Release" },
     { "name": "windows-msvc-asan", "configurePreset": "windows-msvc-asan" },
-    { "name": "ios-release", "configurePreset": "ios-release", "configuration": "Release" }
+    { "name": "macos-debug", "configurePreset": "macos-debug" },
+    { "name": "macos-release", "configurePreset": "macos-release" },
+    { "name": "ios-release", "configurePreset": "ios-release", "configuration": "Release" },
+    { "name": "ios-simulator", "configurePreset": "ios-simulator", "configuration": "Debug" }
   ],
   "testPresets": [
     { "name": "linux-debug", "configurePreset": "linux-debug", "output": { "outputOnFailure": true } },
     { "name": "linux-release", "configurePreset": "linux-release", "output": { "outputOnFailure": true } },
     { "name": "linux-asan-ubsan", "configurePreset": "linux-asan-ubsan", "output": { "outputOnFailure": true } },
     { "name": "linux-tsan", "configurePreset": "linux-tsan", "output": { "outputOnFailure": true } },
-    { "name": "linux-coverage", "configurePreset": "linux-coverage", "output": { "outputOnFailure": true } }
+    { "name": "linux-coverage", "configurePreset": "linux-coverage", "output": { "outputOnFailure": true } },
+    { "name": "macos-debug", "configurePreset": "macos-debug", "output": { "outputOnFailure": true } },
+    { "name": "macos-release", "configurePreset": "macos-release", "output": { "outputOnFailure": true } }
   ]
 }

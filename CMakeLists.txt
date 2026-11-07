@@ -17,11 +17,11 @@ set(ICL_PROJECT_PREFIX ERROR_JOURNALING)
 
 # The application id on Android and the bundle identifier on iOS: com.iainchesworthlabs.<app>, the App ID registered with
 # Apple and what the provisioning profile names. Defined once; the iOS workflows repeat it as BUNDLE_ID and
-# apps/ios/packaging/verify_app.sh checks that the two agree.
+# apps/app/packaging/ios/verify_app.sh checks that the two agree.
 set(ERROR_JOURNALING_APPLICATION_ID "com.iainchesworthlabs.errorjournaling")
 set(ERROR_JOURNALING_DISPLAY_NAME "Error Journaling")
 
-# The iOS application's code is Objective-C++ (apps/ios).
+# The iOS bridge is Objective-C++ (libs/ios_bridge/src/platform/ios).
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     enable_language(OBJCXX)
 endif()
@@ -38,10 +38,10 @@ include(IclHardening)
 include(IclTracy)
 include(IclCoverage)
 include(IclPlatform)
+include(IclQtApp)
 
 option(ERROR_JOURNALING_BUILD_TESTS "Build the tests" ON)
-option(ERROR_JOURNALING_BUILD_CLI "Build the command-line application" ON)
-option(ERROR_JOURNALING_BUILD_IOS_APP "Build the iPhone and iPad application (iOS only)" ON)
+option(ERROR_JOURNALING_BUILD_APP "Build the Qt Quick application (the iPhone application on iOS, a desktop program elsewhere)" ON)
 
 if(ERROR_JOURNALING_BUILD_TESTS)
     include(CTest)
@@ -50,11 +50,9 @@ if(ERROR_JOURNALING_BUILD_TESTS)
 endif()
 
 add_subdirectory(libs/core)
+add_subdirectory(libs/storage)
+add_subdirectory(libs/ios_bridge)
 
-if(ERROR_JOURNALING_BUILD_CLI)
-    add_subdirectory(apps/cli)
-endif()
-
-if(CMAKE_SYSTEM_NAME STREQUAL "iOS" AND ERROR_JOURNALING_BUILD_IOS_APP)
-    add_subdirectory(apps/ios)
+if(ERROR_JOURNALING_BUILD_APP)
+    add_subdirectory(apps/app)
 endif()
