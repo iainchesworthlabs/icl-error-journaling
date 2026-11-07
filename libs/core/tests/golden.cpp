@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "golden.hpp"
 
+#include <catch2/catch_test_macros.hpp>
+
 #include <fstream>
 #include <iterator>
 #include <sstream>
@@ -109,6 +111,13 @@ std::optional<std::string> compare_golden(std::string_view name, std::string_vie
     }
     return "golden " + std::string(name) + " differs at " + *difference + "; actual output written to "
            + actual_path.string();
+}
+
+void check_golden(std::string_view name, std::string_view actual)
+{
+    const auto result = compare_golden(name, actual);
+    INFO(result.value_or(std::string{}));
+    CHECK_FALSE(result.has_value());
 }
 
 }  // namespace ej::test

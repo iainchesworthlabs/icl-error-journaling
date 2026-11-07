@@ -14,7 +14,7 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 ## Golden tests and fixtures
 
 The export format is pinned by golden files: `libs/core/tests/golden/<name>.txt` holds the exact bytes an export must
-produce. A test builds a log, renders it and calls `CHECK_GOLDEN("<name>", text)` (`libs/core/tests/golden.hpp`). The
+produce. A test builds a log, renders it and calls `ej::test::check_golden("<name>", text)` (`libs/core/tests/golden.hpp`). The
 comparison is on bytes, so a missing final newline, a tab or a different dash fails. On a mismatch the failure message
 names the first differing line and the helper writes the actual output to `<name>.actual.txt` in
 `<build>/libs/core/tests/golden-actual/`. To accept an intended change, copy that file over the golden and review the diff

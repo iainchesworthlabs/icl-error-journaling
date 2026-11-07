@@ -62,7 +62,7 @@ TEST_CASE("compare_golden reads bytes exactly and reports a mismatch", "[golden]
     CHECK(*bytes == "fixture contents\n");
 
     const std::string text = "First line\n\xe2\x80\x93 second \xe2\x86\x92 line\nlast line, no trailing newline";
-    CHECK_GOLDEN("helper-selftest", text);
+    ej::test::check_golden("helper-selftest", text);
 
     const auto mismatch = ej::test::compare_golden("helper-selftest", "First line\nother");
     REQUIRE(mismatch.has_value());
