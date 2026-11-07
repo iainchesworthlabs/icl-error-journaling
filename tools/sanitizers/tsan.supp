@@ -12,6 +12,7 @@ called_from_lib:libQt6QmlMeta.so.6
 called_from_lib:libQt6QmlModels.so.6
 called_from_lib:libQt6QmlWorkerScript.so.6
 called_from_lib:libQt6Quick.so.6
+called_from_lib:libQt6QuickTemplates2.so.6
 called_from_lib:libQt6Network.so.6
 called_from_lib:libQt6OpenGL.so.6
 
