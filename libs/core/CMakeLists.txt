@@ -11,6 +11,7 @@ configure_file(
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
 
 add_library(ej_core
+    src/configuration.cpp
     src/day_prompt.cpp
     src/export_renderer.cpp
     src/header_history.cpp

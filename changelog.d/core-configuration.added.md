@@ -1,0 +1,1 @@
+**Configuration file in the core library.** `ej_core` can now read and write the versioned configuration file, listing every problem in a file at once and refusing unknown keys and files from a newer app. Nothing changes for the person using the app yet.

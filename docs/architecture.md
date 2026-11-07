@@ -5,7 +5,8 @@ libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespac
   include/error_journaling/  public headers: uuid.hpp, ids.hpp (EntryId, ErrorTypeId, NoteTemplateId, LocationId),
                              header_field.hpp, result.hpp (the std::expected conventions), version.hpp,
                              timestamp.hpp, time_zone_provider.hpp (Qt implementation in src/qt_time_zone_provider.cpp,
-                             the only file that includes QTimeZone), time_format.hpp, day_prompt.hpp
+                             the only file that includes QTimeZone), time_format.hpp, day_prompt.hpp,
+                             configuration.hpp (the configuration file: schema, import, export)
   src/                       implementation files, one per component
   tests/                     Catch2 tests, all labelled `unit`
     golden/                  expected export files, compared byte for byte (docs/testing.md)
