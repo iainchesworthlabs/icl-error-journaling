@@ -8,7 +8,10 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace ej
 {
@@ -20,6 +23,21 @@ inline constexpr std::int32_t SQLITE_APPLICATION_ID = 0x454A4C47;
 /// The schema this build writes: `PRAGMA user_version`. A database with a higher value was written by a newer build and
 /// is refused untouched (C16, M5).
 inline constexpr std::int32_t SQLITE_SCHEMA_VERSION = 1;
+
+/// The answer of a SQLite check: `ok`, or SQLite's own description of what is wrong (pages and tables, never row
+/// content).
+struct CheckResult
+{
+    bool m_Ok = false;
+    std::string m_Message;
+};
+
+/// What a replay did: records applied, and records skipped because the database already had them.
+struct ReplayCounts
+{
+    std::size_t m_Applied = 0;
+    std::size_t m_Skipped = 0;
+};
 
 struct SqliteOptions
 {
@@ -74,6 +92,37 @@ public:
 
     /// `store_state.journal_generation`: how many logs this store has created.
     [[nodiscard]] Result<std::uint64_t, StorageError> journal_generation();
+
+    // --- for recovery (section 2.7) ---
+
+    /// `PRAGMA quick_check` and `PRAGMA integrity_check`. A database that is damaged enough to fail the statement
+    /// itself answers with a `CORRUPT` error instead.
+    [[nodiscard]] Result<CheckResult, StorageError> quick_check();
+    [[nodiscard]] Result<CheckResult, StorageError> integrity_check();
+
+    /// Every log in the database with the highest journal sequence number committed to it.
+    [[nodiscard]] Result<std::map<LogId, std::uint64_t>, StorageError> applied_seqs();
+
+    /// Applies journal records to the database in one transaction and writes nothing to the journal (they come from
+    /// it). The records are in the order they must be applied, a log's `create_log` before anything else of it. A
+    /// record at or below what the database holds for its log is skipped, and so is an `add_entry` of an entry that is
+    /// there already and the `archive` of a log that is archived, so applying the same records twice leaves the same
+    /// log (idempotence). Records are applied with `ApplyMode::REPLAY`.
+    [[nodiscard]] Result<ReplayCounts, StorageError> replay(const std::vector<JournalRecord>& records);
+
+    /// Replaces everything the database holds about `log` with `log`, and records `applied_seq` for it. Used where the
+    /// database differs from the journal that is the log of record.
+    [[nodiscard]] Result<void, StorageError> replace_log(const StoredLog& log, std::uint64_t applied_seq);
+
+    /// Records that the database has applied the journal of `log` up to `seq`, after the journal was renumbered.
+    [[nodiscard]] Result<void, StorageError> set_applied_seq(LogId log, std::uint64_t seq);
+
+    /// Folds the write-ahead log into the database file and empties it, so that the file can be moved on its own.
+    [[nodiscard]] Result<void, StorageError> checkpoint();
+
+    /// The note draft of a database that failed its checks, read on a read-only connection of its own. Nothing when it
+    /// cannot be read (the draft is not journalled, so a damaged database can lose it).
+    [[nodiscard]] static std::optional<Draft> salvage_draft(const std::filesystem::path& database);
 
 private:
     struct Impl;

@@ -10,8 +10,11 @@ add_library(ej_storage
     src/file_journal.cpp
     src/journal_file.cpp
     src/journal_reader.cpp
+    src/journal_seed.cpp
     src/journal_writer.cpp
     src/memory_log_repository.cpp
+    src/quarantine.cpp
+    src/recovery.cpp
     src/sqlite_log_repository.cpp
     src/storage.cpp
     src/storage_location.cpp)

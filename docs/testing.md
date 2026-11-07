@@ -49,6 +49,16 @@ followed by zeros. `test_journal_writer.cpp` loses power inside 2,000 appends (a
 earlier record is read back whole and that the one in flight is whole or a torn tail, never a bad line. It models the journal
 only. SQLite does its own file I/O, and the kill harness (work package 2.5) proves the ordering of the two, not the drive.
 
+## Recovery tests
+
+`test_recovery.cpp` damages copies of one populated store (`recovery_fixture.hpp`): an open log of 300 entries, two archived
+logs that were edited, deleted from and shared after they were archived, and a draft, all written through the production
+code. It takes seconds to build because every write is synced, and CTest starts a process for each case, so the first to need
+it builds it in the working directory (`ej-test-tmp/pristine-<compile time>`) and renames it into place; the others copy it.
+After every recovery a case checks that each log has the digest it should, that the checks pass, that every journal is clean,
+and that a second recovery finds nothing to do and changes no file. A file made unreadable (C13) needs the system's own way of
+doing it, in `libs/storage/tests/platform/<os>/`.
+
 ## Coverage
 
 `linux-coverage` builds with instrumentation. CI runs gcovr and `coverage_gate.py` against

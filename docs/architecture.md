@@ -25,10 +25,12 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              journal.hpp (the `Journal` the repository appends to; `NullJournal`), file_journal.hpp
                              (the journal of record on disk: one file per log, archived ones under journal/archive/),
                              journal_writer.hpp, journal_reader.hpp (`scan_journal`: the rules of section 5.2),
-                             journal_file.hpp (`JournalFile`, the interface under the writer), crash_point.hpp
+                             journal_file.hpp (`JournalFile`, the interface under the writer), recovery.hpp
+                             (`Recovery::run`, called at launch before the board appears), crash_point.hpp
                              (`CrashPoint` and `CrashHook`, the places the kill harness ends the process),
                              storage_location.hpp (the folders of one store)
-  src/                       one file per component
+  src/                       one file per component; quarantine (where recovery puts what it replaces), journal_seed
+                             (a journal written again from a log)
   src/platform/              the pieces that differ by operating system, with one directory per system (linux, macos,
                              ios, windows) defining the same functions from the same headers: durable_sync (`fsync`,
                              `F_FULLFSYNC`, `FlushFileBuffers`), file_lock (an exclusive lock that refuses a second
@@ -39,6 +41,8 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              test_journal_reader.cpp (J1 to J12) and test_journal_writer.cpp with lossy_file.hpp (a
                              file that loses power; `unit`); test_file_journal.cpp and test_platform_files.cpp (real
                              files, the lock, the repository over the file journal; `integration`);
+                             test_recovery.cpp with recovery_fixture.hpp (a populated store, copied and damaged for
+                             each case: C1 to C16, J1 to J12, X1 to X3; `integration`);
                              helpers: temp_dir.hpp, raw_db.hpp (a second connection), recording_journal.hpp
 libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, behind interfaces
   src/platform/ios/      Objective-C++ (.mm), built for iOS

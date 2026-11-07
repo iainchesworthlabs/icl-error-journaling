@@ -42,16 +42,42 @@ struct StoredLog
 /// SQLite repository applies it to the log it loaded before writing the change, and recovery replays journals through
 /// it, so the three cannot drift apart.
 ///
-/// The rules: ids are unique; text is well-formed UTF-8 and within its limit; an error entry has a non-empty snapshot
-/// label for its type; a header change goes through `change_header`, so its value is validated and must differ from the
-/// value in force.
+/// The rules: only the open log accepts a new entry (an archived log can still be edited, have entries deleted and
+/// restored, be corrected and be shared); ids are unique; text is well-formed UTF-8 and within its limit; an error
+/// entry has a non-empty snapshot label for its type; a header change goes through `change_header`, so its value is
+/// validated and must differ from the value in force.
 
 /// A new log from the first record of a journal.
 [[nodiscard]] Result<StoredLog, StorageError> make_stored_log(LogId id, const CreateLogBody& body);
 
+/// How strictly a record is checked as it is applied.
+enum class ApplyMode
+{
+    /// A write the person just made: a new header change must differ from the value in force, and cannot arrive deleted
+    /// or edited.
+    STRICT,
+    /// A record that was valid when it was written, applied again by recovery or built to describe a log as it now is:
+    /// a header change is checked for its field and value only. (The log may legitimately hold a change equal to the
+    /// value before it, after a restore or a correction.)
+    REPLAY
+};
+
 /// Applies any record except `CREATE_LOG`. `VOID_RECORD` does nothing here: the code that reads a journal removes the
 /// voided record before applying (it knows both seq numbers).
-[[nodiscard]] Result<void, StorageError> apply_record(StoredLog& log, const JournalRecord& record);
+[[nodiscard]] Result<void, StorageError> apply_record(StoredLog& log, const JournalRecord& record,
+                                                      ApplyMode mode = ApplyMode::STRICT);
+
+/// A summary of a log that two copies of it can be compared by (section 2.7 step 5): how many entries it holds and a
+/// hash of everything about it that a journal records.
+struct StateDigest
+{
+    std::size_t m_Entries = 0;
+    std::uint64_t m_Hash = 0;
+
+    friend bool operator==(const StateDigest&, const StateDigest&) = default;
+};
+
+[[nodiscard]] StateDigest digest_of(const StoredLog& log);
 
 /// Checks an entry against the rules above without applying it.
 [[nodiscard]] Result<void, StorageError> validate_entry(const Entry& entry);

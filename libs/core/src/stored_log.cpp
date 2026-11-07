@@ -171,7 +171,7 @@ Result<StoredLog, StorageError> make_stored_log(LogId id, const CreateLogBody& b
 namespace
 {
 
-Result<void, StorageError> apply_add(StoredLog& stored, const AddEntryBody& body)
+Result<void, StorageError> apply_add(StoredLog& stored, const AddEntryBody& body, ApplyMode mode)
 {
     if (auto ok = validate_entry(body.m_Entry); !ok)
     {
@@ -181,10 +181,30 @@ Result<void, StorageError> apply_add(StoredLog& stored, const AddEntryBody& body
     {
         return limit("the log holds the most entries it may");
     }
+    if (stored.m_Meta.m_Archived && mode == ApplyMode::STRICT)
+    {
+        // Archiving is the boundary for new entries (decision 13). Edits, deletes and sharing still reach an archived
+        // log, through its journal; replay accepts what an older build may have written.
+        return Failure(make_error(StorageErrorKind::NOT_OPEN_LOG, "only the open log accepts a new entry"));
+    }
     const Entry& entry = body.m_Entry;
     if (stored.m_Log.find(entry.m_Id) != nullptr)
     {
         return Failure(make_error(StorageErrorKind::ALREADY_EXISTS, "an entry with this id exists"));
+    }
+    if (const auto* change = std::get_if<HeaderChangeEntry>(&entry.m_Body);
+        change != nullptr && mode == ApplyMode::REPLAY)
+    {
+        auto canonical = canonical_header_text(change->m_Field, change->m_NewValue);
+        if (!canonical)
+        {
+            return Failure(canonical.error());
+        }
+        Entry stored_entry = entry;
+        std::get<HeaderChangeEntry>(stored_entry.m_Body).m_NewValue = std::move(*canonical);
+        return stored.m_Log.add(std::move(stored_entry))
+            .transform_error([](Log::Error)
+                             { return make_error(StorageErrorKind::ALREADY_EXISTS, "an entry with this id exists"); });
     }
     if (const auto* change = std::get_if<HeaderChangeEntry>(&entry.m_Body))
     {
@@ -236,7 +256,7 @@ Result<void, StorageError> apply_edit(StoredLog& stored, const EditEntryBody& bo
 
 }  // namespace
 
-Result<void, StorageError> apply_record(StoredLog& log, const JournalRecord& record)
+Result<void, StorageError> apply_record(StoredLog& log, const JournalRecord& record, ApplyMode mode)
 {
     if (record.m_Log != log.m_Meta.m_Id)
     {
@@ -245,9 +265,10 @@ Result<void, StorageError> apply_record(StoredLog& log, const JournalRecord& rec
     struct Visitor
     {
         StoredLog& m_Log;
+        ApplyMode m_Mode;
 
         Result<void, StorageError> operator()(const CreateLogBody&) const { return invalid("a log is created once"); }
-        Result<void, StorageError> operator()(const AddEntryBody& b) const { return apply_add(m_Log, b); }
+        Result<void, StorageError> operator()(const AddEntryBody& b) const { return apply_add(m_Log, b, m_Mode); }
         Result<void, StorageError> operator()(const EditEntryBody& b) const { return apply_edit(m_Log, b); }
         Result<void, StorageError> operator()(const SetDeletedBody& b) const
         {
@@ -289,7 +310,41 @@ Result<void, StorageError> apply_record(StoredLog& log, const JournalRecord& rec
         }
         Result<void, StorageError> operator()(const VoidBody&) const { return {}; }
     };
-    return std::visit(Visitor{log}, record.m_Body);
+    return std::visit(Visitor{log, mode}, record.m_Body);
+}
+
+StateDigest digest_of(const StoredLog& log)
+{
+    // FNV-1a over the encoding of the log as a journal would record it: its first record, one record for each entry in
+    // order, and the two flags. Two logs that a journal cannot tell apart have the same digest.
+    std::uint64_t hash = 14695981039346656037ULL;
+    const auto feed = [&hash](std::string_view text)
+    {
+        for (const char c : text)
+        {
+            hash = (hash ^ static_cast<std::uint8_t>(c)) * 1099511628211ULL;
+        }
+        hash = (hash ^ 0x0A) * 1099511628211ULL;
+    };
+    const auto feed_record = [&feed, &log](std::uint64_t seq, JournalBody body)
+    {
+        JournalRecord record;
+        record.m_Seq = seq;
+        record.m_Log = log.m_Meta.m_Id;
+        record.m_Body = std::move(body);
+        const auto line = encode_record(record);
+        feed(line ? std::string_view(*line) : std::string_view("unencodable"));
+    };
+    std::uint64_t seq = 1;
+    feed_record(seq++, CreateLogBody{log.m_Log.initial_header(), log.m_Meta.m_CreatedUtc, log.m_Meta.m_Previous});
+    for (const Entry& entry : log.m_Log.entries())
+    {
+        feed_record(seq++, AddEntryBody{entry});
+    }
+    feed(log.m_Meta.m_Archived ? "archived" : "open");
+    feed(log.m_Meta.m_LastSharedUtc ? std::to_string(log.m_Meta.m_LastSharedUtc->time_since_epoch().count())
+                                    : "unshared");
+    return StateDigest{log.m_Log.entries().size(), hash};
 }
 
 }  // namespace ej

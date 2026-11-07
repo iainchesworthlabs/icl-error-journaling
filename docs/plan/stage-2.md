@@ -182,7 +182,9 @@ closing (NOTE-03) and no loss of the draft on crash (NFR-08). The owner accepted
 ### 2.9 Archive, delete, migrations
 
 **Archive (DS-05).** `archive_log` marks the log archived, appends an `archive` record, closes the journal and moves it
-to `journal/archive/`. Starting a new day or log is `archive_log` followed by `create_log`, and the pair is one unit: a
+to `journal/archive/`. Archiving is the boundary for new entries only: past logs can still be edited, have entries deleted and
+restored, and be shared (DAY-04), and each such change reopens the archived journal for appending, journals before the
+database commits and syncs, exactly as for the open log (decision 13). Only the open log accepts `add_entry`. Starting a new day or log is `archive_log` followed by `create_log`, and the pair is one unit: a
 kill between them leaves either the old log open or the new one open, never none and never two. Nothing in the app
 deletes an open log; there is no API for it.
 
@@ -617,6 +619,7 @@ The owner answered on 7 Nov 2026. The text above reflects these answers.
 | 10 | Clock steps backwards | **Sort by time** as the PRD says and accept the reorder; `seq` breaks ties |
 | 11 | Iteration counts | **Accepted**: 25 on the PR gate, 100 on the merge queue, 1,000 nightly, 10,000 for the gate |
 | 12 | Entry ids | **UUID v4**. Anything shown to the user (review screen, reports) uses a short code derived from the id, never the full UUID |
+| 13 | Writes to archived logs | **Through the archived journal** (7 Nov 2026, Stage 3 open question 11, option 1): `edit_entry`, `set_entry_deleted` and `mark_shared` on an archived log append a record to its journal in `journal/archive/` before the database commit, so DS-02 holds for history too, and a rebuild restores those edits and shared times. Only the open log accepts `add_entry` |
 
 ### Error type snapshots (decision 5)
 

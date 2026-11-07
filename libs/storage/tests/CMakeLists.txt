@@ -20,6 +20,7 @@ add_executable(ej_storage_integration_tests
     test_contract_sqlite.cpp
     test_file_journal.cpp
     test_platform_files.cpp
+    test_recovery.cpp
     test_sqlite_repository.cpp
     test_storage_location.cpp)
 target_link_libraries(ej_storage_integration_tests
@@ -27,4 +28,6 @@ target_link_libraries(ej_storage_integration_tests
 # platform/*.hpp: the internal headers of the platform pieces, which test_platform_files.cpp calls directly.
 target_include_directories(ej_storage_integration_tests
     PRIVATE "${PROJECT_SOURCE_DIR}/libs/core/tests" "${PROJECT_SOURCE_DIR}/libs/storage/src")
+# platform/<os>/unreadable_file.cpp: makes a file unreadable the way the system does (C13), which differs by system.
+icl_platform_sources(ej_storage_integration_tests DIR "${CMAKE_CURRENT_SOURCE_DIR}/platform")
 catch_discover_tests(ej_storage_integration_tests PROPERTIES LABELS integration)
