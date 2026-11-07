@@ -11,6 +11,7 @@
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/share_presenter.hpp"
+#include "error_journaling/timing_stats.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -1196,4 +1197,72 @@ TEST_CASE("exporter: the setup is written to the export folder, shared, and a fa
     REQUIRE(failures.size() == 1);
     CHECK(failures[0] == "The setup could not be saved.");
     CHECK_FALSE(fs::exists(fs::path(written.toStdU16String())));
+}
+
+TEST_CASE("timing_stats: launch, last, median and worst of the recent taps", "[unit][perf]")
+{
+    bridge::TimingStats stats;
+    CHECK(stats.summary() == "launch not yet usable; no taps yet");
+
+    stats.set_launch(812.4);
+    CHECK(stats.summary() == "launch 812 ms; no taps yet");
+
+    for (const double ms : {40.0, 10.0, 70.0})
+    {
+        stats.record_tap(ms);
+    }
+    CHECK(stats.tap_count() == 3);
+    CHECK(*stats.last_tap_ms() == 70.0);
+    CHECK(*stats.median_tap_ms() == 40.0);
+    CHECK(*stats.worst_tap_ms() == 70.0);
+    CHECK(stats.summary() == "launch 812 ms; tap 70 ms (last of 3), median 40 ms, worst 70 ms");
+
+    stats.record_tap(20.0); // an even count: the middle two
+    CHECK(*stats.median_tap_ms() == 30.0);
+}
+
+TEST_CASE("timing_stats: only the last window of taps counts", "[unit][perf]")
+{
+    bridge::TimingStats stats;
+    stats.record_tap(900.0); // falls out of the window
+    for (std::size_t i = 0; i < bridge::TimingStats::WINDOW; ++i)
+    {
+        stats.record_tap(5.0);
+    }
+    CHECK(stats.tap_count() == bridge::TimingStats::WINDOW);
+    CHECK(*stats.worst_tap_ms() == 5.0);
+}
+
+TEST_CASE("timing_stats.bridge: each impact adds a tap, shown on a queued call; the launch time too", "[unit][perf]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    fakes.m_Marks->m_Uptime = 5000;
+    int changes = 0;
+    QObject::connect(&qml, &bridge::QmlBridge::timingChanged, &qml, [&] { ++changes; });
+    CHECK(qml.timing_summary() == "launch not yet usable; no taps yet");
+
+    qml.set_launch_ms(900.0);
+    qml.hapticImpact(4955.0); // a touch 45 ms old; the fake clock does not move during the call
+    qml.hapticImpact(4990.0);
+    CHECK(changes == 0); // queued, and one notice for the lot
+    app.drain();
+    CHECK(changes == 1);
+    CHECK(qml.timing_summary() == "launch 900 ms; tap 10 ms (last of 2), median 28 ms, worst 45 ms");
+}
+
+TEST_CASE("launch_tracker.order: the usable handler gets the time once", "[unit][perf]")
+{
+    FakePerfMarks marks;
+    bridge::LaunchTracker tracker(marks);
+    std::vector<double> seen;
+    tracker.set_usable_handler([&](double ms) { seen.push_back(ms); });
+    tracker.qml_loaded();
+    tracker.storage_ready();
+    tracker.board_enabled();
+    marks.m_SinceStart = 640;
+    tracker.frame_swapped();
+    tracker.frame_swapped();
+    CHECK(seen == std::vector<double>{640.0});
 }

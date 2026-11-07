@@ -61,25 +61,19 @@ build, which is the release workflow's (`docs/releasing.md`, "iOS and TestFlight
 sets `CFBundleVersion`. The identifier is `ERROR_JOURNALING_APPLICATION_ID` in `CMakeLists.txt`. Check the bundle with
 `apps/app/packaging/ios/verify_app.sh <app> --bundle-id <id> --executable error-journaling`.
 
-#### Profiling on a device
+#### Reading the timings on a device
 
-Instruments can profile only a build that has the `get-task-allow` entitlement, which a distribution-signed (App Store or
-ad hoc) build does not. The figures of the exit gate (cold start to a usable board, tap to haptic) therefore come from a
-**development-signed Release build** installed from a Mac; the TestFlight build is checked with the app's own timing line
-(`launch: usable at ...` in Console, with the phone connected, filtered on the bundle identifier).
+The exit-gate figures (cold start to a usable board, tap to haptic) are read from the application itself, on a TestFlight
+build: there is no Mac, so no Instruments. Show the timing readout (five quick taps on the version text of the spike
+window) to see `launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms`. The tap figure stops at the haptic call
+returning and does not include the actuator. The same launch figure goes to the system log as a `launch:` line, and the
+marks go to Points of Interest, for anyone with a Mac and Console or Instruments.
 
-1. Register the iPhone in the developer portal and make a development provisioning profile for the App ID (owner actions
-   O2 in `docs/plan/stage-5.md`). Turn Developer Mode on in the phone's Settings, Privacy and Security.
-2. Configure with the development identity and profile:
-   `cmake --preset ios-release -DERROR_JOURNALING_IOS_SIGNING_IDENTITY="Apple Development" -DERROR_JOURNALING_IOS_SIGNING_TEAM=<team> -DERROR_JOURNALING_IOS_SIGNING_PROFILE=<development profile name>`.
-   `ERROR_JOURNALING_IOS_SIGNING_IDENTITY` defaults to `Apple Distribution`, the release workflow's identity.
-3. Build and install (`xcodebuild`, or open the project in Xcode and run on the phone).
-4. The application marks its own timings for Instruments (`os_signpost`, Points of Interest): `ProcessStart`,
-   `StorageReady`, `QmlLoaded`, `FirstFrame`, `BoardUsable`, `TouchAge` and the `TapToHaptic` interval. In Instruments use
-   the App Launch template and add Points of Interest.
-5. For the one-year dataset, make a data directory on a desktop with `ej_dataset --out <directory>` (about 80,000
-   fictional entries, built by the real repository), and copy it into the app's container with Xcode's Devices and
-   Simulators window, "Replace Container" (a development build only). No seeding code ships in the application.
+`ERROR_JOURNALING_IOS_SIGNING_IDENTITY` defaults to `Apple Distribution`, the release workflow's identity; a development
+identity is only needed to run from Xcode.
+
+`ej_dataset --out <directory>` writes a year of fictional data (about 80,000 entries) through the real repository. There is
+no way yet to put it on a phone without a Mac; see `docs/plan/stage-5.md`, "Timing marks".
 
 ### Windows (developer machine)
 

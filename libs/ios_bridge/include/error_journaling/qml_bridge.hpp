@@ -4,6 +4,7 @@
 #include "error_journaling/haptic_policy.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/share_presenter.hpp"
+#include "error_journaling/timing_stats.hpp"
 
 #include <QObject>
 #include <QString>
@@ -30,6 +31,9 @@ class QmlBridge : public QObject
     Q_PROPERTY(bool reduceMotion READ reduce_motion NOTIFY reduceMotionChanged)
     /// VoiceOver is running. For tests and diagnostics.
     Q_PROPERTY(bool voiceOverRunning READ voice_over_running NOTIFY voiceOverRunningChanged)
+    /// The exit-gate figures as one line (launch time; last, median and worst of the recent taps), to read off the
+    /// phone.
+    Q_PROPERTY(QString timingSummary READ timing_summary NOTIFY timingChanged)
 
 public:
     explicit QmlBridge(PlatformServices services, HapticPolicyConfig haptics = {}, QObject* parent = nullptr);
@@ -40,6 +44,11 @@ public:
     [[nodiscard]] double text_scale() const noexcept;
     [[nodiscard]] bool reduce_motion() const noexcept;
     [[nodiscard]] bool voice_over_running() const noexcept;
+    [[nodiscard]] QString timing_summary() const;
+
+    /// The board became usable `milliseconds` after the process was created (M1). Called by main through the launch
+    /// tracker.
+    void set_launch_ms(double milliseconds);
 
     /// Shares `text` (UTF-8 on the way to the sheet). Always ends with shareFinished, delivered on a queued call, so a
     /// caller sees one order on every platform. A request while a sheet is up ends "failed" without reaching the sheet.
@@ -77,15 +86,20 @@ signals:
     void textScaleChanged();
     void reduceMotionChanged();
     void voiceOverRunningChanged();
+    /// The timing summary changed. Emitted on a queued call, never inside the press handler.
+    void timingChanged();
 
 private:
     void begin_share(ShareRequest request, bool temporary_file);
     void refresh_sharing();
+    void queue_timing_changed();
     void refresh_accessibility();
     void deliver(const ShareResult& result);
 
     PlatformServices m_Services;
     HapticPolicy m_HapticPolicy;
+    TimingStats m_Timing;
+    bool m_TimingNotifyQueued = false;
     QTimer m_KeepAlive;
     SharePresenter m_Presenter;
     bool m_Sharing = false;

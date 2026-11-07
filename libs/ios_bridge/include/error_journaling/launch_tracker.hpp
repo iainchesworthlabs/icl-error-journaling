@@ -3,6 +3,9 @@
 
 #include "error_journaling/perf_marks.hpp"
 
+#include <functional>
+#include <utility>
+
 namespace ej::bridge
 {
 
@@ -26,6 +29,12 @@ public:
     /// BOARD_USABLE; later ones do nothing.
     void frame_swapped();
 
+    /// Called once with the milliseconds since the process was created, when the board becomes usable (M1).
+    void set_usable_handler(std::function<void(double)> handler)
+    {
+        m_OnUsable = std::move(handler);
+    }
+
     [[nodiscard]] bool usable() const noexcept
     {
         return m_Usable;
@@ -35,6 +44,7 @@ private:
     void maybe_usable();
 
     PerfMarks& m_Marks;
+    std::function<void(double)> m_OnUsable;
     bool m_StorageReady = false;
     bool m_QmlLoaded = false;
     bool m_BoardEnabled = false;

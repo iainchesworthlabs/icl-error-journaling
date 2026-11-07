@@ -64,6 +64,29 @@ Window {
                     color: "#4a463e"
                     font.pixelSize: 20
                     text: qsTr("Board") + "\n" + root.versionText + "\n" + root.platformText
+
+                    // The timing readout is behind a discreet affordance: five quick taps on this text show or hide it.
+                    TapHandler {
+                        onTapped: (eventPoint, button) => {
+                            if (tapCount >= 5) {
+                                timingText.visible = !timingText.visible
+                            }
+                        }
+                    }
+                }
+
+                // The exit-gate figures (launch time; last, median and worst of the recent taps), for reading off the phone.
+                Text {
+                    id: timingText
+
+                    objectName: "timingReadout"
+                    visible: false
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    color: "#4a463e"
+                    font.pixelSize: 13
+                    text: root.bridge.timingSummary
                 }
 
                 SpikeTile {

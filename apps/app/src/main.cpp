@@ -80,6 +80,8 @@ int main(int argc, char* argv[])
     ej::bridge::purge_import_leftovers(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
                                        temporary_path);
     ej::bridge::QmlBridge platform_bridge(std::move(services));
+    // M1 of the exit gate, readable on the phone (the timing readout) as well as in the log.
+    launch.set_usable_handler([&platform_bridge](double ms) { platform_bridge.set_launch_ms(ms); });
     const bool share_available = share_sheet.available();
 
     // The composition root (Stage 3, 3.11): the store is opened and recovered, and the services are built and wired.

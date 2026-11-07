@@ -3,8 +3,8 @@
 Task breakdown, test list and device checklist for Stage 5 of the [implementation plan](../implementation-plan.md). Each
 work package is one pull request into `develop`. Requirement IDs refer to the [PRD](../prd.md).
 
-**Exit gate:** on an iPhone 17, measured with Instruments: cold start to a usable board under 1.5 s and tap to haptic
-under 100 ms. The share sheet posts to Slack, and a configuration file AirDropped from a Mac imports cleanly.
+**Exit gate:** on an iPhone 17, read from the app's own timing line on a TestFlight build (there is no Mac, so no
+Instruments): cold start to a usable board under 1.5 s and tap to haptic under 100 ms. The share sheet posts to Slack, and a configuration file AirDropped from a Mac imports cleanly.
 
 **Status:** draft for owner review. No code is written until the owner approves this page.
 
@@ -80,7 +80,7 @@ Each is an assumption this plan depends on, how the plan finds out, and what cha
 | A4 | `UILaunchScreen` with `UIImageName` shows the image at its natural size, so a 402 x 874 pt image fills an iPhone 17 | K1 | Storyboard instead of an image (open question 4) |
 | A5 | QML can read the touch's event timestamp (`point.pressTimestamp` of the pointer handler) and it shares a time base with `NSProcessInfo.systemUptime` | First task of 5.3 | Only the software interval is measured, which is the larger part (see M2) |
 | A6 | New files inherit the data-protection class of their directory, and `setAttributes` with `NSFileProtectionKey` sticks | D1 reads every class back, so this is verified whichever way it falls | None: the explicit call after creation is there for this reason |
-| A7 | A development-signed Release build of this app can be profiled with our entitlements | First Instruments run | Owner action: check the development profile carries `get-task-allow` |
+| A7 | The app's own clock is good enough for the gate: process start from `sysctl`, touch age from the uptime clock (with A5) | M1 and M2 read on the phone | Only the software interval is read and the page says so |
 | A8 | `completionWithItemsHandler` also runs when the sheet is dismissed by a tap outside it | S1 | The sheet gets a `presentationControllerDidDismiss` delegate in the `.mm` |
 
 ## Interfaces
@@ -540,20 +540,31 @@ TestFlight update can keep showing the old one.
 
 ## Timing marks and the device build
 
-**Not a plan row, but the exit gate needs it.** Instruments can read a figure only if the application tells it when
-something happened. This is also where the stage diverges from the plan's wording, so it comes with a decision.
+**Not a plan row, but the exit gate needs it.** The owner decided (2026-11-07) that there is no Mac, so Instruments is out:
+the gate is read from the application's own timing, on a TestFlight build on the iPhone 17. The application therefore
+measures M1 and M2 itself and shows them on the phone, and the marks below are also emitted for Instruments in case a
+Mac is ever used. Everything is on the monotonic clock (`NSProcessInfo.systemUptime` for taps; the process start time from
+`sysctl` for launch), and none of it needs a development-signed build.
 
-**Instruments cannot profile a TestFlight build.** Profiling needs the `get-task-allow` entitlement, which a
-distribution-signed (App Store or ad hoc) build does not have. The Instruments figures therefore come from a
-**development-signed Release build** installed from the owner's Mac. The TestFlight build is checked with the same
-timings printed by the app itself (below), and for the functional rows. This needs two things in the repository:
+**What the measurement is, and is not.** M2 runs from the touch being received to the haptic call returning. It stops at the
+call and does **not** include the Taptic Engine's own delay, which is Apple's and is not documented; the feel test covers
+that part. M1 runs from process creation to the first frame in which the board is usable.
+
+**The readout.** `QmlBridge.timingSummary` is one line, `launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst
+77 ms`, kept by `TimingStats` over the last 50 taps. The shell shows it behind a discreet affordance (five quick taps on
+the version text of the spike window; the real shell chooses its own), so it is not in the facilitator's way. There is no
+shareable diagnostics text yet; when Stage 4 adds one it includes this line. The same figures go to the log (`launch:` line,
+Console) and to Points of Interest.
+
+Two things in the repository remain from the first plan and are harmless:
 
 - A CMake cache variable `ERROR_JOURNALING_IOS_SIGNING_IDENTITY`, default `Apple Distribution` (what `ios.cmake` hard-codes
   now), so the owner can configure `Apple Development` with a development profile. Documented in `docs/building.md`.
 - No harness code in the app. The test data is made on the desktop by a small tool, `ej_dataset`, that uses Stage 2's
-  one-year generator (about 80,000 entries, fictional) through the real repository, and writes a data directory. The owner
-  puts it on the phone with Xcode's Devices and Simulators window, "Replace Container" (works for a development build
-  only). No seeding code ships.
+  one-year generator (about 80,000 entries, fictional) through the real repository, and writes a data directory. **Open
+  question for the owner:** with no Mac, "Replace Container" is not available, so there is no way yet to put the
+  365-day dataset on the phone. Until one is chosen, M1 is read on the datasets that real use builds (D1, D2) and the
+  365-day case is not measured.
 
 ```cpp
 enum class Mark { PROCESS_START, STORAGE_READY, QML_LOADED, FIRST_FRAME, BOARD_USABLE, TAP_TO_HAPTIC, TOUCH_AGE, TAP_TO_COMMIT };
@@ -571,10 +582,10 @@ std::unique_ptr<PerfMarks> make_perf_marks();            // ios/perf_marks.mm (o
 ```
 
 The iOS implementation emits `os_signpost` intervals and events in the Points of Interest category of a log whose
-subsystem is the bundle identifier, so they show in Instruments with no configuration. It also writes the line
+subsystem is the bundle identifier, so they show in Instruments with no configuration if one is ever used. It also writes the line
 `launch: usable at 812 ms (storage 140, qml 380, first frame 610)` with `os_log` when the board becomes usable, using the
-time since the process was created (`sysctl` start time of the process). That line is readable in Console on the Mac
-with the phone connected, from any build including TestFlight. It holds timings only: no content, no network, no
+time since the process was created (`sysctl` start time of the process). The same figures are on the phone
+(the timing readout above), which is how the gate is read. It holds timings only: no content, no network, no
 analytics (NFR-09), and it is formatted with the public specifier for the same reason as the share line. The
 `protection:` and `lifecycle:` lines are too.
 
@@ -647,62 +658,54 @@ spike checklist in `spikes.md` is ticked off from the same run.
 
 | # | Item |
 |---|---|
-| P1 | Record: iPhone model, iOS version, Xcode and Instruments versions, commit, build number. |
+| P1 | Record: iPhone model, iOS version, commit, build number. |
 | P2 | iPhone: Developer Mode on; Settings > Sounds & Haptics > System Haptics on; Accessibility > Touch > Vibration on (either off silences every haptic and would fail the haptic rows for no fault of the app); Low Power Mode off; battery above 50 %; the phone not warm. |
-| P3 | **Build B1:** development-signed Release configuration of the commit under test, installed from the Mac with `ERROR_JOURNALING_IOS_SIGNING_IDENTITY` set to the development identity. For the Instruments rows. **Build B2:** the TestFlight build of the same commit. For the functional rows and the in-app timing line. |
-| P4 | Data, all fictional: **D1** a fresh install with `config/sample-config.json` imported; **D2** a 30-day dataset; **D3** a 365-day dataset (about 80,000 entries) made by `ej_dataset` and put in the app with Replace Container (B1 only). |
+| P3 | **Build B:** the TestFlight build of the commit under test. Every row, including M1 and M2, is read from it. |
+| P4 | Data, all fictional: **D1** a fresh install with `config/sample-config.json` imported; **D2** a 30-day dataset built by use; **D3** the 365-day dataset (about 80,000 entries) from `ej_dataset`, **not available** until the owner chooses a way to put it on the phone (see Timing marks). |
 | P5 | Slack on the phone, signed in, with a private test channel the owner has made for this; the log sent is the fictional one. |
 | P6 | A Mac on the same network with AirDrop on, the iPhone set to receive from it. |
 
-### M1: cold start to a usable board (NFR-04), Instruments
+### M1: cold start to a usable board (NFR-04), the app's timing line
 
 **"Usable"** means the first frame in which all 12 tiles are drawn and enabled and the open log has been loaded
 (recovery finished): the `BOARD_USABLE` mark. **Start** is process creation, as Apple's launch measurements count it. The
 home-screen icon animation and the time from the finger to the process starting are outside this figure.
 
-1. Install B1 with D3.
+1. Install build B on D1 (and D2 when it exists).
 2. Restart the phone. Unlock it. Wait 60 seconds. Open nothing.
-3. On the Mac: Xcode > Open Developer Tool > Instruments. Template **App Launch**. Choose the iPhone 17 and the app
-   (CS Bingo Board). Add the **Points of Interest** instrument (the + button, Library). The app's marks appear in it.
-4. Press Record. Instruments launches the app. When the board is up, wait 3 seconds and stop.
-5. Read it: **start** = the beginning of the "Process Creation" interval in the launch (lifecycle) track; **end** = the
-   `BOARD_USABLE` event in Points of Interest (select the track and use the events list; the Start column is time from
-   the start of the trace). Cold start = end - start. Also note `STORAGE_READY`, `QML_LOADED` and `FIRST_FRAME`, so a
-   failure shows where the time went.
-6. Run 10 launches: quit the app from the app switcher, wait 10 seconds, record again. The run after the restart is
-   reported separately.
-7. Repeat steps 4 to 6 on D2 and D1 for comparison.
-8. **Cross-check without Instruments, on B1 and on B2:** connect the phone to the Mac, open Console, select the phone,
-   filter on the bundle identifier, launch the app from the Home screen, and read the `launch:` line. It must agree with the
-   Instruments figure for B1 to within 100 ms, which validates the in-app timing, and the B2 figure is then the TestFlight
-   result.
+3. Open the app from the Home screen. When the board is up, show the timing readout and write down the `launch` figure.
+4. Repeat 10 times: quit the app from the app switcher, wait 10 seconds, launch again. The run after the restart is reported
+   separately.
+5. If a Mac and Console are ever to hand, the `launch:` line in the log gives the same figure with where the time went
+   (storage, QML, first frame).
 
-**Pass:** the slowest of the 10 launches on D3 is under 1.5 s. Report the median, the run after restart, D2 and D1, and B2.
+**Pass:** the slowest of the 10 launches is under 1.5 s. Report the median, the run after restart, and each dataset. The
+365-day case is open until it can be put on the phone.
 
-### M2: tap to haptic (NFR-03, BRD-03), Instruments
+### M2: tap to haptic (NFR-03, BRD-03), the app's timing line
 
-The figure Instruments can show is the time from the touch to the call that fires the haptic returning. It cannot show the
-Taptic Engine's own delay, which is Apple's and is not documented; the feel test below is how that part is judged.
+The figure is the time from the touch being received to the haptic call returning: `TOUCH_AGE` (the touch's event
+timestamp to the press handler: A5) plus the call itself, on the monotonic clock. **It stops at the call returning and does
+not include the Taptic Engine's own delay**, which is Apple's and is not documented; the feel test below is how that
+part is judged.
 
-1. B1 with D1. Instruments: Blank template with **Points of Interest** only (the Time Profiler adds load and would
-   inflate the figure). Choose the app and Record.
-2. On the first tile, tap with one finger, lift, wait one second; 50 taps.
-3. Each tap produces `TOUCH_AGE` (from the touch's event timestamp to the press handler: A5), and a `TAP_TO_HAPTIC`
-   interval (press handler to `impactOccurred` returned). **Total = `TOUCH_AGE` + `TAP_TO_HAPTIC`.** Copy the events list
-   into a spreadsheet and take the median and the 95th percentile.
-4. Repeat for four conditions: (a) the first tap after a cold launch, (b) after 10 seconds idle, (c) after 60 seconds idle,
-   (d) taps every half second. Condition (c) decides whether the keep-alive prepare is needed; if (c) fails, turn on
-   `HAPTIC_KEEPALIVE`, rebuild and repeat (c).
-5. **Feel test, 10 trials:** rest a finger on the tile and press. The haptic is felt at the moment of contact, not on lift.
+1. Build B on D1. Show the timing readout.
+2. On the first tile, tap with one finger, lift, wait one second; 50 taps. The readout shows the last, the median and the
+   worst of the last 50.
+3. Repeat for four conditions: (a) the first tap after a cold launch, (b) after 10 seconds idle, (c) after 60 seconds idle,
+   (d) taps every half second. Write down the worst of each. Condition (c) decides whether the keep-alive prepare is needed;
+   if (c) fails, turn on `HAPTIC_KEEPALIVE`, make a new build and repeat (c).
+4. **Feel test, 10 trials:** rest a finger on the tile and press. The haptic is felt at the moment of contact, not on lift.
    The note's success haptic feels different from the tile's and fires once per saved note.
-6. Not gated, but recorded: `TAP_TO_COMMIT`, the interval from the press handler to the acknowledged commit (M3).
+5. Not gated, but recorded: `TAP_TO_COMMIT`, the interval from the press handler to the acknowledged commit (M3).
 
-**Pass:** the 95th percentile of the total is under 100 ms in all four conditions, and the feel test is clean. If
-`TOUCH_AGE` cannot be read (A5), the `TAP_TO_HAPTIC` interval is the figure and the page says so.
+**Pass:** the worst of the last 50 taps is under 100 ms in all four conditions (the readout shows the worst, which is
+stricter than the 95th percentile the first plan asked for), and the feel test is clean. If `TOUCH_AGE` cannot be read
+(A5), the call alone is the figure and the page says so.
 
 ### M3: press to commit (informative)
 
-From M2: median and 95th percentile of `TAP_TO_COMMIT`. The touch-down haptic stays (decision 1) whatever
+From M2: median and worst of `TAP_TO_COMMIT`. The touch-down haptic stays (decision 1) whatever
 the figure; it is recorded for information.
 
 ### Functional rows
@@ -777,8 +780,8 @@ for the layout. Tests: those under [Share sheet](#share-sheet).
 ### 5.3 Timing marks and the device build
 
 `PerfMarks`, `LaunchTracker`, the `launch:` log line, `ERROR_JOURNALING_IOS_SIGNING_IDENTITY`, the `ej_dataset` tool, and
-the A5 check (the first task: can QML read the touch timestamp). `docs/building.md`: the variable, and how to make a
-development build for Instruments. Tests: those under [Timing marks](#timing-marks-and-the-device-build).
+the A5 check (the first task: can QML read the touch timestamp), and the on-screen timing readout (`TimingStats`).
+`docs/building.md`: the variable, and how to read the timings. Tests: those under [Timing marks](#timing-marks-and-the-device-build).
 
 ### 5.4 File protection, and 5.4b the entitlement
 
@@ -838,19 +841,19 @@ pull request.
 | # | Action | Needed for | When |
 |---|---|---|---|
 | O1 | Apple Developer portal: on the App ID `com.iainchesworthlabs.errorjournaling`, enable the Data Protection capability set to Complete Until First User Authentication; regenerate the App Store profile; update the repository secret `IOS_PROVISIONING_PROFILE_BASE64` | 5.4b, and every signed build after it | Before 5.4b merges |
-| O2 | For Instruments: register the iPhone 17 (device ID) in the portal; an Apple Development certificate on the Mac; a development profile for the App ID with the same capability; Developer Mode on the phone (Settings > Privacy & Security); Xcode on the Mac at the version in `.github/toolchain-versions.json` | M1, M2 | Before 5.9 |
+| O2 | (Dropped, 2026-11-07: there is no Mac, so no Instruments, no development profile and no registered device.) | | |
 | O3 | A private Slack test channel and the Slack app signed in on the iPhone 17. Only the fictional log is posted | S3 | Before 5.9 |
 | O4 | A Mac and AirDrop between it and the phone. The test file is the fictional sample renamed, not the facilitator's real setup, which is used in Stage 6 | C1 to C3 | Before 5.9 |
 | O5 | Answered on 2026-11-07: all twelve decisions below are accepted as recommended. Nothing further is needed, except O1 for decision 5 | 5.7, 5.5, 5.8, 5.4b | Done |
 | O6 | Run, or be present for, the checklist; sign the gate | 5.9 | After 5.8 |
-| O7 | A TestFlight build of the final commit (Stage 0.6 pipeline, `SIGN_IOS_UPLOAD` already true) | B2 | Before 5.9 |
+| O7 | A TestFlight build of the final commit (Stage 0.6 pipeline, `SIGN_IOS_UPLOAD` already true) | B | Before 5.9 |
 
 The agent does none of the Apple portal, secret or signing steps (`AGENTS.md`).
 
 ## Cross-cutting
 
 - **Documentation:** `docs/architecture.md` (layout and the capability headers, in 5.1), `docs/building.md` (the signing
-  identity variable and building for Instruments, in 5.3), `docs/releasing.md` (the property list keys, the entitlement
+  identity variable and reading the timings, in 5.3), `docs/releasing.md` (the property list keys, the entitlement
   and the Data Protection capability, in 5.4b and 5.5), `docs/ci.md` (the two policy checks), `docs/testing.md` (the
   device rows are not labelled tests, and where they are recorded), `docs/plan/spikes.md` (results, in 5.9).
 - **Changelog fragments:** share log, haptics, setup import and export, protected files, draft kept when the app is closed,
@@ -869,7 +872,7 @@ The agent does none of the Apple portal, secret or signing steps (`AGENTS.md`).
   documentation and memory; the assumptions table lists the ones the plan depends on.
 - Before-first-unlock behaviour of the store cannot be produced on a device (nothing launches the application in that
   state); Stage 2's classification test is the only evidence.
-- The actuator delay of the haptic is not measurable with Instruments.
+- The actuator delay of the haptic is not measurable at all by the app; the timing stops at the call returning, and the feel test covers the rest.
 - Each pull request says what has not run on a device.
 
 ## Decisions (decided by the owner, 2026-11-07)
@@ -880,8 +883,7 @@ The agent does none of the Apple portal, secret or signing steps (`AGENTS.md`).
   the press and prepared ahead, tests against fakes.
 - The bridge is one interface per capability, renamed to the project's naming rules in 5.1.
 - Decisions live in portable C++ and the `.mm` files stay thin.
-- The Instruments figures come from a development-signed Release build; TestFlight builds are checked with the app's own
-  timing line.
+- The gate figures come from the app's own timing line on a TestFlight build; there is no Mac and no Instruments.
 - The cold-start gate is the slowest of 10 launches on the one-year dataset.
 - A failure to apply file protection warns and does not stop the store opening.
 - The files stay in the device backup (Stage 2 decision 8).
@@ -891,7 +893,7 @@ The agent does none of the Apple portal, secret or signing steps (`AGENTS.md`).
 - Implementation plan, Stage 5, Haptics: "prepared on touch-down" becomes "prepared ahead of the touch and fired on the
   touch-down".
 - Implementation plan and Stage 2: the constant is `NSFileProtectionCompleteUntilFirstUserAuthentication`.
-- Implementation plan exit gate: "measured with Instruments" gains "on a development-signed build".
+- Implementation plan exit gate: "measured with Instruments" becomes "read from the app's own timing line on a TestFlight build".
 - PRD DS-01: "before any feedback is shown" becomes "before any confirmation that the entry is saved is shown" (decision 1).
 - PRD PRF-08: the file has the extension `.ejconfig` and a plain `.json` is also accepted (decision 3).
 
@@ -912,11 +914,11 @@ resolve to decision N)
    unblocks 5.8. (owner, 2026-11-07)
 5. **The default-data-protection entitlement.** Add it, for the declaration in the signed binary. It needs owner action
    O1 before 5.4b and before any signed build with it. (owner, 2026-11-07)
-6. **What the 100 ms figure is.** Touch to the haptic call returning, read in Instruments, plus the feel test. A
+6. **What the 100 ms figure is.** Touch to the haptic call returning, read from the app's timing line, plus the feel test. A
    physical measurement of the actuator is not in this plan. (owner, 2026-11-07)
 7. **Cold-start dataset.** The 365-day dataset is the gate; the 30-day and empty cases are reported. (owner, 2026-11-07)
-8. **Instruments on a development build.** The figures come from a development-signed build; the TestFlight build is
-   used for the functional rows and the in-app timing line. (owner, 2026-11-07)
+8. **Timing line on TestFlight.** The figures come from the app's own timing line, read from a TestFlight build on the
+   iPhone 17; Instruments and a development-signed build are dropped. (owner, 2026-11-07)
 9. **Configuration export.** Included in Stage 5 as a share with a file item, because PRF-08 needs both directions.
    (owner, 2026-11-07)
 10. **App switcher snapshot.** No blur or privacy screen is planned; the inactive handler is where one would go if it is

@@ -77,6 +77,34 @@ bool QmlBridge::voice_over_running() const noexcept
     return m_Accessibility.m_VoiceOverRunning;
 }
 
+QString QmlBridge::timing_summary() const
+{
+    return QString::fromStdString(m_Timing.summary());
+}
+
+void QmlBridge::set_launch_ms(double milliseconds)
+{
+    m_Timing.set_launch(milliseconds);
+    queue_timing_changed();
+}
+
+void QmlBridge::queue_timing_changed()
+{
+    if (m_TimingNotifyQueued)
+    {
+        return;
+    }
+    m_TimingNotifyQueued = true;
+    QMetaObject::invokeMethod(
+        this,
+        [this]
+        {
+            m_TimingNotifyQueued = false;
+            emit timingChanged();
+        },
+        Qt::QueuedConnection);
+}
+
 void QmlBridge::refresh_accessibility()
 {
     const AccessibilityState now = m_Services.m_Accessibility->read();
@@ -179,21 +207,29 @@ void QmlBridge::setApplicationActive(bool active)
 void QmlBridge::hapticImpact(double pressTimestamp)
 {
     PerfMarks& marks = *m_Services.m_PerfMarks;
+    double age = 0;
     if (pressTimestamp > 0)
     {
         // How old the touch already is. A timestamp on another time base (assumption A5 not holding) gives a nonsense
         // age, which is dropped here rather than recorded.
-        const double age = marks.uptime_ms() - pressTimestamp;
-        if (age >= 0 && age < MAX_TOUCH_AGE_MS)
+        const double candidate = marks.uptime_ms() - pressTimestamp;
+        if (candidate >= 0 && candidate < MAX_TOUCH_AGE_MS)
         {
+            age = candidate;
             marks.event(Mark::TOUCH_AGE, age);
         }
     }
     // Nothing but the fire between the marks: the engine prepares itself afterwards (haptics.mm), so no prepare sits in
-    // this path.
+    // this path. The call is timed on the monotonic uptime clock.
+    const double before = marks.uptime_ms();
     marks.begin(Mark::TAP_TO_HAPTIC);
     m_Services.m_Haptics->fire(HapticKind::IMPACT);
     marks.end(Mark::TAP_TO_HAPTIC);
+    const double after = marks.uptime_ms();
+    // The figure of the gate (M2): touch to the call returning. The actuator is not in it. Recorded after the call, and
+    // shown on a queued call, so neither adds to the path being measured.
+    m_Timing.record_tap(age + (after - before));
+    queue_timing_changed();
 }
 
 void QmlBridge::hapticSuccess()
