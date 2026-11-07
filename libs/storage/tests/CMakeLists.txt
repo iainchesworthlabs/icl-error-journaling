@@ -31,3 +31,6 @@ target_include_directories(ej_storage_integration_tests
 # platform/<os>/unreadable_file.cpp: makes a file unreadable the way the system does (C13), which differs by system.
 icl_platform_sources(ej_storage_integration_tests DIR "${CMAKE_CURRENT_SOURCE_DIR}/platform")
 catch_discover_tests(ej_storage_integration_tests PROPERTIES LABELS integration)
+
+# `system`: the kill harness, a worker process and the driver that kills it.
+add_subdirectory(kill)
