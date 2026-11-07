@@ -12,6 +12,7 @@
 #include "error_journaling/perf_marks.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
+#include "error_journaling/setup_files.hpp"
 #include "error_journaling/share_presenter.hpp"
 #include "error_journaling/timing_stats.hpp"
 
@@ -1462,4 +1463,104 @@ TEST_CASE("lifecycle.adapter: every state maps to its event, and the slots call 
     QMetaObject::invokeMethod(&app.m_App, "aboutToQuit");
     CHECK(seen == std::vector<LifecycleEvent>{LifecycleEvent::BECAME_INACTIVE, LifecycleEvent::BECAME_INACTIVE,
                                               LifecycleEvent::BECAME_ACTIVE, LifecycleEvent::ABOUT_TO_QUIT});
+}
+
+TEST_CASE(
+    "setup_files: a picked file and an opened file both reach the shell as fileReady, and are deleted after the import",
+    "[integration][import]")
+{
+    AppFixture app;
+    TempDirectory directory;
+    FakePicker picker;
+    bridge::SetupFiles* files = nullptr;
+    bridge::ConfigImporter importer([&](const QString& path) { files->offer(path); });
+    QString exported;
+    bridge::ConfigExporter exporter(
+        qt_path(directory.path() / "ej-share"), [&](const QString& path) { exported = path; }, [](const QString&) {});
+    bridge::SetupFiles setup_files(importer, picker, exporter);
+    files = &setup_files;
+
+    QStringList ready;
+    QStringList names;
+    QStringList failures;
+    QObject::connect(&setup_files, &bridge::SetupFiles::fileReady, &setup_files,
+                     [&](const QString& path, const QString& name)
+                     {
+                         ready.append(path);
+                         names.append(name);
+                     });
+    QObject::connect(&setup_files, &bridge::SetupFiles::failed, &setup_files,
+                     [&](const QString& m) { failures.append(m); });
+
+    // The picker.
+    const fs::path picked = directory.path() / "any name at all.json";
+    write_file(picked, "{}");
+    picker.m_Result = {bridge::PickOutcome::PICKED, picked};
+    setup_files.pick();
+    REQUIRE(ready.size() == 1);
+    CHECK(names[0] == "any name at all.json");
+    CHECK(fs::exists(picked)); // until the settings model has read it
+    importer.load_finished();  // importPrepared or importFailed
+    CHECK_FALSE(fs::exists(picked));
+
+    // A file the system opened.
+    const fs::path opened = directory.path() / "cs-bingo-board-setup.ejconfig";
+    write_file(opened, "{}");
+    importer.import_file(qt_path(opened));
+    REQUIRE(ready.size() == 2);
+    CHECK(names[1] == "cs-bingo-board-setup.ejconfig");
+    importer.load_finished();
+    CHECK_FALSE(fs::exists(opened));
+    CHECK(failures.isEmpty());
+}
+
+TEST_CASE("setup_files: refusals and a failed picker are one message each; the export request reaches the exporter",
+          "[integration][import]")
+{
+    AppFixture app;
+    TempDirectory directory;
+    FakePicker picker;
+    bridge::SetupFiles* files = nullptr;
+    int loads = 0;
+    bridge::ConfigImporter importer(
+        [&](const QString& path)
+        {
+            ++loads;
+            files->offer(path);
+        });
+    QString exported;
+    QString shared;
+    bridge::ConfigExporter exporter(
+        qt_path(directory.path() / "ej-share"),
+        [&](const QString& path)
+        {
+            exported = path;
+            write_file(fs::path(path.toStdU16String()), "{}");
+        },
+        [&](const QString& path) { shared = path; });
+    bridge::SetupFiles setup_files(importer, picker, exporter);
+    files = &setup_files;
+    QStringList failures;
+    QObject::connect(&setup_files, &bridge::SetupFiles::failed, &setup_files,
+                     [&](const QString& m) { failures.append(m); });
+
+    const fs::path big = directory.path() / "big.ejconfig";
+    write_file(big, std::string(bridge::CONFIG_MAX_BYTES + 1, ' '));
+    picker.m_Result = {bridge::PickOutcome::PICKED, big};
+    setup_files.pick();
+    CHECK(failures.size() == 1);
+    CHECK(loads == 0);
+    CHECK_FALSE(fs::exists(big));
+
+    picker.m_Result = {bridge::PickOutcome::FAILED, {}};
+    setup_files.pick();
+    CHECK(failures.size() == 2);
+    picker.m_Result = {bridge::PickOutcome::CANCELLED, {}};
+    setup_files.pick();
+    CHECK(failures.size() == 2);
+
+    setup_files.exportSetup();
+    CHECK(exported.endsWith(".ejconfig"));
+    exporter.export_finished(true, QString());
+    CHECK(shared == exported);
 }
