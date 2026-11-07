@@ -681,3 +681,72 @@ optimisation. NFR-04 allows 1.5 s from cold start to a usable board, so a 200 ms
 journal (a full check reads every journal). Decision 6 asks only for the full integrity check after an upgrade, which is 350 ms.
 Open question for the owner: should that launch compare only the open log, as every launch does, and leave the other logs to a
 check after the board is up? Until it is decided the test bounds that launch at 10 s so that a change for the worse is seen.
+
+## 12. Exit gate record
+
+Recorded 7 Nov 2026 for the owner's review (section 8). The gate is **met except for item 2**, which needs seven days of nightly
+runs that cannot exist yet: the nightly workflow was merged on 7 Nov 2026 and its first run is at 16:41 UTC that day.
+Item 2 can be checked from 14 Nov 2026, after seven green nights.
+
+| | |
+|---|---|
+| Run | `kill-gate.yml`, [run 42371094476](https://github.com/iainchesworthlabs/icl-error-journaling/actions/runs/42371094476), all 22 jobs green |
+| Commit | `43345ce2cdacb31e2af88e3869684e4d179e0f29` (`develop` after work package 2.8) |
+| Master seed | `0x5EED2026110700A1` (fixed; iteration `i` depends only on this and `i`) |
+| Shape | 10 shards of 1,000 random-kill iterations on Linux (gcc 16, release) and on macOS (release), 20,000 in all |
+| Time | Linux shards took under 10 minutes; macOS shards 41 to 46 minutes |
+
+### 1. 10,000 random kills on Linux and on macOS, zero failures: met
+
+| System | Runs | Failures | Acknowledged operations checked | Killed with an operation in flight that was present afterwards | Recoveries that replayed the journal |
+|---|---|---|---|---|---|
+| Linux | 10,000 | 0 | 2,005,102 | 1,569 | 1,023 |
+| macOS | 10,000 | 0 | 2,002,678 | 1,524 | 1,059 |
+
+For every run: recovery reported `clean` or `replayed`, the store equalled the model after `A` or `A + 1` operations on every log
+and the draft, `integrity_check` was `ok`, the next operation applied, and a second recovery changed nothing. The in-flight
+operation appeared whole in about one run in six and was absent in the rest, as decision 4 allows. Each leg also ran every crash
+point K1 to K6 and K9 in both ways, recovery killed at each of its crash points (K7, X3), a migration killed at each of its crash
+points (K8, M3), and 60 typed-draft kills, all green; the Linux and macOS shards also ran 20 random kills of recovery and 20 of a
+migration each.
+
+### 2. K1 to K9 on every nightly run for the preceding seven days: not yet
+
+The crash points passed in this run on both systems, in every pull request (25 random kills and every crash point on Linux
+release and ASan/UBSan) and in the merge queue (Linux debug, ASan/UBSan, TSan and macOS debug). The seven nightly runs do not exist
+yet; the nightly's `Report` job opens a `nightly` issue on a red night.
+
+### 3. Every corruption case recovers: met
+
+C1 to C16, J1 to J12 and X1 to X3 are integration tests (`test_recovery.cpp`), run in every build leg of every pull request and in
+the queue, including the queue run of the last Stage 2 pull request
+([run 42369032129](https://github.com/iainchesworthlabs/icl-error-journaling/actions/runs/42369032129)). K7 and X3 also run as real
+process kills, which was the open point of work package 2.4.
+
+### 4. `linux-debug` and `linux-asan-ubsan` green; TSan on the repository and journal tests: met
+
+All legs of the queue run above are green: Linux gcc debug and release, clang ASan/UBSan and TSan, macOS debug and release, with the
+tests, and the kill harness at 100 random kills on four legs. The storage tests also ran under AddressSanitizer on the
+development machine (Windows, clang): 232 of 232 passed.
+
+### 5. Launch time within its budget on the one-year dataset: met, with the budget changed
+
+The plan's 100 ms was not met and the owner is asked to confirm the 400 ms the test enforces; the figures and the open question
+about the first launch after an upgrade are in section 11. The perf test passes in every build leg.
+
+### What the gate does not show
+
+It shows that the application's own ordering and atomicity hold under process kills. It does not show behaviour after loss of power,
+or that `F_FULLFSYNC` flushes an iPhone's cache (a process kill leaves the system to write what the process handed it), or file
+protection and behaviour before first unlock (Stage 5, on a device). Nothing here has run on a device. Windows ran only on the
+development machine.
+
+### What the gate found on the way
+
+- The kill harness found a defect in recovery on its first merge-queue run: a note replayed from the journal left the draft it
+  was made from (section 11). Fixed in #44, pinned to the seed that failed in the queue
+  (`0x35b5989d25a5fd6c`, iteration 5, killed after acknowledgement 364) by a test that kills at that operation every time.
+- In the gate's first Linux shards, the random kills of recovery and of a migration never landed inside the run (they finish in
+  milliseconds there and the delay was drawn up to 150 ms). The delay is now drawn on a log scale from 100 microseconds to 200
+  milliseconds, and the results of these tests are in the run's summary. The crash-point cases, which kill recovery and a migration
+  at each point exactly, were not affected. The first nightly with the change is the evidence for these two random cases.
