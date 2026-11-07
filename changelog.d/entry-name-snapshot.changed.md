@@ -1,0 +1,1 @@
+**Error entries remember the name they were tapped with.** `ej_core` now prints an error entry under the name it had when it was tapped, so renaming an error type changes only later taps and a past export reads as it did when posted. Changing an entry's type takes a new name. Entries with no stored name still use the current one. Nothing changes for the person using the app yet.
