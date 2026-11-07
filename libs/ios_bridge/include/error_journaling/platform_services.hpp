@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include "error_journaling/accessibility_settings.hpp"
 #include "error_journaling/haptics.hpp"
 #include "error_journaling/perf_marks.hpp"
 #include "error_journaling/share.hpp"
@@ -17,6 +18,7 @@ struct PlatformServices
     std::unique_ptr<Share> m_Share;
     std::unique_ptr<Haptics> m_Haptics;
     std::unique_ptr<PerfMarks> m_PerfMarks;
+    std::unique_ptr<AccessibilitySettings> m_Accessibility;
 };
 
 /// The implementations for the platform CMake linked.

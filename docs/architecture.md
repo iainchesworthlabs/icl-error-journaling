@@ -64,13 +64,15 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
     share_presenter.hpp              SharePresenter: the portable decisions around a Share (exactly one of text and file,
                                      valid UTF-8, one sheet at a time, a temporary file deleted on every outcome) and
                                      purge_directory for the launch purge
+    accessibility_settings.hpp       AccessibilitySettings (Stage 4, 4.3): text scale from the content size category,
+                                     Reduce Motion, VoiceOver, and a change notice; the category-to-scale table is portable
     haptic_policy.hpp                HapticPolicy: when to prepare the generators (board visible, application active, an
                                      optional keep-alive), against an injected clock
     perf_marks.hpp, launch_tracker.hpp
                                      PerfMarks (os_signpost marks for Instruments, the launch log line) and LaunchTracker
                                      (when the board is usable, reported once)
     qml_bridge.hpp                   QmlBridge, the QObject QML sees, over the capabilities (ej_qml_bridge)
-  src/platform/ios/      Objective-C++ (.mm, -fobjc-arc), built for iOS: share.mm, haptics.mm, perf_marks.mm and the internal
+  src/platform/ios/      Objective-C++ (.mm, -fobjc-arc), built for iOS: share.mm, haptics.mm, perf_marks.mm, accessibility_settings.mm and the internal
                          top_view_controller.mm shared by the presenters
   src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)

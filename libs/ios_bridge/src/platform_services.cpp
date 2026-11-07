@@ -10,6 +10,7 @@ PlatformServices make_platform_services()
     services.m_Share = make_share();
     services.m_Haptics = make_haptics();
     services.m_PerfMarks = make_perf_marks();
+    services.m_Accessibility = make_accessibility_settings();
     return services;
 }
 
