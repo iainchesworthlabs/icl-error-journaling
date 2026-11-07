@@ -62,7 +62,7 @@ struct Options
     bool m_ExistingLog = true;
     bool m_Load = true;
     bool m_QtZones = false;
-    HeaderValues m_Header = sample_header();  // Saturday 7 November 2026
+    HeaderValues m_Header = sample_header(); // Saturday 7 November 2026
 
     // Chained setters, because a designated initializer that leaves a field out is a warning for Clang.
     Options& no_load()
@@ -122,7 +122,10 @@ public:
     }
 
     /// Sets the wall clock.
-    void at(UtcMillis time) { world.m_Clock.set_wall(time); }
+    void at(UtcMillis time)
+    {
+        world.m_Clock.set_wall(time);
+    }
 
     /// Records one error at `time` and commits it.
     void tap_at(UtcMillis time)
@@ -162,7 +165,7 @@ public:
     std::unique_ptr<DayWatcher> watcher;
 };
 
-}  // namespace
+} // namespace
 
 // ------------------------------------------------------------------------------------------------------- midnight
 
@@ -248,7 +251,7 @@ TEST_CASE("A session past midnight keeps its entries; keeping the log open hides
 {
     WatcherRig rig;
     rig.tap_at(melbourne(7, 23, 50));
-    rig.tap_at(melbourne(8, 0, 10));  // after midnight, into the open log
+    rig.tap_at(melbourne(8, 0, 10)); // after midnight, into the open log
     REQUIRE(rig.document().id() == rig.log_id);
     REQUIRE(rig.document().log().entries().size() == 2);
     QSignalSpy changed(rig.watcher.get(), &DayWatcher::promptChanged);
@@ -300,7 +303,7 @@ TEST_CASE("Accepting archives the log with the entry made after midnight", "[vie
 
     CHECK_FALSE(rig.watcher->prompt_visible());
     CHECK(started.count() == 1);
-    CHECK(changed.count() == 2);  // raised, then lowered
+    CHECK(changed.count() == 2); // raised, then lowered
     CHECK(rig.session->open_log() == document);
     CHECK(rig.document().id() != rig.log_id);
     CHECK(rig.document().log().entries().empty());
@@ -340,7 +343,7 @@ TEST_CASE("The 25-hour day rolls over at local midnight, not after 24 hours", "[
     // 5th.
     WatcherRig rig(Options().header(header_on(2026, 4, 5)).qt_zones());
 
-    rig.at(utc(2026, 4, 5, 13, 0));  // 24 hours after the day began is not yet midnight
+    rig.at(utc(2026, 4, 5, 13, 0)); // 24 hours after the day began is not yet midnight
     rig.watcher->check();
     CHECK_FALSE(rig.watcher->prompt_visible());
 
@@ -423,7 +426,7 @@ TEST_CASE("A check before the log has loaded does nothing and is made when the s
     CHECK(changed.count() == 0);
 
     rig.session->load();
-    CHECK_FALSE(rig.watcher->prompt_visible());  // still loading
+    CHECK_FALSE(rig.watcher->prompt_visible()); // still loading
     rig.gateway.run_all();
 
     REQUIRE(rig.session->state() == LogSession::State::OPEN);
@@ -581,11 +584,11 @@ TEST_CASE("A log that was shared is not unshared, even when it changed after", "
 {
     WatcherRig rig;
     rig.tap_at(melbourne(7, 17, 30));
-    REQUIRE(rig.share->shareOpenLog());  // the fake sheet reports "shared" at once
+    REQUIRE(rig.share->shareOpenLog()); // the fake sheet reports "shared" at once
     rig.gateway.run_all();
     REQUIRE(rig.stored(rig.log_id).m_Meta.m_LastSharedUtc.has_value());
 
-    rig.tap_at(melbourne(7, 18, 0));  // an edit after sharing does not clear it
+    rig.tap_at(melbourne(7, 18, 0)); // an edit after sharing does not clear it
     rig.at(melbourne(8, 8, 5));
     rig.watcher->check();
 
@@ -632,7 +635,7 @@ TEST_CASE("A share the facilitator cancelled leaves the log unshared", "[viewmod
     rig.at(melbourne(8, 8, 5));
     rig.watcher->check();
     QSignalSpy changed(rig.watcher.get(), &DayWatcher::promptChanged);
-    rig.platform.answer_with(FakePlatform::share_outcome::cancelled);
+    rig.platform.answer_with(FakePlatform::share_outcome::CANCELLED);
 
     REQUIRE(rig.watcher->shareFirst());
     rig.gateway.run_all();
@@ -643,7 +646,7 @@ TEST_CASE("A share the facilitator cancelled leaves the log unshared", "[viewmod
     CHECK_FALSE(rig.stored(rig.log_id).m_Meta.m_LastSharedUtc.has_value());
 
     // And a second try, which the facilitator completes.
-    rig.platform.answer_with(FakePlatform::share_outcome::shared);
+    rig.platform.answer_with(FakePlatform::share_outcome::SHARED);
     REQUIRE(rig.watcher->shareFirst());
     rig.gateway.run_all();
     CHECK_FALSE(rig.watcher->unshared());
@@ -658,11 +661,11 @@ TEST_CASE("Sharing is one at a time, and the prompt stays up whatever the outcom
     rig.platform.hold_completion();
 
     REQUIRE(rig.watcher->shareFirst());
-    CHECK_FALSE(rig.watcher->shareFirst());  // the sheet is open
+    CHECK_FALSE(rig.watcher->shareFirst()); // the sheet is open
     CHECK(rig.platform.sheets_presented() == 1);
     CHECK(rig.watcher->prompt_visible());
 
-    REQUIRE(rig.platform.complete_share_sheet(FakePlatform::share_outcome::cancelled));
+    REQUIRE(rig.platform.complete_share_sheet(FakePlatform::share_outcome::CANCELLED));
     CHECK(rig.watcher->prompt_visible());
     CHECK(rig.watcher->unshared());
 }
@@ -741,7 +744,7 @@ TEST_CASE("Sharing first and then starting the new log, as on the morning after"
     rig.platform.hold_completion();
     REQUIRE(rig.watcher->shareFirst());
     rig.world.m_Clock.advance(20s);
-    REQUIRE(rig.platform.complete_share_sheet(FakePlatform::share_outcome::shared));
+    REQUIRE(rig.platform.complete_share_sheet(FakePlatform::share_outcome::SHARED));
     rig.gateway.run_all();
     CHECK(rig.stored(rig.log_id).m_Meta.m_LastSharedUtc == melbourne(8, 8, 5, 20));
     CHECK(rig.watcher->prompt_visible());
@@ -826,7 +829,7 @@ TEST_CASE("A new log started from anywhere takes the prompt down", "[viewmodel][
     rig.watcher->check();
     REQUIRE(rig.watcher->prompt_visible());
 
-    REQUIRE(rig.session->startNewLog());  // "a log for another unit", not the answer to the prompt
+    REQUIRE(rig.session->startNewLog()); // "a log for another unit", not the answer to the prompt
     rig.gateway.run_all();
 
     CHECK_FALSE(rig.watcher->prompt_visible());

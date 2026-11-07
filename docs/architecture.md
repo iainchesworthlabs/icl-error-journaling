@@ -46,9 +46,20 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              test_recovery.cpp with recovery_fixture.hpp (a populated store, copied and damaged for
                              each case: C1 to C16, J1 to J12, X1 to X3; `integration`);
                              helpers: temp_dir.hpp, raw_db.hpp (a second connection), recording_journal.hpp
-libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, behind interfaces
-  src/platform/ios/      Objective-C++ (.mm), built for iOS
-  src/platform/desktop/  stub, built everywhere else
+libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one small interface per capability, namespace
+                      `ej::bridge`
+  include/error_journaling/
+    share.hpp haptics.hpp            the capability interfaces (Share, Haptics) and their value types; each has a
+                                     `make_<name>()` factory defined once per platform
+    platform_services.hpp            PlatformServices: a struct of unique_ptr to the capabilities, and
+                                     make_platform_services(), one line per capability
+    share_presenter.hpp              SharePresenter: the portable decisions around a Share (exactly one of text and file,
+                                     valid UTF-8, one sheet at a time, a temporary file deleted on every outcome) and
+                                     purge_directory for the launch purge
+    qml_bridge.hpp                   QmlBridge, the QObject QML sees, over the capabilities (ej_qml_bridge)
+  src/platform/ios/      Objective-C++ (.mm, -fobjc-arc), built for iOS: share.mm, haptics.mm and the internal
+                         top_view_controller.mm shared by the presenters
+  src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
   qml/                the module ErrorJournalingApp (the URI differs from the executable name)
   src/                main.cpp
@@ -85,7 +96,7 @@ tools/                project scripts, baselines and coverage floors
 | `ej_core` | static library, C++23 | QtCore |
 | `ej_storage` | static library: the in-memory and SQLite repositories and the journal files (recovery and migrations follow in Stage 2) | `ej_core`, QtSql |
 | `ej_ios_bridge` | static library; Objective-C++ on iOS, a stub elsewhere | nothing (UIKit and Foundation on iOS) |
-| `ej_qml_bridge` | static library; the `qml_bridge` QObject QML calls, over the `ej_ios_bridge` interface | `ej_ios_bridge`, QtCore |
+| `ej_qml_bridge` | static library; the `QmlBridge` QObject QML calls, over the `ej_ios_bridge` capabilities | `ej_ios_bridge`, QtCore |
 | `ej_viewmodel` | static library: the view-model layer of Stage 3; no Qt Quick and no QtGui, so its tests run without a display | `ej_core`, `ej_storage`, `ej_ios_bridge`, QtCore |
 | `ej_app` | Qt Quick executable (`error-journaling`) | the libraries above, `ej_viewmodel`, Qt Quick |
 
@@ -103,7 +114,10 @@ to iterate on the user interface and to be tested in CI; no desktop package is r
 
 ## Platform code
 
-Platform differences live in `src/platform/<os>/` with the same file names in each directory.
+Platform differences live in `src/platform/<os>/` with the same file names in each directory. In the bridge the pairs
+are `ios/<name>.mm` and `desktop/<name>.cpp`; `tools/ci/check_platform_layout.py` keeps them in step. An `.mm` file does
+only what UIKit or Foundation must do (call the API, translate the result to a plain struct); every decision is portable
+C++ against the interface and tested with a fake.
 `icl_platform_sources(target)` adds the directory that matches the target system; `ej_ios_bridge` picks its directory in
 its own `CMakeLists.txt` (`ios` or `desktop`). Source files
 contain no `#if` on the platform or compiler; the preprocessor check fails the pull request if

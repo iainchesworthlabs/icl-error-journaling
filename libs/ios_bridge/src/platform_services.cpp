@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "error_journaling/platform_services.hpp"
+
+namespace ej::bridge
+{
+
+PlatformServices make_platform_services()
+{
+    PlatformServices services;
+    services.m_Share = make_share();
+    services.m_Haptics = make_haptics();
+    return services;
+}
+
+} // namespace ej::bridge

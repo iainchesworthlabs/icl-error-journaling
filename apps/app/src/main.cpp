@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "error_journaling/ios_bridge.hpp"
 #include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/storage.hpp"
 #include "error_journaling/version.hpp"
@@ -20,7 +19,7 @@ void name_the_program()
     QCoreApplication::setApplicationVersion(error_journaling::version_text());
 }
 
-}  // namespace
+} // namespace
 
 int main(int argc, char* argv[])
 {
@@ -47,7 +46,7 @@ int main(int argc, char* argv[])
 
     QQmlApplicationEngine engine;
     // What Qt does not cover on an iPhone: the share sheet and the haptics (the Stage 0 spikes).
-    error_journaling::bridge::qml_bridge platform_bridge(error_journaling::bridge::make_platform_services());
+    ej::bridge::QmlBridge platform_bridge(ej::bridge::make_platform_services());
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(1); },
         Qt::QueuedConnection);
@@ -57,8 +56,7 @@ int main(int argc, char* argv[])
          {QStringLiteral("versionText"), error_journaling::version_text()},
          {QStringLiteral("platformText"),
           QStringLiteral("%1, storage: %2")
-              .arg(QString::fromUtf8(error_journaling::bridge::implementation_name().data(),
-                                     static_cast<qsizetype>(error_journaling::bridge::implementation_name().size())),
+              .arg(platform_bridge.share_available() ? QStringLiteral("ios") : QStringLiteral("desktop-stub"),
                    QString::fromUtf8(error_journaling::storage::backend_name().data(),
                                      static_cast<qsizetype>(error_journaling::storage::backend_name().size())))}});
     engine.loadFromModule("ErrorJournalingApp", "Main");

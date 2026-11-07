@@ -1,67 +1,125 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/qml_bridge.hpp"
 
+#include <QMetaObject>
 #include <QPointer>
-
+#include <filesystem>
 #include <utility>
 
-namespace error_journaling::bridge
+namespace ej::bridge
 {
 
-qml_bridge::qml_bridge(std::unique_ptr<platform_services> services, QObject* parent)
-    : QObject(parent)
-    , m_Services(std::move(services))
+QmlBridge::QmlBridge(PlatformServices services, QObject* parent)
+    : QObject(parent), m_Services(std::move(services)), m_Presenter(*m_Services.m_Share)
 {
 }
 
-qml_bridge::~qml_bridge() = default;
+QmlBridge::~QmlBridge() = default;
 
-bool qml_bridge::share_available() const noexcept
+bool QmlBridge::share_available() const noexcept
 {
-    return implementation_name() != "desktop-stub";
+    return m_Services.m_Share->available();
 }
 
-void qml_bridge::shareSpikeText()
+bool QmlBridge::sharing() const noexcept
+{
+    return m_Sharing;
+}
+
+void QmlBridge::shareText(const QString& text)
+{
+    ShareRequest request;
+    request.m_Text = text.toUtf8().toStdString();
+    begin_share(std::move(request), false);
+}
+
+void QmlBridge::shareTemporaryFile(const QString& path)
+{
+    ShareRequest request;
+    request.m_File = std::filesystem::path(path.toStdU16String());
+    begin_share(std::move(request), true);
+}
+
+void QmlBridge::begin_share(ShareRequest request, bool temporary_file)
 {
     // The guard keeps a late completion from reaching a bridge that has gone.
-    QPointer<qml_bridge> self(this);
-    m_Services->present_share_sheet(spike_share_text, [self](const share_result& result) {
+    QPointer<QmlBridge> self(this);
+    auto done = [self](const ShareResult& result)
+    {
+        // Always a queued call: the stub completes before present returns and a phone after, and a caller sees one
+        // order.
         if (self)
         {
-            emit self->shareFinished(outcome_name(result.outcome), QString::fromStdString(result.activity_type));
+            QMetaObject::invokeMethod(
+                self.data(),
+                [self, result]
+                {
+                    if (self)
+                    {
+                        self->deliver(result);
+                    }
+                },
+                Qt::QueuedConnection);
         }
-    });
+    };
+
+    if (temporary_file)
+    {
+        m_Presenter.present_temporary_file(request.m_File, std::move(done));
+    }
+    else
+    {
+        m_Presenter.present(std::move(request), std::move(done));
+    }
+    refresh_sharing();
 }
 
-void qml_bridge::prepareHaptics()
+void QmlBridge::refresh_sharing()
 {
-    m_Services->prepare_haptics();
+    // `sharing` follows the presenter, so a refused request (answered FAILED while another sheet is up) leaves it
+    // alone.
+    if (m_Sharing != m_Presenter.in_flight())
+    {
+        m_Sharing = m_Presenter.in_flight();
+        emit sharingChanged();
+    }
 }
 
-void qml_bridge::hapticImpact()
+void QmlBridge::deliver(const ShareResult& result)
 {
-    m_Services->fire_haptic(haptic_kind::impact);
+    refresh_sharing();
+    emit shareFinished(outcome_name(result.m_Outcome), QString::fromStdString(result.m_ActivityType));
 }
 
-void qml_bridge::hapticSuccess()
+void QmlBridge::prepareHaptics()
 {
-    m_Services->fire_haptic(haptic_kind::success);
+    m_Services.m_Haptics->prepare();
 }
 
-QString qml_bridge::outcome_name(share_outcome outcome)
+void QmlBridge::hapticImpact()
+{
+    m_Services.m_Haptics->fire(HapticKind::IMPACT);
+}
+
+void QmlBridge::hapticSuccess()
+{
+    m_Services.m_Haptics->fire(HapticKind::SUCCESS);
+}
+
+QString QmlBridge::outcome_name(ShareOutcome outcome)
 {
     switch (outcome)
     {
-    case share_outcome::shared:
+    case ShareOutcome::SHARED:
         return QStringLiteral("shared");
-    case share_outcome::cancelled:
+    case ShareOutcome::CANCELLED:
         return QStringLiteral("cancelled");
-    case share_outcome::unavailable:
+    case ShareOutcome::UNAVAILABLE:
         return QStringLiteral("unavailable");
-    case share_outcome::failed:
+    case ShareOutcome::FAILED:
         break;
     }
     return QStringLiteral("failed");
 }
 
-}  // namespace error_journaling::bridge
+} // namespace ej::bridge

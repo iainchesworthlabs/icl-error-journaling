@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include "error_journaling/haptics.hpp"
 #include "error_journaling/ids.hpp"
-#include "error_journaling/ios_bridge.hpp"
 
 namespace ej::viewmodel
 {
@@ -53,13 +53,13 @@ public:
     void note_saved(EntryId) override {}
 };
 
-/// The production sink: `platform_services` fires the haptics. The impact haptic is the touch acknowledgement and the
-/// success haptic is for a saved note only; a recorded error entry is confirmed by the count, the toast and the "Last"
-/// bar, and makes no haptic of its own.
+/// The production sink: the bridge's `Haptics` fires the haptics. The impact haptic is the touch acknowledgement and
+/// the success haptic is for a saved note only; a recorded error entry is confirmed by the count, the toast and the
+/// "Last" bar, and makes no haptic of its own.
 class PlatformFeedbackSink final : public FeedbackSink
 {
 public:
-    explicit PlatformFeedbackSink(error_journaling::bridge::platform_services& platform) : m_Platform(platform) {}
+    explicit PlatformFeedbackSink(ej::bridge::Haptics& haptics) : m_Haptics(haptics) {}
 
     void prepare_haptics() override;
     void acknowledge_touch() override;
@@ -67,7 +67,7 @@ public:
     void note_saved(EntryId entry) override;
 
 private:
-    error_journaling::bridge::platform_services& m_Platform;
+    ej::bridge::Haptics& m_Haptics;
 };
 
 } // namespace ej::viewmodel
