@@ -284,7 +284,7 @@ Rules as implemented (the numbering is this plan's; it covers PRD rules 1 to 9 a
 6. Times in the zone each entry was captured in, formatted by `TimeFormatter`.
 7. Deleted entries are skipped. With totals on, a blank line and a totals line follow the timeline.
 8. Header block, blank line, timeline. LF line endings, UTF-8, no trailing whitespace on any line.
-9. Free text containing line breaks is collapsed to single spaces, so one entry is always one line (accepted; open question 3 checks it against the indexer).
+9. Free text containing line breaks is collapsed to single spaces, so one entry is always one line (confirmed).
 
 Tests (`unit`): the golden files below, plus:
 
@@ -487,11 +487,11 @@ Stage 5.
   constants in `export_format.hpp`, so a later finding from the indexer is a one-line change and a golden regeneration.
 - Correct fixes the value currently in force, and a change line's "old" value is derived from history, not stored.
 - Digit limits stand: nine digits for unit numbers and for each version component; `0` is not a unit number.
-- 24-hour `HH:mm` is the default (PRF-07); the 12-hour and seconds styles are options.
+- Clock format is a preference (PRF-07) and 24-hour `HH:mm` is the default; the 12-hour and seconds styles are options.
 - Unknown keys in a configuration file are rejected.
-- Free-text line breaks are collapsed to a single space. To be checked against the indexer.
+- Free-text line breaks are collapsed to a single space. Confirmed: the indexer never needs the line breaks.
 - A trailing newline after the last export line does not matter; the plan keeps none.
-- An empty header field prints its label and colon with no trailing space.
+- An empty header field prints its label and colon with no trailing space. Confirmed fine; the UI shows the missing-field banner (HDR-06).
 - The C++ namespace is `ej` (headers stay under `include/error_journaling/`, per the template layout).
 
 **Still open**
@@ -502,6 +502,3 @@ Stage 5.
    `totals-on-empty.txt`); work package 1.5 can land the rest first.
 2. **12-hour and seconds style.** Proposed `9:07 am` / `1:15 pm` and `HH:mm:ss`. Any preference on `am`/`pm` versus
    `AM`/`PM`, or a leading zero? Blocks only `twelve-hour.txt` and the 12-hour half of `with-seconds.txt`.
-3. **Multi-line notes and the indexer.** Collapsing to one line is accepted; confirm with the indexer that it never needs
-   the line breaks.
-4. **Empty header field and the indexer.** Confirm the indexer does not care about `Software Version:` with no value.
