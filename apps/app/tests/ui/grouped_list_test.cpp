@@ -56,6 +56,8 @@ TEST_CASE("grouped_list.layout: the rows are stacked at the width of the group i
     QQuickItem* c = rig.find(QStringLiteral("c"));
     REQUIRE(group != nullptr);
     REQUIRE(a != nullptr);
+    REQUIRE(b != nullptr);
+    REQUIRE(c != nullptr);
 
     CHECK(rig.geometry(a).width() == rig.geometry(group).width());
     CHECK(rig.geometry(b).top() == rig.geometry(a).bottom());
@@ -88,6 +90,8 @@ TEST_CASE("grouped_list.heading: the title is in capitals above the group and th
     QQuickItem* heading = text_item(rig, QStringLiteral("LOCATION"));
     QQuickItem* note = text_item(rig, QStringLiteral("Choose where the log was made."));
     REQUIRE(group != nullptr);
+    REQUIRE(a != nullptr);
+    REQUIRE(c != nullptr);
     REQUIRE(heading != nullptr);
     REQUIRE(note != nullptr);
 

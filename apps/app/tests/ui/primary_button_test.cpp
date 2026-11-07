@@ -109,7 +109,7 @@ TEST_CASE("primary_button.accessibility: the label is the name unless a screen g
     REQUIRE(iface != nullptr);
     CHECK(iface->role() == QAccessible::Button);
     CHECK(iface->text(QAccessible::Name) == QStringLiteral("Start logging"));
-    iface->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    press_action(button);
     CHECK(clicked.count() == 1);
 
     button->setProperty("accessibleName", QStringLiteral("Start logging for UNIT-27"));

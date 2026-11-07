@@ -67,7 +67,9 @@ QQuickItem* face_of(UiRig& rig, QQuickItem* row)
 
 double face_x(UiRig& rig, QQuickItem* row)
 {
-    return face_of(rig, row)->x();
+    QQuickItem* face = face_of(rig, row);
+    REQUIRE(face != nullptr);
+    return face->x();
 }
 
 /// A left swipe on the face of `row`, from `from` to `to` (x in the row's coordinates), in the middle of the row.
@@ -304,7 +306,7 @@ TEST_CASE("swipe_row.accessible: the row is a button, and Copy and Delete are re
     REQUIRE(iface != nullptr);
     CHECK(iface->role() == QAccessible::Button);
     CHECK(iface->text(QAccessible::Name) == QStringLiteral("10:14 Mute Delay"));
-    iface->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    press_action(face);
     CHECK(activated.count() == 1);
 
     // The actions are in the accessibility tree while the row is closed, named after the row.
@@ -324,9 +326,9 @@ TEST_CASE("swipe_row.accessible: the row is a button, and Copy and Delete are re
     REQUIRE(copy != nullptr);
     REQUIRE(del != nullptr);
     CHECK(copy->role() == QAccessible::Button);
-    copy->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    press_action(rig.find(QStringLiteral("copyAction"), row));
     CHECK(copied.count() == 1);
-    del->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    press_action(rig.find(QStringLiteral("deleteAction"), row));
     CHECK(deleted.count() == 1);
     CHECK(activated.count() == 1);
     // Both were pressed on a closed row, which stays closed: the press action does not need the swipe.

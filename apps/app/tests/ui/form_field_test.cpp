@@ -95,7 +95,7 @@ TEST_CASE("form_field.validation: the refusal appears inline, is the field's des
     // Valid: the hint is shown, the description is the hint, Save is allowed and the check mark shows.
     CHECK(text_item(rig, QStringLiteral("Format 1.4.2, numbers only.")) != nullptr);
     CHECK(iface->text(QAccessible::Description) == QStringLiteral("Format 1.4.2, numbers only."));
-    CHECK(rig.root()->property("canSave").toBool());
+    CHECK(require_root(rig)->property("canSave").toBool());
     CHECK(check_arms(rig) == 2);
     CHECK(input->property("background")
               .value<QObject*>()
@@ -106,8 +106,8 @@ TEST_CASE("form_field.validation: the refusal appears inline, is the field's des
 
     // Refused: the model's message replaces the hint under the field and is the description.
     const QString message = QStringLiteral("A version has three numbers, such as 1.4.2.");
-    rig.root()->setProperty("value", QStringLiteral("1.4"));
-    rig.root()->setProperty("refusal", message);
+    require_root(rig)->setProperty("value", QStringLiteral("1.4"));
+    require_root(rig)->setProperty("refusal", message);
     rig.layout();
     QQuickItem* shown = text_item(rig, message);
     REQUIRE(shown != nullptr);
@@ -116,19 +116,19 @@ TEST_CASE("form_field.validation: the refusal appears inline, is the field's des
     CHECK(rig.geometry(shown).top() >= rig.geometry(input).bottom());
     CHECK(iface->text(QAccessible::Description) == message);
     CHECK(field->property("invalid").toBool());
-    CHECK_FALSE(rig.root()->property("canSave").toBool());
+    CHECK_FALSE(require_root(rig)->property("canSave").toBool());
     // Not colour alone: the message is text, the border is 2 pt, and the check mark is gone.
     CHECK(check_arms(rig) == 0);
     const QObject* background = input->property("background").value<QObject*>();
     REQUIRE(background != nullptr);
-    CHECK(background->property("border").value<QObject*>()->property("width").toDouble() == 2.0);
+    CHECK(require_object(background, "border")->property("width").toDouble() == 2.0);
 
     // Corrected: the hint returns and Save is allowed again.
-    rig.root()->setProperty("value", QStringLiteral("1.4.2"));
-    rig.root()->setProperty("refusal", QString());
+    require_root(rig)->setProperty("value", QStringLiteral("1.4.2"));
+    require_root(rig)->setProperty("refusal", QString());
     rig.layout();
     CHECK(text_item(rig, message) == nullptr);
-    CHECK(rig.root()->property("canSave").toBool());
+    CHECK(require_root(rig)->property("canSave").toBool());
 }
 
 TEST_CASE("form_field.validation: the message is read with a long refusal at the largest text size and is never cut",
@@ -136,8 +136,8 @@ TEST_CASE("form_field.validation: the message is read with a long refusal at the
 {
     UiRig rig;
     REQUIRE(load_host(rig, QString::fromUtf8(VERSION)) != nullptr);
-    rig.root()->setProperty("refusal",
-                            QStringLiteral("A software version has three numbers separated by dots, such as 1.4.2."));
+    require_root(rig)->setProperty(
+        "refusal", QStringLiteral("A software version has three numbers separated by dots, such as 1.4.2."));
     rig.set_text_scale(3.1);
     expect_clean(check_text_scale(rig));
     QQuickItem* field = rig.find(QStringLiteral("field"));
@@ -209,16 +209,15 @@ TEST_CASE("form_field.states: the field has a 14 pt card, a border while it has 
     REQUIRE(background != nullptr);
     CHECK(background->property("radius").toDouble() == 14);
     CHECK(background->property("color").value<QColor>() == theme_colour(rig, "surface"));
-    CHECK(background->property("border").value<QObject*>()->property("width").toDouble() == 0.0);
+    CHECK(require_object(background, "border")->property("width").toDouble() == 0.0);
 
     input->forceActiveFocus();
-    CHECK(background->property("border").value<QObject*>()->property("width").toDouble() == 2.0);
-    CHECK(background->property("border").value<QObject*>()->property("color").value<QColor>() ==
-          theme_colour(rig, "primaryText"));
+    CHECK(require_object(background, "border")->property("width").toDouble() == 2.0);
+    CHECK(require_object(background, "border")->property("color").value<QColor>() == theme_colour(rig, "primaryText"));
     CHECK(rig.geometry(input).height() >= 44);
 
     CHECK(text_item(rig, QStringLiteral("UNIT NUMBER")) != nullptr);
-    rig.find(QStringLiteral("field"))->setProperty("labelVisible", false);
+    require_item(rig, QStringLiteral("field"))->setProperty("labelVisible", false);
     rig.layout();
     CHECK(text_item(rig, QStringLiteral("UNIT NUMBER")) == nullptr);
 }

@@ -286,7 +286,7 @@ TEST_CASE("composer.undo_text: text returned by the note undo is placed in the f
     // Committed: the session clears the draft.
     f.host->setProperty("draft", QString());
     CHECK(f.text().isEmpty());
-    const int typed = edited.count();
+    const qsizetype typed = edited.count();
 
     // Undo: the session gives the text back as the draft.
     f.host->setProperty("draft", QStringLiteral("Wrong Response"));

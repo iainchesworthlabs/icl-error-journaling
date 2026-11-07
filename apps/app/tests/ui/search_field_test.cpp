@@ -77,9 +77,10 @@ TEST_CASE("search_field.filter: a filter set from outside shows in the field and
     QQuickItem* search = rig.find(QStringLiteral("search"));
     QQuickItem* input = rig.find(QStringLiteral("searchInput"));
     REQUIRE(search != nullptr);
+    REQUIRE(input != nullptr);
     QSignalSpy edited(search, SIGNAL(filterEdited(QString)));
 
-    rig.root()->setProperty("filter", QStringLiteral("sequence"));
+    require_root(rig)->setProperty("filter", QStringLiteral("sequence"));
     CHECK(input->property("text").toString() == QStringLiteral("sequence"));
     CHECK(edited.count() == 0);
 }
@@ -92,6 +93,8 @@ TEST_CASE("search_field.filter: the clear button appears with text, empties the 
     QQuickItem* search = rig.find(QStringLiteral("search"));
     QQuickItem* input = rig.find(QStringLiteral("searchInput"));
     QQuickItem* clear = rig.find(QStringLiteral("clearButton"));
+    REQUIRE(search != nullptr);
+    REQUIRE(input != nullptr);
     REQUIRE(clear != nullptr);
     QSignalSpy edited(search, SIGNAL(filterEdited(QString)));
 
@@ -132,7 +135,7 @@ TEST_CASE("search_field.accessibility: an edit field with a search name, and a n
     REQUIRE(button != nullptr);
     CHECK(button->role() == QAccessible::Button);
     CHECK(button->text(QAccessible::Name) == QStringLiteral("Clear search"));
-    button->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    press_action(clear);
     CHECK(input->property("text").toString().isEmpty());
 }
 
@@ -143,6 +146,7 @@ TEST_CASE("search_field.geometry: 44 pt high with 12 pt corners, and taller with
     QQuickItem* search = rig.find(QStringLiteral("search"));
     QQuickItem* input = rig.find(QStringLiteral("searchInput"));
     REQUIRE(search != nullptr);
+    REQUIRE(input != nullptr);
     CHECK(rig.geometry(search).height() == 44);
     CHECK(rig.geometry(search).width() == 402 - 32);
     const QObject* background = input->property("background").value<QObject*>();
@@ -189,7 +193,7 @@ TEST_CASE("search_field.cross_cutting: names, targets, order and text scale, in 
 
     // With text in it, and so with the clear button.
     rig.set_reduce_motion(false);
-    rig.root()->setProperty("filter", QStringLiteral("Sequence Out of Order"));
+    require_root(rig)->setProperty("filter", QStringLiteral("Sequence Out of Order"));
     rig.layout();
     expect_clean(check_everything(rig));
 }

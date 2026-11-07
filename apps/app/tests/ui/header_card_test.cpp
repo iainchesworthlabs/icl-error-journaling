@@ -83,7 +83,9 @@ TEST_CASE("header_card.fields: the five values are shown on the plum card", "[ui
     CHECK(card->property("missingCount").toInt() == 0);
 
     CHECK(fill_of(card) == theme_colour(rig, "headerCard"));
-    CHECK(first_rectangle(card)->property("radius").toDouble() == 20);
+    QQuickItem* plum = first_rectangle(card);
+    REQUIRE(plum != nullptr);
+    CHECK(plum->property("radius").toDouble() == 20);
     CHECK(rig.geometry(card).width() == 402 - 32);
     // 64 pt in the design: 20 pt and 13 pt lines with 12 pt above and below.
     CHECK(rig.geometry(card).height() >= 64);
@@ -165,7 +167,7 @@ TEST_CASE("header_card.tap: a tap emits clicked once, the accessibility press an
     QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(card);
     REQUIRE(iface != nullptr);
     CHECK(iface->role() == QAccessible::Button);
-    iface->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    press_action(card);
     CHECK(clicked.count() == 2);
 
     card->forceActiveFocus();

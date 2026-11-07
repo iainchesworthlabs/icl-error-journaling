@@ -46,7 +46,7 @@ int selected_count(UiRig& rig)
     int count = 0;
     for (const char* name : {"changed", "typo"})
     {
-        count += rig.find(QString::fromLatin1(name))->property("selected").toBool() ? 1 : 0;
+        count += require_item(rig, QString::fromLatin1(name))->property("selected").toBool() ? 1 : 0;
     }
     return count;
 }
@@ -137,7 +137,7 @@ TEST_CASE("choice_card.voiceover: a radio button with its explanation as the des
     CHECK(first->state().checked);
     CHECK_FALSE(second->state().checked);
 
-    second->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    press_action(typo);
     CHECK(clicked.count() == 1);
     CHECK(second->state().checked);
     CHECK_FALSE(first->state().checked);

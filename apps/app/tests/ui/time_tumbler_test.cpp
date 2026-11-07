@@ -61,13 +61,13 @@ struct Fixture
 
     void set(const char* name, const QVariant& value)
     {
-        rig.root()->setProperty(name, value);
+        require_root(rig)->setProperty(name, value);
         rig.layout();
     }
 
-    [[nodiscard]] int seconds() const
+    [[nodiscard]] int seconds()
     {
-        return rig.root()->property("seconds").toInt();
+        return require_root(rig)->property("seconds").toInt();
     }
 
     static int index(QQuickItem* column)
@@ -327,15 +327,16 @@ TEST_CASE("time_tumbler.voiceover: each column is an adjustable item that reads 
         CHECK(iface->role() == QAccessible::SpinBox);
         CHECK(iface->text(QAccessible::Name) == QString::fromLatin1(expected.name));
         CHECK(iface->text(QAccessible::Description) == QString::fromLatin1(expected.value));
-        REQUIRE(iface->actionInterface() != nullptr);
-        const QStringList actions = iface->actionInterface()->actionNames();
+        QAccessibleActionInterface* adjustable = iface->actionInterface();
+        REQUIRE(adjustable != nullptr);
+        const QStringList actions = adjustable->actionNames();
         CHECK(actions.contains(QAccessibleActionInterface::increaseAction()));
         CHECK(actions.contains(QAccessibleActionInterface::decreaseAction()));
     }
 
     // After an adjustment the value read out is the new one.
     f.adjust(f.hours, +1);
-    CHECK(QAccessible::queryAccessibleInterface(f.hours)->text(QAccessible::Description) == QStringLiteral("12"));
+    CHECK(require_interface(f.hours)->text(QAccessible::Description) == QStringLiteral("12"));
 
     // They are read in the order they appear.
     QStringList order;

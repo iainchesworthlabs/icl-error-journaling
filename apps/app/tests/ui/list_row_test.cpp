@@ -102,11 +102,11 @@ TEST_CASE("list_row.layout: a rule under every row but the last of the group", "
     CHECK(separators(rig, rig.find(QStringLiteral("first"))) == 1);
     CHECK(separators(rig, rig.find(QStringLiteral("fourth"))) == 1);
     CHECK(separators(rig, rig.find(QStringLiteral("fixed"))) == 0);
-    CHECK(rig.find(QStringLiteral("first"))->property("isFirst").toBool());
-    CHECK_FALSE(rig.find(QStringLiteral("first"))->property("isLast").toBool());
-    CHECK(rig.find(QStringLiteral("fixed"))->property("isLast").toBool());
+    CHECK(require_item(rig, QStringLiteral("first"))->property("isFirst").toBool());
+    CHECK_FALSE(require_item(rig, QStringLiteral("first"))->property("isLast").toBool());
+    CHECK(require_item(rig, QStringLiteral("fixed"))->property("isLast").toBool());
 
-    rig.find(QStringLiteral("fourth"))->setProperty("showSeparator", false);
+    require_item(rig, QStringLiteral("fourth"))->setProperty("showSeparator", false);
     CHECK(separators(rig, rig.find(QStringLiteral("fourth"))) == 0);
 }
 
@@ -163,8 +163,8 @@ TEST_CASE("list_row.marks: a check on the chosen row, a chevron on a row that op
     CHECK(second->state().checkable);
     CHECK_FALSE(second->state().checked);
 
-    rig.find(QStringLiteral("second"))->setProperty("checked", true);
-    rig.find(QStringLiteral("first"))->setProperty("checked", false);
+    require_item(rig, QStringLiteral("second"))->setProperty("checked", true);
+    require_item(rig, QStringLiteral("first"))->setProperty("checked", false);
     CHECK(mark_arms(rig, rig.find(QStringLiteral("first"))) == 0);
     CHECK(mark_arms(rig, rig.find(QStringLiteral("second"))) == 2);
 }
@@ -177,6 +177,7 @@ TEST_CASE("list_row.states: a destructive row has its label in the destructive c
     QQuickItem* row = rig.find(QStringLiteral("fourth"));
     QQuickItem* normal = rig.find(QStringLiteral("second"));
     REQUIRE(row != nullptr);
+    REQUIRE(normal != nullptr);
     QQuickItem* label = text_item(rig, row, QStringLiteral("Retire this error type"));
     QQuickItem* plain = text_item(rig, normal, QStringLiteral("South Site"));
     REQUIRE(label != nullptr);
@@ -201,7 +202,7 @@ TEST_CASE(
     REQUIRE(iface != nullptr);
     CHECK(iface->role() == QAccessible::Button);
     CHECK(iface->text(QAccessible::Name) == QStringLiteral("Software version, 1.4.2"));
-    iface->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    press_action(third);
     CHECK(activated.count() == 1);
 
     third->forceActiveFocus();

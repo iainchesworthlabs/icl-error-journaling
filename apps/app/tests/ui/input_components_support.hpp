@@ -4,6 +4,9 @@
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"
 
+#include <catch2/catch_test_macros.hpp>
+
+#include <QAccessible>
 #include <QByteArray>
 #include <QColor>
 #include <QObject>
@@ -26,11 +29,56 @@ namespace ej::ui::input
     return rig.load_source(source);
 }
 
+/// A lookup that must find its item: the test stops with a failure when there is none, so the pointer is never null
+/// after it.
+[[nodiscard]] inline QQuickItem* require_item(UiRig& rig, const QString& name, QQuickItem* from = nullptr)
+{
+    QQuickItem* item = rig.find(name, from);
+    REQUIRE(item != nullptr);
+    return item;
+}
+
+/// The loaded item, which the test has loaded and which therefore exists.
+[[nodiscard]] inline QQuickItem* require_root(UiRig& rig)
+{
+    QQuickItem* root = rig.root();
+    REQUIRE(root != nullptr);
+    return root;
+}
+
+/// The object that a property of `owner` holds (the `border` of a rectangle, the `background` of a field).
+[[nodiscard]] inline QObject* require_object(const QObject* owner, const char* property)
+{
+    REQUIRE(owner != nullptr);
+    QObject* object = owner->property(property).value<QObject*>();
+    REQUIRE(object != nullptr);
+    return object;
+}
+
+/// The accessibility interface of an item, which every item of the components has.
+[[nodiscard]] inline QAccessibleInterface* require_interface(QQuickItem* item)
+{
+    REQUIRE(item != nullptr);
+    QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(item);
+    REQUIRE(iface != nullptr);
+    return iface;
+}
+
+/// What VoiceOver does to activate an item: its accessibility press action.
+inline void press_action(QQuickItem* item)
+{
+    QAccessibleActionInterface* actions = require_interface(item)->actionInterface();
+    REQUIRE(actions != nullptr);
+    actions->doAction(QAccessibleActionInterface::pressAction());
+}
+
 /// `Theme.colour.<name>` of this rig's engine, for the scheme the rig is in.
 [[nodiscard]] inline QColor theme_colour(UiRig& rig, const char* name)
 {
-    const QObject* colours = rig.theme()->property("colour").value<QObject*>();
-    return colours != nullptr ? colours->property(name).value<QColor>() : QColor();
+    const QObject* theme = rig.theme();
+    REQUIRE(theme != nullptr);
+    const QObject* colours = require_object(theme, "colour");
+    return colours->property(name).value<QColor>();
 }
 
 /// The first child of `item` that is a `Rectangle`, or null: the fill that the components draw first.
@@ -57,7 +105,7 @@ namespace ej::ui::input
 [[nodiscard]] inline double border_of(QQuickItem* item)
 {
     const QQuickItem* rectangle = first_rectangle(item);
-    return rectangle != nullptr ? rectangle->property("border").value<QObject*>()->property("width").toDouble() : -1.0;
+    return rectangle != nullptr ? require_object(rectangle, "border")->property("width").toDouble() : -1.0;
 }
 
 /// True when a line of `violations` has `text` in it.
