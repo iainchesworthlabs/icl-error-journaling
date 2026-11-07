@@ -168,10 +168,55 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: iainchesworthlabs/icl-common-infra/actions/dependency-review@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
+  confidentiality:
+    name: Confidentiality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test the checks
+        run: python3 -m unittest discover -s tools/tests -v
+      - name: Check for other configuration files
+        run: python3 tools/ci/check_config_files.py
+      - name: Check for confidential terms
+        env:
+          CONFIDENTIAL_TERMS: ${{ secrets.CONFIDENTIAL_TERMS }}
+          EVENT: ${{ github.event_name }}
+          SECRETS_UNAVAILABLE: ${{ github.event.pull_request.head.repo.fork == true || github.actor == 'dependabot[bot]' }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+          GROUP_HEAD: ${{ github.event.merge_group.head_sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          args=(--event "$EVENT")
+          if [ "$SECRETS_UNAVAILABLE" = "true" ]; then args+=(--secrets-unavailable); fi
+          case "$EVENT" in
+            pull_request) args+=(--range "$PR_BASE..$PR_HEAD") ;;
+            merge_group) args+=(--range "$GROUP_BASE..$GROUP_HEAD") ;;
+            push)
+              if [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+                args+=(--range "$PUSH_AFTER^!")
+              else
+                args+=(--range "$PUSH_BEFORE..$PUSH_AFTER")
+              fi ;;
+          esac
+          python3 tools/ci/check_confidential_terms.py "${args[@]}"
+
   ci-status:
     name: CI Status
     if: always()
-    needs: [policy, plan, build-fast, build-full, coverage, zizmor, dependency-scan]
+    needs: [policy, plan, build-fast, build-full, coverage, zizmor, dependency-scan, confidentiality]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -186,5 +231,6 @@ jobs:
               "build-fast": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }},
               "coverage": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }},
               "build-full": ${{ needs.plan.outputs.build == 'true' && github.event_name != 'pull_request' }},
-              "dependency-scan": ${{ github.event_name != 'push' }}
+              "dependency-scan": ${{ github.event_name != 'push' }},
+              "confidentiality": true
             }

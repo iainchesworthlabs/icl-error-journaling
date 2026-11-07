@@ -81,8 +81,8 @@ Needed now (repository administration, section 12):
 2. Add `MERGE_QUEUE_TOKEN` as a Dependabot secret, and add the repository to the selected repositories of the organisation
    secrets (`icl-common-infra/docs/secrets.md`).
 3. Create the `release` environment with yourself as required reviewer.
-4. Create the repository secret that holds the confidentiality term list (its name is set by the Stage 0 check and written
-   in `docs/ci.md`).
+4. Create the repository secret `CONFIDENTIAL_TERMS` (one confidential term per line; also as a Dependabot secret if wanted).
+   Without it the Confidentiality job fails. Details are in `docs/ci.md`.
 
 Needed before the Stage 0 exit gate (a signed build on TestFlight), in Apple's portal and App Store Connect
 (`docs/releasing.md`, "iOS and TestFlight"):
