@@ -100,6 +100,30 @@ jobs:
           {"name": "macos-xcode27-release", "runner": ["xcode-27"], "preset": "macos-release", "qt": true, "tests": true, "experimental": true}
         ]
 
+  # The kill harness (docs/plan/stage-2.md, section 4.4): 100 random kills, the crash points, and the random kills of
+  # recovery, a migration and the typed draft, on the legs that find memory and threading errors on the recovery path and on
+  # macOS. A pull request runs the smaller set that the unit and integration phase of the builds above include (25).
+  kill-queue:
+    name: Kill harness (queue)
+    needs: plan
+    if: needs.plan.outputs.build == 'true' && github.event_name != 'pull_request'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/kill-harness.yml
+    with:
+      tier: merge-queue
+      iterations: 100
+      shards: 1
+      secondary-iterations: 25
+      timeout-minutes: 90
+      legs: >-
+        [
+          {"name": "linux-gcc-debug", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-debug"},
+          {"name": "linux-clang-asan-ubsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-asan-ubsan"},
+          {"name": "linux-clang-tsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-tsan"},
+          {"name": "macos-debug", "runner": ["macos-26"], "preset": "macos-debug"}
+        ]
+
   coverage:
     name: Coverage
     needs: plan
@@ -219,7 +243,7 @@ jobs:
   ci-status:
     name: CI Status
     if: always()
-    needs: [policy, plan, build-fast, build-full, coverage, zizmor, dependency-scan, confidentiality]
+    needs: [policy, plan, build-fast, build-full, kill-queue, coverage, zizmor, dependency-scan, confidentiality]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -234,6 +258,7 @@ jobs:
               "build-fast": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }},
               "coverage": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }},
               "build-full": ${{ needs.plan.outputs.build == 'true' && github.event_name != 'pull_request' }},
+              "kill-queue": ${{ needs.plan.outputs.build == 'true' && github.event_name != 'pull_request' }},
               "dependency-scan": ${{ github.event_name != 'push' }},
               "confidentiality": true
             }

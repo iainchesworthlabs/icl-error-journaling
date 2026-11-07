@@ -1,0 +1,48 @@
+name: Stage 2 exit gate
+
+# The run that decides the Stage 2 exit gate (docs/plan/stage-2.md, section 8): 10,000 random-kill iterations from one
+# recorded master seed on Linux (release) and on macOS, 10 shards of 1,000 each, with zero lost acknowledged entries. Run it by
+# hand (Actions, Stage 2 exit gate, Run workflow) with a seed; the seed, the commit and the run's link are what the gate's
+# record in docs/plan/stage-2.md names. If a macOS shard is too slow for the time allowed, raise the number of shards, not
+# the number of iterations.
+
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "The master seed, decimal or 0x and hex. It is required because the gate records it."
+        type: string
+        required: true
+      iterations:
+        description: Random-kill iterations for each system.
+        type: string
+        default: "10000"
+      shards:
+        description: Shards for each system.
+        type: string
+        default: "10"
+      systems:
+        description: Which systems to run.
+        type: choice
+        options: [both, linux, macos]
+        default: both
+
+permissions: {}
+
+jobs:
+  gate:
+    name: Exit gate
+    permissions:
+      contents: read
+    uses: ./.github/workflows/kill-harness.yml
+    with:
+      tier: exit-gate
+      seed: ${{ inputs.seed }}
+      iterations: ${{ fromJSON(inputs.iterations) }}
+      shards: ${{ fromJSON(inputs.shards) }}
+      secondary-iterations: 200
+      timeout-minutes: 240
+      legs: >-
+        ${{ inputs.systems == 'linux' && '[{"name": "linux-gcc-release", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-release"}]'
+        || inputs.systems == 'macos' && '[{"name": "macos-release", "runner": ["macos-26"], "preset": "macos-release"}]'
+        || '[{"name": "linux-gcc-release", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-release"}, {"name": "macos-release", "runner": ["macos-26"], "preset": "macos-release"}]' }}

@@ -1,0 +1,263 @@
+name: Kill harness
+
+# Reusable. Runs the Stage 2 kill harness (docs/plan/stage-2.md, section 4; docs/testing.md; docs/ci.md, "The kill harness
+# tiers") on a list of legs, with the random-kill iterations of each leg split over shards. Each shard builds the harness
+# and runs `ej_kill_driver` with its range of iterations (EJ_KILL_FIRST and EJ_KILL_LAST) under one master seed, so that
+# together the shards run iterations 0 to N - 1 once, and a failure is repeated with that seed and its iteration number.
+#
+# Shard 0 of each leg also runs the tests that kill at named crash points (`[points]`), which give the same result every time
+# and are needed once. Every shard runs the `[random]` tests: the random kills of the workload, of recovery, of a migration
+# and of the typed draft.
+#
+# The callers: ci.yml (merge queue and push to develop), kill-nightly.yml, and kill-gate.yml (the Stage 2 exit gate).
+#
+# `legs` is a JSON array. Each leg:
+#   name       job name and cache lineage (required)
+#   runner     array of runner labels, for example ["ubuntu-26.04"] (required)
+#   preset     CMake configure and build preset (required)
+#   compiler   gcc or clang: installs the GCC (`gcc` pin) or Clang (`llvm` pin) of .github/toolchain-versions.json and sets
+#              CC and CXX. A clang leg also installs GCC, because Clang takes its C++ library from the newest libstdc++.
+#              Leave it out on macOS.
+# Qt is installed on every leg (the library links Qt SQL).
+
+on:
+  workflow_call:
+    inputs:
+      tier:
+        description: Names the tier in the summary and the artifacts, for example merge-queue, nightly or exit-gate.
+        type: string
+        required: true
+      legs:
+        description: JSON array of legs, see the header of this file.
+        type: string
+        required: true
+      iterations:
+        description: Random-kill iterations for each leg, split over the shards.
+        type: number
+        required: true
+      shards:
+        description: How many shards each leg is split into.
+        type: number
+        default: 1
+      secondary-iterations:
+        description: >-
+          Random kills of recovery and of a migration for each leg, split over the shards; the typed draft gets a quarter
+          of that, and at least 6 in each shard.
+        type: number
+        default: 25
+      seed:
+        description: The master seed (decimal, or 0x and hex). Empty draws a new one, which is printed and kept.
+        type: string
+        default: ""
+      timeout-minutes:
+        description: Time allowed for one shard.
+        type: number
+        default: 120
+    outputs:
+      seed:
+        description: The master seed the run used.
+        value: ${{ jobs.plan.outputs.seed }}
+
+permissions: {}
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      seed: ${{ steps.plan.outputs.seed }}
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Choose the seed and split the iterations
+        id: plan
+        env:
+          SEED: ${{ inputs.seed }}
+          ITERATIONS: ${{ inputs.iterations }}
+          SHARDS: ${{ inputs.shards }}
+          SECONDARY: ${{ inputs.secondary-iterations }}
+          TIER: ${{ inputs.tier }}
+        run: |
+          set -euo pipefail
+          python3 tools/ci/kill_plan.py --seed "$SEED" --iterations "$ITERATIONS" --shards "$SHARDS" --secondary "$SECONDARY" | tee plan.txt >> "$GITHUB_OUTPUT"
+          seed="$(sed -n 's/^seed=//p' plan.txt)"
+          {
+            echo "### Kill harness, $TIER"
+            echo
+            echo "Master seed \`$seed\`: repeat with \`EJ_KILL_SEED=$seed\`, or one iteration with \`ej_kill_driver --seed $seed --iteration <i>\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the seed
+        env:
+          TIER: ${{ inputs.tier }}
+        run: |
+          set -euo pipefail
+          mkdir -p seed
+          cp plan.txt seed/plan.txt
+          echo "$TIER" > seed/tier.txt
+      - name: Upload the seed
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kill-${{ inputs.tier }}-seed
+          path: seed/
+          retention-days: 90
+
+  run:
+    name: ${{ matrix.leg.name }} shard ${{ matrix.shard.index }}
+    needs: plan
+    runs-on: ${{ matrix.leg.runner }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(inputs.legs) }}
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    env:
+      EJ_KILL_SEED: ${{ needs.plan.outputs.seed }}
+      EJ_KILL_FIRST: ${{ matrix.shard.first }}
+      EJ_KILL_LAST: ${{ matrix.shard.last }}
+      SECONDARY: ${{ matrix.shard.secondary }}
+      SHARD: ${{ matrix.shard.index }}
+      PRESET: ${{ matrix.leg.preset }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install GCC
+        if: matrix.leg.compiler == 'gcc' || matrix.leg.compiler == 'clang'
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+        with:
+          export-compiler: ${{ matrix.leg.compiler == 'gcc' }}
+
+      - name: Install Clang
+        if: matrix.leg.compiler == 'clang'
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-llvm@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+
+      - name: Set up CMake
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+
+      - name: Read toolchain versions
+        id: versions
+        run: |
+          set -euo pipefail
+          echo "qt=$(python3 -c "import json; print(json.load(open('.github/toolchain-versions.json')).get('qt',''))")" >> "$GITHUB_OUTPUT"
+
+      - name: Install Qt
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+        with:
+          version: ${{ steps.versions.outputs.qt }}
+
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+
+      - name: Set up ccache
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+        with:
+          key: ${{ matrix.leg.name }}-kill
+
+      - name: Configure
+        run: cmake --preset "$PRESET"
+
+      - name: Build the harness
+        run: cmake --build --preset "$PRESET" --target ej_kill_driver ej_kill_worker
+
+      - name: Run the harness
+        env:
+          TIER: ${{ inputs.tier }}
+          LEG: ${{ matrix.leg.name }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/kill"
+          mkdir -p "$out"
+          export EJ_KILL_SUMMARY="$out/summary.txt"
+          export EJ_KILL_ARTIFACT_DIR="$out/failures"
+          export EJ_KILL_RECOVERY_ITERATIONS="$SECONDARY"
+          export EJ_KILL_MIGRATION_ITERATIONS="$SECONDARY"
+          draft=$(( SECONDARY / 4 ))
+          if [ "$draft" -lt 6 ]; then draft=6; fi
+          export EJ_KILL_DRAFT_ITERATIONS="$draft"
+          # One iteration of the random kills is reached through EJ_KILL_FIRST and EJ_KILL_LAST; the count is their span.
+          export EJ_KILL_ITERATIONS=$(( EJ_KILL_LAST - EJ_KILL_FIRST + 1 ))
+          filter="[kill][random]"
+          if [ "$SHARD" = "0" ]; then filter="[kill]"; fi
+          cd "build/$PRESET/libs/storage/tests/kill"
+          echo "ej-kill $TIER $LEG shard $SHARD: tests $filter, iterations $EJ_KILL_FIRST to $EJ_KILL_LAST"
+          ./ej_kill_driver "$filter" 2>&1 | tee "$out/log.txt"
+
+      - name: Upload the result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kill-${{ inputs.tier }}-${{ matrix.leg.name }}-shard${{ matrix.shard.index }}-summary
+          path: |
+            ${{ runner.temp }}/kill/summary.txt
+            ${{ runner.temp }}/kill/log.txt
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Upload the stores of failed iterations
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kill-failure-${{ inputs.tier }}-${{ matrix.leg.name }}-shard${{ matrix.shard.index }}
+          path: ${{ runner.temp }}/kill/failures/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Save ccache
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ env.CCACHE_SAVE_KEY }}
+
+      - name: Save vcpkg caches
+        if: always()
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+
+  result:
+    name: Result
+    needs: [plan, run]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the shards' results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: kill-${{ inputs.tier }}-*-summary
+          path: results
+      - name: Add them up
+        env:
+          TIER: ${{ inputs.tier }}
+          SEED: ${{ needs.plan.outputs.seed }}
+          LEGS: ${{ inputs.legs }}
+          ITERATIONS: ${{ inputs.iterations }}
+          RUN_RESULT: ${{ needs.run.result }}
+        run: |
+          set -euo pipefail
+          expected="$(python3 -c "import json, os; print(len(json.loads(os.environ['LEGS'])) * int(os.environ['ITERATIONS']))")"
+          status=0
+          python3 tools/ci/kill_summary.py --tier "$TIER" --seed "$SEED" --expected-runs "$expected" results | tee summary.md >> "$GITHUB_STEP_SUMMARY" || status=$?
+          if [ "$RUN_RESULT" != "success" ]; then
+            echo "A shard did not succeed: $RUN_RESULT" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          exit "$status"

@@ -11,11 +11,19 @@
 // Environment:
 //   EJ_KILL_SEED                 the master seed (decimal or 0x hex); drawn at random and printed when unset
 //   EJ_KILL_ITERATIONS           random-kill iterations (default 25)
-//   EJ_KILL_FIRST, EJ_KILL_LAST  the range of iterations to run (default 0 .. iterations - 1), to shard a long run
-//   EJ_KILL_RECOVERY_ITERATIONS  random kills of recovery (default 25)
+//   EJ_KILL_FIRST, EJ_KILL_LAST  the range of iterations to run (default 0 .. iterations - 1), to shard a long run; the
+//                                seeds of the random kills of recovery, a migration and the draft start at EJ_KILL_FIRST
+//                                too, so shards do not repeat each other
+//   EJ_KILL_RECOVERY_ITERATIONS, EJ_KILL_MIGRATION_ITERATIONS, EJ_KILL_DRAFT_ITERATIONS
+//                                random kills of recovery, of a migration (default 25 each) and of the typed draft
+//                                (default 6)
 //   EJ_KILL_ARTIFACT_DIR         where the store of a failed iteration is copied (default ./ej-kill-artifacts)
-//   EJ_KILL_SUMMARY              a file the result line is appended to
+//   EJ_KILL_SUMMARY              a file the result lines are appended to
 // Command line: `--seed 0x... --iteration i` re-runs one iteration (up to 20 times) and says how often it failed.
+//
+// The tests are tagged `[kill]`. `[random]` ones draw their kills from the seed and are the ones a long run repeats in
+// every shard; `[points]` ones kill at each named crash point and give the same result every time, so a run needs them
+// once.
 #include "error_journaling/migrator.hpp"
 #include "error_journaling/recovery.hpp"
 #include "kill_workload.hpp"
@@ -610,7 +618,7 @@ IterationResult run_iteration(std::uint64_t master, std::uint64_t iteration)
 
 } // namespace
 
-TEST_CASE("kill: random kills lose no acknowledged entry", "[kill]")
+TEST_CASE("kill: random kills lose no acknowledged entry", "[kill][random]")
 {
     const std::uint64_t master = master_seed();
     std::uint64_t first = env_number("EJ_KILL_FIRST", 0);
@@ -741,7 +749,7 @@ std::uint64_t seed_for(std::uint64_t master, std::uint64_t index, const CrashCas
 
 } // namespace
 
-TEST_CASE("kill: every crash point leaves a store that recovers whole", "[kill][crash-point]")
+TEST_CASE("kill: every crash point leaves a store that recovers whole", "[kill][points]")
 {
     const std::uint64_t master = master_seed();
     print("ej-kill master_seed=" + hex(master) + " crash points=" + decimal(std::size(CRASH_CASES)));
@@ -864,7 +872,7 @@ QStringList recovery_arguments(const std::filesystem::path& dir, std::uint64_t c
 
 } // namespace
 
-TEST_CASE("kill: recovery killed at each of its crash points recovers again to the same result", "[kill][recovery]")
+TEST_CASE("kill: recovery killed at each of its crash points recovers again to the same result", "[kill][recovery][points]")
 {
     const std::map<LogId, StateDigest>& expected = pristine().m_Digests;
     for (const Damage kind : {Damage::EMPTY_DATABASE, Damage::ENTRY_PAGE, Damage::NO_DATABASE})
@@ -909,7 +917,7 @@ TEST_CASE("kill: recovery killed at each of its crash points recovers again to t
     }
 }
 
-TEST_CASE("kill: recovery killed at random moments recovers again to the same result", "[kill][recovery]")
+TEST_CASE("kill: recovery killed at random moments recovers again to the same result", "[kill][recovery][random]")
 {
     const std::uint64_t master = master_seed();
     const std::uint64_t count = env_number("EJ_KILL_RECOVERY_ITERATIONS", DEFAULT_ITERATIONS);
@@ -918,7 +926,7 @@ TEST_CASE("kill: recovery killed at random moments recovers again to the same re
     std::uint64_t killed_mid_run = 0;
     for (std::uint64_t iteration = 0; iteration < count; ++iteration)
     {
-        const std::uint64_t seed = iteration_seed(master, 2'000'000 + iteration);
+        const std::uint64_t seed = iteration_seed(master, 2'000'000 + env_number("EJ_KILL_FIRST", 0) + iteration);
         SplitMix64 rng(seed);
         const std::array<Damage, 3> kinds{Damage::EMPTY_DATABASE, Damage::ENTRY_PAGE, Damage::NO_DATABASE};
         const Damage kind = kinds[static_cast<std::size_t>(rng.below(kinds.size()))];
@@ -953,7 +961,7 @@ TEST_CASE("kill: recovery killed at random moments recovers again to the same re
 // The typed draft (NOTE-03, decision 3): at most the debounce's worth of typing is lost
 // ---------------------------------------------------------------------------------------------------------------------
 
-TEST_CASE("kill: a typed draft is lost for no more than the debounce", "[kill][draft]")
+TEST_CASE("kill: a typed draft is lost for no more than the debounce", "[kill][draft][random]")
 {
     // The draft store writes 300 ms after the first change it is holding. A change this old, or a later one, must be in
     // the store after a kill; the rest of the age is slack for the polling of the worker's timer, the write itself and
@@ -965,7 +973,7 @@ TEST_CASE("kill: a typed draft is lost for no more than the debounce", "[kill][d
     std::uint64_t failures = 0;
     for (std::uint64_t iteration = 0; iteration < count; ++iteration)
     {
-        const std::uint64_t seed = iteration_seed(master, 3'000'000 + iteration);
+        const std::uint64_t seed = iteration_seed(master, 3'000'000 + env_number("EJ_KILL_FIRST", 0) + iteration);
         SplitMix64 rng(seed);
         const std::uint64_t target = rng.between(30, 100);
         const std::chrono::milliseconds delay(static_cast<std::int64_t>(rng.between(0, 400)));
@@ -1147,7 +1155,7 @@ void relaunch_and_finish(const StoreCopy& store, const std::map<std::string, std
 } // namespace
 
 TEST_CASE("kill: a migration killed at each of its crash points leaves the old version or the new, never half",
-          "[kill][migration]")
+          "[kill][migration][points]")
 {
     const auto rows = []
     {
@@ -1188,7 +1196,7 @@ TEST_CASE("kill: a migration killed at each of its crash points leaves the old v
 }
 
 TEST_CASE("kill: a migration killed at random moments leaves the old version or the new, never half",
-          "[kill][migration]")
+          "[kill][migration][random]")
 {
     const std::uint64_t master = master_seed();
     const std::uint64_t count = env_number("EJ_KILL_MIGRATION_ITERATIONS", DEFAULT_ITERATIONS);
@@ -1201,7 +1209,7 @@ TEST_CASE("kill: a migration killed at random moments leaves the old version or 
     std::uint64_t killed_before_the_end = 0;
     for (std::uint64_t iteration = 0; iteration < count; ++iteration)
     {
-        const std::uint64_t seed = iteration_seed(master, 4'000'000 + iteration);
+        const std::uint64_t seed = iteration_seed(master, 4'000'000 + env_number("EJ_KILL_FIRST", 0) + iteration);
         SplitMix64 rng(seed);
         const std::chrono::microseconds delay(static_cast<std::int64_t>(rng.between(0, 120'000)));
         INFO("migration iteration " << iteration << ", seed " << hex(seed) << ", kill after " << delay.count()
