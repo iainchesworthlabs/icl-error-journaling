@@ -11,12 +11,15 @@ configure_file(
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
 
 add_library(ej_core
+    src/day_prompt.cpp
     src/export_renderer.cpp
     src/header_history.cpp
     src/header_values.cpp
     src/log.cpp
     src/note_template.cpp
+    src/qt_time_zone_provider.cpp
     src/software_version.cpp
+    src/time_format.cpp
     src/unit_number.cpp
     src/uuid.cpp
     src/version.cpp)

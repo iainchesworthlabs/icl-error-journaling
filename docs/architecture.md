@@ -3,12 +3,15 @@
 ```text
 libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespace `ej`
   include/error_journaling/  public headers: uuid.hpp, ids.hpp (EntryId, ErrorTypeId, NoteTemplateId, LocationId),
-                             header_field.hpp, result.hpp (the std::expected conventions), version.hpp
+                             header_field.hpp, result.hpp (the std::expected conventions), version.hpp,
+                             timestamp.hpp, time_zone_provider.hpp (Qt implementation in src/qt_time_zone_provider.cpp,
+                             the only file that includes QTimeZone), time_format.hpp, day_prompt.hpp
   src/                       implementation files, one per component
   tests/                     Catch2 tests, all labelled `unit`
     golden/                  expected export files, compared byte for byte (docs/testing.md)
     fixtures/                other input files for tests
     golden.hpp, golden.cpp   the golden comparison helper
+    fake_time_zone_provider.hpp  fixed-offset TimeZoneProvider for deterministic tests
 libs/storage/         ej_storage: empty until Stage 2; links ej_core
 libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, behind interfaces
   src/platform/ios/      Objective-C++ (.mm), built for iOS
