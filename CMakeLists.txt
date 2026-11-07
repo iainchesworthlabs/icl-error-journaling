@@ -19,7 +19,7 @@ set(ICL_PROJECT_PREFIX ERROR_JOURNALING)
 # Apple and what the provisioning profile names. Defined once; the iOS workflows repeat it as BUNDLE_ID and
 # apps/app/packaging/ios/verify_app.sh checks that the two agree.
 set(ERROR_JOURNALING_APPLICATION_ID "com.iainchesworthlabs.errorjournaling")
-set(ERROR_JOURNALING_DISPLAY_NAME "Error Journaling")
+set(ERROR_JOURNALING_DISPLAY_NAME "CS Bingo Board")
 
 # The iOS bridge is Objective-C++ (libs/ios_bridge/src/platform/ios).
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")

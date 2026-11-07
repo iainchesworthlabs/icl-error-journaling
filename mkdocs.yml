@@ -1,4 +1,4 @@
-site_name: error-journaling
+site_name: CS Bingo Board
 site_description: An iPhone app for logging robot session errors through the day and sharing the log
 repo_url: https://github.com/iainchesworthlabs/icl-error-journaling
 docs_dir: docs

@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
         const QCoreApplication core(argc, argv);
         name_the_program();
         QCommandLineParser parser;
-        parser.setApplicationDescription(QStringLiteral("Error Journaling"));
+        parser.setApplicationDescription(QStringLiteral("CS Bingo Board"));
         parser.addHelpOption();
         parser.addVersionOption();
         parser.addOption(smoke_test);
