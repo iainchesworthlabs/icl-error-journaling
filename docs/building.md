@@ -61,6 +61,26 @@ build, which is the release workflow's (`docs/releasing.md`, "iOS and TestFlight
 sets `CFBundleVersion`. The identifier is `ERROR_JOURNALING_APPLICATION_ID` in `CMakeLists.txt`. Check the bundle with
 `apps/app/packaging/ios/verify_app.sh <app> --bundle-id <id> --executable error-journaling`.
 
+#### Profiling on a device
+
+Instruments can profile only a build that has the `get-task-allow` entitlement, which a distribution-signed (App Store or
+ad hoc) build does not. The figures of the exit gate (cold start to a usable board, tap to haptic) therefore come from a
+**development-signed Release build** installed from a Mac; the TestFlight build is checked with the app's own timing line
+(`launch: usable at ...` in Console, with the phone connected, filtered on the bundle identifier).
+
+1. Register the iPhone in the developer portal and make a development provisioning profile for the App ID (owner actions
+   O2 in `docs/plan/stage-5.md`). Turn Developer Mode on in the phone's Settings, Privacy and Security.
+2. Configure with the development identity and profile:
+   `cmake --preset ios-release -DERROR_JOURNALING_IOS_SIGNING_IDENTITY="Apple Development" -DERROR_JOURNALING_IOS_SIGNING_TEAM=<team> -DERROR_JOURNALING_IOS_SIGNING_PROFILE=<development profile name>`.
+   `ERROR_JOURNALING_IOS_SIGNING_IDENTITY` defaults to `Apple Distribution`, the release workflow's identity.
+3. Build and install (`xcodebuild`, or open the project in Xcode and run on the phone).
+4. The application marks its own timings for Instruments (`os_signpost`, Points of Interest): `ProcessStart`,
+   `StorageReady`, `QmlLoaded`, `FirstFrame`, `BoardUsable`, `TouchAge` and the `TapToHaptic` interval. In Instruments use
+   the App Launch template and add Points of Interest.
+5. For the one-year dataset, make a data directory on a desktop with `ej_dataset --out <directory>` (about 80,000
+   fictional entries, built by the real repository), and copy it into the app's container with Xcode's Devices and
+   Simulators window, "Replace Container" (a development build only). No seeding code ships in the application.
+
 ### Windows (developer machine)
 
 `cmake --preset windows-msvc-release` from a Visual Studio developer prompt builds the libraries, the application and

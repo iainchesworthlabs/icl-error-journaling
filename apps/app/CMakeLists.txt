@@ -68,6 +68,13 @@ if(ERROR_JOURNALING_BUILD_TESTS)
     add_test(NAME app.smoke COMMAND ej_app --smoke-test)
     set_tests_properties(app.smoke PROPERTIES LABELS ui TIMEOUT 60 ENVIRONMENT "${ej_app_test_environment}")
 
+    # The signing identity is the distribution certificate unless the build is told otherwise (a script test: nothing
+    # here configures for iOS).
+    add_test(NAME ios.signing_identity
+        COMMAND ${CMAKE_COMMAND} -DIOS_CMAKE=${CMAKE_CURRENT_SOURCE_DIR}/packaging/ios.cmake
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_signing_identity.cmake)
+    set_tests_properties(ios.signing_identity PROPERTIES LABELS unit TIMEOUT 30)
+
     # The version and the help are answered without a window system: the platform plugin is one that does not exist.
     add_test(NAME app.version COMMAND ej_app --version)
     set_tests_properties(app.version PROPERTIES

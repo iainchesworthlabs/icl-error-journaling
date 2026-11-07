@@ -50,7 +50,8 @@ public:
     Q_INVOKABLE void setApplicationActive(bool active);
     /// Fires the impact haptic. Call it from onPressed (touch-down), never from onClicked or onReleased: the entry is
     /// recorded on the press too, and a finger sliding off must not fire a haptic without an entry. `pressTimestamp` is
-    /// the touch's event timestamp in milliseconds, used only for the timing marks of Stage 5, 5.3; 0 when unknown.
+    /// the touch's event timestamp in milliseconds (`point.pressTimestamp` of the pointer handler), used only for the
+    /// timing marks: the time from the touch to this call is the TOUCH_AGE mark. 0 when unknown.
     Q_INVOKABLE void hapticImpact(double pressTimestamp = 0);
     /// Call when a note has been saved.
     Q_INVOKABLE void hapticSuccess();

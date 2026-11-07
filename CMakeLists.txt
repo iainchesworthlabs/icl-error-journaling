@@ -56,3 +56,8 @@ add_subdirectory(libs/ios_bridge)
 if(ERROR_JOURNALING_BUILD_APP)
     add_subdirectory(apps/app)
 endif()
+
+# The desktop tool that makes the one-year dataset for the device measurements (Stage 5, M1). Not built for a device.
+if(ERROR_JOURNALING_BUILD_TESTS AND NOT IOS)
+    add_subdirectory(tools/dataset)
+endif()
