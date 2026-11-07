@@ -58,6 +58,9 @@ Item {
         required property string rowName
         required property real rowHeight
         required property real rowWidth
+        // The row is open. A closed row has these buttons under its face, where a tap must not reach them; the
+        // accessibility press action below is not gated, so a screen reader can still press them.
+        required property bool armed
         signal triggered
 
         // 76 pt, wider for a long word, and never more than two fifths of the row.
@@ -94,6 +97,8 @@ Item {
             Accessible.ignored: true
         }
         TapHandler {
+            enabled: action.armed
+
             onTapped: action.triggered()
         }
         Keys.onReturnPressed: action.triggered()
@@ -184,6 +189,7 @@ Item {
             rowName: root.accessibleName
             rowHeight: root.height
             rowWidth: root.width
+            armed: root.revealed
             onTriggered: {
                 root.copyRequested();
                 root.revealed = false;
@@ -199,6 +205,7 @@ Item {
             rowName: root.accessibleName
             rowHeight: root.height
             rowWidth: root.width
+            armed: root.revealed
             onTriggered: {
                 root.deleteRequested();
                 root.revealed = false;

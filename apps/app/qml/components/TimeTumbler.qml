@@ -52,9 +52,11 @@ Item {
     // The width of a column: 88 pt, or less when the 12-hour format with seconds has four of them to fit.
     readonly property int columnCount: 2 + (showSeconds ? 1 : 0) + (twelveHour ? 1 : 0)
     readonly property int separatorCount: showSeconds ? 2 : 1
+    // The colon between two columns: a gap wide, or as wide as the colon in the font if that is more.
+    readonly property real separatorWidth: Math.max(Theme.space.sectionGap, colonMetrics.advanceWidth)
     // The gaps of the row of columns and colons.
     readonly property int gapCount: columnCount + separatorCount - 1
-    readonly property real columnWidth: Math.min(Theme.size.minTouchTarget * 2, (width - 2 * Theme.space.tileGap - separatorCount * Theme.space.sectionGap - gapCount * columns.spacing) / columnCount)
+    readonly property real columnWidth: Math.min(Theme.size.minTouchTarget * 2, (width - 2 * Theme.space.tileGap - separatorCount * separatorWidth - gapCount * columns.spacing) / columnCount)
 
     implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
     implicitHeight: card.height + message.height
@@ -209,13 +211,21 @@ Item {
         }
     }
 
+    TextMetrics {
+        id: colonMetrics
+
+        font: Theme.font.headerUnit.font
+        text: ":"
+    }
+
     // The colon between two columns, level with the selected row.
     component Separator: Item {
         required property real columnHeight
         required property real headingHeight
         required property real rowsHeight
+        required property real separatorWidth
 
-        width: Theme.space.sectionGap
+        width: separatorWidth
         height: columnHeight
 
         Text {
@@ -267,6 +277,7 @@ Item {
                 columnHeight: hours.height
                 headingHeight: hours.headingHeight
                 rowsHeight: root.rowsHeight
+                separatorWidth: root.separatorWidth
             }
             TimeColumn {
                 id: minutes
@@ -282,6 +293,7 @@ Item {
                 columnHeight: hours.height
                 headingHeight: hours.headingHeight
                 rowsHeight: root.rowsHeight
+                separatorWidth: root.separatorWidth
             }
             TimeColumn {
                 id: secs
