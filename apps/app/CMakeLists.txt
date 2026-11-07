@@ -2,8 +2,27 @@
 # The application: an empty Qt Quick window. On iOS (the product) Xcode builds the bundle; on a Mac it is a desktop
 # program for iterating on the user interface; on Linux it is built and tested in CI, and installed nowhere.
 
-find_package(Qt6 6.9 REQUIRED COMPONENTS Quick)
+# Sql: ej_storage links Qt Sql privately and a static library's dependencies have to be declared where it is linked.
+find_package(Qt6 6.9 REQUIRED COMPONENTS Core Quick Sql)
 qt_standard_project_setup(REQUIRES 6.9)
+
+# The view-model layer (Stage 3, docs/plan/stage-3.md): the thin QObject layer between the core and storage on one side
+# and QML on the other. A static library, so that ej_app links it and the tests can too (an executable cannot be linked).
+# It links no Qt Quick and no QtGui, so its tests run without a display. The sources are found by a glob, as in
+# libs/ios_bridge, so that a work package adds its files without editing this file: a new file in src/viewmodel is
+# compiled and, when it has Q_OBJECT, moc'd, with no change here (CONFIGURE_DEPENDS re-runs the glob at build time).
+file(GLOB ej_viewmodel_sources CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/viewmodel/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/viewmodel/*.hpp")
+add_library(ej_viewmodel STATIC ${ej_viewmodel_sources})
+add_library(error_journaling::viewmodel ALIAS ej_viewmodel)
+# Headers are included as "viewmodel/<name>.hpp".
+target_include_directories(ej_viewmodel PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
+target_compile_features(ej_viewmodel PUBLIC cxx_std_23)
+target_link_libraries(ej_viewmodel
+    PUBLIC ej_core ej_storage ej_ios_bridge Qt6::Core
+    PRIVATE icl::warnings icl::hardening icl::tracy icl::coverage)
+icl_relax_generated_warnings(ej_viewmodel)
 
 qt_add_executable(ej_app src/main.cpp)
 # The executable is named error-journaling while the target is ej_app.
@@ -18,7 +37,7 @@ qt_add_qml_module(ej_app
     QML_FILES qml/Main.qml)
 
 target_link_libraries(ej_app
-    PRIVATE ej_core ej_storage ej_ios_bridge ej_qml_bridge Qt6::Quick icl::warnings icl::hardening icl::coverage)
+    PRIVATE ej_viewmodel ej_core ej_storage ej_ios_bridge ej_qml_bridge Qt6::Quick icl::warnings icl::hardening icl::coverage)
 # qmlcachegen, rcc and moc write C++ files that the strict warning set rejects with some compilers.
 icl_relax_generated_warnings(ej_app)
 
@@ -35,6 +54,9 @@ else()
 endif()
 
 if(ERROR_JOURNALING_BUILD_TESTS)
+    # The tests of the view-model layer (unit, integration, perf), in tests/viewmodel.
+    add_subdirectory(tests/viewmodel)
+
     set(ej_app_test_environment QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QSG_RENDER_LOOP=basic)
     if(ICL_SANITIZERS MATCHES "thread")
         # The prebuilt Qt libraries are not instrumented; the file says why.

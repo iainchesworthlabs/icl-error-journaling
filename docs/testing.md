@@ -10,6 +10,9 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 |---|---|---|
 | unit | `libs/*/tests` | `ej_core_tests`, `ej_storage_tests`, `ej_ios_bridge_tests` (the desktop stub and the QML-facing wiring, against a fake; the iOS code is only compiled in CI) |
 | integration | `libs/storage/tests` | `ej_storage_integration_tests`: real SQLite and real files, each test in a directory of its own under the build tree (never the system temp folder). It has its own `main` because Qt SQL loads its drivers through a `QCoreApplication` |
+| unit | `apps/app/tests/viewmodel/test_*.cpp` | `ej_viewmodel_tests`: the view-model layer on `MemoryLogRepository`, the fakes and `ManualStorageGateway` |
+| integration | `apps/app/tests/viewmodel/integration/*.cpp` | `ej_viewmodel_integration_tests`: `ThreadedStorageGateway` on a real thread (and, in work package 3.11, the real store and the threading tests; TSan runs them in CI) |
+| perf | `apps/app/tests/viewmodel/perf/*.cpp` | `ej_viewmodel_perf_tests`: the budgets of the threading section, added by 3.11 |
 | ui | `apps/app` | `app.smoke` starts the application off-screen and waits for a frame; `app.version` |
 
 ## Golden tests and fixtures
@@ -31,6 +34,31 @@ and fails when a file in `golden/` has no scenario. The two daylight-saving gold
 A fixture is any other input file a test reads, kept in `libs/core/tests/fixtures/` and found with
 `ej::test::fixture_path(name)`. Fixtures and goldens contain only the fictional stand-ins (Sam Example, UNIT, North Site,
 Wrong Response); the confidentiality check runs over them.
+
+## Tests of the view-model layer
+
+The cases are Catch2 and link `Qt6::Test` for `QSignalSpy` only (Stage 3, decision 3). Each executable owns a `QCoreApplication`
+(`support/test_main.cpp`). The sources of the tests are found by globs, so a work package adds `test_<thing>.cpp` (`unit`),
+`integration/<thing>.cpp` or `perf/<thing>.cpp` and nothing else. The support library `ej_viewmodel_test_support`
+(`apps/app/tests/viewmodel/support/`, included as `"support/<name>.hpp"`, namespace `ej::test`) is the same for all three:
+
+| Helper | What it is for |
+|---|---|
+| `TestClock` | The wall `Clock` and the monotonic `Scheduler` in one. `advance(ms)` moves both and fires due timers in order; `step_wall_back` and `step_wall_forward` move the wall clock only; `set_wall` puts it anywhere. Starts at 08:55 Melbourne on 7 Nov 2026 |
+| `SequentialIds`, `FakeDeviceZone`, `TestEnvironment` | Ids that count (`Uuid::from_random(0, n)`, the same as `test_id<Id>(n)`), a settable device zone, and one struct that owns them with the fixed-offset zones and hands out the `Environment`. `sample_configuration()` reads `config/sample-config.json` |
+| `EventLog` | The order of things that happened (`COMMIT`, `HAPTIC`, `CONFIRMATION`, `TOAST`, `SHARE`, `CLIPBOARD`, `WRITE_FAILED`, `LOG_CHANGE`, `CONFIGURATION`, `MARK`), for the tests that the touch haptic comes before the commit and the confirmation after it. Thread safe |
+| `RecordingRepository` | A `LogRepository` over another: records every call and its thread, writes a `COMMIT` event after each mutating call that succeeded, makes the next calls of an operation fail (`fail_next`), holds a commit (`set_before_commit`) or slows it (`set_commit_delay`), and counts the open logs after each mutating call (`open_log_counts`) |
+| `MemoryStorage`, `FakeConfigStore` | `MemoryLogRepository` seen through a `RecordingRepository`, a text `ConfigStore` in memory that can fail a load or a save, and the `StorageContext` that holds both |
+| `ManualStorageGateway` | Jobs wait until the test calls `run_next()` or `run_all()`; a job and its completion run in the same call, so no event loop is needed. This is how a test looks at the state between "submitted" and "committed" |
+| `FakePlatform`, `FakeClipboard` | `platform_services` with a share sheet that ends at once (the desktop stub) or later (`hold_completion`, `complete_share_sheet`, as iOS), and the haptics; a clipboard that keeps every text byte for byte |
+| `FakeFeedbackSink`, `FakeConfigurationSource`, `FakeConfigurationEditor`, `FakeOpenLogSource`, `FakeLogObserver`, `FakeConfigurationObserver`, `FakeOpenLogObserver` | The interfaces a service reads its neighbours through, so a package is tested without the class that implements them |
+
+`ThreadedStorageGateway` tests are `integration`. They pump the event loop with `QCoreApplication::processEvents` or call
+`drain()`; they never sleep to wait for a result.
+
+The golden comparison, the scenarios behind the golden files and the fixed-offset zone provider of the core tests are the
+library `ej_core_test_support` (`libs/core/tests`), linked by the core tests and the view-model tests. A mismatch writes its
+`<name>.actual.txt` to `<build>/libs/core/tests/golden-actual/` whichever test found it.
 
 ## Repository contract tests
 
