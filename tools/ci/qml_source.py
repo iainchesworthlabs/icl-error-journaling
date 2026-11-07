@@ -13,22 +13,17 @@ from pathlib import Path
 QML_DIR = Path("apps/app/qml")
 TEST_DIR = Path("apps/app/tests/ui")
 
-# The Stage 0 spike window. Package 4.15 replaces it (and deletes this entry); until then it is not held to the rules of
-# the components, which it was written before.
-LEGACY = {"Main.qml"}
 # The token singleton and the safe frame are where literals live.
 THEME_DIR = "theme"
 
 
-def qml_files(root: Path, *, include_theme: bool = False, include_legacy: bool = False) -> list[Path]:
-    """The QML files of the module, sorted, without the theme and the legacy window unless asked for."""
+def qml_files(root: Path, *, include_theme: bool = False) -> list[Path]:
+    """The QML files of the module, sorted, without the theme unless asked for."""
     base = root / QML_DIR
     found = []
     for path in sorted(base.rglob("*.qml")):
         relative = path.relative_to(base)
         if not include_theme and relative.parts[0] == THEME_DIR:
-            continue
-        if not include_legacy and relative.as_posix() in LEGACY:
             continue
         found.append(path)
     return found

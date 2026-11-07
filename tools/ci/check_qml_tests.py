@@ -8,7 +8,8 @@ docs/plan/stage-4.md, "Coverage": Catch2 does not measure QML, so the rule is th
 test file. `qml/theme/Theme.qml` is tested by `apps/app/tests/ui/theme_test.cpp`, `qml/components/TabBar.qml` by
 `tab_bar_test.cpp`, `qml/screens/log/LogScreen.qml` by `log_screen_test.cpp`: the file name in snake case plus `_test.cpp`,
 in `apps/app/tests/ui/`, with at least one `TEST_CASE`. A file under a folder named `private` is a part of the file next to
-it and is tested through that one. The Stage 0 window (`Main.qml`) has none until package 4.15 (`app_flow_test.cpp`).
+it and is tested through that one. The window (`Main.qml`) and the shell
+(`shell/AppShell.qml`) are tested by `app_flow_test.cpp`, which drives the whole app.
 """
 
 from __future__ import annotations
@@ -20,6 +21,9 @@ from pathlib import Path
 import qml_source as source
 
 PRIVATE = "private"
+# The window and the shell are one test, of the whole app (Stage 4, 4.15): the shell is the window's content, kept apart only
+# so that the test rig, which loads an item, can load it.
+TESTED_BY = {"Main": "app_flow", "AppShell": "app_flow"}
 
 
 def check(root: Path) -> list[str]:
@@ -29,7 +33,7 @@ def check(root: Path) -> list[str]:
         relative = path.relative_to(root / source.QML_DIR)
         if PRIVATE in relative.parts[:-1]:
             continue
-        test = tests / f"{source.snake_case(path.stem)}_test.cpp"
+        test = tests / f"{TESTED_BY.get(path.stem, source.snake_case(path.stem))}_test.cpp"
         shown = path.relative_to(root).as_posix()
         if not test.is_file():
             problems.append(f"{shown}: no test file {test.relative_to(root).as_posix()}")

@@ -13,7 +13,7 @@ concatenation. This finds, in the properties that show or speak text (`text`, `p
     not a string literal (`qsTr(name)`), because the extractor cannot read it.
 
 `.arg(...)` after `qsTr(...)` is how a value gets in. A literal with no letter (`"×"`, `"\\n"`, `":"`) is a symbol, not a
-word. The Stage 0 window (`Main.qml`) is not checked.
+word.
 """
 
 from __future__ import annotations

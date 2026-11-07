@@ -6,7 +6,7 @@
 
 The QML counterpart of the rule against `#if` on a platform (AGENTS.md, docs/plan/stage-4.md "No platform tests in QML"):
 what differs between the phone and a desktop (a share sheet, a document picker, a haptic) arrives as a property or a signal
-of the bridge, so a screen never branches on `Qt.platform`. The theme and the legacy window are checked too.
+of the bridge, so a screen never branches on `Qt.platform`. The theme is checked too.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def check_text(name: str, text: str) -> list[str]:
 
 def check(root: Path) -> list[str]:
     problems = []
-    for path in source.qml_files(root, include_theme=True, include_legacy=True):
+    for path in source.qml_files(root, include_theme=True):
         problems += check_text(path.relative_to(root).as_posix(), path.read_text(encoding="utf-8"))
     return problems
 
