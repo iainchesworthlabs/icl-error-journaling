@@ -25,20 +25,28 @@ target_link_libraries(ej_ios_bridge
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # Objective-C++ with reference counting, and the frameworks the bridge calls.
     set_source_files_properties(${bridge_sources} PROPERTIES COMPILE_OPTIONS -fobjc-arc)
-    target_link_libraries(ej_ios_bridge PRIVATE "$<LINK_LIBRARY:FRAMEWORK,Foundation>" "$<LINK_LIBRARY:FRAMEWORK,UIKit>")
+    target_link_libraries(ej_ios_bridge PRIVATE "$<LINK_LIBRARY:FRAMEWORK,Foundation>" "$<LINK_LIBRARY:FRAMEWORK,UIKit>"
+        "$<LINK_LIBRARY:FRAMEWORK,UniformTypeIdentifiers>")
 endif()
 
 # What QML sees of the bridge: a QObject over the interface, so the interface itself needs no Qt.
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui)
+# Gui is for QFileOpenEvent (the file the system opens in the application).
 add_library(ej_qml_bridge
+    src/config_exporter.cpp
+    src/config_importer.cpp
+    src/open_file_filter.cpp
     src/qml_bridge.cpp
+    include/error_journaling/config_exporter.hpp
+    include/error_journaling/config_importer.hpp
+    include/error_journaling/open_file_filter.hpp
     include/error_journaling/qml_bridge.hpp)
 add_library(error_journaling::qml_bridge ALIAS ej_qml_bridge)
 set_target_properties(ej_qml_bridge PROPERTIES AUTOMOC ON)
 target_include_directories(ej_qml_bridge PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")
 target_compile_features(ej_qml_bridge PUBLIC cxx_std_23)
 target_link_libraries(ej_qml_bridge
-    PUBLIC ej_ios_bridge Qt6::Core
+    PUBLIC ej_ios_bridge Qt6::Core Qt6::Gui
     PRIVATE icl::warnings icl::hardening icl::tracy icl::coverage)
 icl_relax_generated_warnings(ej_qml_bridge)
 

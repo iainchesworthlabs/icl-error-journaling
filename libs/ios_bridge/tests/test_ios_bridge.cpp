@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/accessibility_settings.hpp"
+#include "error_journaling/config_exporter.hpp"
+#include "error_journaling/config_importer.hpp"
+#include "error_journaling/document_picker.hpp"
+#include "error_journaling/document_types.hpp"
 #include "error_journaling/haptic_policy.hpp"
 #include "error_journaling/launch_tracker.hpp"
+#include "error_journaling/open_file_filter.hpp"
 #include "error_journaling/perf_marks.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
@@ -13,9 +18,12 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <QCoreApplication>
+#include <QDir>
+#include <QFileOpenEvent>
 #include <QList>
 #include <QObject>
 #include <QString>
+#include <QUrl>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -873,4 +881,315 @@ TEST_CASE("accessibility.wrapper: a notice after the bridge is gone is ignored",
     REQUIRE(late);
     late();
     SUCCEED();
+}
+
+namespace
+{
+
+class FakePicker final : public bridge::DocumentPicker
+{
+public:
+    bridge::PickResult m_Result;
+    int m_Calls = 0;
+
+    void pick_configuration(std::function<void(const bridge::PickResult&)> done) override
+    {
+        ++m_Calls;
+        done(m_Result);
+    }
+};
+
+QString qt_path(const fs::path& path)
+{
+    return QString::fromStdU16String(path.u16string());
+}
+
+std::string sample_config_bytes()
+{
+    return read_file(fs::path(EJ_SAMPLE_CONFIG));
+}
+
+void post_file_open(QObject& target, const QUrl& url)
+{
+    QCoreApplication::postEvent(&target, new QFileOpenEvent(url));
+    QCoreApplication::sendPostedEvents(&target, 0);
+}
+
+} // namespace
+
+TEST_CASE("picker.stub: the stub reports UNAVAILABLE once", "[unit][import]")
+{
+    const auto picker = bridge::make_document_picker();
+    int calls = 0;
+    bridge::PickOutcome seen = bridge::PickOutcome::PICKED;
+    picker->pick_configuration(
+        [&](const bridge::PickResult& result)
+        {
+            ++calls;
+            seen = result.m_Outcome;
+        });
+    CHECK(calls == 1);
+    CHECK(seen == bridge::PickOutcome::UNAVAILABLE);
+}
+
+TEST_CASE("document_types: the constants name the type and the file", "[unit][import]")
+{
+    CHECK(bridge::CONFIG_TYPE_IDENTIFIER == "com.iainchesworthlabs.errorjournaling.config");
+    CHECK(bridge::CONFIG_EXTENSION == "ejconfig");
+    CHECK(bridge::CONFIG_EXPORT_FILE_NAME.ends_with(".ejconfig"));
+    CHECK(bridge::CONFIG_MAX_BYTES == 1024 * 1024);
+}
+
+TEST_CASE("open_file.queue: a file event before ready is delivered once, after it", "[unit][import]")
+{
+    AppFixture app;
+    TempDirectory directory;
+    const fs::path first = directory.path() / "first.ejconfig";
+    const fs::path second = directory.path() / "second.json";
+    write_file(first, "{}");
+    write_file(second, "{}");
+
+    std::vector<std::string> log;
+    bridge::OpenFileFilter filter([&](std::string_view line) { log.emplace_back(line); });
+    QCoreApplication::instance()->installEventFilter(&filter);
+    QStringList opened;
+    QObject::connect(&filter, &bridge::OpenFileFilter::fileOpened, &filter,
+                     [&](const QString& p) { opened.append(p); });
+
+    post_file_open(*QCoreApplication::instance(), QUrl::fromLocalFile(qt_path(first)));
+    CHECK(opened.isEmpty());
+    CHECK(filter.pending() == 1);
+    CHECK(log.size() == 1);
+
+    filter.ready();
+    REQUIRE(opened.size() == 1);
+    CHECK(QDir::cleanPath(opened[0]) == QDir::cleanPath(qt_path(first)));
+
+    // A second file waits until the first is handled.
+    post_file_open(*QCoreApplication::instance(), QUrl::fromLocalFile(qt_path(second)));
+    CHECK(opened.size() == 1);
+    filter.handled();
+    REQUIRE(opened.size() == 2);
+    CHECK(QDir::cleanPath(opened[1]) == QDir::cleanPath(qt_path(second)));
+
+    filter.handled();
+    CHECK(opened.size() == 2);
+    QCoreApplication::instance()->removeEventFilter(&filter);
+}
+
+TEST_CASE("open_file.queue: a URL that is not a local file, an empty URL and a directory are ignored", "[unit][import]")
+{
+    AppFixture app;
+    TempDirectory directory;
+    bridge::OpenFileFilter filter;
+    QCoreApplication::instance()->installEventFilter(&filter);
+    filter.ready();
+    int opened = 0;
+    QObject::connect(&filter, &bridge::OpenFileFilter::fileOpened, &filter, [&](const QString&) { ++opened; });
+
+    post_file_open(*QCoreApplication::instance(), QUrl(QStringLiteral("https://example.invalid/setup.ejconfig")));
+    post_file_open(*QCoreApplication::instance(), QUrl());
+    post_file_open(*QCoreApplication::instance(), QUrl::fromLocalFile(qt_path(directory.path())));
+    CHECK(opened == 0);
+    CHECK(filter.pending() == 0);
+    QCoreApplication::instance()->removeEventFilter(&filter);
+}
+
+TEST_CASE("importer.sample: the sample goes through as a .ejconfig and as a .json, byte for byte, and is deleted",
+          "[integration][import]")
+{
+    AppFixture app;
+    TempDirectory directory;
+    const std::string sample = sample_config_bytes();
+    REQUIRE_FALSE(sample.empty());
+
+    for (const char* name : {"setup.ejconfig", "setup.json"})
+    {
+        const fs::path file = directory.path() / name;
+        write_file(file, sample);
+        std::string seen;
+        int loads = 0;
+        bridge::ConfigImporter importer(
+            [&](const QString& path)
+            {
+                ++loads;
+                seen = read_file(fs::path(path.toStdU16String()));
+            });
+        QStringList failures;
+        QObject::connect(&importer, &bridge::ConfigImporter::failed, &importer,
+                         [&](const QStringList& m) { failures += m; });
+
+        importer.import_file(qt_path(file));
+        CHECK(loads == 1);
+        CHECK(seen == sample);
+        CHECK(importer.busy());
+        CHECK(fs::exists(file)); // until the settings model has read it
+
+        importer.load_finished();
+        CHECK_FALSE(fs::exists(file));
+        CHECK_FALSE(importer.busy());
+        CHECK(failures.isEmpty());
+    }
+}
+
+TEST_CASE(
+    "importer.errors: an oversize file is refused unread; a missing file and a directory are refused; all are gone",
+    "[integration][import]")
+{
+    AppFixture app;
+    TempDirectory directory;
+    int loads = 0;
+    bridge::ConfigImporter importer([&](const QString&) { ++loads; });
+    QStringList failures;
+    QObject::connect(&importer, &bridge::ConfigImporter::failed, &importer,
+                     [&](const QStringList& m) { failures += m; });
+
+    const fs::path big = directory.path() / "big.ejconfig";
+    write_file(big, std::string(bridge::CONFIG_MAX_BYTES + 1, ' '));
+    importer.import_file(qt_path(big));
+    CHECK(loads == 0);
+    CHECK(failures.size() == 1);
+    CHECK_FALSE(fs::exists(big));
+
+    importer.import_file(qt_path(directory.path() / "missing.ejconfig"));
+    importer.import_file(qt_path(directory.path()));
+    CHECK(loads == 0);
+    CHECK(failures.size() == 3);
+
+    // A file of exactly the limit is handed on.
+    const fs::path exact = directory.path() / "exact.ejconfig";
+    write_file(exact, std::string(bridge::CONFIG_MAX_BYTES, ' '));
+    importer.import_file(qt_path(exact));
+    CHECK(loads == 1);
+    importer.load_finished();
+    CHECK_FALSE(fs::exists(exact));
+}
+
+TEST_CASE("importer.errors: a file the settings refuse is deleted all the same, and the next one goes on",
+          "[integration][import]")
+{
+    AppFixture app;
+    TempDirectory directory;
+    std::vector<std::string> loaded;
+    bridge::ConfigImporter importer([&](const QString& path)
+                                    { loaded.push_back(read_file(fs::path(path.toStdU16String()))); });
+    int idles = 0;
+    QObject::connect(&importer, &bridge::ConfigImporter::idle, &importer, [&] { ++idles; });
+
+    const fs::path malformed = directory.path() / "malformed.ejconfig";
+    const fs::path future = directory.path() / "future.json";
+    write_file(malformed, "{ not json");
+    write_file(future, "{\"schema_version\": 2}");
+    importer.import_file(qt_path(malformed));
+    importer.import_file(qt_path(future)); // waits
+    REQUIRE(loaded.size() == 1);
+    CHECK(loaded[0] == "{ not json");
+
+    importer.load_finished(); // importFailed from the model
+    CHECK_FALSE(fs::exists(malformed));
+    REQUIRE(loaded.size() == 2);
+    importer.load_finished();
+    CHECK_FALSE(fs::exists(future));
+    CHECK(idles == 1);
+}
+
+TEST_CASE("importer.purge: stale files in the Inbox and the export folder go, and nothing else",
+          "[integration][import]")
+{
+    TempDirectory directory;
+    const fs::path documents = directory.path() / "Documents";
+    const fs::path temporary = directory.path() / "tmp";
+    fs::create_directories(documents / "Inbox");
+    fs::create_directories(documents / "Kept");
+    fs::create_directories(temporary / "ej-share");
+    write_file(documents / "Inbox" / "old.ejconfig", "{}");
+    write_file(documents / "Inbox" / "older.json", "{}");
+    write_file(temporary / "ej-share" / std::string(bridge::CONFIG_EXPORT_FILE_NAME), "{}");
+    write_file(documents / "Kept" / "keep.txt", "x");
+    write_file(documents / "top.txt", "x");
+
+    CHECK(bridge::purge_import_leftovers(qt_path(documents), qt_path(temporary)) == 3);
+    CHECK_FALSE(fs::exists(documents / "Inbox" / "old.ejconfig"));
+    CHECK(fs::exists(documents / "Kept" / "keep.txt"));
+    CHECK(fs::exists(documents / "top.txt"));
+    // Nothing there at all is not an error.
+    CHECK(bridge::purge_import_leftovers(qt_path(directory.path() / "none"), qt_path(directory.path() / "nada")) == 0);
+    CHECK(bridge::purge_import_leftovers(QString(), QString()) == 0);
+}
+
+TEST_CASE("importer.picker: PICKED is imported and deleted, CANCELLED is silent, FAILED gives one message",
+          "[integration][import]")
+{
+    AppFixture app;
+    TempDirectory directory;
+    std::vector<std::string> loaded;
+    bridge::ConfigImporter importer([&](const QString& path)
+                                    { loaded.push_back(read_file(fs::path(path.toStdU16String()))); });
+    QStringList failures;
+    QObject::connect(&importer, &bridge::ConfigImporter::failed, &importer,
+                     [&](const QStringList& m) { failures += m; });
+    FakePicker picker;
+
+    const fs::path file = directory.path() / "picked.ejconfig";
+    write_file(file, "{\"schema_version\": 1}");
+    picker.m_Result = {bridge::PickOutcome::PICKED, file};
+    importer.pick_and_import(picker);
+    REQUIRE(loaded.size() == 1);
+    importer.load_finished();
+    CHECK_FALSE(fs::exists(file));
+
+    picker.m_Result = {bridge::PickOutcome::CANCELLED, {}};
+    importer.pick_and_import(picker);
+    CHECK(failures.isEmpty());
+    CHECK(loaded.size() == 1);
+
+    picker.m_Result = {bridge::PickOutcome::FAILED, {}};
+    importer.pick_and_import(picker);
+    CHECK(failures.size() == 1);
+    picker.m_Result = {bridge::PickOutcome::UNAVAILABLE, {}};
+    importer.pick_and_import(picker);
+    CHECK(failures.size() == 2);
+    CHECK(picker.m_Calls == 4);
+}
+
+TEST_CASE("exporter: the setup is written to the export folder, shared, and a failed write leaves nothing",
+          "[integration][import]")
+{
+    AppFixture app;
+    TempDirectory directory;
+    const QString folder = qt_path(directory.path() / "ej-share");
+    QString written;
+    QString shared;
+    bridge::ConfigExporter exporter(
+        folder,
+        [&](const QString& path)
+        {
+            written = path;
+            write_file(fs::path(path.toStdU16String()), "{\"schema_version\": 1}");
+        },
+        [&](const QString& path) { shared = path; });
+    QStringList failures;
+    QObject::connect(&exporter, &bridge::ConfigExporter::failed, &exporter, [&](const QString& m) { failures += m; });
+
+    // A stale file from an earlier run is removed first.
+    fs::create_directories(directory.path() / "ej-share");
+    write_file(directory.path() / "ej-share" / std::string(bridge::CONFIG_EXPORT_FILE_NAME), "stale");
+
+    exporter.request();
+    CHECK(exporter.busy());
+    exporter.request(); // one at a time: ignored
+    CHECK(written.endsWith(QString::fromUtf8(bridge::CONFIG_EXPORT_FILE_NAME.data())));
+    exporter.export_finished(true, QString());
+    CHECK(shared == written);
+    CHECK_FALSE(exporter.busy());
+    CHECK(failures.isEmpty());
+    CHECK(read_file(fs::path(written.toStdU16String())) == "{\"schema_version\": 1}");
+
+    shared.clear();
+    exporter.request();
+    exporter.export_finished(false, QStringLiteral("The setup could not be saved."));
+    CHECK(shared.isEmpty());
+    REQUIRE(failures.size() == 1);
+    CHECK(failures[0] == "The setup could not be saved.");
+    CHECK_FALSE(fs::exists(fs::path(written.toStdU16String())));
 }

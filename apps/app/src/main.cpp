@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "error_journaling/config_importer.hpp"
 #include "error_journaling/launch_tracker.hpp"
+#include "error_journaling/open_file_filter.hpp"
 #include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/storage.hpp"
 #include "error_journaling/version.hpp"
@@ -10,6 +12,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
+#include <QStandardPaths>
 #include <utility>
 
 namespace
@@ -52,6 +55,14 @@ int main(int argc, char* argv[])
     // The marks the exit gate is measured by (NFR-04). The tracker reports the launch once, when the board is usable.
     ej::bridge::LaunchTracker launch(*services.m_PerfMarks);
     launch.process_started();
+    // A file the system opens in the application (AirDrop, Files) arrives as an event, possibly before anything can
+    // import it: the filter holds it until the importer says it is ready (Stage 5, 5.7 wires the importer to the
+    // settings). What an earlier import left behind is removed now.
+    ej::bridge::PerfMarks& marks = *services.m_PerfMarks;
+    ej::bridge::OpenFileFilter open_files([&marks](std::string_view line) { marks.log(line); });
+    QCoreApplication::instance()->installEventFilter(&open_files);
+    ej::bridge::purge_import_leftovers(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
+                                       QStandardPaths::writableLocation(QStandardPaths::TempLocation));
     ej::bridge::QmlBridge platform_bridge(std::move(services));
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(1); },

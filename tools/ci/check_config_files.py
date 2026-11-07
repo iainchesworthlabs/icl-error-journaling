@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Fail when a tracked file other than config/sample-config.json is named *-config.json.
+"""Fail when a tracked file other than config/sample-config.json is named *-config.json or *.ejconfig.
 
     python3 tools/ci/check_config_files.py [--root .]
 
@@ -16,11 +16,15 @@ import sys
 from pathlib import Path
 
 ALLOWED = "config/sample-config.json"
-PATTERN = "*-config.json"
+PATTERNS = ("*-config.json", "*.ejconfig")
 
 
 def offending(paths: list[str]) -> list[str]:
-    return [p for p in paths if fnmatch.fnmatch(p.rsplit("/", 1)[-1].lower(), PATTERN) and p != ALLOWED]
+    return [
+        p
+        for p in paths
+        if p != ALLOWED and any(fnmatch.fnmatch(p.rsplit("/", 1)[-1].lower(), pattern) for pattern in PATTERNS)
+    ]
 
 
 def tracked(root: Path) -> list[str]:
@@ -34,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     bad = offending(tracked(Path(args.root)))
     for path in bad:
-        print(f"error: {path}: only {ALLOWED} may be committed as a configuration file", file=sys.stderr)
+        print(f"error: {path}: only {ALLOWED} may be committed as a configuration file (a *.ejconfig is one too)", file=sys.stderr)
     return 1 if bad else 0
 
 

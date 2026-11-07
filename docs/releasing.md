@@ -63,6 +63,12 @@ kit's. The application is portrait only (`Info.plist.in`).
   application uses no encryption beyond the system's. Change it only if that stops being true. The check refuses usage
   text for a permission the application does not ask for. Safe areas are the application's: it reads `SafeArea.margins`
   (Qt 6.9 or later).
+- **The setup file type.** The property list exports one type of its own, `com.iainchesworthlabs.errorjournaling.config`
+  (extension `ejconfig`, conforming to `public.json`), names it in `CFBundleDocumentTypes` with the handler rank Owner,
+  and registers `public.json` as an alternate, so a setup file that was not renamed still offers the application.
+  `LSSupportsOpeningDocumentsInPlace` is `false` (the system copies the file into the sandbox, and the importer deletes
+  it), and `UIFileSharingEnabled` stays unset (it would list the Documents folder in Files). No permission, capability or
+  entitlement is involved. `tools/ci/check_ios_plist.py` and `verify_app.sh` check these.
 - **Signing names.** The signing needs, by name only: the organisation secrets `IOS_DIST_CERT_P12_BASE64`,
   `IOS_DIST_CERT_PASSWORD`, `APPSTORE_API_KEY_ID`, `APPSTORE_API_ISSUER_ID` and `APPSTORE_API_PRIVATE_KEY` (shared with
   the repository), the repository secret `IOS_PROVISIONING_PROFILE_BASE64`, and the repository variable `SIGN_IOS_UPLOAD`.
