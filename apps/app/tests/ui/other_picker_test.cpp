@@ -135,12 +135,12 @@ struct Fixture
     void open(std::chrono::milliseconds wait = 400ms)
     {
         QMetaObject::invokeMethod(m_Sheet, "open");
-        advance_frames(m_Rig, wait);
+        m_Rig.advance(wait);
     }
 
     void play(std::chrono::milliseconds wait = 400ms)
     {
-        advance_frames(m_Rig, wait);
+        m_Rig.advance(wait);
     }
 
     [[nodiscard]] bool is_open() const
@@ -179,9 +179,9 @@ struct Fixture
         return {};
     }
 
-    [[nodiscard]] QQuickItem* find(const QString& name) const
+    [[nodiscard]] QQuickItem* find(const QString& name)
     {
-        return find_item(m_Rig.root(), name);
+        return require_item(m_Rig, name);
     }
 
     /// The model's count for `label` today.
@@ -284,6 +284,14 @@ const Row* row_for(const std::vector<Row>& all, const QString& label)
     return nullptr;
 }
 
+/// The text of the value of the row for `label`; fails the test when there is no such row.
+QString value_of(const std::vector<Row>& all, const QString& label)
+{
+    const Row* row = row_for(all, label);
+    REQUIRE(row != nullptr);
+    return row->m_Value;
+}
+
 /// The colour of the swatch in `row`.
 QColor swatch_colour(const Row& row)
 {
@@ -308,7 +316,9 @@ QColor tile_colour(UiRig& rig, int slot)
 
 QColor theme_colour(UiRig& rig, const char* name)
 {
-    const QObject* colours = rig.theme()->property("colour").value<QObject*>();
+    const QObject* theme = rig.theme();
+    REQUIRE(theme != nullptr);
+    const QObject* colours = theme->property("colour").value<QObject*>();
     return colours != nullptr ? colours->property(name).value<QColor>() : QColor();
 }
 
@@ -336,15 +346,16 @@ TEST_CASE("other.sections: the types by section, the counts, the swatches and th
     CHECK(f.m_Rig.geometry(all.front().m_Item).top() < f.m_Rig.geometry(all.back().m_Item).top());
 
     // A count shows as "n today" and a type with none shows nothing.
-    CHECK(row_for(all, QStringLiteral("Wrong Response"))->m_Value == QStringLiteral("2 today"));
-    CHECK(row_for(all, QStringLiteral("Mute Delay"))->m_Value == QStringLiteral("1 today"));
-    CHECK(row_for(all, QStringLiteral("Track Delay"))->m_Value.isEmpty());
-    CHECK(row_for(all, QStringLiteral("Navigation Failure"))->m_Value.isEmpty());
+    CHECK(value_of(all, QStringLiteral("Wrong Response")) == QStringLiteral("2 today"));
+    CHECK(value_of(all, QStringLiteral("Mute Delay")) == QStringLiteral("1 today"));
+    CHECK(value_of(all, QStringLiteral("Track Delay")).isEmpty());
+    CHECK(value_of(all, QStringLiteral("Navigation Failure")).isEmpty());
 
     // The swatch is the colour of the tile on the board and neutral off it.
     CHECK(swatch_colour(*row_for(all, QStringLiteral("Navigation Failure"))) == theme_colour(f.m_Rig, "swatch"));
     CHECK(swatch_colour(*row_for(all, ECHO)) == theme_colour(f.m_Rig, "swatch"));
     const Row* wrong_response = row_for(all, QStringLiteral("Wrong Response"));
+    REQUIRE(wrong_response != nullptr);
     const Row* sequence = row_for(all, QStringLiteral("Sequence Out of Order"));
     REQUIRE(sequence != nullptr);
     CHECK(swatch_colour(*wrong_response) == tile_colour(f.m_Rig, 1));
@@ -360,9 +371,9 @@ TEST_CASE("other.sections: the types by section, the counts, the swatches and th
 
     // The counts follow a commit while the sheet is open.
     f.record(QStringLiteral("Navigation Failure"));
-    CHECK(row_for(rows(f), QStringLiteral("Navigation Failure"))->m_Value == QStringLiteral("1 today"));
+    CHECK(value_of(rows(f), QStringLiteral("Navigation Failure")) == QStringLiteral("1 today"));
     f.record(QStringLiteral("Mute Delay"));
-    CHECK(row_for(rows(f), QStringLiteral("Mute Delay"))->m_Value == QStringLiteral("2 today"));
+    CHECK(value_of(rows(f), QStringLiteral("Mute Delay")) == QStringLiteral("2 today"));
 }
 
 TEST_CASE("other.sections: a board with nothing off it shows no empty section", "[ui][other]")
@@ -428,7 +439,9 @@ TEST_CASE("other.filter: no match shows the message, and the clear button brings
     f.open();
     QQuickItem* input = f.find(QStringLiteral("searchInput"));
     REQUIRE(input != nullptr);
-    CHECK_FALSE(f.find(QStringLiteral("pickerEmpty"))->isVisible());
+    const QQuickItem* empty = f.find(QStringLiteral("pickerEmpty"));
+    REQUIRE(empty != nullptr);
+    CHECK_FALSE(empty->isVisible());
 
     input->forceActiveFocus();
     f.m_Rig.type(QStringLiteral("zzz"));
@@ -539,7 +552,9 @@ TEST_CASE("other.add: a valid name is added, nothing is recorded, and the type i
     f.m_Rig.tap(f.find(QStringLiteral("pickerAdd")));
     f.m_Rig.layout();
     CHECK(name->isVisible());
-    CHECK(f.find(QStringLiteral("formInput"))->property("activeFocus").toBool());
+    const QQuickItem* field = f.find(QStringLiteral("formInput"));
+    REQUIRE(field != nullptr);
+    CHECK(field->property("activeFocus").toBool());
 
     f.m_Rig.type(QStringLiteral("Wrong Greeting"));
     f.m_Rig.tap(f.find(QStringLiteral("pickerAddButton")));
@@ -598,7 +613,9 @@ TEST_CASE("other.add: a refused name stays in the field with the model's message
     {
         f.m_Editor.refuse_next(viewmodel::ConfigEditError{viewmodel::ConfigEditError::Code::REFUSED,
                                                           "There is already an error type with that name."});
-        f.find(QStringLiteral("formInput"))->forceActiveFocus();
+        QQuickItem* field = f.find(QStringLiteral("formInput"));
+        REQUIRE(field != nullptr);
+        field->forceActiveFocus();
         f.m_Rig.type(QStringLiteral("wrong response"));
         f.m_Rig.key(Qt::Key_Return);
         CHECK(name->property("errorText").toString() ==
@@ -618,7 +635,9 @@ TEST_CASE("other.add: a refused name stays in the field with the model's message
     {
         f.m_Editor.refuse_next(viewmodel::ConfigEditError{viewmodel::ConfigEditError::Code::REFUSED,
                                                           "An error type name can be 200 characters at most."});
-        f.find(QStringLiteral("formInput"))->forceActiveFocus();
+        QQuickItem* field = f.find(QStringLiteral("formInput"));
+        REQUIRE(field != nullptr);
+        field->forceActiveFocus();
         f.m_Rig.type(QStringLiteral("A very long name"));
         f.m_Rig.tap(f.find(QStringLiteral("pickerAddButton")));
         CHECK(name->property("errorText").toString() ==
@@ -666,7 +685,9 @@ TEST_CASE("other.voiceover: rows read \"label, n today\" and a screen reader's a
     }
     QQuickItem* panel = f.find(QStringLiteral("sheetPanel"));
     REQUIRE(panel != nullptr);
-    CHECK(QAccessible::queryAccessibleInterface(panel)->text(QAccessible::Name) == QStringLiteral("Log another error"));
+    const QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(panel);
+    REQUIRE(iface != nullptr);
+    CHECK(iface->text(QAccessible::Name) == QStringLiteral("Log another error"));
 }
 
 TEST_CASE("other.checks: names, targets, reading order and text scale, in light and dark", "[ui][other]")
@@ -699,7 +720,9 @@ TEST_CASE("other.checks: names, targets, reading order and text scale, in light 
 
     SECTION("with no match")
     {
-        f.find(QStringLiteral("searchInput"))->forceActiveFocus();
+        QQuickItem* search = f.find(QStringLiteral("searchInput"));
+        REQUIRE(search != nullptr);
+        search->forceActiveFocus();
         f.m_Rig.type(QStringLiteral("zzz"));
         expect_clean(check_everything(f.m_Rig));
     }
