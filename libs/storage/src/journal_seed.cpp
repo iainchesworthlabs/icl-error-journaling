@@ -4,6 +4,7 @@
 #include "platform/durable_sync.hpp"
 
 #include <system_error>
+#include <utility>
 
 namespace ej
 {
@@ -12,26 +13,28 @@ std::vector<JournalRecord> seed_records(const StoredLog& log)
 {
     std::vector<JournalRecord> records;
     std::uint64_t seq = 1;
-    const auto add = [&records, &log, &seq](JournalBody body)
+    // Each body is built in place in the record: a body built apart and moved in trips a false warning in GCC's variant
+    // code.
+    const auto add = [&records, &log, &seq]<typename Body>(std::in_place_type_t<Body>, auto&&... arguments)
     {
         JournalRecord record;
         record.m_Seq = seq++;
         record.m_Log = log.m_Meta.m_Id;
-        record.m_Body = std::move(body);
+        record.m_Body.template emplace<Body>(std::forward<decltype(arguments)>(arguments)...);
         records.push_back(std::move(record));
     };
-    add(CreateLogBody{log.m_Log.initial_header(), log.m_Meta.m_CreatedUtc, log.m_Meta.m_Previous});
+    add(std::in_place_type<CreateLogBody>, log.m_Log.initial_header(), log.m_Meta.m_CreatedUtc, log.m_Meta.m_Previous);
     for (const Entry& entry : log.m_Log.entries())
     {
-        add(AddEntryBody{entry});
+        add(std::in_place_type<AddEntryBody>, entry);
     }
     if (log.m_Meta.m_LastSharedUtc)
     {
-        add(MarkSharedBody{*log.m_Meta.m_LastSharedUtc});
+        add(std::in_place_type<MarkSharedBody>, *log.m_Meta.m_LastSharedUtc);
     }
     if (log.m_Meta.m_Archived)
     {
-        add(ArchiveBody{});
+        add(std::in_place_type<ArchiveBody>);
     }
     return records;
 }

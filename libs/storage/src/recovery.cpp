@@ -806,7 +806,10 @@ Result<void, StorageError> RecoveryRun::rebuild(const std::string& reason, bool 
     std::size_t open_count = 0;
     for (const LogPlan* plan : ordered)
     {
-        open_count += plan->m_Folded->m_Meta.m_Archived ? 0 : 1;
+        if (!plan->m_Folded->m_Meta.m_Archived)
+        {
+            ++open_count;
+        }
     }
     for (std::size_t i = 0; i < ordered.size() && open_count > 1; ++i)
     {
