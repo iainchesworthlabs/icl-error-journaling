@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Import – confirm – dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8FC6E6}a:hover{color:#8FC6E6}
+input::placeholder{color:#93A3B0}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #0E141A; font-family: Inter, -apple-system, system-ui, sans-serif; color: #EEF2F6">
+  <div style="position: absolute; left: 0; right: 0; top: 0; padding: 59px 16px 0; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: center; height: 44px">
+      <a href="ImportExport.dc.html" style="display: flex; align-items: center; gap: 2px; font-size: 17px; text-decoration: none; color: #8FC6E6; height: 44px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FC6E6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+        Cancel
+      </a>
+    </div>
+    <h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.4px">Import this setup?</h1>
+    <p style="margin: 0 0 12px; font-size: 15px; color: #A7B6C3">From error-journaling-setup.json</p>
+    <div style="background: #18212A; border-radius: 14px; overflow: hidden">
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-bottom: 1px solid #27333E; box-sizing: border-box; font-size: 16px; color: #EEF2F6"><span style="flex-grow: 1; padding: 6px 0; ">Error types</span><span style="color: #A7B6C3; margin-right: 8px; font-size: 16px">11</span></div>
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-bottom: 1px solid #27333E; box-sizing: border-box; font-size: 16px; color: #EEF2F6"><span style="flex-grow: 1; padding: 6px 0; ">Locations</span><span style="color: #A7B6C3; margin-right: 8px; font-size: 16px">2</span></div>
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-bottom: 1px solid #27333E; box-sizing: border-box; font-size: 16px; color: #EEF2F6"><span style="flex-grow: 1; padding: 6px 0; ">Note templates</span><span style="color: #A7B6C3; margin-right: 8px; font-size: 16px">2</span></div>
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; box-sizing: border-box; font-size: 16px; color: #EEF2F6"><span style="flex-grow: 1; padding: 6px 0; ">Preferences</span><span style="color: #A7B6C3; margin-right: 8px; font-size: 16px">Included</span></div>
+    </div>
+    <div role="status" style="display: flex; gap: 10px; align-items: flex-start; background: #2F2815; border: 1.5px solid #D2A23A; border-radius: 14px; padding: 12px 14px; box-sizing: border-box">
+      <span style="margin-top: 1px; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D2A23A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3L2 21h20L12 3z"></path><path d="M12 10v5M12 18h.01"></path></svg></span>
+      <div style="flex-grow: 1; min-width: 0; color: #EEF2F6">
+        <div style="font-size: 15px; font-weight: 600; line-height: 1.3">This replaces your current setup</div>
+        <div style="font-size: 14px; line-height: 1.4; margin-top: 2px">Your board, locations, templates and preferences are swapped for the ones in the file. Past logs aren’t touched.</div>
+        
+      </div>
+      
+    </div>
+  </div>
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 34px; display: flex; flex-direction: column; gap: 10px"><a href="Main.dc.html" style="height: 54px; border-radius: 14px; background: #2A6F96; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 600; text-decoration: none">Replace my setup</a><a href="ImportExport.dc.html" style="height: 54px; border-radius: 14px; background: transparent; color: #8FC6E6; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 600; text-decoration: none">Cancel</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

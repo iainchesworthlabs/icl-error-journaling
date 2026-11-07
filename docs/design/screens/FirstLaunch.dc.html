@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>First launch</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1E5B7A}a:hover{color:#1E5B7A}
+input::placeholder{color:#6B7A86}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #F2F4F7; font-family: Inter, -apple-system, system-ui, sans-serif; color: #14212B">
+  <div style="position: absolute; left: 0; right: 0; top: 0; padding: 59px 16px 0; display: flex; flex-direction: column; gap: 8px">
+    <div style="margin-top: 70px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding: 0 12px">
+      <div style="width: 84px; height: 84px; border-radius: 24px; background: #5B2A63; display: flex; align-items: center; justify-content: center"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg></div>
+      <h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.4px">Error Journaling</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.45; color: #5A6B78">Log what goes wrong during a session, as it happens, and share the log at the end of the day.</p>
+    </div>
+  </div>
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 34px; display: flex; flex-direction: column; gap: 10px">
+    <div style="font-size: 12px; font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">How do you want to start?</div>
+    <a href="ImportConfirm.dc.html" style="height: 54px; border-radius: 14px; background: #1E5B7A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 600; text-decoration: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"></path><path d="M14 3v5h5"></path></svg>Import a setup file</a>
+    <a href="FirstLaunchManual.dc.html" style="height: 54px; border-radius: 14px; background: #EAF1F5; color: #1E5B7A; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 600; text-decoration: none">Set up by hand</a>
+    <div style="text-align: center; font-size: 13px; line-height: 1.4; color: #5A6B78; padding: 4px 8px 0">A setup file holds your error types, locations and note templates. You can import one later in Settings.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

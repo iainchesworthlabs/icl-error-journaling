@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Edit an entry – dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8FC6E6}a:hover{color:#8FC6E6}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #05080B; font-family: Inter, -apple-system, system-ui, sans-serif; color: #EEF2F6">
+  <div style="position: absolute; left: 0; right: 0; top: 54px; bottom: 0; background: #141C24; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; padding: 0 16px">
+    <div style="display: flex; justify-content: center; padding-top: 8px">
+      <div style="width: 36px; height: 5px; border-radius: 3px; background: #34434F"></div>
+    </div>
+    <div style="display: flex; align-items: center; padding: 8px 0 16px">
+      <a href="Review.dc.html" style="font-size: 17px; text-decoration: none; color: #8FC6E6; min-width: 64px; height: 44px; display: flex; align-items: center">Cancel</a>
+      <h1 style="flex-grow: 1; margin: 0; text-align: center; font-size: 17px; font-weight: 600">Edit entry</h1>
+      <a href="Review.dc.html" style="font-size: 17px; font-weight: 600; text-decoration: none; color: #8FC6E6; min-width: 64px; height: 44px; display: flex; align-items: center; justify-content: flex-end">Save</a>
+    </div>
+
+    <div style="background: #212C37; border-radius: 14px; overflow: hidden">
+      <button style="width: 100%; min-height: 52px; border: 0; border-bottom: 1px solid #27333E; background: transparent; display: flex; align-items: center; gap: 10px; padding: 0 14px; font-family: inherit; color: #EEF2F6; text-align: left">
+        <span style="font-size: 16px; flex-grow: 1">Error</span>
+        <span style="width: 12px; height: 12px; border-radius: 3px; background: #63462C"></span>
+        <span style="font-size: 16px; color: #A7B6C3">Wrong Track Played</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#74869A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+      <div style="display: flex; align-items: center; height: 52px; padding: 0 14px">
+        <span style="font-size: 16px; flex-grow: 1">Time</span>
+        <button style="height: 34px; padding: 0 12px; border-radius: 8px; border: 0; background: #2B3844; font-family: inherit; font-size: 16px; font-weight: 500; color: #EEF2F6; font-variant-numeric: tabular-nums">11:02</button>
+      </div>
+    </div>
+
+    <div style="margin-top: 22px; font-size: 12px; font-weight: 600; color: #A7B6C3; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Note</div>
+    <label for="enote" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Note for this entry</label>
+    <textarea id="enote" style="margin-top: 8px; height: 104px; box-sizing: border-box; border-radius: 14px; border: 0; background: #212C37; padding: 12px 14px; font-family: inherit; font-size: 16px; line-height: 1.4; color: #EEF2F6; resize: none">asked for Evening Song</textarea>
+
+    <div style="margin-top: 22px; font-size: 12px; font-weight: 600; color: #A7B6C3; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">In the shared log</div>
+    <div style="margin-top: 8px; background: #212C37; border-radius: 14px; padding: 14px; font-size: 14px; line-height: 1.45; color: #EEF2F6">11:02 T| Wrong Track Played – asked for Evening Song</div>
+    <p style="margin: 10px 4px 0; font-size: 13px; color: #A7B6C3; line-height: 1.4">Logged at 11:02 on UNIT-27, version 1.4.2.</p>
+
+    <div style="position: absolute; left: 16px; right: 16px; bottom: 34px; display: flex; flex-direction: column; gap: 10px">
+      <button style="height: 52px; border-radius: 14px; border: 0; background: #212C37; color: #FF8F85; font-family: inherit; font-size: 17px; font-weight: 600">Delete entry</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error type – rename and retire</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1E5B7A}a:hover{color:#1E5B7A}
+input::placeholder{color:#6B7A86}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #3A4650; font-family: Inter, -apple-system, system-ui, sans-serif; color: #14212B">
+  <div style="position: absolute; left: 0; right: 0; top: 120px; bottom: 0px; background: #F2F4F7; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; padding: 0 16px; box-shadow: 0 -4px 24px rgba(0,0,0,0.25)">
+    <div style="display: flex; justify-content: center; padding-top: 8px">
+      <div style="width: 36px; height: 5px; border-radius: 3px; background: #C9D3DC"></div>
+    </div>
+    <div style="display: flex; align-items: center; padding: 8px 0 16px">
+      <a href="ErrorTypes.dc.html" style="font-size: 17px; text-decoration: none; color: #1E5B7A; min-width: 64px; height: 44px; display: flex; align-items: center">Cancel</a>
+      <h1 style="flex-grow: 1; margin: 0; text-align: center; font-size: 17px; font-weight: 600">Error type</h1>
+      <a href="ErrorTypes.dc.html" style="font-size: 17px; font-weight: 600; text-decoration: none; color: #5A6B78; min-width: 64px; height: 44px; display: flex; align-items: center; justify-content: flex-end" aria-disabled="true">Save</a>
+    </div>
+    <div style="font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px; margin-top: 0px">Name</div>
+    <div style="background: #FFFFFF; border: 2px solid #B42318; border-radius: 12px; box-sizing: border-box; min-height: 48px; display: flex; align-items: center; padding: 0 14px; font-size: 17px; color: #14212B">Mute Delay</div>
+    <div style="display: flex; gap: 6px; align-items: flex-start; font-size: 13px; line-height: 1.35; color: #14212B; padding: 0 4px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3L2 21h20L12 3z"></path><path d="M12 10v5M12 18h.01"></path></svg><span>There is already an error type called “Mute Delay”. Names must be different.</span></div>
+    <div style="margin-top: 20px; font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Colour</div>
+    <div style="background: #FFFFFF; border-radius: 14px; overflow: hidden">
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; box-sizing: border-box; font-size: 16px; color: #14212B"><span style="width: 18px; height: 18px; border-radius: 4px; background: #D9E2FB; border: 1px solid #C9D3DC; flex-shrink: 0"></span><span style="flex-grow: 1; padding: 6px 0; ">Periwinkle<span style="display:block; font-size: 13px; color: #5A6B78; margin-top: 2px">Stays with the type when the board is reordered</span></span></div>
+    </div>
+    <div style="margin-top: 28px"><a href="#" style="height: 54px; border-radius: 14px; background: #FFFFFF; color: #B42318; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 600; text-decoration: none">Retire this error type</a></div>
+    <p style="margin: 8px 4px 0; font-size: 13px; color: #5A6B78; line-height: 1.4">A retired type disappears from the board and from Other. It stays on entries already logged.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

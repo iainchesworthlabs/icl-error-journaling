@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New day prompt – dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8FC6E6}a:hover{color:#8FC6E6}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #05080B; font-family: Inter, -apple-system, system-ui, sans-serif; color: #EEF2F6">
+  <div aria-hidden="true" style="position: absolute; left: 16px; right: 16px; top: 59px; display: flex; flex-direction: column; gap: 12px; opacity: 0.35">
+    <div style="height: 64px; border-radius: 20px; background: #5B2A63"></div>
+    <div style="height: 110px; border-radius: 16px; background: #212C37"></div>
+    <div style="height: 44px; border-radius: 14px; background: #212C37"></div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <div style="height: 104px; border-radius: 16px; background: #2E486B"></div>
+      <div style="height: 104px; border-radius: 16px; background: #45396A"></div>
+      <div style="height: 104px; border-radius: 16px; background: #63462C"></div>
+      <div style="height: 104px; border-radius: 16px; background: #225359"></div>
+      <div style="height: 104px; border-radius: 16px; background: #62375E"></div>
+      <div style="height: 104px; border-radius: 16px; background: #5C4E1F"></div>
+    </div>
+  </div>
+
+  <div role="alertdialog" aria-labelledby="nd-title" style="position: absolute; left: 32px; right: 32px; top: 236px; background: #212C37; border-radius: 22px; padding: 24px 20px 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 20px 48px rgba(0,0,0,0.3)">
+    <div style="width: 48px; height: 48px; border-radius: 24px; background: #1B2F3D; display: flex; align-items: center; justify-content: center; align-self: center">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8FC6E6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+    </div>
+    <h1 id="nd-title" style="margin: 0; text-align: center; font-size: 20px; font-weight: 700">It’s Sunday 8 November</h1>
+    <p style="margin: 0; text-align: center; font-size: 15px; line-height: 1.45; color: #C7D3DD">Saturday’s log has 7 entries and hasn’t been shared yet. Starting a new log keeps it in History.</p>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px">
+      <a href="Header.dc.html" style="height: 50px; border-radius: 14px; background: #2A6F96; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; text-decoration: none">Start a new log</a>
+      <a href="Review.dc.html" style="height: 50px; border-radius: 14px; background: #1B2F3D; color: #8FC6E6; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; text-decoration: none">Share Saturday’s log first</a>
+      <a href="Main.dc.html" style="height: 46px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #8FC6E6; text-decoration: none">Keep Saturday’s log open</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
