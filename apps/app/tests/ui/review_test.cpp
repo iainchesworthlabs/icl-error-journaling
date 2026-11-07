@@ -230,7 +230,7 @@ TEST_CASE("review.share: Share log calls shareOpenLog once, is disabled while sh
 {
     SECTION("the button is absent when the platform has no share sheet")
     {
-        Screen s(Options{.share_available = false});
+        Screen s(Options::no_share_sheet());
         CHECK_FALSE(s.visible("reviewShare"));
     }
 
@@ -286,7 +286,7 @@ TEST_CASE("review.share: Share log calls shareOpenLog once, is disabled while sh
 
 TEST_CASE("review.empty: an empty log says so and disables Share and Copy-all", "[ui][review]")
 {
-    Screen s(Options{.entries = std::vector<Entry>{}});
+    Screen s(Options::empty_log());
     CHECK(row_lines(s.m_Rig).empty());
     CHECK(s.visible("reviewEmpty"));
     CHECK_FALSE(s.item("reviewCopyAll")->isEnabled());
@@ -305,7 +305,7 @@ TEST_CASE("review.empty: an empty log says so and disables Share and Copy-all", 
 TEST_CASE("review.past_log: any TimelineModel, with a back control, the date shared and Share log again",
           "[ui][review]")
 {
-    Screen s(Options{.past = true});
+    Screen s(Options::past_log());
     QSignalSpy back(s.m_Review, SIGNAL(backRequested()));
     QSignalSpy header(s.m_Review, SIGNAL(headerRequested()));
 
@@ -344,7 +344,7 @@ TEST_CASE("review.past_log: any TimelineModel, with a back control, the date sha
 
 TEST_CASE("review.past_log: without a share time nothing is said about one", "[ui][review]")
 {
-    Screen s(Options{.past = true});
+    Screen s(Options::past_log());
     s.m_Review->setProperty("sharedTimeText", QString());
     s.m_Rig.layout();
     CHECK_FALSE(s.visible("reviewShared"));

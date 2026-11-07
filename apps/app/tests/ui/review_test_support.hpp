@@ -469,6 +469,25 @@ struct Options
     HeaderValues header = test::sample_header();
     /// The clock format of the configuration; none given = the sample's (24-hour).
     std::optional<TimeFormat> time_format;
+
+    [[nodiscard]] static Options no_share_sheet()
+    {
+        Options options;
+        options.share_available = false;
+        return options;
+    }
+    [[nodiscard]] static Options empty_log()
+    {
+        Options options;
+        options.entries = std::vector<Entry>{};
+        return options;
+    }
+    [[nodiscard]] static Options past_log()
+    {
+        Options options;
+        options.past = true;
+        return options;
+    }
 };
 
 /// The real view models with a log in the open slot, and the Review screen over them. The rig is declared after the
