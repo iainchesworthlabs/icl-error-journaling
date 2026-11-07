@@ -1,0 +1,1 @@
+**Confidentiality guard.** CI fails when a confidential term appears in tracked files, commit messages or the pull request text, and when a real `*-config.json` is committed. The term list comes from the optional `CONFIDENTIAL_TERMS` secret; without it the term check warns and is skipped. `config/sample-config.json` holds fictional values only.

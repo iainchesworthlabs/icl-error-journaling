@@ -35,6 +35,39 @@ There is no Windows leg and no desktop package: Windows, Android and desktop pac
 branch with `gh workflow run ci.yml --ref <branch>`, and the iOS build with `gh workflow run ios-build.yml --ref <branch>`.
 Nothing in CI runs on a device or in the simulator: the bundle is built and inspected, not started.
 
+## Confidentiality check
+
+The **Confidentiality** job of `ci.yml` is part of CI Status. It runs the unit tests of the two checks in
+`tools/ci/`, then:
+
+- `check_config_files.py` fails when any tracked file other than `config/sample-config.json` is named `*-config.json`.
+- `check_confidential_terms.py` fails on a case-insensitive whole-word match of any term in the tracked files and their
+  names, the commit messages and author names of the pull request range (or merge group, or push), and the pull request
+  title and body. The title and body are passed through `env:`, never interpolated into the script. The script prints the
+  location (file and line, commit and line, title, body line) and never a term.
+
+The term list is the repository secret **`CONFIDENTIAL_TERMS`**: one term per line, blank lines ignored.
+
+The secret is optional. **Owner action, when wanted:** create it (Settings, Secrets and variables, Actions, New
+repository secret) named `CONFIDENTIAL_TERMS`, from a terms file kept outside the repository:
+`gh secret set CONFIDENTIAL_TERMS < terms.txt`. Add it as a Dependabot secret too if Dependabot pull requests should be
+checked before the merge queue. The list never goes in the repository.
+
+When the secret is missing or empty, the term check prints a warning annotation, does not run and passes, on every
+event. That also covers a pull request from a fork or from Dependabot, which cannot read the secret. The choice means the
+guard is off, without a failing check, until the secret exists; the warning on each run is the reminder. With terms
+present, any match fails the job.
+
+## Run the confidentiality checks locally
+
+```bash
+python3 -m unittest discover -s tools/tests
+python3 tools/ci/check_config_files.py
+CONFIDENTIAL_TERMS="$(cat ~/terms.txt)" python3 tools/ci/check_confidential_terms.py
+```
+
+The terms file stays outside the repository.
+
 ## Run the checks locally
 
 ```bash
