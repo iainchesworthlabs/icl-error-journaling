@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Software version changed – dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8FC6E6}a:hover{color:#8FC6E6}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #05080B; font-family: Inter, -apple-system, system-ui, sans-serif; color: #EEF2F6">
+  <div style="position: absolute; left: 0; right: 0; top: 54px; bottom: 0; background: #141C24; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; padding: 0 16px">
+    <div style="display: flex; justify-content: center; padding-top: 8px">
+      <div style="width: 36px; height: 5px; border-radius: 3px; background: #34434F"></div>
+    </div>
+    <div style="display: flex; align-items: center; padding: 8px 0 16px">
+      <a href="Main.dc.html" style="font-size: 17px; text-decoration: none; color: #8FC6E6; min-width: 64px; height: 44px; display: flex; align-items: center">Cancel</a>
+      <h1 style="flex-grow: 1; margin: 0; text-align: center; font-size: 17px; font-weight: 600">Software version</h1>
+      <div style="min-width: 64px"></div>
+    </div>
+
+    <div style="font-size: 15px; color: #A7B6C3; margin-bottom: 10px; padding: 0 4px">What happened?</div>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <button style="border: 2px solid #8FC6E6; background: #212C37; border-radius: 14px; padding: 14px; display: flex; gap: 12px; align-items: flex-start; text-align: left; font-family: inherit; color: #EEF2F6">
+        <span style="width: 22px; height: 22px; border-radius: 11px; background: #2A6F96; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+        </span>
+        <span style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 16px; font-weight: 600">It changed during the day</span>
+          <span style="font-size: 14px; color: #A7B6C3; line-height: 1.35">For example an over-the-air update. Adds a timed entry to the log.</span>
+        </span>
+      </button>
+      <button style="border: 1px solid #34434F; background: #212C37; border-radius: 14px; padding: 14px; display: flex; gap: 12px; align-items: flex-start; text-align: left; font-family: inherit; color: #EEF2F6">
+        <span style="width: 22px; height: 22px; border-radius: 11px; border: 2px solid #74869A; box-sizing: border-box; flex-shrink: 0; margin-top: 1px"></span>
+        <span style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 16px; font-weight: 600">I typed it wrong</span>
+          <span style="font-size: 14px; color: #A7B6C3; line-height: 1.35">Corrects the value. Nothing is added to the log.</span>
+        </span>
+      </button>
+    </div>
+
+    <div style="margin-top: 22px; background: #212C37; border-radius: 14px; overflow: hidden">
+      <div style="display: flex; align-items: center; height: 48px; padding: 0 14px; border-bottom: 1px solid #27333E">
+        <span style="font-size: 16px; flex-grow: 1">From</span>
+        <span style="font-size: 16px; color: #A7B6C3">1.4.2</span>
+      </div>
+      <div style="display: flex; align-items: center; height: 52px; padding: 0 14px; border-bottom: 1px solid #27333E; gap: 8px">
+        <label for="newver" style="font-size: 16px; flex-grow: 1">To</label>
+        <input id="newver" value="1.5.0" inputmode="decimal" style="width: 120px; text-align: right; border: 0; background: transparent; font-family: inherit; font-size: 18px; font-weight: 600; color: #EEF2F6">
+      </div>
+      <div style="display: flex; align-items: center; height: 48px; padding: 0 14px">
+        <span style="font-size: 16px; flex-grow: 1">Time</span>
+        <button style="height: 34px; padding: 0 12px; border-radius: 8px; border: 0; background: #2B3844; font-family: inherit; font-size: 16px; font-weight: 500; color: #EEF2F6">Now · 13:15</button>
+      </div>
+    </div>
+
+    <div style="margin-top: 22px; font-size: 12px; font-weight: 600; color: #A7B6C3; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Adds to your log</div>
+    <div style="margin-top: 8px; background: #212C37; border-radius: 14px; padding: 14px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: #EEF2F6">13:15 Software Version changed: 1.4.2 → 1.5.0</div>
+    <p style="margin: 10px 4px 0; font-size: 13px; color: #A7B6C3; line-height: 1.4">Entries before 13:15 keep 1.4.2. Entries after it use 1.5.0.</p>
+
+    <div style="position: absolute; left: 16px; right: 16px; bottom: 34px">
+      <a href="Main.dc.html" style="height: 54px; border-radius: 14px; background: #2A6F96; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; text-decoration: none">Log the change</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
