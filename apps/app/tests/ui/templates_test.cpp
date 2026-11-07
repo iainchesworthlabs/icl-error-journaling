@@ -45,6 +45,14 @@ TEST_CASE("editor.templates: the templates are listed with their question and pa
 
     world.m_Ui.tap(label_of(first));
     settle_page(world);
+    // The pushed page has finished its transition: it and everything above it in the tree are shown at full opacity.
+    for (QQuickItem* up = item(world, QStringLiteral("nameField"));
+         up != nullptr && up != world.m_Ui.root()->parentItem(); up = up->parentItem())
+    {
+        INFO(up->metaObject()->className());
+        CHECK(up->opacity() == 1.0);
+        CHECK(up->isVisible());
+    }
     CHECK(field_text(world, QStringLiteral("nameField")) == QStringLiteral("Played song"));
     CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played {value}"));
 
