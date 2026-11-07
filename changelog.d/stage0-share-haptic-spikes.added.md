@@ -1,0 +1,1 @@
+**Share sheet and haptic spikes.** The empty app has a placeholder tile that fires a haptic on touch-down, a success haptic and a share button, behind `ej_ios_bridge` (a desktop stub does nothing). They have not run on a device yet; see `docs/plan/spikes.md`.

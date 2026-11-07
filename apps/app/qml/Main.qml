@@ -9,6 +9,8 @@ Window {
     // Given by main.cpp: the version of the core library, and which bridge and storage are linked.
     required property string versionText
     required property string platformText
+    // The bridge to what Qt does not cover on an iPhone (the share sheet, haptics); see docs/plan/spikes.md.
+    required property QtObject bridge
 
     width: 390
     height: 844
