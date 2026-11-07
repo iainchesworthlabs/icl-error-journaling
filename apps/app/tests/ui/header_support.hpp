@@ -129,6 +129,15 @@ private:
     viewmodel::TimelineModel m_Timeline{m_Env, m_Settings, m_Clipboard};
 };
 
+/// The first item under `from` (the root by default) with this objectName; the test stops here when there is none, so a
+/// pointer from `need` can be used without a check.
+[[nodiscard]] inline QQuickItem* need(UiRig& rig, const QString& name, QQuickItem* from = nullptr)
+{
+    QQuickItem* item = rig.find(name, from);
+    REQUIRE(item != nullptr);
+    return item;
+}
+
 /// The first item under the rig's root with this accessible name (or text, for a `Text`), or null.
 [[nodiscard]] inline QQuickItem* find_named(UiRig& rig, const QString& name, QQuickItem* from = nullptr)
 {
@@ -145,7 +154,10 @@ private:
 /// The text field inside a `FormField`.
 [[nodiscard]] inline QQuickItem* input_of(UiRig& rig, QQuickItem* form_field)
 {
-    return rig.find(QStringLiteral("formInput"), form_field);
+    REQUIRE(form_field != nullptr);
+    QQuickItem* input = rig.find(QStringLiteral("formInput"), form_field);
+    REQUIRE(input != nullptr);
+    return input;
 }
 
 /// Taps a field, types `text` after clearing it and presses Return, as a person would.

@@ -36,13 +36,13 @@ QQuickItem* open_sheet(UiRig& rig, HeaderWorld& world)
 
 QString preview_of(UiRig& rig)
 {
-    QQuickItem* line = rig.find(QStringLiteral("versionPreview"));
+    QQuickItem* line = need(rig, QStringLiteral("versionPreview"));
     return line != nullptr ? line->property("text").toString() : QString();
 }
 
 bool save_enabled(UiRig& rig)
 {
-    return rig.find(QStringLiteral("versionSave"))->isEnabled();
+    return need(rig, QStringLiteral("versionSave"))->isEnabled();
 }
 
 int selected_cards(UiRig& rig)
@@ -50,7 +50,7 @@ int selected_cards(UiRig& rig)
     int count = 0;
     for (const char* name : {"versionChanged", "versionTypo"})
     {
-        count += rig.find(QString::fromLatin1(name))->property("selected").toBool() ? 1 : 0;
+        count += need(rig, QString::fromLatin1(name))->property("selected").toBool() ? 1 : 0;
     }
     return count;
 }
@@ -62,8 +62,8 @@ TEST_CASE("version.choices: two plain choices, exactly one selected, in the faci
     HeaderWorld world(true);
     UiRig rig;
     open_sheet(rig, world);
-    QQuickItem* changed = rig.find(QStringLiteral("versionChanged"));
-    QQuickItem* typo = rig.find(QStringLiteral("versionTypo"));
+    QQuickItem* changed = need(rig, QStringLiteral("versionChanged"));
+    QQuickItem* typo = need(rig, QStringLiteral("versionTypo"));
     REQUIRE(changed != nullptr);
     REQUIRE(typo != nullptr);
 
@@ -75,20 +75,20 @@ TEST_CASE("version.choices: two plain choices, exactly one selected, in the faci
           QStringLiteral("Corrects the value. Nothing is added to the log."));
     CHECK(selected_cards(rig) == 1);
     CHECK(changed->property("selected").toBool());
-    CHECK(rig.find(QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("1.4.2"));
+    CHECK(need(rig, QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("1.4.2"));
 
     rig.tap(typo);
     CHECK(selected_cards(rig) == 1);
     CHECK(typo->property("selected").toBool());
     // A Correct has no time.
-    CHECK_FALSE(rig.find(QStringLiteral("versionTime"))->isVisible());
-    CHECK(rig.find(QStringLiteral("versionSave"))->property("text").toString() ==
+    CHECK_FALSE(need(rig, QStringLiteral("versionTime"))->isVisible());
+    CHECK(need(rig, QStringLiteral("versionSave"))->property("text").toString() ==
           QStringLiteral("Correct the version"));
 
     rig.tap(changed);
     CHECK(selected_cards(rig) == 1);
-    CHECK(rig.find(QStringLiteral("versionTime"))->isVisible());
-    CHECK(rig.find(QStringLiteral("versionSave"))->property("text").toString() == QStringLiteral("Log the change"));
+    CHECK(need(rig, QStringLiteral("versionTime"))->isVisible());
+    CHECK(need(rig, QStringLiteral("versionSave"))->property("text").toString() == QStringLiteral("Log the change"));
 }
 
 TEST_CASE("version.change: \"It changed during the day\" records one entry at the time chosen", "[ui][version_sheet]")
@@ -99,9 +99,9 @@ TEST_CASE("version.change: \"It changed during the day\" records one entry at th
     REQUIRE(world.timeline().entry_count() == 0);
     CHECK_FALSE(save_enabled(rig));
 
-    retype(rig, rig.find(QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
     REQUIRE(save_enabled(rig));
-    rig.tap(rig.find(QStringLiteral("versionSave")));
+    rig.tap(need(rig, QStringLiteral("versionSave")));
     rig.settle();
     play(rig, 500);
 
@@ -119,13 +119,13 @@ TEST_CASE("version.change: the time is the one the tumbler gives, and it may be 
     HeaderWorld world(true);
     UiRig rig;
     QQuickItem* sheet = open_sheet(rig, world);
-    retype(rig, rig.find(QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
 
-    rig.tap(rig.find(QStringLiteral("versionTime")));
-    QQuickItem* tumbler = rig.find(QStringLiteral("versionTumbler"));
+    rig.tap(need(rig, QStringLiteral("versionTime")));
+    QQuickItem* tumbler = need(rig, QStringLiteral("versionTumbler"));
     REQUIRE(tumbler != nullptr);
     CHECK(tumbler->isVisible());
-    QQuickItem* hours = rig.find(QStringLiteral("Hours"), tumbler);
+    QQuickItem* hours = need(rig, QStringLiteral("Hours"), tumbler);
     REQUIRE(hours != nullptr);
     // 08:55 is now; the change happened at 07:55.
     REQUIRE(sheet->property("timeSeconds").toInt() / 3600 == 8);
@@ -133,11 +133,11 @@ TEST_CASE("version.change: the time is the one the tumbler gives, and it may be 
     play(rig, 64);
     CHECK(sheet->property("timeSeconds").toInt() / 3600 == 7);
     CHECK_FALSE(
-        rig.find(QStringLiteral("versionTime"))->property("value").toString().startsWith(QStringLiteral("Now")));
+        need(rig, QStringLiteral("versionTime"))->property("value").toString().startsWith(QStringLiteral("Now")));
 
     const QString shown = preview_of(rig);
     CHECK(shown.contains(QStringLiteral("07:55")));
-    rig.tap(rig.find(QStringLiteral("versionSave")));
+    rig.tap(need(rig, QStringLiteral("versionSave")));
     rig.settle();
     REQUIRE(world.timeline().entry_count() == 1);
     CHECK(world.timeline().last_line() == shown);
@@ -148,13 +148,13 @@ TEST_CASE("version.correct: \"I typed it wrong\" corrects the value and adds no 
     HeaderWorld world(true);
     UiRig rig;
     QQuickItem* sheet = open_sheet(rig, world);
-    rig.tap(rig.find(QStringLiteral("versionTypo")));
+    rig.tap(need(rig, QStringLiteral("versionTypo")));
 
-    retype(rig, rig.find(QStringLiteral("versionTo")), QStringLiteral("1.4.3"));
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.4.3"));
     REQUIRE(save_enabled(rig));
     // A Correct shows no log line.
     CHECK(preview_of(rig).isEmpty());
-    rig.tap(rig.find(QStringLiteral("versionSave")));
+    rig.tap(need(rig, QStringLiteral("versionSave")));
     rig.settle();
     play(rig, 500);
 
@@ -170,7 +170,7 @@ TEST_CASE("version.preview: the exact line, byte for byte, updating as the field
     HeaderWorld world(true);
     UiRig rig;
     QQuickItem* sheet = open_sheet(rig, world);
-    QQuickItem* to = rig.find(QStringLiteral("versionTo"));
+    QQuickItem* to = need(rig, QStringLiteral("versionTo"));
     const int now = world.session().now_local_seconds();
     const QString key = QStringLiteral("software_version");
 
@@ -192,7 +192,7 @@ TEST_CASE("version.preview: the exact line, byte for byte, updating as the field
     CHECK(shown.contains(QStringLiteral("07:00")));
 
     // What is saved is the line that was shown.
-    rig.tap(rig.find(QStringLiteral("versionSave")));
+    rig.tap(need(rig, QStringLiteral("versionSave")));
     rig.settle();
     REQUIRE(world.timeline().entry_count() == 1);
     CHECK(world.timeline().last_line() == shown);
@@ -204,13 +204,13 @@ TEST_CASE("version.preview: an unchanged value shows the refusal and cannot be s
     UiRig rig;
     open_sheet(rig, world);
 
-    retype(rig, rig.find(QStringLiteral("versionTo")), QStringLiteral("1.4.2"));
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.4.2"));
     CHECK(preview_of(rig) == world.session().previewHeaderChange(QStringLiteral("software_version"),
                                                                  QStringLiteral("1.4.2"),
                                                                  world.session().now_local_seconds()));
     CHECK(preview_of(rig) == QStringLiteral("That is already the current value."));
     CHECK_FALSE(save_enabled(rig));
-    rig.tap(rig.find(QStringLiteral("versionSave")));
+    rig.tap(need(rig, QStringLiteral("versionSave")));
     rig.settle();
     CHECK(world.timeline().entry_count() == 0);
 }
@@ -221,7 +221,7 @@ TEST_CASE("version.validation: a refused version is flagged inline and Save stay
     HeaderWorld world(true);
     UiRig rig;
     open_sheet(rig, world);
-    QQuickItem* to = rig.find(QStringLiteral("versionTo"));
+    QQuickItem* to = need(rig, QStringLiteral("versionTo"));
 
     for (const char* refused : {"1.4", "1.4.2-beta"})
     {
@@ -232,7 +232,7 @@ TEST_CASE("version.validation: a refused version is flagged inline and Save stay
         CHECK(to->property("errorText").toString() == message);
         CHECK_FALSE(save_enabled(rig));
         CHECK(preview_of(rig).isEmpty());
-        rig.tap(rig.find(QStringLiteral("versionSave")));
+        rig.tap(need(rig, QStringLiteral("versionSave")));
         CHECK(world.timeline().entry_count() == 0);
     }
     retype(rig, to, QStringLiteral("1.5.0"));
@@ -249,18 +249,18 @@ TEST_CASE("version.time_default: the time starts at now", "[ui][version_sheet]")
     const int now = world.session().now_local_seconds();
     CHECK(sheet->property("timeSeconds").toInt() == now);
     const QString clock = world.timeline().formatLocalSeconds(now);
-    CHECK(rig.find(QStringLiteral("versionTime"))->property("value").toString() ==
+    CHECK(need(rig, QStringLiteral("versionTime"))->property("value").toString() ==
           QStringLiteral("Now · %1").arg(clock));
 
     // The tumbler opens on that time.
-    rig.tap(rig.find(QStringLiteral("versionTime")));
-    QQuickItem* tumbler = rig.find(QStringLiteral("versionTumbler"));
+    rig.tap(need(rig, QStringLiteral("versionTime")));
+    QQuickItem* tumbler = need(rig, QStringLiteral("versionTumbler"));
     REQUIRE(tumbler != nullptr);
     CHECK(tumbler->isVisible());
     CHECK(tumbler->property("localSeconds").toInt() == now);
 
     // Opening the sheet again reads the clock again.
-    rig.tap(rig.find(QStringLiteral("navLeading")));
+    rig.tap(need(rig, QStringLiteral("navLeading")));
     play(rig, 500);
     CHECK_FALSE(sheet->property("isOpen").toBool());
     world.clock().advance(std::chrono::minutes(10));
@@ -275,9 +275,9 @@ TEST_CASE("version.cancel: Cancel leaves the log as it was", "[ui][version_sheet
     HeaderWorld world(true);
     UiRig rig;
     QQuickItem* sheet = open_sheet(rig, world);
-    retype(rig, rig.find(QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
 
-    rig.tap(rig.find(QStringLiteral("navLeading")));
+    rig.tap(need(rig, QStringLiteral("navLeading")));
     play(rig, 500);
     CHECK_FALSE(sheet->property("isOpen").toBool());
     CHECK(world.session().version_text() == QStringLiteral("1.4.2"));
@@ -294,15 +294,15 @@ TEST_CASE("version.a11y: names, targets, order and text scale, in light and dark
 
     SECTION("light, with a preview")
     {
-        retype(rig, rig.find(QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+        retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
         expect_clean(check_everything(rig));
     }
 
     SECTION("dark, with the time picker open")
     {
         rig.set_dark(true);
-        retype(rig, rig.find(QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
-        rig.tap(rig.find(QStringLiteral("versionTime")));
+        retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+        rig.tap(need(rig, QStringLiteral("versionTime")));
         rig.settle();
         rig.layout();
         expect_clean(check_everything(rig));
@@ -310,7 +310,7 @@ TEST_CASE("version.a11y: names, targets, order and text scale, in light and dark
 
     SECTION("a Correct")
     {
-        rig.tap(rig.find(QStringLiteral("versionTypo")));
+        rig.tap(need(rig, QStringLiteral("versionTypo")));
         expect_clean(check_everything(rig));
     }
 

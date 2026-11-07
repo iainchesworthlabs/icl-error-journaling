@@ -34,6 +34,7 @@ QQuickItem* location_row(UiRig& rig, const QString& name)
             return node.m_Item;
         }
     }
+    FAIL("no location row named " << name.toStdString());
     return nullptr;
 }
 
@@ -52,7 +53,7 @@ QQuickItem* text_item(UiRig& rig, const QString& text)
 
 QString input_text(UiRig& rig, const char* field)
 {
-    QQuickItem* input = input_of(rig, rig.find(QString::fromLatin1(field)));
+    QQuickItem* input = input_of(rig, need(rig, QString::fromLatin1(field)));
     return input != nullptr ? input->property("text").toString() : QString();
 }
 
@@ -75,8 +76,8 @@ TEST_CASE("details.fields: the values come from the session; the facilitator and
     UiRig rig(TALL_WINDOW);
     load_screen(rig, world);
 
-    QQuickItem* facilitator = rig.find(QStringLiteral("headerFacilitator"));
-    QQuickItem* date = rig.find(QStringLiteral("headerDate"));
+    QQuickItem* facilitator = need(rig, QStringLiteral("headerFacilitator"));
+    QQuickItem* date = need(rig, QStringLiteral("headerDate"));
     REQUIRE(facilitator != nullptr);
     REQUIRE(date != nullptr);
     CHECK(facilitator->property("value").toString() == QStringLiteral("Sam Example"));
@@ -105,7 +106,7 @@ TEST_CASE("details.fields: the values come from the session; the facilitator and
     CHECK(input_text(rig, "headerVersion") == QStringLiteral("1.4.2"));
     CHECK(location_row(rig, QStringLiteral("North Site"))->property("checked").toBool());
     CHECK_FALSE(location_row(rig, QStringLiteral("South Site"))->property("checked").toBool());
-    CHECK_FALSE(rig.find(QStringLiteral("headerOtherText"))->isVisible());
+    CHECK_FALSE(need(rig, QStringLiteral("headerOtherText"))->isVisible());
 }
 
 TEST_CASE("details.unit_keypad: the number pad, the prefix that is shown and not typed, and a refused value",
@@ -114,7 +115,7 @@ TEST_CASE("details.unit_keypad: the number pad, the prefix that is shown and not
     HeaderWorld world;
     UiRig rig(TALL_WINDOW);
     load_screen(rig, world);
-    QQuickItem* unit = rig.find(QStringLiteral("headerUnit"));
+    QQuickItem* unit = need(rig, QStringLiteral("headerUnit"));
     REQUIRE(unit != nullptr);
     QQuickItem* input = input_of(rig, unit);
     REQUIRE(input != nullptr);
@@ -173,18 +174,18 @@ TEST_CASE("details.location: a configured location, and Other with a text", "[ui
         CHECK(world.session().location_text() == QStringLiteral("South Site"));
         CHECK(location_row(rig, QStringLiteral("South Site"))->property("checked").toBool());
         CHECK_FALSE(location_row(rig, QStringLiteral("North Site"))->property("checked").toBool());
-        CHECK_FALSE(rig.find(QStringLiteral("headerOtherText"))->isVisible());
+        CHECK_FALSE(need(rig, QStringLiteral("headerOtherText"))->isVisible());
         CHECK(world.timeline().entry_count() == 0);
     }
 
     SECTION("Other shows a text field and sends what is typed")
     {
-        rig.tap(rig.find(QStringLiteral("headerOther")));
+        rig.tap(need(rig, QStringLiteral("headerOther")));
         rig.settle();
-        QQuickItem* other = rig.find(QStringLiteral("headerOtherText"));
+        QQuickItem* other = need(rig, QStringLiteral("headerOtherText"));
         REQUIRE(other != nullptr);
         CHECK(other->isVisible());
-        CHECK(rig.find(QStringLiteral("headerOther"))->property("checked").toBool());
+        CHECK(need(rig, QStringLiteral("headerOther"))->property("checked").toBool());
         CHECK_FALSE(location_row(rig, QStringLiteral("North Site"))->property("checked").toBool());
 
         retype(rig, other, QStringLiteral("West Yard"));
@@ -194,15 +195,15 @@ TEST_CASE("details.location: a configured location, and Other with a text", "[ui
 
     SECTION("a location that is not configured opens as Other with its text")
     {
-        rig.tap(rig.find(QStringLiteral("headerOther")));
+        rig.tap(need(rig, QStringLiteral("headerOther")));
         rig.settle();
-        retype(rig, rig.find(QStringLiteral("headerOtherText")), QStringLiteral("West Yard"));
+        retype(rig, need(rig, QStringLiteral("headerOtherText")), QStringLiteral("West Yard"));
 
         UiRig second(TALL_WINDOW);
         world.attach(second);
         REQUIRE(second.load(QStringLiteral("HeaderScreen"), world.models()) != nullptr);
         second.settle();
-        CHECK(second.find(QStringLiteral("headerOther"))->property("checked").toBool());
+        CHECK(need(second, QStringLiteral("headerOther"))->property("checked").toBool());
         CHECK(input_text(second, "headerOtherText") == QStringLiteral("West Yard"));
     }
 }
@@ -213,7 +214,7 @@ TEST_CASE("details.version_validation: a refused version shows the message inlin
     HeaderWorld world;
     UiRig rig(TALL_WINDOW);
     load_screen(rig, world);
-    QQuickItem* version = rig.find(QStringLiteral("headerVersion"));
+    QQuickItem* version = need(rig, QStringLiteral("headerVersion"));
     REQUIRE(version != nullptr);
     const auto before = world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER);
 
@@ -243,8 +244,8 @@ TEST_CASE("details.correct_first_fill: filling an empty field is a Correct and a
     REQUIRE(world.timeline().entry_count() == 0);
     REQUIRE(world.session().missing_fields().size() == 3);
 
-    retype(rig, rig.find(QStringLiteral("headerUnit")), QStringLiteral("27"));
-    retype(rig, rig.find(QStringLiteral("headerVersion")), QStringLiteral("1.4.2"));
+    retype(rig, need(rig, QStringLiteral("headerUnit")), QStringLiteral("27"));
+    retype(rig, need(rig, QStringLiteral("headerVersion")), QStringLiteral("1.4.2"));
     rig.tap(location_row(rig, QStringLiteral("North Site")));
     rig.settle();
 
@@ -263,8 +264,8 @@ TEST_CASE("details.commit: a field is saved when the person is done with it, not
     HeaderWorld world;
     UiRig rig(TALL_WINDOW);
     QQuickItem* screen = load_screen(rig, world);
-    QQuickItem* unit = rig.find(QStringLiteral("headerUnit"));
-    QQuickItem* version = rig.find(QStringLiteral("headerVersion"));
+    QQuickItem* unit = need(rig, QStringLiteral("headerUnit"));
+    QQuickItem* version = need(rig, QStringLiteral("headerVersion"));
     const auto writes = [&world] { return world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER); };
 
     SECTION("typing writes nothing; leaving the field does")
@@ -300,7 +301,7 @@ TEST_CASE("details.commit: a field is saved when the person is done with it, not
         rig.tap(input_of(rig, version));
         rig.type(QStringLiteral("1.4"));
         QSignalSpy closed(screen, SIGNAL(closeRequested()));
-        rig.tap(rig.find(QStringLiteral("headerStart")));
+        rig.tap(need(rig, QStringLiteral("headerStart")));
         rig.settle();
         CHECK(closed.count() == 1);
         CHECK(world.session().unit_text() == QStringLiteral("UNIT-27"));
@@ -312,7 +313,7 @@ TEST_CASE("details.commit: a field is saved when the person is done with it, not
     {
         rig.tap(input_of(rig, unit));
         rig.type(QStringLiteral("31"));
-        rig.tap(rig.find(QStringLiteral("navLeading")));
+        rig.tap(need(rig, QStringLiteral("navLeading")));
         rig.settle();
         CHECK(world.session().unit_text() == QStringLiteral("UNIT-31"));
     }
@@ -325,9 +326,9 @@ TEST_CASE("details.start_logging: leaving the screen needs no field", "[ui][head
     QQuickItem* screen = load_screen(rig, world);
     QSignalSpy closed(screen, SIGNAL(closeRequested()));
 
-    rig.tap(rig.find(QStringLiteral("headerStart")));
+    rig.tap(need(rig, QStringLiteral("headerStart")));
     CHECK(closed.count() == 1);
-    rig.tap(rig.find(QStringLiteral("navLeading")));
+    rig.tap(need(rig, QStringLiteral("navLeading")));
     CHECK(closed.count() == 2);
     // Errors can be logged before every field is filled.
     CHECK(world.session().recordError(QStringLiteral("00000000-0000-4000-8000-0000000000a1")));
@@ -340,9 +341,9 @@ TEST_CASE("details.new_log_row: starting a new log asks first and then archives 
     UiRig rig(TALL_WINDOW);
     load_screen(rig, world);
     REQUIRE(world.session().live_entry_count() == 2);
-    QQuickItem* alert = rig.find(QStringLiteral("newLogAlert"));
+    QQuickItem* alert = need(rig, QStringLiteral("newLogAlert"));
     REQUIRE(alert != nullptr);
-    QQuickItem* row = rig.find(QStringLiteral("headerNewLogRow"));
+    QQuickItem* row = need(rig, QStringLiteral("headerNewLogRow"));
     REQUIRE(row != nullptr);
     CHECK(row->property("text").toString() == QStringLiteral("Start a new log for another unit or site"));
     CHECK_FALSE(alert->property("isOpen").toBool());
@@ -357,7 +358,7 @@ TEST_CASE("details.new_log_row: starting a new log asks first and then archives 
         CHECK(alert->property("message").toString() ==
               QStringLiteral("UNIT-27 at North Site has 2 entries. It stays in History. The new log starts empty, with "
                              "Sam Example as facilitator."));
-        rig.tap(rig.find(QStringLiteral("alertCancel"), alert));
+        rig.tap(need(rig, QStringLiteral("alertCancel"), alert));
         play(rig, 400);
         rig.settle();
         CHECK_FALSE(alert->property("isOpen").toBool());
@@ -370,7 +371,7 @@ TEST_CASE("details.new_log_row: starting a new log asks first and then archives 
     {
         rig.tap(row);
         play(rig, 400);
-        rig.tap(rig.find(QStringLiteral("alertConfirm"), alert));
+        rig.tap(need(rig, QStringLiteral("alertConfirm"), alert));
         play(rig, 400);
         rig.advance(100ms);
         rig.settle();
@@ -393,9 +394,9 @@ TEST_CASE("details.keyboard: the foot bar steps aside and the field being typed 
     HeaderWorld world;
     UiRig rig;
     QQuickItem* screen = load_screen(rig, world);
-    QQuickItem* scroller = rig.find(QStringLiteral("headerScroller"));
-    QQuickItem* version = rig.find(QStringLiteral("headerVersion"));
-    QQuickItem* start = rig.find(QStringLiteral("headerStart"));
+    QQuickItem* scroller = need(rig, QStringLiteral("headerScroller"));
+    QQuickItem* version = need(rig, QStringLiteral("headerVersion"));
+    QQuickItem* start = need(rig, QStringLiteral("headerStart"));
     REQUIRE(scroller != nullptr);
     REQUIRE(version != nullptr);
     REQUIRE(start != nullptr);
@@ -424,7 +425,7 @@ TEST_CASE("details.a11y: on the phone's window the names, targets and large text
     HeaderWorld world(true);
     UiRig rig;
     load_screen(rig, world);
-    QQuickItem* scroller = rig.find(QStringLiteral("headerScroller"));
+    QQuickItem* scroller = need(rig, QStringLiteral("headerScroller"));
     REQUIRE(scroller != nullptr);
 
     expect_clean(check_names(rig));
@@ -432,13 +433,13 @@ TEST_CASE("details.a11y: on the phone's window the names, targets and large text
     expect_clean(check_text_scale(rig));
     // The content is longer than the window, so it scrolls; the foot bar stays.
     CHECK(scroller->property("contentHeight").toDouble() > scroller->height());
-    CHECK(rig.find(QStringLiteral("headerStart"))->isVisible());
+    CHECK(need(rig, QStringLiteral("headerStart"))->isVisible());
 
     rig.set_text_scale(3.1);
     rig.layout();
     expect_clean(check_text_scale(rig));
     const QRectF area = rig.geometry(scroller);
-    const QRectF start = rig.geometry(rig.find(QStringLiteral("headerStart")));
+    const QRectF start = rig.geometry(need(rig, QStringLiteral("headerStart")));
     CHECK(area.height() > 0);
     CHECK(start.top() >= area.bottom() - 0.5);
     CHECK(start.bottom() <= rig.window().height() + 0.5);
@@ -467,7 +468,7 @@ TEST_CASE("details.a11y: names, targets, order and text scale, in light and dark
 
     SECTION("with the Other field open")
     {
-        rig.tap(rig.find(QStringLiteral("headerOther")));
+        rig.tap(need(rig, QStringLiteral("headerOther")));
         rig.settle();
         rig.layout();
         expect_clean(check_everything(rig));
