@@ -74,6 +74,7 @@ namespace
 constexpr int WRONG_RESPONSE_ROW = 0;
 constexpr int MUTE_DELAY_ROW = 7;
 constexpr int OTHER_ROW = 11;
+constexpr int COVERED_BY_TOAST_FROM = 9;
 constexpr int ROWS = 12;
 
 const QString PLAYED_SONG = QStringLiteral("00000000-0000-4000-8000-0000000000c1");
@@ -205,7 +206,9 @@ public:
     [[nodiscard]] std::vector<Entry> entries()
     {
         std::vector<Entry> out;
-        for (const Entry* entry : session.open_log()->log().sorted_entries())
+        viewmodel::LogDocument* document = session.open_log();
+        REQUIRE(document != nullptr);
+        for (const Entry* entry : document->log().sorted_entries())
         {
             out.push_back(*entry);
         }
@@ -268,11 +271,19 @@ struct Screen
 
     [[nodiscard]] QQuickItem* named(const QString& name)
     {
-        QQuickItem* found = find_item(rig, name);
+        QQuickItem* found = rig.find_item(name);
         REQUIRE(found != nullptr);
         return found;
     }
     [[nodiscard]] QQuickItem* tile(int row) { return named(QStringLiteral("tile%1").arg(row)); }
+    /// The item named `name` under `from`; fails the test when there is none, so no caller dereferences a null pointer.
+    [[nodiscard]] QQuickItem* inside(QQuickItem* from, const QString& name)
+    {
+        REQUIRE(from != nullptr);
+        QQuickItem* found = rig.find_item(name, from);
+        REQUIRE(found != nullptr);
+        return found;
+    }
     [[nodiscard]] QString text_of(const QString& name) { return named(name)->property("text").toString(); }
     [[nodiscard]] QObject* child(QQuickItem* from, const QString& name)
     {
@@ -280,10 +291,10 @@ struct Screen
         REQUIRE(found != nullptr);
         return found;
     }
-    [[nodiscard]] bool badge_visible(int row) { return find_item(tile(row), QStringLiteral("tileBadge"))->isVisible(); }
+    [[nodiscard]] bool badge_visible(int row) { return inside(tile(row), QStringLiteral("tileBadge"))->isVisible(); }
     [[nodiscard]] QString badge_text(int row)
     {
-        return find_item(tile(row), QStringLiteral("tileBadgeText"))->property("text").toString();
+        return inside(tile(row), QStringLiteral("tileBadgeText"))->property("text").toString();
     }
     [[nodiscard]] QString last_line() { return text_of(QStringLiteral("lastBarLine")); }
     [[nodiscard]] bool toast_shown() { return named(QStringLiteral("logToast"))->property("active").toBool(); }
@@ -352,16 +363,16 @@ TEST_CASE(
     for (int row = 0; row < ROWS; ++row)
     {
         QQuickItem* tile = screen.tile(row);
-        QQuickItem* background = find_item(tile, QStringLiteral("tileBackground"));
+        QQuickItem* background = screen.inside(tile, QStringLiteral("tileBackground"));
         REQUIRE(background != nullptr);
         CHECK(background->isVisible());
         // No label, no count, no role: a shape.
-        CHECK_FALSE(find_item(tile, QStringLiteral("tileLabel"))->isVisible());
-        CHECK_FALSE(find_item(tile, QStringLiteral("tileBadge"))->isVisible());
+        CHECK_FALSE(screen.inside(tile, QStringLiteral("tileLabel"))->isVisible());
+        CHECK_FALSE(screen.inside(tile, QStringLiteral("tileBadge"))->isVisible());
         shapes.push_back(screen.rig.geometry(tile));
     }
     // The other parts draw shapes as well, with no words.
-    CHECK_FALSE(find_item(screen.rig, QStringLiteral("lastBarContent"))->isVisible());
+    CHECK_FALSE(screen.named(QStringLiteral("lastBarContent"))->isVisible());
     CHECK_FALSE(screen.named(QStringLiteral("noteInput"))->isEnabled());
 
     // A touch does nothing: no haptic, nothing sent to the session.
@@ -376,9 +387,9 @@ TEST_CASE(
     screen.rig.layout();
 
     // The labels are there now, and the shapes are where they were.
-    CHECK(find_item(screen.tile(MUTE_DELAY_ROW), QStringLiteral("tileLabel"))->property("text").toString() ==
+    CHECK(screen.inside(screen.tile(MUTE_DELAY_ROW), QStringLiteral("tileLabel"))->property("text").toString() ==
           QStringLiteral("Mute Delay"));
-    CHECK(find_item(screen.tile(MUTE_DELAY_ROW), QStringLiteral("tileLabel"))->isVisible());
+    CHECK(screen.inside(screen.tile(MUTE_DELAY_ROW), QStringLiteral("tileLabel"))->isVisible());
     for (int row = 0; row < ROWS; ++row)
     {
         CAPTURE(row);
@@ -449,8 +460,10 @@ TEST_CASE("log.tap_flow: the screen counts nothing itself, it shows what the mod
     // An entry that did not come through the screen at all.
     Entry entry = sample_error(1, 10);
     entry.m_Body = ErrorEntry{sim.config.configuration().m_ErrorTypes.front().m_Id, std::nullopt, "Wrong Response"};
-    REQUIRE(sim.session.open_log()->add_entry(std::move(entry), viewmodel::LogChange::Origin::USER,
-                                              [](const Result<void, StorageError>&) {}));
+    viewmodel::LogDocument* document = sim.session.open_log();
+    REQUIRE(document != nullptr);
+    REQUIRE(document->add_entry(std::move(entry), viewmodel::LogChange::Origin::USER,
+                                [](const Result<void, StorageError>&) {}));
     sim.gateway.run_all();
     screen.rig.settle();
 
@@ -568,7 +581,7 @@ TEST_CASE("log.empty_tiles: a nine-type configuration shows two inert tiles", "[
     {
         CAPTURE(row);
         QQuickItem* tile = screen.tile(row);
-        CHECK(find_item(tile, QStringLiteral("tileEmptySlot"))->isVisible());
+        CHECK(screen.inside(tile, QStringLiteral("tileEmptySlot"))->isVisible());
         CHECK_FALSE(tile->property("interactive").toBool());
         screen.rig.tap(tile);
         CHECK_FALSE(accessible_press(tile));
@@ -606,9 +619,11 @@ TEST_CASE("log.note: type and Add, the entry appears after the commit, the field
     sim.gateway.run_all();
     screen.rig.settle();
     CHECK(sim.timeline.entry_count() == 1);
-    REQUIRE(sim.entries().size() == 1);
-    REQUIRE(note_of(sim.entries().front()) != nullptr);
-    CHECK(note_of(sim.entries().front())->m_Value == "The robot paused twice");
+    const std::vector<Entry> saved_entries = sim.entries();
+    REQUIRE(saved_entries.size() == 1);
+    const NoteEntry* saved_note = note_of(saved_entries.front());
+    REQUIRE(saved_note != nullptr);
+    CHECK(saved_note->m_Value == "The robot paused twice");
     CHECK(input->property("text").toString().isEmpty());
     CHECK(sim.session.draft().isEmpty());
     CHECK(screen.toast_shown());
@@ -666,7 +681,7 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     CHECK_FALSE(sheet->property("isOpen").toBool());
     screen.rig.tap(chips[0]);
     CHECK(sheet->property("isOpen").toBool());
-    advance_frames(screen.rig, 400ms);
+    screen.rig.advance(400ms);
 
     // The prompt of the template.
     QQuickItem* field = screen.named(QStringLiteral("templateValueField"));
@@ -687,7 +702,7 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     screen.rig.tap(screen.named(QStringLiteral("navTrailing")));
     sim.gateway.run_all();
     screen.rig.settle();
-    advance_frames(screen.rig, 400ms);
+    screen.rig.advance(400ms);
     const std::vector<Entry> entries = sim.entries();
     REQUIRE(entries.size() == 1);
     const NoteEntry* note = note_of(entries.front());
@@ -711,13 +726,13 @@ TEST_CASE("log.template: Cancel leaves everything as it was", "[ui][log]")
     REQUIRE(chips.size() == 2);
 
     screen.rig.tap(chips[1]);
-    advance_frames(screen.rig, 400ms);
+    screen.rig.advance(400ms);
     QQuickItem* sheet = screen.named(QStringLiteral("logTemplateSheet"));
     REQUIRE(sheet->property("isOpen").toBool());
     CHECK(screen.named(QStringLiteral("templateValueField"))->property("label").toString() ==
           QStringLiteral("Who visited?"));
     screen.rig.tap(screen.named(QStringLiteral("navLeading")));
-    advance_frames(screen.rig, 400ms);
+    screen.rig.advance(400ms);
     CHECK_FALSE(sheet->property("isOpen").toBool());
     sim.gateway.run_all();
     CHECK(sim.entries().empty());
@@ -812,7 +827,7 @@ TEST_CASE("log.write_failed: the banner can be closed, and a failed undo shows i
 
     // A frame later, as a finger is.
     screen.rig.layout();
-    screen.rig.tap(find_item(banner, QStringLiteral("bannerClose")));
+    screen.rig.tap(screen.inside(banner, QStringLiteral("bannerClose")));
     CHECK_FALSE(banner->isVisible());
 }
 
@@ -826,13 +841,13 @@ TEST_CASE("log.recovery_notice: a notice shows once, with its action, and can be
 
     REQUIRE_FALSE(sim.session.recovery_notice().isEmpty());
     CHECK(banner->isVisible());
-    CHECK(find_item(banner, QStringLiteral("bannerMessage"))->property("text").toString() ==
+    CHECK(screen.inside(banner, QStringLiteral("bannerMessage"))->property("text").toString() ==
           sim.session.recovery_notice());
     // The tiles under it work.
     screen.tap_tile(sim, MUTE_DELAY_ROW);
     CHECK(sim.entries().size() == 1);
 
-    screen.rig.tap(find_item(banner, QStringLiteral("bannerClose")));
+    screen.rig.tap(screen.inside(banner, QStringLiteral("bannerClose")));
     CHECK_FALSE(banner->isVisible());
     CHECK(review.count() == 0);
 }
@@ -846,7 +861,7 @@ TEST_CASE("log.recovery_notice: the action opens Review and closes the notice; a
         QQuickItem* banner = screen.named(QStringLiteral("logRecoveryBanner"));
         QSignalSpy review(screen.item, SIGNAL(reviewRequested()));
         REQUIRE(banner->isVisible());
-        screen.rig.tap(find_item(banner, QStringLiteral("bannerAction")));
+        screen.rig.tap(screen.inside(banner, QStringLiteral("bannerAction")));
         CHECK(review.count() == 1);
         CHECK_FALSE(banner->isVisible());
     }
@@ -1121,7 +1136,8 @@ TEST_CASE("perf.press_path: from the press to the visual feedback, p95 over 200 
     sim.load();
     Screen screen(sim);
     std::vector<QQuickItem*> tiles;
-    for (int row = 0; row < OTHER_ROW; ++row)
+    // The toast covers the foot of the board and takes its touches, so the presses go to the first three rows.
+    for (int row = 0; row < COVERED_BY_TOAST_FROM; ++row)
     {
         tiles.push_back(screen.tile(row));
     }
@@ -1178,8 +1194,13 @@ TEST_CASE("perf.scene: the items and the delegates of the Log screen stay under 
     const QJsonObject limit = budget();
     REQUIRE_FALSE(limit.isEmpty());
     INFO("items " << size.m_Items << ", delegates " << size.m_Delegates);
-    // The board's 12 tiles are the only delegates: no Repeater or Loader per tile, and none in the composer's chips.
-    CHECK(size.m_Delegates == limit.value(QStringLiteral("delegates")).toInt());
+    // The delegates are the board's 12 tiles and the composer's template chips, one for each template of the sample
+    // configuration (two): 14. The rig counts what every Repeater has made, so the chips are in the number; the budget
+    // is what the screen needs, and a Repeater or a Loader for each tile would raise it.
+    constexpr int TILE_DELEGATES = 12;
+    constexpr int CHIP_DELEGATES = 2;
+    CHECK(limit.value(QStringLiteral("delegates")).toInt() == TILE_DELEGATES + CHIP_DELEGATES);
+    CHECK(size.m_Delegates == TILE_DELEGATES + CHIP_DELEGATES);
     CHECK(size.m_Items <= limit.value(QStringLiteral("items")).toInt());
 }
 
@@ -1193,7 +1214,7 @@ TEST_CASE("perf.first_frame: the loading screen draws all 12 tile rectangles in 
     int rectangles = 0;
     for (int row = 0; row < ROWS; ++row)
     {
-        QQuickItem* background = find_item(screen.tile(row), QStringLiteral("tileBackground"));
+        QQuickItem* background = screen.inside(screen.tile(row), QStringLiteral("tileBackground"));
         if (background != nullptr && background->isVisible() && background->width() > 0 && background->height() > 0)
         {
             ++rectangles;
