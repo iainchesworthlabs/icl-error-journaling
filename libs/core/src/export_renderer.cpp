@@ -100,6 +100,17 @@ Result<std::string, RenderError> error_type_name(const ExportContext& context, E
     return std::string(name);
 }
 
+/// The name an error entry prints: the snapshot taken at the tap when it has one (a later rename does not touch it),
+/// otherwise the name looked up by id (data written before snapshots).
+Result<std::string, RenderError> entry_type_name(const ExportContext& context, const ErrorEntry& entry)
+{
+    if (!entry.m_ErrorTypeLabel.empty())
+    {
+        return entry.m_ErrorTypeLabel;
+    }
+    return error_type_name(context, entry.m_ErrorType);
+}
+
 /// A header value as the export prints it, from its stored text (empty text is an empty value).
 Result<std::string, RenderError> display_value(const ExportContext& context, HeaderField field, std::string_view stored)
 {
@@ -165,7 +176,7 @@ Result<std::string, RenderError> render_line(const Entry& entry, const HeaderHis
 
     if (const auto* error = std::get_if<ErrorEntry>(&entry.m_Body))
     {
-        const auto name = error_type_name(context, error->m_ErrorType);
+        const auto name = entry_type_name(context, *error);
         if (!name)
         {
             return fail(name.error());
@@ -230,6 +241,9 @@ Result<std::string, RenderError> render_line(const Entry& entry, const HeaderHis
 Result<std::string, RenderError> render_totals(const Log& log, const ExportContext& context)
 {
     std::vector<std::pair<ErrorTypeId, std::size_t>> counts;
+    // A type's totals name is the snapshot of its first live entry in time order, so a rename mid-day does not split
+    // the count; a type whose entries carry no snapshot is named by lookup.
+    std::vector<std::pair<ErrorTypeId, std::string>> snapshots;
     const auto bump = [&counts](ErrorTypeId id)
     {
         const auto it = std::find_if(counts.begin(), counts.end(), [id](const auto& c) { return c.first == id; });
@@ -247,6 +261,12 @@ Result<std::string, RenderError> render_totals(const Log& log, const ExportConte
         if (const auto* error = std::get_if<ErrorEntry>(&entry->m_Body))
         {
             bump(error->m_ErrorType);
+            const auto has_snapshot = std::any_of(snapshots.begin(), snapshots.end(),
+                                                  [error](const auto& s) { return s.first == error->m_ErrorType; });
+            if (!has_snapshot && !error->m_ErrorTypeLabel.empty())
+            {
+                snapshots.emplace_back(error->m_ErrorType, error->m_ErrorTypeLabel);
+            }
         }
     }
     if (counts.empty())
@@ -276,7 +296,10 @@ Result<std::string, RenderError> render_totals(const Log& log, const ExportConte
     std::string out(export_format::TOTALS_PREFIX);
     for (std::size_t i = 0; i < ordered.size(); ++i)
     {
-        const auto name = error_type_name(context, ordered[i].first);
+        const auto snapshot = std::find_if(snapshots.begin(), snapshots.end(),
+                                           [&](const auto& s) { return s.first == ordered[i].first; });
+        const auto name = snapshot != snapshots.end() ? Result<std::string, RenderError>(snapshot->second)
+                                                      : error_type_name(context, ordered[i].first);
         if (!name)
         {
             return fail(name.error());
