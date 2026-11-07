@@ -176,7 +176,7 @@ private:
         const LocationId north = location_named(m_Configuration, "North Site");
         make(LAST_YEAR, 2025, 11, 7, taps({{11, 9, 0}, {12, 9, 10}}), true, LocationValue{north, {}});
         make(YESTERDAY, 2026, 11, 6, taps({{21, 9, 0}}), true, LocationValue{std::nullopt, "South Elsewhere"});
-        make(MORNING, 2026, 11, 7, review::prd_example(m_Configuration), true, LocationValue{north, {}});
+        make(MORNING, 2026, 11, 7, prd_entries(), true, LocationValue{north, {}});
         REQUIRE(m_Storage.memory().mark_shared(test::sample_id<LogId>(MORNING), test::utc(2026, 11, 7, 6, 42)));
         make(EVENING, 2026, 11, 7, taps({{41, 16, 0}}), true, LocationValue{north, {}});
         make(OPEN, 2026, 11, 8, taps({{51, 9, 0}}), false, LocationValue{north, {}});
@@ -192,6 +192,21 @@ private:
         int m_Hour;
         int m_Minute;
     };
+
+    /// The entries of the PRD example, as `review::prd_example` makes them, added one at a time: that function's
+    /// initializer list of Entry is what GCC 16 reports as maybe uninitialised when it is inlined into another file.
+    [[nodiscard]] std::vector<Entry> prd_entries() const
+    {
+        std::vector<Entry> entries;
+        entries.push_back(review::error_at(m_Configuration, 1, 10, 5));
+        entries.push_back(review::error_at(m_Configuration, 2, 10, 20, "Mute Delay"));
+        entries.push_back(review::note_at(3, 10, 30, "Played Morning Medley"));
+        entries.push_back(
+            review::error_at(m_Configuration, 4, 11, 2, "Wrong Track Played", std::string("asked for Evening Song")));
+        entries.push_back(review::change_at(5, 13, 15, HeaderField::SOFTWARE_VERSION, "1.5.0"));
+        entries.push_back(review::error_at(m_Configuration, 6, 13, 40, "Speech Delay"));
+        return entries;
+    }
 
     [[nodiscard]] std::vector<Entry> taps(const std::vector<Tap>& list) const
     {
