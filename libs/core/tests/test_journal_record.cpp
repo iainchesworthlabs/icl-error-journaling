@@ -322,3 +322,45 @@ TEST_CASE("Every operation has a name that decodes", "[journal]")
         CHECK_FALSE(decode_error_name(static_cast<DecodeError>(i)).empty());
     }
 }
+
+TEST_CASE("A value outside the enumerations has no name", "[journal]")
+{
+    CHECK(journal_op_name(static_cast<JournalOp>(99)).empty());
+    CHECK(decode_error_name(static_cast<DecodeError>(99)).empty());
+}
+
+TEST_CASE("An entry or header with a bad part is reported, not guessed at", "[journal]")
+{
+    const std::string log = "\"log\":\"00000000-0000-4000-8000-000000000064\"";
+    const std::string entry_start =
+        "{\"id\":\"00000000-0000-4000-8000-000000000001\",\"utc\":0,\"zone\":\"\",\"edited\":null,";
+    const auto add = [&](const std::string& entry)
+    {
+        return decode_record(
+            with_crc("{\"v\":1,\"seq\":2,\"op\":\"add_entry\"," + log + ",\"body\":{\"entry\":" + entry + "}}"));
+    };
+
+    CHECK(add(entry_start + "\"deleted\":false,\"kind\":\"error\",\"type\":\"00000000-0000-4000-8000-000000000002\","
+                            "\"label\":\"Wrong Response\",\"note\":null}")
+              .has_value());
+    CHECK(add(entry_start + "\"deleted\":false,\"kind\":\"mystery\"}").error() == DecodeError::BAD_FIELD);
+    CHECK(add(entry_start + "\"deleted\":false,\"kind\":\"header_change\",\"field\":\"colour\",\"value\":\"x\"}")
+              .error() == DecodeError::BAD_FIELD);
+    CHECK(add(entry_start + "\"deleted\":\"no\",\"kind\":\"note\",\"template\":null,\"value\":\"x\"}").error() ==
+          DecodeError::MALFORMED);
+    CHECK(add(entry_start + "\"deleted\":false,\"kind\":\"note\",\"template\":7,\"value\":\"x\"}").error() ==
+          DecodeError::MALFORMED);
+
+    const std::string header = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":null,"
+                               "\"location\":null,\"version\":\"1.2\"},\"created\":0,\"prev\":null}";
+    CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + header + "}"))
+              .error() == DecodeError::BAD_FIELD);
+    const std::string shaped = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026/02/03\",\"unit\":null,"
+                               "\"location\":null,\"version\":null},\"created\":0,\"prev\":null}";
+    CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + shaped + "}"))
+              .error() == DecodeError::BAD_FIELD);
+    const std::string fraction = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":null,"
+                                 "\"location\":null,\"version\":null},\"created\":1.5,\"prev\":null}";
+    CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + fraction + "}"))
+              .error() == DecodeError::MALFORMED);
+}

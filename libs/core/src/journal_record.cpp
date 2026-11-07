@@ -11,6 +11,7 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QJsonValue>
+#include <algorithm>
 #include <array>
 #include <charconv>
 #include <cmath>
@@ -526,518 +527,294 @@ Result<std::string, StorageError> encode_record(const JournalRecord& record)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Decoding
+// Decoding. A `Decoder` collects the first error, and a field that cannot be read answers a default, so the readers
+// below are straight lines and the caller checks once at the end (a record with an error is thrown away whole).
 // ---------------------------------------------------------------------------------------------------------------------
 
 namespace
 {
 
-using Fail = std::unexpected<DecodeError>;
-
-Fail malformed()
+struct Decoder
 {
-    return Fail(DecodeError::MALFORMED);
-}
+    std::optional<DecodeError> m_Error;
 
-Fail bad_field()
-{
-    return Fail(DecodeError::BAD_FIELD);
-}
+    void fail(DecodeError error)
+    {
+        if (!m_Error)
+        {
+            m_Error = error;
+        }
+    }
+};
 
-/// The value under `name`; an undefined value when the key is missing.
-QJsonValue member(const QJsonObject& object, const char* name)
+class Fields
 {
-    return object.value(QLatin1StringView(name));
-}
+public:
+    Fields(Decoder& decoder, QJsonObject object) : m_Decoder(decoder), m_Object(std::move(object)) {}
 
-Result<std::string, DecodeError> get_string(const QJsonObject& object, const char* name)
-{
-    const QJsonValue value = member(object, name);
-    if (!value.isString())
+    [[nodiscard]] Fields object(const char* name) const
     {
-        return malformed();
+        const QJsonValue value = m_Object.value(QLatin1StringView(name));
+        if (!value.isObject())
+        {
+            m_Decoder.fail(DecodeError::MALFORMED);
+        }
+        return Fields(m_Decoder, value.toObject());
     }
-    const QByteArray utf8 = value.toString().toUtf8();
-    return std::string(utf8.constData(), static_cast<std::size_t>(utf8.size()));
-}
 
-Result<std::optional<std::string>, DecodeError> get_optional_string(const QJsonObject& object, const char* name)
-{
-    const QJsonValue value = member(object, name);
-    if (value.isUndefined())
+    /// The sub-object, or nothing when the value is null.
+    [[nodiscard]] std::optional<Fields> optional_object(const char* name) const
     {
-        return malformed();
-    }
-    if (value.isNull())
-    {
-        return std::optional<std::string>{};
-    }
-    auto text = get_string(object, name);
-    if (!text)
-    {
-        return Fail(text.error());
-    }
-    return std::optional<std::string>{std::move(*text)};
-}
-
-Result<std::int64_t, DecodeError> integer_of(const QJsonValue& value)
-{
-    if (!value.isDouble())
-    {
-        return malformed();
-    }
-    const double number = value.toDouble();
-    if (!std::isfinite(number) || number != std::floor(number) ||
-        std::fabs(number) >= static_cast<double>(MAX_SAFE_INTEGER))
-    {
-        return malformed();
-    }
-    return static_cast<std::int64_t>(number);
-}
-
-Result<std::int64_t, DecodeError> get_integer(const QJsonObject& object, const char* name)
-{
-    const QJsonValue value = member(object, name);
-    if (value.isUndefined())
-    {
-        return malformed();
-    }
-    return integer_of(value);
-}
-
-Result<std::optional<std::int64_t>, DecodeError> get_optional_integer(const QJsonObject& object, const char* name)
-{
-    const QJsonValue value = member(object, name);
-    if (value.isUndefined())
-    {
-        return malformed();
-    }
-    if (value.isNull())
-    {
-        return std::optional<std::int64_t>{};
-    }
-    auto number = integer_of(value);
-    if (!number)
-    {
-        return Fail(number.error());
-    }
-    return std::optional<std::int64_t>{*number};
-}
-
-Result<bool, DecodeError> get_bool(const QJsonObject& object, const char* name)
-{
-    const QJsonValue value = member(object, name);
-    if (!value.isBool())
-    {
-        return malformed();
-    }
-    return value.toBool();
-}
-
-Result<Uuid, DecodeError> parse_uuid(const std::string& text)
-{
-    auto uuid = Uuid::parse(text);
-    if (!uuid)
-    {
-        return bad_field();
-    }
-    return *uuid;
-}
-
-Result<Uuid, DecodeError> get_uuid(const QJsonObject& object, const char* name)
-{
-    auto text = get_string(object, name);
-    if (!text)
-    {
-        return Fail(text.error());
-    }
-    return parse_uuid(*text);
-}
-
-Result<std::optional<Uuid>, DecodeError> get_optional_uuid(const QJsonObject& object, const char* name)
-{
-    auto text = get_optional_string(object, name);
-    if (!text)
-    {
-        return Fail(text.error());
-    }
-    if (!*text)
-    {
-        return std::optional<Uuid>{};
-    }
-    auto uuid = parse_uuid(**text);
-    if (!uuid)
-    {
-        return Fail(uuid.error());
-    }
-    return std::optional<Uuid>{*uuid};
-}
-
-Result<QJsonObject, DecodeError> get_object(const QJsonObject& object, const char* name)
-{
-    const QJsonValue value = member(object, name);
-    if (!value.isObject())
-    {
-        return malformed();
-    }
-    return value.toObject();
-}
-
-Result<UtcMillis, DecodeError> get_millis(const QJsonObject& object, const char* name)
-{
-    auto number = get_integer(object, name);
-    if (!number)
-    {
-        return Fail(number.error());
-    }
-    return UtcMillis{std::chrono::milliseconds{*number}};
-}
-
-Result<std::chrono::year_month_day, DecodeError> parse_date(const std::string& text)
-{
-    if (text.size() != 10 || text[4] != '-' || text[7] != '-')
-    {
-        return bad_field();
-    }
-    const auto number = [&text](std::size_t from, std::size_t count) -> std::optional<int>
-    {
-        int value = 0;
-        const auto [end, code] = std::from_chars(text.data() + from, text.data() + from + count, value);
-        if (code != std::errc{} || end != text.data() + from + count)
+        if (m_Object.value(QLatin1StringView(name)).isNull())
         {
             return std::nullopt;
         }
-        return value;
-    };
-    const auto year = number(0, 4);
-    const auto month = number(5, 2);
-    const auto day = number(8, 2);
-    if (!year || !month || !day)
-    {
-        return bad_field();
+        return object(name);
     }
-    const std::chrono::year_month_day date{std::chrono::year{*year}, std::chrono::month{static_cast<unsigned>(*month)},
-                                           std::chrono::day{static_cast<unsigned>(*day)}};
+
+    [[nodiscard]] std::string string(const char* name) const
+    {
+        const QJsonValue value = m_Object.value(QLatin1StringView(name));
+        if (!value.isString())
+        {
+            m_Decoder.fail(DecodeError::MALFORMED);
+            return {};
+        }
+        const QByteArray utf8 = value.toString().toUtf8();
+        return std::string(utf8.constData(), static_cast<std::size_t>(utf8.size()));
+    }
+
+    [[nodiscard]] std::optional<std::string> optional_string(const char* name) const
+    {
+        if (m_Object.value(QLatin1StringView(name)).isNull())
+        {
+            return std::nullopt;
+        }
+        return string(name);
+    }
+
+    [[nodiscard]] std::int64_t integer(const char* name) const
+    {
+        const QJsonValue value = m_Object.value(QLatin1StringView(name));
+        const double number = value.toDouble();
+        if (!value.isDouble() || !std::isfinite(number) || number != std::floor(number) ||
+            std::fabs(number) >= static_cast<double>(MAX_SAFE_INTEGER))
+        {
+            m_Decoder.fail(DecodeError::MALFORMED);
+            return 0;
+        }
+        return static_cast<std::int64_t>(number);
+    }
+
+    [[nodiscard]] std::optional<std::int64_t> optional_integer(const char* name) const
+    {
+        if (m_Object.value(QLatin1StringView(name)).isNull())
+        {
+            return std::nullopt;
+        }
+        return integer(name);
+    }
+
+    [[nodiscard]] UtcMillis millis(const char* name) const
+    {
+        return UtcMillis{std::chrono::milliseconds{integer(name)}};
+    }
+
+    [[nodiscard]] bool boolean(const char* name) const
+    {
+        const QJsonValue value = m_Object.value(QLatin1StringView(name));
+        if (!value.isBool())
+        {
+            m_Decoder.fail(DecodeError::MALFORMED);
+        }
+        return value.toBool();
+    }
+
+    [[nodiscard]] Uuid uuid(const char* name) const { return parse_uuid(string(name)); }
+
+    [[nodiscard]] std::optional<Uuid> optional_uuid(const char* name) const
+    {
+        const auto text = optional_string(name);
+        if (!text)
+        {
+            return std::nullopt;
+        }
+        return parse_uuid(*text);
+    }
+
+    /// A value that parsed as text but is not valid for its type.
+    void bad_field() const { m_Decoder.fail(DecodeError::BAD_FIELD); }
+
+private:
+    [[nodiscard]] Uuid parse_uuid(const std::string& text) const
+    {
+        const auto parsed = Uuid::parse(text);
+        if (!parsed)
+        {
+            bad_field();
+            return Uuid{};
+        }
+        return *parsed;
+    }
+
+    Decoder& m_Decoder;
+    QJsonObject m_Object;
+};
+
+std::chrono::year_month_day parse_date(const Fields& fields, const std::string& text)
+{
+    const auto number = [&text](std::size_t from, std::size_t count) -> int
+    {
+        int value = -1;
+        const auto [end, code] = std::from_chars(text.data() + from, text.data() + from + count, value);
+        return code == std::errc{} && end == text.data() + from + count ? value : -1;
+    };
+    const bool shaped = text.size() == 10 && text[4] == '-' && text[7] == '-';
+    const std::chrono::year_month_day date{std::chrono::year{shaped ? number(0, 4) : -1},
+                                           std::chrono::month{static_cast<unsigned>(shaped ? number(5, 2) : 0)},
+                                           std::chrono::day{static_cast<unsigned>(shaped ? number(8, 2) : 0)}};
     if (!date.ok())
     {
-        return bad_field();
+        fields.bad_field();
     }
     return date;
 }
 
-Result<HeaderValues, DecodeError> read_header(const QJsonObject& object)
+HeaderValues read_header(const Fields& fields)
 {
     HeaderValues header;
-    auto facilitator = get_string(object, "facilitator");
-    auto date = get_string(object, "date");
-    auto unit = get_optional_string(object, "unit");
-    auto version = get_optional_string(object, "version");
-    if (!facilitator)
+    header.m_Facilitator = fields.string("facilitator");
+    header.m_LocalDate = parse_date(fields, fields.string("date"));
+    if (const auto unit = fields.optional_string("unit"))
     {
-        return Fail(facilitator.error());
-    }
-    if (!date)
-    {
-        return Fail(date.error());
-    }
-    if (!unit)
-    {
-        return Fail(unit.error());
-    }
-    if (!version)
-    {
-        return Fail(version.error());
-    }
-    header.m_Facilitator = std::move(*facilitator);
-    auto parsed_date = parse_date(*date);
-    if (!parsed_date)
-    {
-        return Fail(parsed_date.error());
-    }
-    header.m_LocalDate = *parsed_date;
-    if (*unit)
-    {
-        auto parsed = UnitNumber::parse(**unit);
-        if (!parsed)
+        auto parsed = UnitNumber::parse(*unit);
+        if (parsed)
         {
-            return bad_field();
+            header.m_UnitNumber = std::move(*parsed);
         }
-        header.m_UnitNumber = std::move(*parsed);
+        else
+        {
+            fields.bad_field();
+        }
     }
-    if (*version)
+    if (const auto version = fields.optional_string("version"))
     {
-        auto parsed = SoftwareVersion::parse(**version);
-        if (!parsed)
+        const auto parsed = SoftwareVersion::parse(*version);
+        if (parsed)
         {
-            return bad_field();
+            header.m_SoftwareVersion = *parsed;
         }
-        header.m_SoftwareVersion = *parsed;
+        else
+        {
+            fields.bad_field();
+        }
     }
-    const QJsonValue location = member(object, "location");
-    if (location.isUndefined())
+    if (const auto location = fields.optional_object("location"))
     {
-        return malformed();
-    }
-    if (!location.isNull())
-    {
-        if (!location.isObject())
-        {
-            return malformed();
-        }
-        const QJsonObject location_object = location.toObject();
-        auto id = get_optional_uuid(location_object, "id");
-        auto text = get_string(location_object, "text");
-        if (!id)
-        {
-            return Fail(id.error());
-        }
-        if (!text)
-        {
-            return Fail(text.error());
-        }
         LocationValue value;
-        if (*id)
+        if (const auto id = location->optional_uuid("id"))
         {
-            value.m_Id = LocationId{**id};
+            value.m_Id = LocationId{*id};
         }
-        value.m_Text = std::move(*text);
+        value.m_Text = location->string("text");
         header.m_Location = std::move(value);
     }
     return header;
 }
 
-Result<Entry, DecodeError> read_entry(const QJsonObject& object)
+Entry read_entry(const Fields& fields)
 {
     Entry entry;
+    entry.m_Id = EntryId{fields.uuid("id")};
+    entry.m_Captured = Timestamp{fields.millis("utc"), fields.string("zone")};
+    if (const auto edited = fields.optional_integer("edited"))
+    {
+        entry.m_EditedUtc = UtcMillis{std::chrono::milliseconds{*edited}};
+    }
+    entry.m_Deleted = fields.boolean("deleted");
 
-    auto id = get_uuid(object, "id");
-    auto utc = get_millis(object, "utc");
-    auto zone = get_string(object, "zone");
-    auto edited = get_optional_integer(object, "edited");
-    auto deleted = get_bool(object, "deleted");
-    auto kind = get_string(object, "kind");
-    if (!id)
+    const std::string kind = fields.string("kind");
+    if (kind == "error")
     {
-        return Fail(id.error());
+        const ErrorTypeId type{fields.uuid("type")};
+        std::string label = fields.string("label");
+        entry.m_Body = ErrorEntry{type, fields.optional_string("note"), std::move(label)};
     }
-    if (!utc)
+    else if (kind == "note")
     {
-        return Fail(utc.error());
-    }
-    if (!zone)
-    {
-        return Fail(zone.error());
-    }
-    if (!edited)
-    {
-        return Fail(edited.error());
-    }
-    if (!deleted)
-    {
-        return Fail(deleted.error());
-    }
-    if (!kind)
-    {
-        return Fail(kind.error());
-    }
-    entry.m_Id = EntryId{*id};
-    entry.m_Captured = Timestamp{*utc, std::move(*zone)};
-    if (*edited)
-    {
-        entry.m_EditedUtc = UtcMillis{std::chrono::milliseconds{**edited}};
-    }
-    entry.m_Deleted = *deleted;
-
-    if (*kind == "error")
-    {
-        auto type = get_uuid(object, "type");
-        auto label = get_string(object, "label");
-        auto note = get_optional_string(object, "note");
-        if (!type)
-        {
-            return Fail(type.error());
-        }
-        if (!label)
-        {
-            return Fail(label.error());
-        }
-        if (!note)
-        {
-            return Fail(note.error());
-        }
-        entry.m_Body = ErrorEntry{ErrorTypeId{*type}, std::move(*note), std::move(*label)};
-    }
-    else if (*kind == "note")
-    {
-        auto note_template = get_optional_uuid(object, "template");
-        auto value = get_string(object, "value");
-        if (!note_template)
-        {
-            return Fail(note_template.error());
-        }
-        if (!value)
-        {
-            return Fail(value.error());
-        }
         NoteEntry note;
-        if (*note_template)
+        if (const auto note_template = fields.optional_uuid("template"))
         {
-            note.m_Template = NoteTemplateId{**note_template};
+            note.m_Template = NoteTemplateId{*note_template};
         }
-        note.m_Value = std::move(*value);
+        note.m_Value = fields.string("value");
         entry.m_Body = std::move(note);
     }
-    else if (*kind == "header_change")
+    else if (kind == "header_change")
     {
-        auto field = get_string(object, "field");
-        auto value = get_string(object, "value");
+        const auto field = header_field_from_key(fields.string("field"));
         if (!field)
         {
-            return Fail(field.error());
+            fields.bad_field();
         }
-        if (!value)
-        {
-            return Fail(value.error());
-        }
-        const auto parsed = header_field_from_key(*field);
-        if (!parsed)
-        {
-            return bad_field();
-        }
-        entry.m_Body = HeaderChangeEntry{*parsed, std::move(*value)};
+        entry.m_Body = HeaderChangeEntry{field.value_or(HeaderField::UNIT_NUMBER), fields.string("value")};
     }
     else
     {
-        return bad_field();
+        fields.bad_field();
     }
     return entry;
 }
 
-Result<JournalBody, DecodeError> read_body(JournalOp op, const QJsonObject& body)
+JournalBody read_body(JournalOp op, const Fields& body)
 {
     switch (op)
     {
     case JournalOp::CREATE_LOG:
     {
-        auto header_object = get_object(body, "header");
-        auto created = get_millis(body, "created");
-        auto previous = get_optional_uuid(body, "prev");
-        if (!header_object)
+        CreateLogBody result{read_header(body.object("header")), body.millis("created"), std::nullopt};
+        if (const auto previous = body.optional_uuid("prev"))
         {
-            return Fail(header_object.error());
+            result.m_Previous = LogId{*previous};
         }
-        if (!created)
-        {
-            return Fail(created.error());
-        }
-        if (!previous)
-        {
-            return Fail(previous.error());
-        }
-        auto header = read_header(*header_object);
-        if (!header)
-        {
-            return Fail(header.error());
-        }
-        CreateLogBody result{std::move(*header), *created, std::nullopt};
-        if (*previous)
-        {
-            result.m_Previous = LogId{**previous};
-        }
-        return JournalBody{std::move(result)};
+        return result;
     }
     case JournalOp::ADD_ENTRY:
-    {
-        auto entry_object = get_object(body, "entry");
-        if (!entry_object)
-        {
-            return Fail(entry_object.error());
-        }
-        auto entry = read_entry(*entry_object);
-        if (!entry)
-        {
-            return Fail(entry.error());
-        }
-        return JournalBody{AddEntryBody{std::move(*entry)}};
-    }
+        return AddEntryBody{read_entry(body.object("entry"))};
     case JournalOp::EDIT_ENTRY:
     {
-        auto entry_object = get_object(body, "entry");
-        auto at = get_millis(body, "at");
-        if (!entry_object)
-        {
-            return Fail(entry_object.error());
-        }
-        if (!at)
-        {
-            return Fail(at.error());
-        }
-        auto entry = read_entry(*entry_object);
-        if (!entry)
-        {
-            return Fail(entry.error());
-        }
-        return JournalBody{EditEntryBody{std::move(*entry), *at}};
+        Entry entry = read_entry(body.object("entry"));
+        return EditEntryBody{std::move(entry), body.millis("at")};
     }
     case JournalOp::SET_DELETED:
     {
-        auto id = get_uuid(body, "entry");
-        auto deleted = get_bool(body, "deleted");
-        if (!id)
-        {
-            return Fail(id.error());
-        }
-        if (!deleted)
-        {
-            return Fail(deleted.error());
-        }
-        return JournalBody{SetDeletedBody{EntryId{*id}, *deleted}};
+        const EntryId entry{body.uuid("entry")};
+        return SetDeletedBody{entry, body.boolean("deleted")};
     }
     case JournalOp::CORRECT_HEADER:
     {
-        auto field = get_string(body, "field");
-        auto value = get_string(body, "value");
+        const auto field = header_field_from_key(body.string("field"));
         if (!field)
         {
-            return Fail(field.error());
+            body.bad_field();
         }
-        if (!value)
-        {
-            return Fail(value.error());
-        }
-        const auto parsed = header_field_from_key(*field);
-        if (!parsed)
-        {
-            return bad_field();
-        }
-        return JournalBody{CorrectHeaderBody{*parsed, std::move(*value)}};
+        return CorrectHeaderBody{field.value_or(HeaderField::UNIT_NUMBER), body.string("value")};
     }
     case JournalOp::MARK_SHARED:
-    {
-        auto at = get_millis(body, "at");
-        if (!at)
-        {
-            return Fail(at.error());
-        }
-        return JournalBody{MarkSharedBody{*at}};
-    }
+        return MarkSharedBody{body.millis("at")};
     case JournalOp::ARCHIVE:
-        return JournalBody{ArchiveBody{}};
+        return ArchiveBody{};
     case JournalOp::VOID_RECORD:
     {
-        auto target = get_integer(body, "target");
-        if (!target)
+        const std::int64_t target = body.integer("target");
+        if (target <= 0)
         {
-            return Fail(target.error());
+            body.bad_field();
         }
-        if (*target <= 0)
-        {
-            return bad_field();
-        }
-        return JournalBody{VoidBody{static_cast<std::uint64_t>(*target)}};
+        return VoidBody{static_cast<std::uint64_t>(target > 0 ? target : 0)};
     }
     }
-    return malformed();
+    return ArchiveBody{};  // not reached: every operation is handled above
 }
 
 std::optional<JournalOp> op_from_name(std::string_view name)
@@ -1055,14 +832,7 @@ std::optional<JournalOp> op_from_name(std::string_view name)
 
 bool is_lower_hex(std::string_view text)
 {
-    for (const char c : text)
-    {
-        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
-        {
-            return false;
-        }
-    }
-    return true;
+    return std::ranges::all_of(text, [](char c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'); });
 }
 
 }  // namespace
@@ -1071,25 +841,23 @@ Result<JournalRecord, DecodeError> decode_record(std::string_view line)
 {
     if (line.size() > MAX_RECORD_BYTES)
     {
-        return Fail(DecodeError::TOO_LONG);
+        return std::unexpected(DecodeError::TOO_LONG);
     }
     // The line ends with ,"crc":"xxxxxxxx"} and the checksum covers the same object without that key.
     if (line.size() <= CRC_SUFFIX_SIZE || line.front() != '{')
     {
-        return malformed();
+        return std::unexpected(DecodeError::MALFORMED);
     }
     const std::string_view suffix = line.substr(line.size() - CRC_SUFFIX_SIZE);
     const std::string_view digits = suffix.substr(CRC_SUFFIX_PREFIX.size(), CRC_HEX_DIGITS);
-    if (suffix.substr(0, CRC_SUFFIX_PREFIX.size()) != CRC_SUFFIX_PREFIX || suffix.substr(suffix.size() - 2) != "\"}" ||
-        !is_lower_hex(digits))
+    if (!suffix.starts_with(CRC_SUFFIX_PREFIX) || !suffix.ends_with("\"}") || !is_lower_hex(digits))
     {
-        return malformed();
+        return std::unexpected(DecodeError::MALFORMED);
     }
     const std::string_view covered = line.substr(0, line.size() - CRC_SUFFIX_SIZE);
-    const std::uint32_t computed = crc32("}", crc32(covered));
-    if (hex8(computed) != digits)
+    if (hex8(crc32("}", crc32(covered))) != digits)
     {
-        return Fail(DecodeError::BAD_CRC);
+        return std::unexpected(DecodeError::BAD_CRC);
     }
 
     // The checksum matched, so the text is what some writer produced. Parse it.
@@ -1100,52 +868,41 @@ Result<JournalRecord, DecodeError> decode_record(std::string_view line)
         QByteArray::fromRawData(payload.data(), static_cast<qsizetype>(payload.size())), &parse_error);
     if (parse_error.error != QJsonParseError::NoError || !document.isObject())
     {
-        return malformed();
-    }
-    const QJsonObject object = document.object();
-    auto version = get_integer(object, "v");
-    auto seq = get_integer(object, "seq");
-    auto op_name = get_string(object, "op");
-    auto log = get_uuid(object, "log");
-    auto body_object = get_object(object, "body");
-    if (!version || !seq || !op_name || !body_object)
-    {
-        return malformed();
-    }
-    if (*version != static_cast<std::int64_t>(JOURNAL_VERSION))
-    {
-        // The reader understands every version ever shipped; only version 1 exists so far, and anything else is from a
-        // newer build or damaged in a way the checksum happened to miss.
-        return Fail(*version > static_cast<std::int64_t>(JOURNAL_VERSION) ? DecodeError::UNSUPPORTED_VERSION
-                                                                          : DecodeError::MALFORMED);
-    }
-    if (!log)
-    {
-        return Fail(log.error());
-    }
-    const auto op = op_from_name(*op_name);
-    if (*seq <= 0 || !op)
-    {
-        return malformed();
-    }
-    auto body = read_body(*op, *body_object);
-    if (!body)
-    {
-        return Fail(body.error());
+        return std::unexpected(DecodeError::MALFORMED);
     }
 
+    Decoder decoder;
+    const Fields root(decoder, document.object());
+    const std::int64_t version = root.integer("v");
+    if (version > static_cast<std::int64_t>(JOURNAL_VERSION))
+    {
+        // The reader understands every version ever shipped; only version 1 exists so far. A newer one comes from a
+        // newer build and is not damage.
+        return std::unexpected(DecodeError::UNSUPPORTED_VERSION);
+    }
+    const std::int64_t seq = root.integer("seq");
+    const auto op = op_from_name(root.string("op"));
     JournalRecord record;
-    record.m_Version = static_cast<std::uint32_t>(*version);
-    record.m_Seq = static_cast<std::uint64_t>(*seq);
-    record.m_Log = LogId{*log};
-    record.m_Body = std::move(*body);
+    record.m_Log = LogId{root.uuid("log")};
+    const Fields body = root.object("body");
+    if (decoder.m_Error || version != static_cast<std::int64_t>(JOURNAL_VERSION) || seq <= 0 || !op)
+    {
+        return std::unexpected(decoder.m_Error.value_or(DecodeError::MALFORMED));
+    }
+    record.m_Version = static_cast<std::uint32_t>(version);
+    record.m_Seq = static_cast<std::uint64_t>(seq);
+    record.m_Body = read_body(*op, body);
+    if (decoder.m_Error)
+    {
+        return std::unexpected(*decoder.m_Error);
+    }
 
     // Strict: the line must be exactly what the encoder writes for this record. A character that is escaped in a
     // different but equivalent way, an upper-case hexadecimal digit or an extra key is an error, never a record.
     const auto canonical = encode_record(record);
     if (!canonical || *canonical != line)
     {
-        return malformed();
+        return std::unexpected(DecodeError::MALFORMED);
     }
     return record;
 }

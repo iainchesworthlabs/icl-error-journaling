@@ -43,3 +43,17 @@ TEST_CASE("Every recovery outcome has a name", "[recovery-report]")
         CHECK(recovery_outcome_name(static_cast<RecoveryOutcome>(i)) != "unknown");
     }
 }
+
+TEST_CASE("A replayed recovery says how many records it applied", "[recovery-report]")
+{
+    RecoveryReport report;
+    report.m_Outcome = RecoveryOutcome::REPLAYED;
+    report.m_OpenLogEntries = 12;
+    report.m_ReplayedRecords = 1;
+    CHECK(describe(report) == "replayed: 12 entries in the open log, 1 record replayed");
+}
+
+TEST_CASE("A value outside the enumeration is named unknown, not crashed on", "[recovery-report]")
+{
+    CHECK(recovery_outcome_name(static_cast<RecoveryOutcome>(99)) == "unknown");
+}

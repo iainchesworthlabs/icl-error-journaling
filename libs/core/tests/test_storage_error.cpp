@@ -26,3 +26,8 @@ TEST_CASE("Storage errors compare by value", "[storage-error]")
     CHECK(make_error(StorageErrorKind::IO, "x", 1) == make_error(StorageErrorKind::IO, "x", 1));
     CHECK_FALSE(make_error(StorageErrorKind::IO, "x", 1) == make_error(StorageErrorKind::IO, "x", 2));
 }
+
+TEST_CASE("A kind outside the enumeration is named unknown", "[storage-error]")
+{
+    CHECK(storage_error_kind_name(static_cast<StorageErrorKind>(99)) == "unknown");
+}

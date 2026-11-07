@@ -305,3 +305,68 @@ TEST_CASE("A refused record leaves the log exactly as it was", "[stored-log]")
     CHECK(std::get<NoteEntry>(log.m_Log.find(sample_id<EntryId>(2))->m_Body).m_Value == "kept");
     CHECK(log.m_Log.initial_header().m_UnitNumber->digits() == "27");
 }
+
+TEST_CASE("Times that a journal cannot carry are refused", "[stored-log]")
+{
+    const UtcMillis huge{std::chrono::milliseconds{std::int64_t{1} << 60}};
+    StoredLog log = new_log();
+
+    Entry captured = sample_error(1, 0);
+    captured.m_Captured.m_Utc = huge;
+    CHECK(kind_of(apply(log, AddEntryBody{captured})) == StorageErrorKind::INVALID_ARGUMENT);
+
+    Entry edited = sample_error(2, 0);
+    edited.m_EditedUtc = huge;
+    CHECK(kind_of(apply(log, AddEntryBody{edited})) == StorageErrorKind::INVALID_ARGUMENT);
+
+    require_ok(apply(log, AddEntryBody{sample_error(3, 0)}));
+    CHECK(kind_of(apply(log, EditEntryBody{sample_error(3, 5), huge})) == StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(kind_of(apply(log, EditEntryBody{captured, sample_time(1)})) == StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(kind_of(apply(log, MarkSharedBody{huge})) == StorageErrorKind::INVALID_ARGUMENT);
+
+    CHECK(make_stored_log(sample_id<LogId>(1), CreateLogBody{sample_header(), huge, std::nullopt}).error().m_Kind ==
+          StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(log.m_Log.entries().size() == 1);
+}
+
+TEST_CASE("A time zone name that is too long or not text is refused", "[stored-log]")
+{
+    StoredLog log = new_log();
+    Entry long_zone = sample_error(1, 0);
+    long_zone.m_Captured.m_Zone = std::string(MAX_ZONE_BYTES + 1, 'x');
+    CHECK(kind_of(apply(log, AddEntryBody{long_zone})) == StorageErrorKind::INVALID_ARGUMENT);
+
+    Entry bad_zone = sample_error(2, 0);
+    bad_zone.m_Captured.m_Zone = "Australia/\xFF";
+    CHECK(kind_of(apply(log, AddEntryBody{bad_zone})) == StorageErrorKind::INVALID_ARGUMENT);
+
+    Entry no_zone = sample_error(3, 0);
+    no_zone.m_Captured.m_Zone.clear();  // allowed: the zone is only a record of where the device was
+    require_ok(apply(log, AddEntryBody{no_zone}));
+}
+
+TEST_CASE("A header value that is too long, empty or unchanged is refused", "[stored-log]")
+{
+    StoredLog log = new_log();
+    CHECK(kind_of(apply(log,
+                        CorrectHeaderBody{HeaderField::LOCATION, std::string(MAX_HEADER_TEXT_CODE_POINTS + 1, 'x')})) ==
+          StorageErrorKind::LIMIT_EXCEEDED);
+    CHECK(kind_of(apply(log, AddEntryBody{sample_change(1, 5, HeaderField::LOCATION, "")})) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(kind_of(apply(log, AddEntryBody{sample_change(2, 5, HeaderField::LOCATION, "North Site")})) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(kind_of(apply(log, AddEntryBody{sample_change(3, 5, HeaderField::SOFTWARE_VERSION,
+                                                        std::string(MAX_HEADER_TEXT_CODE_POINTS + 1, '1'))})) ==
+          StorageErrorKind::LIMIT_EXCEEDED);
+    require_ok(apply(log, AddEntryBody{sample_change(4, 5, HeaderField::LOCATION, "South Site")}));
+    CHECK(kind_of(apply(log, EditEntryBody{sample_change(4, 5, HeaderField::LOCATION, ""), sample_time(9)})) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+}
+
+TEST_CASE("A location that names an id is stored by id", "[stored-log]")
+{
+    StoredLog log = new_log();
+    const std::string id = sample_id<LocationId>(5).format();
+    require_ok(apply(log, AddEntryBody{sample_change(1, 5, HeaderField::LOCATION, id)}));
+    CHECK(std::get<HeaderChangeEntry>(log.m_Log.find(sample_id<EntryId>(1))->m_Body).m_NewValue == id);
+}

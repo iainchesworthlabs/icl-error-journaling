@@ -54,10 +54,6 @@ StorageError from_header_error(const HeaderError& error)
 {
     switch (error.m_Kind)
     {
-    case HeaderError::Kind::UNKNOWN_ENTRY:
-        return make_error(StorageErrorKind::NOT_FOUND, "unknown header change");
-    case HeaderError::Kind::DUPLICATE_ID:
-        return make_error(StorageErrorKind::ALREADY_EXISTS, "duplicate entry id");
     case HeaderError::Kind::INVALID_UNIT_NUMBER:
         return make_error(StorageErrorKind::INVALID_ARGUMENT, "invalid unit number");
     case HeaderError::Kind::INVALID_SOFTWARE_VERSION:
@@ -66,10 +62,10 @@ StorageError from_header_error(const HeaderError& error)
         return make_error(StorageErrorKind::INVALID_ARGUMENT, "empty location");
     case HeaderError::Kind::UNCHANGED:
         return make_error(StorageErrorKind::INVALID_ARGUMENT, "the value does not differ from the one in force");
-    case HeaderError::Kind::NOT_A_HEADER_CHANGE:
-        return make_error(StorageErrorKind::INVALID_ARGUMENT, "the entry is not a header change");
+    default:
+        // The entry cannot be unknown, duplicated or the wrong kind here: the callers checked before they asked.
+        return make_error(StorageErrorKind::INVALID_ARGUMENT, "invalid header value");
     }
-    return make_error(StorageErrorKind::INVALID_ARGUMENT, "invalid header value");
 }
 
 /// The stored text of a header value, or the reason it is not valid for the field.
@@ -80,12 +76,8 @@ Result<std::string, StorageError> canonical_header_text(HeaderField field, std::
     {
         return Failure(from_header_error(set.error()));
     }
-    const auto canonical = header_field_text(scratch, field);
-    if (!canonical)
-    {
-        return invalid("invalid header value");
-    }
-    return *canonical;
+    // set_header_field succeeded, so the field holds a value.
+    return header_field_text(scratch, field).value_or(std::string());
 }
 
 }  // namespace
@@ -204,11 +196,8 @@ Result<void, StorageError> apply_add(StoredLog& stored, const AddEntryBody& body
         }
         return {};
     }
-    if (auto added = stored.m_Log.add(entry); !added)
-    {
-        return Failure(make_error(StorageErrorKind::ALREADY_EXISTS, "an entry with this id exists"));
-    }
-    return {};
+    return stored.m_Log.add(entry).transform_error(
+        [](Log::Error) { return make_error(StorageErrorKind::ALREADY_EXISTS, "an entry with this id exists"); });
 }
 
 Result<void, StorageError> apply_edit(StoredLog& stored, const EditEntryBody& body)
@@ -236,11 +225,8 @@ Result<void, StorageError> apply_edit(StoredLog& stored, const EditEntryBody& bo
         change->m_NewValue = std::move(*canonical);
     }
     const EntryId id = entry.m_Id;
-    if (auto replaced = stored.m_Log.replace(id, std::move(entry), body.m_EditedUtc); !replaced)
-    {
-        return Failure(make_error(StorageErrorKind::NOT_FOUND, "no such entry"));
-    }
-    return {};
+    return stored.m_Log.replace(id, std::move(entry), body.m_EditedUtc)
+        .transform_error([](Log::Error) { return make_error(StorageErrorKind::NOT_FOUND, "no such entry"); });
 }
 
 }  // namespace
