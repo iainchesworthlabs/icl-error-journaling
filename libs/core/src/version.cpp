@@ -2,9 +2,9 @@
 #include <charconv>
 #include <string_view>
 
-#include "icl_template/parse.hpp"
+#include "error_journaling/parse.hpp"
 
-namespace icl_template
+namespace error_journaling
 {
 
 namespace
@@ -76,4 +76,4 @@ std::expected<SemanticVersion, ParseError> parse_version(std::string_view text) 
     return SemanticVersion{fields[0], fields[1], fields[2]};
 }
 
-}  // namespace icl_template
+}  // namespace error_journaling

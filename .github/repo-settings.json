@@ -1,4 +1,6 @@
 {
+  "description": "An iPhone app for logging robot session errors through the day and sharing the log",
+  "homepage": "https://iainchesworthlabs.github.io/icl-error-journaling/",
   "repository": {
     "has_issues": true,
     "has_wiki": false,
@@ -18,7 +20,11 @@
     "cpp",
     "cpp23",
     "cmake",
-    "vcpkg"
+    "vcpkg",
+    "qt6",
+    "ios",
+    "iphone",
+    "logging"
   ],
   "actions": {
     "default_workflow_permissions": "read",

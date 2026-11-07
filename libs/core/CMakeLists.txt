@@ -3,26 +3,26 @@
 # The version is written as constants in a header; code reads them with `if constexpr`
 # or as plain values. CMake never defines a macro that changes which code compiles.
 configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/icl_template/version.hpp.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/generated/icl_template/version.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/error_journaling/version.hpp.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/error_journaling/version.hpp"
     @ONLY)
 
-add_library(icl_template_core
+add_library(error_journaling_core
     src/greeting.cpp
     src/version.cpp)
-add_library(icl_template::core ALIAS icl_template_core)
+add_library(error_journaling::core ALIAS error_journaling_core)
 
 # One implementation file per platform; CMake adds the directory that matches the target.
-icl_platform_sources(icl_template_core)
+icl_platform_sources(error_journaling_core)
 
-target_include_directories(icl_template_core
+target_include_directories(error_journaling_core
     PUBLIC
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>")
-target_compile_features(icl_template_core PUBLIC cxx_std_23)
-target_link_libraries(icl_template_core
+target_compile_features(error_journaling_core PUBLIC cxx_std_23)
+target_link_libraries(error_journaling_core
     PRIVATE icl::warnings icl::hardening icl::tracy icl::coverage)
 
-if(ICL_TEMPLATE_BUILD_TESTS)
+if(ERROR_JOURNALING_BUILD_TESTS)
     add_subdirectory(tests)
 endif()

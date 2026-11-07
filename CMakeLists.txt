@@ -5,21 +5,21 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/icl" "${CMAKE_C
 
 # Chooses the vcpkg checkout for this configure. Must run before project().
 include(IclVcpkgRoot)
-icl_resolve_vcpkg("${CMAKE_CURRENT_SOURCE_DIR}" ICL_TEMPLATE)
+icl_resolve_vcpkg("${CMAKE_CURRENT_SOURCE_DIR}" ERROR_JOURNALING)
 
-project(icl_template
+project(error_journaling
     VERSION 0.1.0
-    DESCRIPTION "Template for new C++23 projects"
-    HOMEPAGE_URL "https://github.com/iainchesworthlabs/icl-cpp-template"
+    DESCRIPTION "An iPhone app for logging robot session errors through the day and sharing the log"
+    HOMEPAGE_URL "https://github.com/iainchesworthlabs/icl-error-journaling"
     LANGUAGES CXX)
 
-set(ICL_PROJECT_PREFIX ICL_TEMPLATE)
+set(ICL_PROJECT_PREFIX ERROR_JOURNALING)
 
 # The application id on Android and the bundle identifier on iOS: com.iainchesworthlabs.<app>, the App ID registered with
 # Apple and what the provisioning profile names. Defined once; the iOS workflows repeat it as BUNDLE_ID and
 # apps/ios/packaging/verify_app.sh checks that the two agree.
-set(ICL_TEMPLATE_APPLICATION_ID "com.iainchesworthlabs.icltemplate")
-set(ICL_TEMPLATE_DISPLAY_NAME "ICL Template")
+set(ERROR_JOURNALING_APPLICATION_ID "com.iainchesworthlabs.errorjournaling")
+set(ERROR_JOURNALING_DISPLAY_NAME "Error Journaling")
 
 # The iOS application's code is Objective-C++ (apps/ios).
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
@@ -39,11 +39,11 @@ include(IclTracy)
 include(IclCoverage)
 include(IclPlatform)
 
-option(ICL_TEMPLATE_BUILD_TESTS "Build the tests" ON)
-option(ICL_TEMPLATE_BUILD_CLI "Build the command-line application" ON)
-option(ICL_TEMPLATE_BUILD_IOS_APP "Build the iPhone and iPad application (iOS only)" ON)
+option(ERROR_JOURNALING_BUILD_TESTS "Build the tests" ON)
+option(ERROR_JOURNALING_BUILD_CLI "Build the command-line application" ON)
+option(ERROR_JOURNALING_BUILD_IOS_APP "Build the iPhone and iPad application (iOS only)" ON)
 
-if(ICL_TEMPLATE_BUILD_TESTS)
+if(ERROR_JOURNALING_BUILD_TESTS)
     include(CTest)
     find_package(Catch2 3 CONFIG REQUIRED)
     include(Catch)
@@ -51,10 +51,10 @@ endif()
 
 add_subdirectory(libs/core)
 
-if(ICL_TEMPLATE_BUILD_CLI)
+if(ERROR_JOURNALING_BUILD_CLI)
     add_subdirectory(apps/cli)
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "iOS" AND ICL_TEMPLATE_BUILD_IOS_APP)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS" AND ERROR_JOURNALING_BUILD_IOS_APP)
     add_subdirectory(apps/ios)
 endif()

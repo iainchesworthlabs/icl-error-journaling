@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace icl_template::platform
+namespace error_journaling::platform
 {
 
 /// The name of the machine, or "unknown" when the system does not provide one.
@@ -11,4 +11,4 @@ namespace icl_template::platform
 /// the directory for the target, and no source file tests for the platform.
 [[nodiscard]] std::string host_name();
 
-}  // namespace icl_template::platform
+}  // namespace error_journaling::platform

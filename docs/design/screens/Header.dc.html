@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Start of day details</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1E5B7A}a:hover{color:#15435A}
+input::placeholder{color:#6B7A86}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #F2F4F7; font-family: Inter, -apple-system, system-ui, sans-serif; color: #14212B">
+  <div style="position: absolute; left: 0; right: 0; top: 0; padding: 59px 16px 0; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: center; height: 44px">
+      <a href="Main.dc.html" style="display: flex; align-items: center; gap: 2px; font-size: 17px; text-decoration: none; color: #1E5B7A; height: 44px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E5B7A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+        Log
+      </a>
+    </div>
+    <h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.4px">Today’s details</h1>
+    <p style="margin: 0 0 12px; font-size: 15px; color: #5A6B78">Set these once at the start of the day. They head your log.</p>
+
+    <div style="background: #FFFFFF; border-radius: 14px; overflow: hidden">
+      <div style="display: flex; align-items: center; height: 48px; padding: 0 14px; border-bottom: 1px solid #E8ECF0">
+        <span style="font-size: 16px; flex-grow: 1">Facilitator</span>
+        <span style="font-size: 16px; color: #5A6B78">Sam Example</span>
+      </div>
+      <div style="display: flex; align-items: center; height: 48px; padding: 0 14px">
+        <span style="font-size: 16px; flex-grow: 1">Date</span>
+        <span style="font-size: 16px; color: #5A6B78">Sat 7 Nov 2026</span>
+      </div>
+    </div>
+
+    <div style="margin-top: 12px; font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">UNIT number</div>
+    <div style="background: #FFFFFF; border-radius: 14px; display: flex; align-items: center; height: 52px; padding: 0 14px; gap: 2px; border: 2px solid #1E5B7A; box-sizing: border-box">
+      <label for="unit" style="font-size: 20px; font-weight: 600; color: #5A6B78">UNIT-</label>
+      <input id="unit" value="27" inputmode="numeric" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 20px; font-weight: 600; color: #14212B">
+    </div>
+    <div style="font-size: 13px; color: #5A6B78; padding: 0 4px">Type the number only.</div>
+
+    <div style="margin-top: 12px; font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Location</div>
+    <div style="background: #FFFFFF; border-radius: 14px; overflow: hidden">
+      <button style="width: 100%; height: 48px; border: 0; border-bottom: 1px solid #E8ECF0; background: transparent; display: flex; align-items: center; padding: 0 14px; font-family: inherit; font-size: 16px; color: #14212B; text-align: left">
+        <span style="flex-grow: 1">North Site</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E5B7A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Selected" role="img"><path d="M5 12l5 5L20 7"></path></svg>
+      </button>
+      <button style="width: 100%; height: 48px; border: 0; border-bottom: 1px solid #E8ECF0; background: transparent; display: flex; align-items: center; padding: 0 14px; font-family: inherit; font-size: 16px; color: #14212B; text-align: left">
+        <span style="flex-grow: 1">South Site</span>
+      </button>
+      <button style="width: 100%; height: 48px; border: 0; background: transparent; display: flex; align-items: center; padding: 0 14px; font-family: inherit; font-size: 16px; color: #14212B; text-align: left">
+        <span style="flex-grow: 1">Other…</span>
+      </button>
+    </div>
+
+    <div style="margin-top: 12px; font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Software version</div>
+    <div style="background: #FFFFFF; border-radius: 14px; display: flex; align-items: center; height: 52px; padding: 0 14px; gap: 8px">
+      <label for="ver" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Software version</label>
+      <input id="ver" value="1.4.2" inputmode="decimal" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 20px; font-weight: 600; color: #14212B">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E5B7A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Valid version"><path d="M5 12l5 5L20 7"></path></svg>
+    </div>
+    <div style="font-size: 13px; color: #5A6B78; padding: 0 4px">Format 1.4.2 – numbers only.</div>
+  </div>
+
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 34px; display: flex; flex-direction: column; gap: 10px">
+    <a href="Main.dc.html" style="height: 54px; border-radius: 14px; background: #1E5B7A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; text-decoration: none">Start logging</a>
+    <div style="text-align: center; font-size: 13px; color: #5A6B78">You can log errors before every field is filled.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

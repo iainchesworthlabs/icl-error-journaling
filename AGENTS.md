@@ -15,6 +15,28 @@ This file applies to any automated contributor. Read it before changing the repo
 - Do not create or edit secrets, tags, releases, repository settings or rulesets. Those are done by the owner.
 - Do not edit `cmake/icl/`. Change `icl-common-infra` and re-run `tools/ci/sync_cmake.py`.
 
+## Confidentiality (PRD NFR-10)
+
+- Use only the fictional stand-ins from `docs/` (Sam Example, UNIT, North Site, Wrong Response, "the robot", "the
+  downstream ticket indexer") in code, tests, samples, docs, commits, pull requests, issues and CI output.
+- Never copy anything from the handover's `private/` folder into the repository or any text that leaves the machine.
+  Do not open it unless the owner asks. The real configuration file is never committed; only
+  `config/sample-config.json` is.
+
+## Stage gates
+
+- Work follows the stages of `docs/implementation-plan.md`. Before code for a stage, its task breakdown and test list go in
+  `docs/plan/stage-N.md` and the owner reviews it.
+- No UI work starts until the Stage 2 exit gate (no lost acknowledged entries, all corruption cases recover) has passed.
+  Losing an entry from the open log is a P1 defect.
+
+## Developer machine
+
+- Worktrees go on `E:\wt\icl-error-journaling\<slug>` and build inside the worktree. Do not build in the main checkout on
+  `C:`, which has little free space.
+- There is no Mac on the machine. macOS and iOS builds are verified in CI; say in the pull request what has not run on a
+  device.
+
 ## Code rules
 
 - The full project standard is [`docs/standard.md`](https://github.com/iainchesworthlabs/icl-common-infra/blob/develop/docs/standard.md)

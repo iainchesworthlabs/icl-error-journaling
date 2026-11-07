@@ -2,7 +2,7 @@
 
 ```text
 libs/core/            library: public headers, sources, tests
-  include/icl_template/
+  include/error_journaling/
   src/
     platform/<os>/    one directory per platform, chosen by CMake
   tests/

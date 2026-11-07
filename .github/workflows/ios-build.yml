@@ -41,8 +41,8 @@ permissions: {}
 
 env:
   VCPKG_DISABLE_METRICS: "1"
-  # The bundle identifier of CMakeLists.txt (ICL_TEMPLATE_APPLICATION_ID), which the check of the bundle compares.
-  BUNDLE_ID: com.iainchesworthlabs.icltemplate
+  # The bundle identifier of CMakeLists.txt (ERROR_JOURNALING_APPLICATION_ID), which the check of the bundle compares.
+  BUNDLE_ID: com.iainchesworthlabs.errorjournaling
 
 jobs:
   ios-build:
@@ -60,10 +60,10 @@ jobs:
       # The vcpkg toolchain is the toolchain file of every preset, iOS's included. The manifest has no dependency for a
       # device (the tests are not built there).
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
       - name: Show the toolchain
         shell: bash
@@ -84,6 +84,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          app="$(find build/ios-release -name icl-template.app -type d | head -n 1)"
-          [ -n "$app" ] || { echo "::error::no icl-template.app under build/ios-release"; exit 1; }
-          apps/ios/packaging/verify_app.sh "$app" --bundle-id "$BUNDLE_ID" --executable icl-template
+          app="$(find build/ios-release -name error-journaling.app -type d | head -n 1)"
+          [ -n "$app" ] || { echo "::error::no error-journaling.app under build/ios-release"; exit 1; }
+          apps/ios/packaging/verify_app.sh "$app" --bundle-id "$BUNDLE_ID" --executable error-journaling
