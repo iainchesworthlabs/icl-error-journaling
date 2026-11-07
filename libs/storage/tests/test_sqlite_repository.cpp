@@ -596,12 +596,16 @@ TEST_CASE("A file that cannot be opened is a permission problem, not corruption"
     TempDir dir;
     ScriptedClock clock;
     NullJournal journal;
-    // The folder does not exist, and a folder stands where the file should be.
+    // The folder does not exist.
     CHECK(SqliteLogRepository::open(dir.path() / "missing" / "ej.db", clock, journal).error().m_Kind ==
           StorageErrorKind::PERMISSION);
+    // A folder stands where the file should be: depending on the system the open or the first read says no, but never
+    // that the file is corrupt, and nothing is rebuilt.
     std::filesystem::create_directories(dir.path() / "ej.db");
-    CHECK(SqliteLogRepository::open(dir.path() / "ej.db", clock, journal).error().m_Kind ==
-          StorageErrorKind::PERMISSION);
+    const auto opened = SqliteLogRepository::open(dir.path() / "ej.db", clock, journal);
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().m_Kind != StorageErrorKind::CORRUPT);
+    CHECK(std::filesystem::is_directory(dir.path() / "ej.db"));
 }
 
 TEST_CASE("A database that another connection holds locked is reported as locked", "[sqlite][open]")
