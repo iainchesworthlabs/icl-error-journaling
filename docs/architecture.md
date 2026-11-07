@@ -75,13 +75,19 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
                                      every outcome; purge_import_leftovers at launch
     config_exporter.hpp              ConfigExporter: SettingsModel::exportTo into a temporary .ejconfig, then the share
                                      sheet (QmlBridge::shareTemporaryFile), which deletes it
+    background_tasks.hpp             BackgroundTasks (beginBackgroundTaskWithName on iOS; tokens only on the desktop)
+    lifecycle.hpp                    LifecycleCoordinator: on inactive, inside a background task, flush the draft and
+                                     drain the writes; on active, tell the haptic policy and run the day check once the
+                                     store is ready; at quit, flush. Plain C++ over functions, so a test needs no model
+    lifecycle_adapter.hpp            LifecycleAdapter: the only code that listens to Qt for it (applicationStateChanged,
+                                     aboutToQuit)
     haptic_policy.hpp                HapticPolicy: when to prepare the generators (board visible, application active, an
                                      optional keep-alive), against an injected clock
     perf_marks.hpp, launch_tracker.hpp
                                      PerfMarks (os_signpost marks for Instruments, the launch log line) and LaunchTracker
                                      (when the board is usable, reported once)
     qml_bridge.hpp                   QmlBridge, the QObject QML sees, over the capabilities (ej_qml_bridge)
-  src/platform/ios/      Objective-C++ (.mm, -fobjc-arc), built for iOS: share.mm, haptics.mm, perf_marks.mm, accessibility_settings.mm, document_picker.mm and the internal
+  src/platform/ios/      Objective-C++ (.mm, -fobjc-arc), built for iOS: share.mm, haptics.mm, perf_marks.mm, accessibility_settings.mm, document_picker.mm, background_tasks.mm and the internal
                          top_view_controller.mm shared by the presenters
   src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)

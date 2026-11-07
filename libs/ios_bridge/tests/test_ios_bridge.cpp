@@ -6,6 +6,8 @@
 #include "error_journaling/document_types.hpp"
 #include "error_journaling/haptic_policy.hpp"
 #include "error_journaling/launch_tracker.hpp"
+#include "error_journaling/lifecycle.hpp"
+#include "error_journaling/lifecycle_adapter.hpp"
 #include "error_journaling/open_file_filter.hpp"
 #include "error_journaling/perf_marks.hpp"
 #include "error_journaling/platform_services.hpp"
@@ -25,6 +27,7 @@
 #include <QObject>
 #include <QString>
 #include <QUrl>
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -1265,4 +1268,198 @@ TEST_CASE("launch_tracker.order: the usable handler gets the time once", "[unit]
     tracker.frame_swapped();
     tracker.frame_swapped();
     CHECK(seen == std::vector<double>{640.0});
+}
+
+namespace
+{
+
+// Counts the tasks and can run the expiry handler of the last one.
+class FakeTasks final : public bridge::BackgroundTasks
+{
+public:
+    std::vector<std::string> m_Calls;
+    std::function<void()> m_OnExpiry;
+    Token m_Last = 0;
+
+    Token begin(std::string_view name, std::function<void()> on_expiry) override
+    {
+        m_Calls.push_back("begin " + std::string(name));
+        m_OnExpiry = std::move(on_expiry);
+        return ++m_Last;
+    }
+    void end(Token token) override
+    {
+        m_Calls.push_back("end " + std::to_string(token));
+    }
+};
+
+// Everything the coordinator does, in order, as text; and how many writes a flush made.
+struct LifecycleRig
+{
+    FakeTasks m_Tasks;
+    std::vector<std::string> m_Calls;
+    int m_Pending = 0; // a draft waiting to be written
+    int m_Writes = 0;
+    std::function<void()> m_DuringFlush;
+    bridge::LifecycleCoordinator m_Coordinator;
+
+    LifecycleRig() : m_Coordinator(actions(), m_Tasks) {}
+
+    bridge::LifecycleActions actions()
+    {
+        bridge::LifecycleActions a;
+        a.flush_draft = [this]
+        {
+            m_Calls.push_back("flush");
+            if (m_DuringFlush)
+            {
+                m_DuringFlush();
+            }
+            m_Writes += m_Pending;
+            m_Pending = 0;
+        };
+        a.drain = [this] { m_Calls.push_back("drain"); };
+        a.check_day = [this] { m_Calls.push_back("check"); };
+        a.set_application_active = [this](bool active) { m_Calls.push_back(active ? "active" : "inactive"); };
+        a.log = [this](std::string_view line) { m_Calls.push_back("log " + std::string(line)); };
+        return a;
+    }
+
+    [[nodiscard]] std::vector<std::string> without_logs() const
+    {
+        std::vector<std::string> out;
+        for (const std::string& call : m_Calls)
+        {
+            if (!call.starts_with("log "))
+            {
+                out.push_back(call);
+            }
+        }
+        return out;
+    }
+};
+
+} // namespace
+
+TEST_CASE("background_tasks.stub: the desktop version hands out tokens and does nothing", "[unit][lifecycle]")
+{
+    const auto tasks = bridge::make_background_tasks();
+    const auto first = tasks->begin("a", [] {});
+    const auto second = tasks->begin("b", {});
+    CHECK(first != second);
+    tasks->end(first);
+    tasks->end(0);
+    SUCCEED();
+}
+
+TEST_CASE("lifecycle.flush_on_inactive: one task around the flush and the drain, in that order", "[unit][lifecycle]")
+{
+    LifecycleRig rig;
+    rig.m_Pending = 1;
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::BECAME_INACTIVE);
+    CHECK(rig.m_Writes == 1);
+    CHECK(rig.without_logs() == std::vector<std::string>{"inactive", "flush", "drain"});
+    CHECK(rig.m_Tasks.m_Calls == std::vector<std::string>{"begin flush on inactive", "end 1"});
+
+    // A second inactive flushes again and writes nothing.
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::BECAME_INACTIVE);
+    CHECK(rig.m_Writes == 1);
+    CHECK(rig.m_Tasks.m_Calls.size() == 4);
+    CHECK(rig.m_Tasks.m_Calls[3] == "end 2");
+    CHECK(rig.m_Calls.front() == "log lifecycle: inactive");
+}
+
+TEST_CASE("lifecycle.task_expiry: a task that expires mid-flush ends once, and the finish does not end it again",
+          "[unit][lifecycle]")
+{
+    LifecycleRig rig;
+    rig.m_DuringFlush = [&] { rig.m_Tasks.m_OnExpiry(); };
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::BECAME_INACTIVE);
+    CHECK(rig.m_Tasks.m_Calls == std::vector<std::string>{"begin flush on inactive", "end 1"});
+    bool logged = false;
+    for (const std::string& call : rig.m_Calls)
+    {
+        logged = logged || call == "log lifecycle: flush task expired";
+    }
+    CHECK(logged);
+    CHECK(rig.m_Calls.back() == "drain"); // the flush still finished
+
+    // An expiry after the flush finished does nothing.
+    rig.m_Tasks.m_Calls.clear();
+    rig.m_DuringFlush = nullptr;
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::BECAME_INACTIVE);
+    rig.m_Tasks.m_OnExpiry();
+    CHECK(rig.m_Tasks.m_Calls == std::vector<std::string>{"begin flush on inactive", "end 2"});
+}
+
+TEST_CASE("lifecycle.day_check_on_active: before storage is ready it waits and runs once; after it, on every active",
+          "[unit][lifecycle]")
+{
+    LifecycleRig rig;
+    const auto checks = [&] { return std::count(rig.m_Calls.begin(), rig.m_Calls.end(), "check"); };
+
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::BECAME_ACTIVE);
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::BECAME_ACTIVE);
+    CHECK(checks() == 0);
+    rig.m_Coordinator.storage_ready();
+    CHECK(checks() == 1); // once, however many actives waited
+    rig.m_Coordinator.storage_ready();
+    CHECK(checks() == 1);
+
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::BECAME_INACTIVE);
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::BECAME_ACTIVE);
+    CHECK(checks() == 2);
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::BECAME_ACTIVE);
+    CHECK(checks() == 3);
+}
+
+TEST_CASE("lifecycle.order: storage ready with no active yet runs no check; the first active after it does",
+          "[unit][lifecycle]")
+{
+    LifecycleRig rig;
+    rig.m_Coordinator.storage_ready();
+    CHECK(rig.without_logs().empty());
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::BECAME_ACTIVE);
+    CHECK(rig.without_logs() == std::vector<std::string>{"active", "check"});
+}
+
+TEST_CASE("lifecycle.quit: about to quit flushes and drains without a task", "[unit][lifecycle]")
+{
+    LifecycleRig rig;
+    rig.m_Pending = 1;
+    rig.m_Coordinator.on_event(bridge::LifecycleEvent::ABOUT_TO_QUIT);
+    CHECK(rig.m_Writes == 1);
+    CHECK(rig.without_logs() == std::vector<std::string>{"flush", "drain"});
+    CHECK(rig.m_Tasks.m_Calls.empty());
+}
+
+TEST_CASE("lifecycle.coordinator: missing actions are skipped", "[unit][lifecycle]")
+{
+    FakeTasks tasks;
+    bridge::LifecycleCoordinator coordinator({}, tasks);
+    coordinator.on_event(bridge::LifecycleEvent::BECAME_ACTIVE);
+    coordinator.storage_ready();
+    coordinator.on_event(bridge::LifecycleEvent::BECAME_INACTIVE);
+    coordinator.on_event(bridge::LifecycleEvent::ABOUT_TO_QUIT);
+    SUCCEED();
+}
+
+TEST_CASE("lifecycle.adapter: every state maps to its event, and the slots call the handler", "[unit][lifecycle]")
+{
+    using bridge::LifecycleEvent;
+    CHECK(bridge::lifecycle_event_for(Qt::ApplicationActive) == LifecycleEvent::BECAME_ACTIVE);
+    CHECK(bridge::lifecycle_event_for(Qt::ApplicationInactive) == LifecycleEvent::BECAME_INACTIVE);
+    CHECK(bridge::lifecycle_event_for(Qt::ApplicationSuspended) == LifecycleEvent::BECAME_INACTIVE);
+    CHECK(bridge::lifecycle_event_for(Qt::ApplicationHidden) == LifecycleEvent::BECAME_INACTIVE);
+
+    AppFixture app;
+    std::vector<LifecycleEvent> seen;
+    bridge::LifecycleAdapter adapter(app.m_App, [&](LifecycleEvent event) { seen.push_back(event); });
+    adapter.on_state_changed(Qt::ApplicationInactive);
+    adapter.on_state_changed(Qt::ApplicationSuspended);
+    adapter.on_state_changed(Qt::ApplicationActive);
+    // aboutToQuit is connected to the application: emitting it reaches the handler.
+    QMetaObject::invokeMethod(&app.m_App, "aboutToQuit");
+    CHECK(seen == std::vector<LifecycleEvent>{LifecycleEvent::BECAME_INACTIVE, LifecycleEvent::BECAME_INACTIVE,
+                                              LifecycleEvent::BECAME_ACTIVE, LifecycleEvent::ABOUT_TO_QUIT});
 }

@@ -1,0 +1,1 @@
+**A note being typed is kept when the app goes to the background, and the day is checked on return.** When the app becomes inactive it writes the note draft and finishes any write in flight inside a short background task, and when it becomes active again it runs the new-day check (once the log has loaded). The same flush runs at quit. Not yet run on a device.
