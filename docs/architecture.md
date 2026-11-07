@@ -19,6 +19,8 @@ libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespac
     golden.hpp, golden.cpp   the golden comparison helper
     fake_time_zone_provider.hpp  fixed-offset TimeZoneProvider for deterministic tests
     storage_samples.hpp      sample data (fictional stand-ins) shared with the storage tests
+    golden_scenarios.hpp     the scenarios behind the golden files; built with golden.* as the library
+                             `ej_core_test_support`, which the view-model tests link too
 libs/storage/         ej_storage: the repositories behind `LogRepository` and the journal files (Stage 2); links ej_core, QtSql
                       privately
   include/error_journaling/  memory_log_repository.hpp, sqlite_log_repository.hpp (no Qt SQL type in the header),
@@ -50,6 +52,26 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, behind
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
   qml/                the module ErrorJournalingApp (the URI differs from the executable name)
   src/                main.cpp
+  src/viewmodel/      ej_viewmodel: the thin QObject layer between the core and storage and QML (Stage 3), namespace
+                      `ej::viewmodel`; every .cpp and .hpp here is picked up by a glob (see below). Headers are
+                      included as "viewmodel/<name>.hpp"
+                        environment.hpp      Scheduler (monotonic one-shot timers), IdGenerator, DeviceZone, and the
+                                             `Environment` struct of references that also holds the core `Clock`
+                        storage_gateway.*    StorageGateway (post a job and a completion; `run` is the typed form),
+                                             StorageContext (the repository and the ConfigStore), ThreadedStorageGateway
+                        config_store.hpp     ConfigStore: where the configuration file and the import and export files
+                                             are read and written, on the storage thread
+                        feedback_sink.*      FeedbackSink: touch acknowledgement (the impact haptic, before a commit)
+                                             and confirmation (after a commit); PlatformFeedbackSink, NullFeedbackSink
+                        clipboard.hpp        Clipboard (the QtGui implementation is in src/, work package 3.11)
+                        configuration_source.hpp  ConfigurationSource and ConfigurationObserver (the read side) and
+                                             ConfigurationEditor (the one write the Other sheet makes)
+                        log_observer.hpp     LogChange and LogObserver
+                        open_log_source.hpp  OpenLogSource and OpenLogObserver
+                        observer_list.hpp    ObserverList<T>, the observer set the services share
+                        move_only_function.hpp  MoveOnlyFunction, a stand-in for std::move_only_function (Apple libc++ lacks it)
+  tests/viewmodel/    test_*.cpp (`unit`), integration/*.cpp (`integration`), perf/*.cpp (`perf`, built only when the
+                      directory has files), support/: the test support (docs/testing.md)
   packaging/ios.cmake    bundle properties, signing and the plugin defaults of Qt's iOS kit
   packaging/ios/         Info.plist.in, asset catalogue (icon, launch colour), verify_app.sh
 cmake/icl/            vendored CMake modules from icl-common-infra (do not edit)
@@ -64,7 +86,15 @@ tools/                project scripts, baselines and coverage floors
 | `ej_storage` | static library: the in-memory and SQLite repositories and the journal files (recovery and migrations follow in Stage 2) | `ej_core`, QtSql |
 | `ej_ios_bridge` | static library; Objective-C++ on iOS, a stub elsewhere | nothing (UIKit and Foundation on iOS) |
 | `ej_qml_bridge` | static library; the `qml_bridge` QObject QML calls, over the `ej_ios_bridge` interface | `ej_ios_bridge`, QtCore |
-| `ej_app` | Qt Quick executable (`error-journaling`) | the libraries above, Qt Quick |
+| `ej_viewmodel` | static library: the view-model layer of Stage 3; no Qt Quick and no QtGui, so its tests run without a display | `ej_core`, `ej_storage`, `ej_ios_bridge`, QtCore |
+| `ej_app` | Qt Quick executable (`error-journaling`) | the libraries above, `ej_viewmodel`, Qt Quick |
+
+`apps/app/CMakeLists.txt` finds the sources of `ej_viewmodel` with `file(GLOB ... CONFIGURE_DEPENDS)` over `src/viewmodel/`,
+and `apps/app/tests/viewmodel/CMakeLists.txt` does the same for the tests, so a work package adds its files without
+editing CMake. The view-model layer owns one storage thread (`ThreadedStorageGateway`: a `std::thread` joined in the
+destructor, because Apple libc++ keeps `std::jthread` behind an experimental flag). The repository and the configuration
+store are used only on that thread; the GUI thread keeps a mirror of what it shows and changes it when a commit has
+succeeded.
 
 Each library has tests with the `unit` label; the application has two `ui` tests (`app.smoke` starts it
 without a display and waits for the first frame, `app.version` answers `--version`). The application is the iPhone
