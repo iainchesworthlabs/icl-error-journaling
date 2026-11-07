@@ -544,6 +544,109 @@ TEST_CASE("A write to an archived log that was journalled but not committed is r
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// The draft and a note that was journalled but not committed
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+
+/// The store as a kill between the journal sync and the commit leaves it, while a note is being added to the open log:
+/// the draft ("half a note", written at sample_time(1600)) is in the database and so is the journal record of the note.
+void crash_image_of_a_note(const StoreCopy& store, const std::filesystem::path& image, std::int64_t captured_minute)
+{
+    bool copied = false;
+    OpenStore open(store.root(),
+                   [&](CrashPoint point) -> Result<void, StorageError>
+                   {
+                       if (point == CrashPoint::BEFORE_DB_COMMIT && !copied)
+                       {
+                           copied = true;
+                           copy_open_store(store.root(), image);
+                           return fail(make_error(StorageErrorKind::INTERNAL, "killed"));
+                       }
+                       return {};
+                   });
+    CHECK_FALSE(open.repo()
+                    .add_entry(pristine().m_OpenLog, sample_note(9000, captured_minute, pristine().m_Draft))
+                    .has_value());
+    CHECK(copied);
+}
+
+std::optional<Draft> draft_in(const std::filesystem::path& root)
+{
+    ScriptedClock clock;
+    NullJournal journal;
+    auto repo = SqliteLogRepository::open(root / "ej.db", clock, journal);
+    REQUIRE(repo.has_value());
+    return (*repo)->get_draft().value();
+}
+
+}  // namespace
+
+TEST_CASE("A note that was journalled but not committed takes its draft with it when it is replayed",
+          "[recovery][draft]")
+{
+    // The commit would have cleared the draft in the same transaction. A kill after the journal sync leaves the record, which
+    // recovery applies, and the draft, which is not journalled: both must not be there.
+    for (const std::int64_t minute : {1700, 1600})
+    {
+        INFO("the note was captured at minute " << minute << ", the draft was written at 1600");
+        StoreCopy store;
+        TempDir image;
+        crash_image_of_a_note(store, image.path(), minute);
+        REQUIRE(draft_in(image.path()).has_value());  // as the kill left it
+
+        const RecoveryReport report = recover(StorageLocation(image.path())).value();
+        CHECK(report.m_Outcome == RecoveryOutcome::REPLAYED);
+        CHECK(report.m_ReplayedRecords == 1);
+        CHECK_FALSE(draft_in(image.path()).has_value());
+        ScriptedClock clock;
+        NullJournal journal;
+        auto repo = SqliteLogRepository::open(image.path() / "ej.db", clock, journal);
+        REQUIRE(repo.has_value());
+        CHECK((*repo)->load_log(pristine().m_OpenLog).value().m_Log.find(entry_id(9000)) != nullptr);
+    }
+}
+
+TEST_CASE("A draft written after the note was captured is the next note's and stays when the note is replayed",
+          "[recovery][draft]")
+{
+    StoreCopy store;
+    TempDir image;
+    crash_image_of_a_note(store, image.path(), 100);  // captured long before the draft
+    const RecoveryReport report = recover(StorageLocation(image.path())).value();
+    CHECK(report.m_Outcome == RecoveryOutcome::REPLAYED);
+    const auto draft = draft_in(image.path());
+    REQUIRE(draft.has_value());
+    CHECK(draft->m_Text == pristine().m_Draft);
+}
+
+TEST_CASE("A note that was journalled but not committed does not bring its draft back when the database is rebuilt",
+          "[recovery][draft]")
+{
+    for (const std::int64_t minute : {1700, 100})
+    {
+        INFO("the note was captured at minute " << minute << ", the draft was written at 1600");
+        StoreCopy store;
+        TempDir image;
+        crash_image_of_a_note(store, image.path(), minute);
+        const PageSpot spot = page_of(image.path() / "ej.db", "entry");
+        overwrite(image.path() / "ej.db", spot.m_Offset + 8, random_bytes(16, 77));
+
+        const RecoveryReport report = recover(StorageLocation(image.path())).value();
+        CHECK(report.m_Outcome == RecoveryOutcome::REBUILT);
+        // The draft is read back from the damaged file; it stays when it is newer than the note.
+        CHECK(report.m_DraftRecovered == (minute == 100));
+        CHECK(draft_in(image.path()).has_value() == (minute == 100));
+        ScriptedClock clock;
+        NullJournal journal;
+        auto repo = SqliteLogRepository::open(image.path() / "ej.db", clock, journal);
+        REQUIRE(repo.has_value());
+        CHECK((*repo)->load_log(pristine().m_OpenLog).value().m_Log.find(entry_id(9000)) != nullptr);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // J1 to J12: the journal
 // ---------------------------------------------------------------------------------------------------------------------
 

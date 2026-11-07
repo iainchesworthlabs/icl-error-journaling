@@ -851,6 +851,10 @@ Result<void, StorageError> RecoveryRun::rebuild(const std::string& reason, bool 
         {
             return Failure(fresh.error());
         }
+        // The draft goes in before the journals are replayed: replaying a note takes out a draft that was written no later
+        // than the note was captured, because that draft is what the note was made from (a kill between the journal and the
+        // commit leaves both), and a draft typed after the note stays.
+        const bool draft_salvaged = draft && (*fresh)->set_draft(draft->m_Text, draft->m_UpdatedUtc);
         if (!records.empty())
         {
             const auto replayed = (*fresh)->replay(records);
@@ -860,9 +864,10 @@ Result<void, StorageError> RecoveryRun::rebuild(const std::string& reason, bool 
             }
             m_Report.m_RebuiltRecords = replayed->m_Applied;
         }
-        if (draft && (*fresh)->set_draft(draft->m_Text, draft->m_UpdatedUtc))
+        if (draft_salvaged)
         {
-            m_Report.m_DraftRecovered = true;
+            const auto kept = (*fresh)->get_draft();
+            m_Report.m_DraftRecovered = kept && kept->has_value();
         }
         // Check the new file before it replaces anything: it must pass its own checks and agree with the journals.
         const auto quick = (*fresh)->quick_check();
