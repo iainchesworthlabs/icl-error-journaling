@@ -178,12 +178,13 @@ TEST_CASE("Destroying the gateway finishes the queued jobs but never calls their
     MemoryStorage storage(clock);
     std::atomic<int> jobs_run{0};
     int completions = 0;
+    // Declared before the gateway, so that they outlive the job that waits on them.
+    std::mutex mutex;
+    std::condition_variable released;
+    bool release = false;
     {
         ThreadedStorageGateway gateway(storage.context());
         // The first job holds the thread, so the rest are still queued when the gateway goes.
-        std::mutex mutex;
-        std::condition_variable released;
-        bool release = false;
         gateway.post(
             [&](StorageContext&)
             {
