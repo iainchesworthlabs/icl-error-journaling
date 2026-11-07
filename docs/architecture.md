@@ -31,7 +31,9 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              (`Recovery::run`, called at launch before the board appears), crash_point.hpp
                              (`CrashPoint` and `CrashHook`, the places the kill harness ends the process),
                              draft_store.hpp (`DraftStore` and the `DraftTimer` interface under it: the note draft,
-                             written at most 300 ms after it changes), storage_location.hpp (the folders of one store)
+                             written at most 300 ms after it changes), migrator.hpp (`Migrator`: schema migrations with a
+                             backup copy and a marker; the product's list of steps is empty at version 1),
+                             storage_location.hpp (the folders of one store)
   src/                       one file per component; quarantine (where recovery puts what it replaces), journal_seed
                              (a journal written again from a log)
   src/platform/              the pieces that differ by operating system, with one directory per system (linux, macos,
@@ -47,7 +49,7 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              test_recovery.cpp with recovery_fixture.hpp (a populated store, copied and damaged for
                              each case: C1 to C16, J1 to J12, X1 to X3; `integration`);
                              test_draft_store.cpp (`unit`, on fake_draft_timer.hpp) and test_draft_store_sqlite.cpp
-                             (`integration`); kill/ (`system`: ej_kill_worker, the child process, ej_kill_driver, the
+                             (`integration`); test_migrator.cpp with migration_steps.hpp (test-only steps; `integration`); kill/ (`system`: ej_kill_worker, the child process, ej_kill_driver, the
                              Catch2 program that kills it and checks the store, and the workload they share);
                              perf/test_launch_cost.cpp (`perf`: the launch check on a year of logs);
                              helpers: temp_dir.hpp, raw_db.hpp (a second connection), recording_journal.hpp
@@ -88,7 +90,7 @@ tools/                project scripts, baselines and coverage floors
 | Target | Kind | Depends on |
 |---|---|---|
 | `ej_core` | static library, C++23 | QtCore |
-| `ej_storage` | static library: the in-memory and SQLite repositories, the journal files, recovery and the note draft (migrations follow in Stage 2) | `ej_core`, QtSql |
+| `ej_storage` | static library: the in-memory and SQLite repositories, the journal files, recovery, the note draft and migrations | `ej_core`, QtSql |
 | `ej_ios_bridge` | static library; Objective-C++ on iOS, a stub elsewhere | nothing (UIKit and Foundation on iOS) |
 | `ej_qml_bridge` | static library; the `qml_bridge` QObject QML calls, over the `ej_ios_bridge` interface | `ej_ios_bridge`, QtCore |
 | `ej_viewmodel` | static library: the view-model layer of Stage 3; no Qt Quick and no QtGui, so its tests run without a display | `ej_core`, `ej_storage`, `ej_ios_bridge`, QtCore |

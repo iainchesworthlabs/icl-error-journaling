@@ -14,6 +14,7 @@ add_library(ej_storage
     src/journal_seed.cpp
     src/journal_writer.cpp
     src/memory_log_repository.cpp
+    src/migrator.cpp
     src/quarantine.cpp
     src/recovery.cpp
     src/sqlite_log_repository.cpp

@@ -21,6 +21,7 @@ add_executable(ej_storage_integration_tests
     test_contract_sqlite.cpp
     test_draft_store_sqlite.cpp
     test_file_journal.cpp
+    test_migrator.cpp
     test_platform_files.cpp
     test_recovery.cpp
     test_sqlite_repository.cpp

@@ -13,6 +13,8 @@ target_include_directories(ej_kill_workload
 
 add_executable(ej_kill_worker kill_worker.cpp)
 target_link_libraries(ej_kill_worker PRIVATE ej_kill_workload Qt6::Sql icl::warnings icl::coverage)
+# migration_steps.hpp, the test-only migration steps, lives in the parent directory.
+target_include_directories(ej_kill_worker PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 add_executable(ej_kill_driver kill_driver.cpp)
 target_link_libraries(ej_kill_driver PRIVATE ej_kill_workload Qt6::Sql Catch2::Catch2 icl::warnings icl::coverage)

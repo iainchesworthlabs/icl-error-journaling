@@ -3,6 +3,7 @@
 
 #include "error_journaling/journal.hpp"
 #include "error_journaling/journal_reader.hpp"
+#include "error_journaling/migrator.hpp"
 #include "error_journaling/sqlite_log_repository.hpp"
 #include "error_journaling/stored_log.hpp"
 #include "journal_seed.hpp"
@@ -116,6 +117,7 @@ private:
     std::unique_ptr<SqliteLogRepository> m_Repository;
     std::vector<JournalInfo> m_Journals;
     NullJournal m_NullJournal;
+    std::vector<std::string> m_MigrationQuarantined;  // what finishing an interrupted migration set aside
     std::size_t m_Lost = 0;
 };
 
@@ -954,6 +956,19 @@ Result<RecoveryReport, StorageError> RecoveryRun::execute()
     {
         return Failure(created.error());
     }
+    // An interrupted migration is finished or undone before anything opens the database (section 2.7 step 2).
+    if (std::filesystem::exists(m_Location.migration_marker()))
+    {
+        auto resumed = Migrator::resume(m_Location, m_Clock);
+        if (!resumed)
+        {
+            return Failure(resumed.error());
+        }
+        note("a migration from version " + std::to_string(resumed->m_FromVersion) + " to " +
+             std::to_string(resumed->m_ToVersion) + " had been interrupted: " +
+             std::string(migration_outcome_name(resumed->m_Outcome)));
+        m_MigrationQuarantined = resumed->m_QuarantinedPaths;
+    }
     if (auto found = find_journals(); !found)
     {
         return Failure(found.error());
@@ -1010,7 +1025,9 @@ Result<RecoveryReport, StorageError> RecoveryRun::execute()
         return Failure(open.error());
     }
     m_Report.m_OpenLogEntries = *open ? (*open)->m_Log.entries().size() : 0;
-    m_Report.m_QuarantinedPaths = m_Quarantine.taken();
+    m_Report.m_QuarantinedPaths = m_MigrationQuarantined;
+    m_Report.m_QuarantinedPaths.insert(m_Report.m_QuarantinedPaths.end(), m_Quarantine.taken().begin(),
+                                       m_Quarantine.taken().end());
 
     const bool rebuilt = *state == DatabaseState::DAMAGED;
     if (rebuilt && m_Report.m_RebuiltRecords == 0)

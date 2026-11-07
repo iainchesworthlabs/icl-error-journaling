@@ -10,6 +10,8 @@
 //   ACK <n>     after operation n returned success, and never before
 //   DONE        the workload ended by itself
 //   TYPED <n>   the note field changed for the nth time (mode `draft`)
+//   MIGRATING   a migration is about to run (mode `migrate`: the test-only steps, version 1 to 3)
+//   MIGRATED    it finished
 //   RECOVERING  recovery is about to run
 //   RECOVERED <outcome>
 //   AT <point>  at the crash point, waiting to be killed (mode `wait`)
@@ -23,10 +25,12 @@
 #include "error_journaling/crash_point.hpp"
 #include "error_journaling/draft_store.hpp"
 #include "error_journaling/file_journal.hpp"
+#include "error_journaling/migrator.hpp"
 #include "error_journaling/recovery.hpp"
 #include "error_journaling/sqlite_log_repository.hpp"
 #include "error_journaling/storage_location.hpp"
 #include "kill_workload.hpp"
+#include "migration_steps.hpp"
 
 #include <QCoreApplication>
 #include <chrono>
@@ -40,6 +44,8 @@
 
 using namespace ej;
 using namespace ej::test::kill;
+using ej::test::TEST_TARGET_VERSION;
+using ej::test::test_steps;
 
 namespace
 {
@@ -317,6 +323,24 @@ int run_draft(const Arguments& arguments)
     return 0;
 }
 
+int run_migration(const Arguments& arguments)
+{
+    const StorageLocation location(arguments.m_Directory);
+    ScriptedClock clock(UtcMillis{std::chrono::milliseconds(arguments.m_Seed)});
+    Crasher crasher(arguments);
+    MigrationOptions options;
+    options.m_Hook = crasher.hook();
+    say("MIGRATING");
+    auto report = Migrator(location, clock, test_steps(), TEST_TARGET_VERSION, std::move(options)).run();
+    if (!report)
+    {
+        say("ERROR migration: " + describe(report.error()));
+        return 2;
+    }
+    say(std::string("MIGRATED ") + std::string(migration_outcome_name(report->m_Outcome)));
+    return 0;
+}
+
 int run_recovery(const Arguments& arguments)
 {
     const StorageLocation location(arguments.m_Directory);
@@ -358,6 +382,10 @@ int main(int argc, char** argv)
     if (arguments->m_Mode == "draft")
     {
         return run_draft(*arguments);
+    }
+    if (arguments->m_Mode == "migrate")
+    {
+        return run_migration(*arguments);
     }
     say("ERROR unknown mode");
     return 64;
