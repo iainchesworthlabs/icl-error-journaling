@@ -115,6 +115,9 @@ LogSession::~LogSession()
     m_Configuration.remove_observer(*m_Listener);
     if (m_Document)
     {
+        // A model that still follows the open log takes itself off the document when it is told there is none. This
+        // is before the strong reference to the document is released, which is the order the followers rely on.
+        m_OpenLogObservers.notify([](OpenLogObserver& observer) { observer.on_open_log_changed(nullptr); });
         m_Document->remove_observer(*m_Listener);
     }
 }

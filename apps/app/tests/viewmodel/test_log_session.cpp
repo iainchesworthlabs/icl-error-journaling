@@ -7,6 +7,7 @@
 #include "support/manual_storage_gateway.hpp"
 #include "support/memory_storage.hpp"
 #include "support/test_environment.hpp"
+#include "viewmodel/board_model.hpp"
 #include "viewmodel/document_registry.hpp"
 #include "viewmodel/export_context_builder.hpp"
 #include "viewmodel/log_session.hpp"
@@ -804,8 +805,9 @@ TEST_CASE("Empty and over-long notes are refused", "[viewmodel][session]")
     rig.gateway.run_all();
     REQUIRE(rig.entries().size() == 1);
     const auto entries = rig.entries();
-    REQUIRE(note_of(entries.front()) != nullptr);
-    CHECK(note_of(entries.front())->m_Value.size() == 10'000);
+    const NoteEntry* note = note_of(entries.front());
+    REQUIRE(note != nullptr);
+    CHECK(note->m_Value.size() == 10'000);
 }
 
 TEST_CASE("A note is trimmed and confirmed with the success haptic only after its commit", "[viewmodel][session]")
@@ -1158,4 +1160,76 @@ TEST_CASE("A session that has gone is not called back", "[viewmodel][session]")
     rig.world.m_Clock.advance(1s);
     CHECK(rig.world.m_Clock.pending_timers() == 0);
     CHECK(rig.config.observer_count() == 0);
+}
+
+// ------------------------------------------------------------------- a model that follows the session (lifetime)
+
+namespace
+{
+
+int tile_count(const viewmodel::BoardModel& board, int row)
+{
+    return board.data(board.index(row), viewmodel::BoardModel::COUNT).toInt();
+}
+
+} // namespace
+
+TEST_CASE("A board that follows the session counts the taps and starts again at a new log", "[viewmodel][session]")
+{
+    SessionRig rig(Options().existing().no_load());
+    // The board is made before the log is loaded: it follows the session from no document to the open one.
+    viewmodel::BoardModel board(rig.config, *rig.session);
+    CHECK(board.total_count() == 0);
+    rig.session->load();
+    rig.gateway.run_all();
+    REQUIRE(rig.session->open_log() != nullptr);
+
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.world.m_Clock.advance(1s);
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.world.m_Clock.advance(1s);
+    REQUIRE(rig.session->recordError(SEQUENCE_OUT_OF_ORDER));
+    CHECK(board.total_count() == 0); // nothing is counted before the commit
+    rig.gateway.run_all();
+    CHECK(board.total_count() == 3);
+    CHECK(tile_count(board, 0) == 2);
+    CHECK(tile_count(board, 1) == 1);
+    CHECK(rig.feedback.recorded().size() == 3); // the session confirms; the board only reads
+
+    // A new day: the same document takes the new log and the board starts at zero.
+    const LogDocument* const before = rig.session->open_log();
+    rig.world.m_Clock.advance(24h);
+    REQUIRE(rig.session->startNewLog());
+    rig.gateway.run_all();
+    CHECK(rig.session->open_log() == before);
+    CHECK(board.total_count() == 0);
+    CHECK(tile_count(board, 0) == 0);
+
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.gateway.run_all();
+    CHECK(board.total_count() == 1);
+    CHECK(tile_count(board, 0) == 1);
+
+    // And again.
+    REQUIRE(rig.session->startNewLog());
+    rig.gateway.run_all();
+    CHECK(board.total_count() == 0);
+    // The board goes first, then the session, then the document (destruction order of this scope).
+}
+
+TEST_CASE("A session that goes tells its followers there is no open log before it lets go of the document",
+          "[viewmodel][session]")
+{
+    FakeOpenLogObserver observer;
+    {
+        SessionRig rig(Options().existing());
+        rig.session->add_observer(observer);
+        REQUIRE(observer.documents().empty());
+        viewmodel::BoardModel board(rig.config, *rig.session);
+        REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+        rig.gateway.run_all();
+        CHECK(board.total_count() == 1);
+    }
+    REQUIRE(observer.documents().size() == 1);
+    CHECK(observer.documents().front() == nullptr);
 }
