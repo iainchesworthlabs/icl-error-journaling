@@ -12,7 +12,7 @@ one pull request into `develop`. Requirement IDs refer to the [PRD](../prd.md).
 Everything lives in `ej_core` (C++23, QtCore only) under `libs/core/`. There is no UI, no database and no QML. Stage 1 adds
 no dependency.
 
-- Headers in `libs/core/include/error_journaling/`, namespace `error_journaling`, sources in `libs/core/src/`, tests in
+- Headers in `libs/core/include/error_journaling/`, namespace `ej`, sources in `libs/core/src/`, tests in
   `libs/core/tests/`.
 - Text is UTF-8 `std::string`. The core uses `std::chrono` for time. `QTimeZone` appears only in one implementation file
   (see 1.3), so the rest of the core builds and tests without Qt types.
@@ -47,7 +47,7 @@ Tests (`unit`):
 - Accepts `1`, `27`, `100`, `123456789`.
 - Rejects `027` and `00` (`LEADING_ZERO`), the empty string, `2 7`, ` 27`, `27 `, `-27`, `+27`, `2.7`, `UNIT-27`, and
   Unicode digits such as `２７` (`NOT_DIGITS`).
-- Rejects ten or more digits (`TOO_LONG`, see open question 4).
+- Rejects ten or more digits (`TOO_LONG`).
 - `format("UNIT")` gives `UNIT-27`; a different prefix is used verbatim; `unit_label("UNIT")` gives `UNIT #`.
 
 ### SoftwareVersion (HDR-04)
@@ -124,7 +124,7 @@ language.
 Tests (`unit`):
 
 - 24-hour: `00:00`, `00:05`, `09:07`, `12:00`, `23:59`.
-- 12-hour: `12:00 am`, `12:05 am`, `9:07 am`, `12:00 pm`, `11:59 pm` (see open question 6 for the proposed wording).
+- 12-hour: `12:00 am`, `12:05 am`, `9:07 am`, `12:00 pm`, `11:59 pm` (see open question 2 for the proposed wording).
 - With seconds: `09:07:03` and `9:07:03 am`.
 - Zero-padding of minutes and seconds; no locale dependency (the test sets a non-English `LC_ALL` and expects identical
   output).
@@ -198,8 +198,7 @@ std::expected<void, HeaderError> correct_header_change(Log&, EntryId change, std
 
 `correct_header` fixes the value currently in force: the latest live change for that field if there is one, otherwise the
 initial value. The "old" value on a change line is derived from the history (`previous_value`), not stored, so a
-correction flows into every later line without rewriting entries. Open question 3 asks the owner to confirm this reading
-of the PRD's data model. `change_header` validates through `UnitNumber` and `SoftwareVersion` for those fields and
+correction flows into every later line without rewriting entries. The owner confirmed this reading of the PRD's data model. `change_header` validates through `UnitNumber` and `SoftwareVersion` for those fields and
 rejects a change to the value already in force.
 
 Tests (`unit`):
@@ -270,8 +269,8 @@ std::expected<std::string, RenderError> render_entry_line(const Log&, EntryId, c
 ```
 
 `render_entry_line` serves REV-04 (copy one line) and the timeline in Stage 3, so the review screen and the export cannot
-drift apart (REV-01 requires the same wording). The two format constants that are still provisional (the header date and
-the space after `T|`) are each defined once in `export_format.hpp`, so a change is a one-line edit followed by regenerating
+drift apart (REV-01 requires the same wording). The two format constants that were provisional (the header date and
+the space after `T|`, now accepted) are each defined once in `export_format.hpp`, so a change is a one-line edit followed by regenerating
 the affected golden files.
 
 Rules as implemented (the numbering is this plan's; it covers PRD rules 1 to 9 and adds line endings):
@@ -285,7 +284,7 @@ Rules as implemented (the numbering is this plan's; it covers PRD rules 1 to 9 a
 6. Times in the zone each entry was captured in, formatted by `TimeFormatter`.
 7. Deleted entries are skipped. With totals on, a blank line and a totals line follow the timeline.
 8. Header block, blank line, timeline. LF line endings, UTF-8, no trailing whitespace on any line.
-9. Free text containing line breaks is collapsed to single spaces, so one entry is always one line (open question 7).
+9. Free text containing line breaks is collapsed to single spaces, so one entry is always one line (accepted; open question 3 checks it against the indexer).
 
 Tests (`unit`): the golden files below, plus:
 
@@ -342,7 +341,7 @@ Tests (`unit`):
   `{value}`, a malformed UUID, an empty facilitator, a prefix of `UNIT-`.
 - Several faults in one file are all reported, in file order.
 - A retired type keeps its board position out of the layout, and still round-trips.
-- Unknown keys are rejected with `UNKNOWN_FIELD` (open question 8).
+- Unknown keys are rejected with `UNKNOWN_FIELD` (decided).
 - Unicode names round-trip; a file with a byte-order mark is accepted.
 - Limits: files over 1 MiB, or with over 500 error types, are rejected before parsing deeply (no unbounded work on an
   imported file).
@@ -384,10 +383,10 @@ directory and prints the first differing line. A `.gitattributes` rule marks `li
 eol=lf` so a Windows checkout cannot convert line endings. Names, ids and zones are fictional (Sam Example, UNIT, North
 Site, Wrong Response, and the other error types of the proposed board).
 
-"Date" means the header date format (provisional decision 2: `7 Nov 2026`). "T\|" means the space after the marker
-(provisional decision 1: `HH:mm T| <error type>`). Every golden has a `Date:` line, so a change to the date format
+"Date" means the header date format (accepted: `7 Nov 2026`). "T\|" means the space after the marker
+(accepted: `HH:mm T| <error type>`). Every golden has a `Date:` line, so a change to the date format
 regenerates all of them; only the goldens with error lines depend on the marker spacing. The totals-line wording is not in
-the PRD at all and is a third provisional item (open question 5).
+the PRD at all and is a third provisional item (open question 1).
 
 | File | Covers | Date | T\| | Totals wording |
 |---|---|---|---|---|
@@ -416,7 +415,7 @@ the PRD at all and is a third provisional item (open question 5).
 | `retired-type.txt` | An entry whose error type was retired later still prints its name. | yes | yes | no |
 
 The first golden to be written, reviewed and merged is `prd-example.txt` (work package 1.2), before any other renderer
-code. If the owner changes either provisional decision, the change is a constant in `export_format.hpp` plus a
+code. If the owner changes either accepted format, the change is a constant in `export_format.hpp` plus a
 regeneration of the files in the table, reviewed as a diff.
 
 ## Work packages
@@ -480,28 +479,29 @@ depends on the platform's tz database: the Melbourne tests run on Linux CI again
 on the macOS runner when 0.2 adds that leg. Nothing in Stage 1 touches iOS; the iOS-specific tz risk is checked on device in
 Stage 5.
 
-## Open questions for the owner
+## Decisions and open questions
 
-1. **Marker spacing (provisional).** The plan builds against `10:05 T| Wrong Response` (one space each side of `T|`) until
-   it is checked against a line the ticket indexer already reads. Affects 19 of the 23 goldens.
-2. **Header date format (provisional).** Built against `7 Nov 2026`. Affects every golden.
-3. **Correct versus Change on the header card.** Is Correct meant to fix the value currently in force (the latest change if
-   there is one), and should a change line's "old" value be derived from history rather than stored? This plan says yes to
-   both; the PRD data model also lists `old_value` on the change entry, which would then be a snapshot that is ignored.
-4. **Limits on digits.** Unit numbers capped at nine digits and version components at nine digits each (fits a 32-bit
-   integer, far beyond real use). Is `0` an acceptable unit number? This plan rejects it with the leading-zero rule.
-5. **Totals line wording.** The PRD does not give it. Proposal: `Totals: Wrong Response 3, Mute Delay 1`, in board order and
-   then master-list order, types with zero left out, and no totals line at all when there are no errors. Does the
-   downstream ticket indexer read this line, and does it have to avoid starting with a time?
-6. **12-hour and seconds style.** Proposed `9:07 am` / `1:15 pm` and `HH:mm:ss`. Any preference on `am`/`pm` versus
-   `AM`/`PM`, or a leading zero?
-7. **Multi-line notes.** A note typed with a line break is collapsed to one line (one entry, one line, so the indexer's
-   line reader never sees a stray line). Acceptable, or should line breaks be kept?
-8. **Strict configuration files.** Unknown keys are rejected (a typo in a hand-prepared file is caught). The alternative is
-   to ignore them. Strict means a newer file with extra keys at the same schema version fails to import.
-9. **Final newline.** The export has no trailing newline after the last line (it pastes into Slack without an empty line).
-   Confirm, or switch to one trailing LF.
-10. **Empty value rendering.** An empty header field prints `Software Version:` with no trailing space. Confirm that the
-    indexer does not care.
-11. **Naming.** Namespace `error_journaling` and header directory `include/error_journaling/` follow the template layout.
-    Say so if the project prefers `ej`, to match the target names.
+**Decided by the owner (7 Nov 2026)**
+
+- The `T|` spacing (`10:05 T| Wrong Response`) and the header date format (`7 Nov 2026`) are accepted as written. They stay
+  constants in `export_format.hpp`, so a later finding from the indexer is a one-line change and a golden regeneration.
+- Correct fixes the value currently in force, and a change line's "old" value is derived from history, not stored.
+- Digit limits stand: nine digits for unit numbers and for each version component; `0` is not a unit number.
+- 24-hour `HH:mm` is the default (PRF-07); the 12-hour and seconds styles are options.
+- Unknown keys in a configuration file are rejected.
+- Free-text line breaks are collapsed to a single space. To be checked against the indexer.
+- A trailing newline after the last export line does not matter; the plan keeps none.
+- An empty header field prints its label and colon with no trailing space.
+- The C++ namespace is `ej` (headers stay under `include/error_journaling/`, per the template layout).
+
+**Still open**
+
+1. **Totals line wording.** The PRD does not give it. Proposal: `Totals: Wrong Response 3, Mute Delay 1`, in board order and
+   then master-list order, types with zero left out, and no totals line at all when there are no errors. The owner will ask
+   whether the downstream ticket indexer reads this line. Blocks only the totals goldens (`totals-on.txt`,
+   `totals-on-empty.txt`); work package 1.5 can land the rest first.
+2. **12-hour and seconds style.** Proposed `9:07 am` / `1:15 pm` and `HH:mm:ss`. Any preference on `am`/`pm` versus
+   `AM`/`PM`, or a leading zero? Blocks only `twelve-hour.txt` and the 12-hour half of `with-seconds.txt`.
+3. **Multi-line notes and the indexer.** Collapsing to one line is accepted; confirm with the indexer that it never needs
+   the line breaks.
+4. **Empty header field and the indexer.** Confirm the indexer does not care about `Software Version:` with no value.
