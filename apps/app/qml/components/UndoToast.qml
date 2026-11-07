@@ -20,7 +20,8 @@ import ErrorJournalingApp
 // the text size and wraps instead of cutting the line off; 52 pt is its minimum.
 //
 // The item is as high as the card (implicitHeight), so the screen anchors it by its left, right and bottom and gives it
-// no height. The Undo button is named "Undo, <the line>", which starts with its visible label.
+// no height. The card takes every touch on it, so nothing under the toast is pressed through it. The Undo button is
+// named "Undo, <the line>", which starts with its visible label.
 Item {
     id: root
 
@@ -97,6 +98,15 @@ Item {
             radius: Theme.radius.toast
             color: Theme.colour.toastBackground
             Accessible.ignored: true
+        }
+
+        // The whole card takes the touch: a press, a release and a tap on it go no further, so the tile under a toast that
+        // floats over the board is not pressed (and no entry recorded) by a tap on the toast. This handler takes the grab
+        // at the press. It is not a control, so it has no role, and Undo stays the only button.
+        TapHandler {
+            objectName: "toastShield"
+            enabled: root.active
+            gesturePolicy: TapHandler.WithinBounds
         }
 
         // The remaining-time bar, along the bottom edge between the rounded corners.
