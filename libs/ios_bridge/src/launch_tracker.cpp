@@ -60,6 +60,10 @@ void LaunchTracker::maybe_usable()
     m_Usable = true;
     const double now = m_Marks.ms_since_process_start();
     m_Marks.event(Mark::BOARD_USABLE, now);
+    if (m_OnUsable)
+    {
+        m_OnUsable(now);
+    }
     const auto whole = [](double ms) { return std::to_string(static_cast<long long>(ms + 0.5)); };
     m_Marks.log("launch: usable at " + whole(now) + " ms (storage " + whole(m_StorageMs) + ", qml " + whole(m_QmlMs) +
                 ", first frame " + whole(m_FirstFrameMs) + ")");

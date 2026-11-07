@@ -1,0 +1,1 @@
+**Launch and tap timings can be read on the phone.** Five quick taps on the version text show the launch time and the last, median and worst of the recent tap-to-haptic times, so the speed targets can be checked from a TestFlight build without a Mac. The tap time stops when the haptic call returns and does not include the actuator.

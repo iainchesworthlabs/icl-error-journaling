@@ -15,6 +15,7 @@ add_library(ej_ios_bridge
     src/launch_tracker.cpp
     src/platform_services.cpp
     src/share_presenter.cpp
+    src/timing_stats.cpp
     ${bridge_sources})
 add_library(error_journaling::ios_bridge ALIAS ej_ios_bridge)
 
