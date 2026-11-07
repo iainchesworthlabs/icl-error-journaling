@@ -25,8 +25,8 @@ Item {
     signal tilePressed(int row, string typeId, bool isOther)
     signal tileTapped(int row, string typeId, bool isOther)
 
-    readonly property real tileWidth: (width - (Theme.size.boardColumns - 1) * Theme.space.tileGap) / Theme.size.boardColumns
-    readonly property real boardHeight: Theme.size.boardRows * Theme.size.tileHeight + (Theme.size.boardRows - 1) * Theme.space.tileGap
+    readonly property real tileWidth: (width + Theme.space.tileGap) / Theme.size.boardColumns - Theme.space.tileGap
+    readonly property real boardHeight: (Theme.size.tileHeight + Theme.space.tileGap) * Theme.size.boardRows - Theme.space.tileGap
 
     implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
     implicitHeight: boardHeight

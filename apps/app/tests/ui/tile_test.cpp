@@ -133,7 +133,7 @@ QObject* theme_group(UiRig& rig, const char* name)
 /// Waits for an animator of `duration_ms` to have ended and written its value back: its time, and a few frames.
 void advance_through(UiRig& rig, int duration_ms)
 {
-    advance_frames(rig, std::chrono::milliseconds(duration_ms + 48));
+    rig.advance(std::chrono::milliseconds(duration_ms + 48));
 }
 
 double tile_minimum(const Node& /*node*/)
@@ -226,16 +226,8 @@ TEST_CASE("tile.press_scale: 0.96 within 120 ms of the press, back on release an
     const int second = rig.press(tile);
     advance_through(rig, press_ms);
     CHECK(face->scale() == pressed_scale);
-    // Two updates: the first outside the tile starts the cancel, the second is the one that completes it.
-    for (const double beyond : {120.0, 200.0})
-    {
-        // Each update is sent three times: the window holds back some touch updates until its frame (see the drag test
-        // of the MiniBoard), and the cancel needs the updates outside to arrive.
-        for (int repeat = 0; repeat < 3; ++repeat)
-        {
-            rig.move(second, tile, QPointF(TILE_WIDTH + beyond, TILE_HEIGHT / 2));
-        }
-    }
+    rig.move(second, tile, QPointF(TILE_WIDTH + 120, TILE_HEIGHT / 2));
+    rig.move(second, tile, QPointF(TILE_WIDTH + 200, TILE_HEIGHT / 2));
     advance_through(rig, press_ms);
     CHECK(face->scale() == 1.0);
     rig.release(second);

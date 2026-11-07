@@ -46,7 +46,7 @@ QQuickItem* load_toast(UiRig& rig, const QVariantMap& properties)
 /// Waits for an animator of `duration_ms` to have ended and written its value back: its time, and a few frames.
 void advance_through(UiRig& rig, int duration_ms)
 {
-    advance_frames(rig, std::chrono::milliseconds(duration_ms + 48));
+    rig.advance(std::chrono::milliseconds(duration_ms + 48));
 }
 
 QObject* object_named(QQuickItem* from, const QString& name)
