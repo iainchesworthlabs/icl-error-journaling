@@ -84,6 +84,16 @@ Item {
     Accessible.name: root.text
     Accessible.ignored: !root.active
 
+    // The whole toast takes the touch: a press, a release and a tap on it go no further, so the tile under a toast that
+    // floats over the board is not pressed (and no entry recorded) by a tap on the toast. This handler takes the grab at
+    // the press. It sits on the item that is already announced as the toast's line, so it is no control of its own, and
+    // Undo stays the only button.
+    TapHandler {
+        objectName: "toastShield"
+        enabled: root.active
+        gesturePolicy: TapHandler.WithinBounds
+    }
+
     Item {
         id: card
 
@@ -98,15 +108,6 @@ Item {
             radius: Theme.radius.toast
             color: Theme.colour.toastBackground
             Accessible.ignored: true
-        }
-
-        // The whole card takes the touch: a press, a release and a tap on it go no further, so the tile under a toast that
-        // floats over the board is not pressed (and no entry recorded) by a tap on the toast. This handler takes the grab
-        // at the press. It is not a control, so it has no role, and Undo stays the only button.
-        TapHandler {
-            objectName: "toastShield"
-            enabled: root.active
-            gesturePolicy: TapHandler.WithinBounds
         }
 
         // The remaining-time bar, along the bottom edge between the rounded corners.
