@@ -347,7 +347,7 @@ double perf_budget_factor()
 {
     bool parsed = false;
     const double factor = qEnvironmentVariable("EJ_PERF_BUDGET_FACTOR").toDouble(&parsed);
-    return parsed ? std::max(1.0, factor) : 1.0;
+    return std::max(1.0, parsed ? factor : static_cast<double>(EJ_PERF_BUDGET_FACTOR_DEFAULT));
 }
 
 SceneSize measure_scene(UiRig& rig, QQuickItem* from)
