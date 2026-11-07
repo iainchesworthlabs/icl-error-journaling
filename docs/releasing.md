@@ -63,6 +63,12 @@ kit's. The application is portrait only (`Info.plist.in`).
   application uses no encryption beyond the system's. Change it only if that stops being true. The check refuses usage
   text for a permission the application does not ask for. Safe areas are the application's: it reads `SafeArea.margins`
   (Qt 6.9 or later).
+- **The setup file type.** The property list exports one type of its own, `com.iainchesworthlabs.errorjournaling.config`
+  (extension `ejconfig`, conforming to `public.json`), names it in `CFBundleDocumentTypes` with the handler rank Owner,
+  and registers `public.json` as an alternate, so a setup file that was not renamed still offers the application.
+  `LSSupportsOpeningDocumentsInPlace` is `false` (the system copies the file into the sandbox, and the importer deletes
+  it), and `UIFileSharingEnabled` stays unset (it would list the Documents folder in Files). No permission, capability or
+  entitlement is involved. `tools/ci/check_ios_plist.py` and `verify_app.sh` check these.
 - **Entitlements.** `apps/app/packaging/ios/error-journaling.entitlements` holds one key,
   `com.apple.developer.default-data-protection` = `NSFileProtectionCompleteUntilFirstUserAuthentication`, referenced by
   `XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS` in `ios.cmake`. The App ID needs Data Protection set to "Protected Until First

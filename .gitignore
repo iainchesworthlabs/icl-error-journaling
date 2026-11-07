@@ -19,3 +19,5 @@ compile_commands.json
 # Real configuration files hold confidential values and are never committed.
 *-config.json
 !config/sample-config.json
+# The setup file the app exports and imports (renamed from the same JSON); it holds the same confidential values.
+*.ejconfig

@@ -42,6 +42,64 @@
     <key>NSHumanReadableCopyright</key>
     <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
 
+    <!-- The setup file. The application exports one type of its own, with the extension ejconfig, so that it is the only
+         thing the phone offers for that file, and registers plain JSON as an alternate so that a file that was not renamed
+         still offers the application. The identifier is the bundle identifier plus config and, with the extension and the
+         description, is one of the constants in libs/ios_bridge/include/error_journaling/document_types.hpp:
+         tools/ci/check_ios_plist.py fails when the two differ. -->
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.iainchesworthlabs.errorjournaling.config</string>
+            <key>UTTypeDescription</key>
+            <string>CS Bingo Board setup</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.json</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>ejconfig</string>
+                </array>
+            </dict>
+        </dict>
+    </array>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>CS Bingo Board setup</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Owner</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.iainchesworthlabs.errorjournaling.config</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>JSON</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.json</string>
+            </array>
+        </dict>
+    </array>
+    <!-- The system copies an opened file into the application's sandbox, where the importer owns it and deletes it. The
+         application never opens a file in place, and does not turn on file sharing: that would list its Documents folder,
+         and the copy of an imported file in it, in Files and Finder. -->
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <false/>
+
     <!-- No usage text for any permission: the application asks for none. Add the text with the first permission the
          application asks for; the check in packaging/verify_app.sh refuses the keys it lists until then. -->
 

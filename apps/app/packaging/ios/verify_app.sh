@@ -75,6 +75,12 @@ for usage in NSCameraUsageDescription NSMicrophoneUsageDescription NSLocationWhe
   [ -z "$(key $usage)" ] || fail "Info.plist has $usage: the application asks for no permission"
 done
 [ "$(key CFBundleIconName)" = "AppIcon" ] || fail "CFBundleIconName is '$(key CFBundleIconName)'"
+# The setup file type: exported, named by a document type, opened by copy and not in place, and no file sharing.
+[ "$(key UTExportedTypeDeclarations:0:UTTypeIdentifier)" = "$bundle_id.config" ] || fail "UTExportedTypeDeclarations does not export $bundle_id.config"
+[ "$(key UTExportedTypeDeclarations:0:UTTypeTagSpecification:public.filename-extension:0)" = "ejconfig" ] || fail "the exported type does not have the extension ejconfig"
+[ "$(key CFBundleDocumentTypes:0:LSItemContentTypes:0)" = "$bundle_id.config" ] || fail "CFBundleDocumentTypes does not name $bundle_id.config"
+[ "$(key LSSupportsOpeningDocumentsInPlace)" = "false" ] || fail "LSSupportsOpeningDocumentsInPlace is '$(key LSSupportsOpeningDocumentsInPlace)', expected false"
+[ "$(key UIFileSharingEnabled)" != "true" ] || fail "UIFileSharingEnabled is true: the Documents folder would be listed in Files"
 [ -n "$(key UILaunchScreen)" ] || fail "Info.plist has no UILaunchScreen (iOS would run the program in a legacy window)"
 [ "$(key DTPlatformName)" = "iphoneos" ] || fail "DTPlatformName is '$(key DTPlatformName)'; this is not a device build"
 [ -n "$(key MinimumOSVersion)" ] || fail "Info.plist has no MinimumOSVersion"

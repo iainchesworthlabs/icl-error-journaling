@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app_root.hpp"
+#include "error_journaling/config_exporter.hpp"
+#include "error_journaling/config_importer.hpp"
 #include "error_journaling/launch_tracker.hpp"
+#include "error_journaling/open_file_filter.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/storage.hpp"
 #include "error_journaling/version.hpp"
 #include "qt_clipboard.hpp"
+#include "viewmodel/settings_model.hpp"
 
 #include <QCommandLineOption>
 #include <QCommandLineParser>
@@ -16,6 +20,7 @@
 #include <QQuickWindow>
 #include <QStandardPaths>
 #include <filesystem>
+#include <string_view>
 #include <utility>
 
 namespace
@@ -65,6 +70,15 @@ int main(int argc, char* argv[])
     // The marks the exit gate is measured by (NFR-04). The tracker reports the launch once, when the board is usable.
     ej::bridge::LaunchTracker launch(*services.m_PerfMarks);
     launch.process_started();
+    // A file the system opens in the application (AirDrop, Files) arrives as an event, possibly before anything can
+    // import it: the filter holds it until the importer is ready. What an earlier import left behind is removed now.
+    ej::bridge::PerfMarks& marks = *services.m_PerfMarks;
+    ej::bridge::DocumentPicker& document_picker = *services.m_DocumentPicker;
+    ej::bridge::OpenFileFilter open_files([&marks](std::string_view line) { marks.log(line); });
+    QCoreApplication::instance()->installEventFilter(&open_files);
+    const QString temporary_path = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    ej::bridge::purge_import_leftovers(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
+                                       temporary_path);
     ej::bridge::QmlBridge platform_bridge(std::move(services));
     const bool share_available = share_sheet.available();
 
@@ -83,6 +97,27 @@ int main(int argc, char* argv[])
                           ej::app::start_sqlite_storage(store));
     // Every queued write is finished once, on the GUI thread, before the program ends.
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &root, [&root] { root.drain(); });
+
+    // Setup files: a file from the open-file event or the picker goes to the settings model, which reads and checks it;
+    // the importer deletes the file when the model has answered, whatever the answer. The export writes a temporary
+    // file and shares it. The Settings screens call these in Stage 4; until then only a file opened in the application
+    // reaches them.
+    ej::viewmodel::SettingsModel& settings = *root.settings();
+    ej::bridge::ConfigImporter importer([&settings](const QString& path) { settings.loadImport(path); });
+    QObject::connect(&settings, &ej::viewmodel::SettingsModel::importPrepared, &importer,
+                     [&importer] { importer.load_finished(); });
+    QObject::connect(&settings, &ej::viewmodel::SettingsModel::importFailed, &importer,
+                     [&importer] { importer.load_finished(); });
+    QObject::connect(&open_files, &ej::bridge::OpenFileFilter::fileOpened, &importer,
+                     [&importer](const QString& path) { importer.import_file(path); });
+    QObject::connect(&importer, &ej::bridge::ConfigImporter::idle, &open_files,
+                     [&open_files] { open_files.handled(); });
+    ej::bridge::ConfigExporter exporter(
+        ej::bridge::export_directory(temporary_path), [&settings](const QString& path) { settings.exportTo(path); },
+        [&platform_bridge](const QString& path) { platform_bridge.shareTemporaryFile(path); });
+    QObject::connect(&settings, &ej::viewmodel::SettingsModel::exportFinished, &exporter,
+                     [&exporter](bool ok, const QString& message) { exporter.export_finished(ok, message); });
+    (void)document_picker; // the Settings rows call pick_and_import with it (Stage 4)
 
     QQmlApplicationEngine engine;
     // The root owns the models; QML must never delete one.
@@ -115,6 +150,8 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("share"), QVariant::fromValue(root.share())}});
     engine.loadFromModule("ErrorJournalingApp", "Main");
     launch.qml_loaded();
+    // The importer can take a file now; one that launched the application cold is delivered here.
+    open_files.ready();
     // Recovery has finished: the store was opened above, before the window was made. The shell of Stage 5, 5.7 calls
     // board_enabled() when the 12 tiles accept taps (the session is open); until then this line stands for it.
     launch.storage_ready();

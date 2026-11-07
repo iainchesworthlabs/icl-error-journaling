@@ -134,12 +134,23 @@ exist only under `src/platform/ios`; and the library's CMake must compile that d
 private to the iOS directory (`top_view_controller`) is listed in the script and needs no stub. Its unit tests are in
 `tools/tests/test_platform_layout.py`.
 
+## iOS property list check
+
+The **Plan** job of `ci.yml` runs `tools/ci/check_ios_plist.py` on `apps/app/packaging/ios/Info.plist.in` (with the CMake
+placeholders stubbed). It fails when the exported type's identifier, description or extension differ from the constants
+in `libs/ios_bridge/include/error_journaling/document_types.hpp`, when the document types do not name the exported
+type (role Viewer, rank Owner) and `public.json` (rank Alternate), when `LSSupportsOpeningDocumentsInPlace` is not
+false, when `UIFileSharingEnabled` is on, or when a usage-description key appears. Its unit tests are in
+`tools/tests/test_ios_plist.py`. `verify_app.sh` repeats the type, the document type and the two flags on the built
+bundle. Later packages add the launch screen and the entitlements.
+
 ## Confidentiality check
 
 The **Confidentiality** job of `ci.yml` is part of CI Status. It runs the unit tests of the two checks in
 `tools/ci/`, then:
 
-- `check_config_files.py` fails when any tracked file other than `config/sample-config.json` is named `*-config.json`.
+- `check_config_files.py` fails when any tracked file other than `config/sample-config.json` is named `*-config.json` or
+  `*.ejconfig` (the setup file as the app exports it).
 - `check_confidential_terms.py` fails on a case-insensitive whole-word match of any term in the tracked files and their
   names, the commit messages and author names of the pull request range (or merge group, or push), and the pull request
   title and body. The title and body are passed through `env:`, never interpolated into the script. The script prints the

@@ -66,13 +66,22 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
                                      purge_directory for the launch purge
     accessibility_settings.hpp       AccessibilitySettings (Stage 4, 4.3): text scale from the content size category,
                                      Reduce Motion, VoiceOver, and a change notice; the category-to-scale table is portable
+    document_types.hpp               the setup file's type identifier, extension, description and size limit, one
+                                     constant each; tools/ci/check_ios_plist.py compares Info.plist.in with them
+    document_picker.hpp              DocumentPicker (UIDocumentPickerViewController as copy; UNAVAILABLE on the desktop)
+    open_file_filter.hpp             OpenFileFilter: the QFileOpenEvent the system sends for an opened file, queued
+                                     until the importer is ready
+    config_importer.hpp              ConfigImporter: size check, hand to SettingsModel::loadImport, delete the file on
+                                     every outcome; purge_import_leftovers at launch
+    config_exporter.hpp              ConfigExporter: SettingsModel::exportTo into a temporary .ejconfig, then the share
+                                     sheet (QmlBridge::shareTemporaryFile), which deletes it
     haptic_policy.hpp                HapticPolicy: when to prepare the generators (board visible, application active, an
                                      optional keep-alive), against an injected clock
     perf_marks.hpp, launch_tracker.hpp
                                      PerfMarks (os_signpost marks for Instruments, the launch log line) and LaunchTracker
                                      (when the board is usable, reported once)
     qml_bridge.hpp                   QmlBridge, the QObject QML sees, over the capabilities (ej_qml_bridge)
-  src/platform/ios/      Objective-C++ (.mm, -fobjc-arc), built for iOS: share.mm, haptics.mm, perf_marks.mm, accessibility_settings.mm and the internal
+  src/platform/ios/      Objective-C++ (.mm, -fobjc-arc), built for iOS: share.mm, haptics.mm, perf_marks.mm, accessibility_settings.mm, document_picker.mm and the internal
                          top_view_controller.mm shared by the presenters
   src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
@@ -106,7 +115,7 @@ apps/app/             ej_app: the Qt Quick application (executable error-journal
   packaging/ios.cmake    bundle properties, signing and the plugin defaults of Qt's iOS kit
   packaging/ios/         Info.plist.in, asset catalogue (icon, launch colour), verify_app.sh
 cmake/icl/            vendored CMake modules from icl-common-infra (do not edit)
-tools/                project scripts, baselines and coverage floors
+tools/                project scripts, baselines and coverage floors (ci/check_ios_plist.py, ci/check_platform_layout.py)
   dataset/             ej_dataset: a desktop tool that writes the one-year fictional store for the device measurements
 ```
 
