@@ -14,7 +14,7 @@ jobs:
       security-events: write
       contents: read
       issues: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/codeql.yml@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/codeql.yml@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
     with:
       runner: '["ubuntu-26.04"]'
       languages: >-

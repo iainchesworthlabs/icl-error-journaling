@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <catch2/catch_test_macros.hpp>
 
-#include "icl_template/parse.hpp"
+#include "error_journaling/parse.hpp"
 
-using icl_template::ParseError;
-using icl_template::SemanticVersion;
-using icl_template::parse_version;
+using error_journaling::ParseError;
+using error_journaling::SemanticVersion;
+using error_journaling::parse_version;
 
 TEST_CASE("parse_version reads MAJOR.MINOR.PATCH", "[parse]")
 {

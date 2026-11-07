@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace icl_template
+namespace error_journaling
 {
 
 /// Builds a greeting for a name. Kept deliberately small: it exists so that the template
@@ -26,4 +26,4 @@ private:
     std::string m_Name;
 };
 
-}  // namespace icl_template
+}  // namespace error_journaling

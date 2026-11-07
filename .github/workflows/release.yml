@@ -46,7 +46,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
       - name: Check the release has notes
-        uses: iainchesworthlabs/icl-common-infra/actions/release-notes@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/release-notes@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           version: ${{ steps.tag.outputs.version }}
           prerelease: ${{ steps.tag.outputs.prerelease }}
@@ -74,18 +74,18 @@ jobs:
           persist-credentials: false
       - name: Install GCC
         if: runner.os == 'Linux'
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
       - name: Set up Qt
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
       - name: Load the MSVC environment
         if: runner.os == 'Windows'
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-msvc-env@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-msvc-env@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
       - name: Set up ccache
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           key: release-${{ matrix.name }}
       - name: Configure, build and install
@@ -107,22 +107,22 @@ jobs:
       # start on Ubuntu 24.04 (glibc 2.39) or Debian 13. The action fails when a program or library in it needs more.
       - name: Check the glibc the package needs
         if: runner.os == 'Linux'
-        uses: iainchesworthlabs/icl-common-infra/actions/check-glibc-floor@e15f14812b7446517252d6677abf755698d57986 # v0.1.16 plus #34
+        uses: iainchesworthlabs/icl-common-infra/actions/check-glibc-floor@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19 plus #34
         with:
           folder: stage
       - name: Sign the Windows binaries
         id: sign
         if: runner.os == 'Windows'
-        uses: iainchesworthlabs/icl-common-infra/actions/sign-windows@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/sign-windows@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           mode: ${{ vars.SIGN_WINDOWS || 'false' }}
-          files: stage/bin/icl-template.exe
+          files: stage/bin/error-journaling.exe
           pfx-base64: ${{ secrets.WIN_TESTSIGN_PFX_BASE64 }}
           pfx-password: ${{ secrets.WIN_TESTSIGN_PFX_PASSWORD }}
       - name: Archive
         shell: bash
         env:
-          NAME: icl-template-${{ github.ref_type == 'tag' && github.ref_name || 'dry-run' }}-${{ matrix.name }}
+          NAME: error-journaling-${{ github.ref_type == 'tag' && github.ref_name || 'dry-run' }}-${{ matrix.name }}
         run: |
           set -euo pipefail
           mkdir -p dist
@@ -153,9 +153,9 @@ jobs:
     permissions:
       contents: read
     env:
-      # ICL_TEMPLATE_APPLICATION_ID in CMakeLists.txt; the check of the IPA fails if the two differ.
-      BUNDLE_ID: com.iainchesworthlabs.icltemplate
-      EXECUTABLE: icl-template
+      # ERROR_JOURNALING_APPLICATION_ID in CMakeLists.txt; the check of the IPA fails if the two differ.
+      BUNDLE_ID: com.iainchesworthlabs.errorjournaling
+      EXECUTABLE: error-journaling
       VCPKG_DISABLE_METRICS: "1"
     steps:
       - name: Check out
@@ -166,7 +166,7 @@ jobs:
       # The shared action names the secret that is missing, before anything else is downloaded.
       - name: Import the certificate and the provisioning profile
         id: signing
-        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           certificate-base64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
           certificate-password: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
@@ -175,10 +175,10 @@ jobs:
           method: app-store
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
       # Signed for the application alone (apps/ios/CMakeLists.txt says why). CMake makes no Xcode scheme unless asked,
       # and `xcodebuild archive` takes only a scheme.
@@ -191,9 +191,9 @@ jobs:
         run: >
           cmake --preset ios-release
           -DCMAKE_XCODE_GENERATE_SCHEME=ON
-          -DICL_TEMPLATE_IOS_BUILD_NUMBER="$BUILD_NUMBER"
-          -DICL_TEMPLATE_IOS_SIGNING_TEAM="$TEAM_ID"
-          -DICL_TEMPLATE_IOS_SIGNING_PROFILE="$PROFILE_NAME"
+          -DERROR_JOURNALING_IOS_BUILD_NUMBER="$BUILD_NUMBER"
+          -DERROR_JOURNALING_IOS_SIGNING_TEAM="$TEAM_ID"
+          -DERROR_JOURNALING_IOS_SIGNING_PROFILE="$PROFILE_NAME"
 
       - name: Name the package
         id: name
@@ -208,15 +208,15 @@ jobs:
           project="$(find build/ios-release -maxdepth 1 -name '*.xcodeproj' | head -n 1)"
           [ -n "$project" ] || { echo "::error::CMake made no .xcodeproj under build/ios-release"; exit 1; }
           echo "project=$project" >> "$GITHUB_OUTPUT"
-          echo "ipa=dist-ios/icl-template-$label-ios-appstore.ipa" >> "$GITHUB_OUTPUT"
+          echo "ipa=dist-ios/error-journaling-$label-ios-appstore.ipa" >> "$GITHUB_OUTPUT"
           echo "version=${label#v}" >> "$GITHUB_OUTPUT"
 
       - name: Archive and export the IPA
         id: export
-        uses: iainchesworthlabs/icl-common-infra/actions/export-ios-ipa@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/export-ios-ipa@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           project: ${{ steps.name.outputs.project }}
-          scheme: icl_template_ios
+          scheme: error_journaling_ios
           bundle-id: ${{ env.BUNDLE_ID }}
           team-id: ${{ steps.signing.outputs.team-id }}
           profile-name: ${{ steps.signing.outputs.profile-name }}
@@ -240,7 +240,7 @@ jobs:
       # Apple's own check of the icon, the property list, the signature and the privacy declarations; and, for a tag or a
       # manual run that asks, the upload to TestFlight.
       - name: Validate with Apple, and upload to TestFlight
-        uses: iainchesworthlabs/icl-common-infra/actions/upload-testflight@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/upload-testflight@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           ipa: ${{ steps.export.outputs.ipa }}
           key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
@@ -250,7 +250,7 @@ jobs:
 
       - name: Remove the signing keychain and profile
         if: always()
-        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           remove: "true"
 
@@ -286,7 +286,7 @@ jobs:
       contents: write
       id-token: write
       attestations: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/release-publish.yml@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/release-publish.yml@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
     secrets:
       REPO_GPG_PRIVATE_KEY: ${{ secrets.REPO_GPG_PRIVATE_KEY }}
       REPO_GPG_PASSPHRASE: ${{ secrets.REPO_GPG_PASSPHRASE }}

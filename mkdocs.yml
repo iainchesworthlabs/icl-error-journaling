@@ -1,6 +1,6 @@
-site_name: ICL C++ template
-site_description: Template for C++23 projects in the iainchesworthlabs organisation
-repo_url: https://github.com/iainchesworthlabs/icl-cpp-template
+site_name: error-journaling
+site_description: An iPhone app for logging robot session errors through the day and sharing the log
+repo_url: https://github.com/iainchesworthlabs/icl-error-journaling
 docs_dir: docs
 strict: true
 theme:
@@ -10,9 +10,14 @@ theme:
     - content.code.copy
 nav:
   - Home: index.md
+  - Requirements (PRD): prd.md
+  - Implementation plan: implementation-plan.md
+  - Plan:
+      - Bootstrap: design/bootstrap-plan.md
+      - Stage 0: plan/stage-0.md
+  - Design: design/README.md
   - Building: building.md
   - Architecture: architecture.md
   - Testing: testing.md
   - Continuous integration: ci.md
   - Releasing: releasing.md
-  - Starting a project: new-project.md

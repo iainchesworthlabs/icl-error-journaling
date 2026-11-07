@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "icl_template/greeting.hpp"
+#include "error_journaling/greeting.hpp"
 
 #include <utility>
 
-#include "icl_template/platform.hpp"
+#include "error_journaling/platform.hpp"
 
-namespace icl_template
+namespace error_journaling
 {
 
 Greeter::Greeter(std::string name) : m_Name(std::move(name))
@@ -22,4 +22,4 @@ std::string Greeter::greet() const
     return text;
 }
 
-}  // namespace icl_template
+}  // namespace error_journaling

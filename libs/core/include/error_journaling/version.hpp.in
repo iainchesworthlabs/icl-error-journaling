@@ -3,7 +3,7 @@
 
 #include <string_view>
 
-namespace icl_template
+namespace error_journaling
 {
 
 inline constexpr int VERSION_MAJOR = @PROJECT_VERSION_MAJOR@;
@@ -11,4 +11,4 @@ inline constexpr int VERSION_MINOR = @PROJECT_VERSION_MINOR@;
 inline constexpr int VERSION_PATCH = @PROJECT_VERSION_PATCH@;
 inline constexpr std::string_view VERSION_STRING = "@PROJECT_VERSION@";
 
-}  // namespace icl_template
+}  // namespace error_journaling

@@ -4,7 +4,7 @@
 #include <expected>
 #include <string_view>
 
-namespace icl_template
+namespace error_journaling
 {
 
 struct SemanticVersion
@@ -27,4 +27,4 @@ enum class ParseError
 /// Parses "MAJOR.MINOR.PATCH". Each field is a decimal number of at most nine digits.
 [[nodiscard]] std::expected<SemanticVersion, ParseError> parse_version(std::string_view text) noexcept;
 
-}  // namespace icl_template
+}  // namespace error_journaling

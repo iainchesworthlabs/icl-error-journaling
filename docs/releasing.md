@@ -61,10 +61,10 @@ job of `release.yml` and `ios-build.yml`.
   --signed --store`, and hands it to `upload-testflight`. A tag, or a manual run with `upload_testflight`, uploads; any
   other run (`gh workflow run release.yml --ref <branch>`) has Apple validate the IPA and stops. The IPA is a workflow
   artifact for 7 days under the name `ios-appstore`, and is never put on the release.
-- **One identifier.** `ICL_TEMPLATE_APPLICATION_ID` in `CMakeLists.txt` is the bundle identifier
+- **One identifier.** `ERROR_JOURNALING_APPLICATION_ID` in `CMakeLists.txt` is the bundle identifier
   (`com.iainchesworthlabs.<app>`, the same string as the Android application id will be). The two workflows repeat it as
   `BUNDLE_ID`, and `verify_app.sh` fails when the bundle says otherwise. `tools/instantiate.py` sets all three.
-- **Build number.** `CFBundleVersion` is `ICL_TEMPLATE_IOS_BUILD_NUMBER` (the run number in the release job), or the
+- **Build number.** `CFBundleVersion` is `ERROR_JOURNALING_IOS_BUILD_NUMBER` (the run number in the release job), or the
   project version when empty. TestFlight refuses a number that is not higher than every earlier one for the same version.
 - **Property list.** `ITSAppUsesNonExemptEncryption` is `false`, which is the owner's declaration to Apple that the
   application uses no encryption beyond the system's. Change it only if that stops being true. The check refuses usage
@@ -81,7 +81,7 @@ What the owner does in Apple's developer portal and App Store Connect, once per 
 2. Profiles, Distribution: an **App Store Connect** profile for that App ID and the Apple Distribution certificate, with no
    devices. Its base64 is the secret `IOS_PROVISIONING_PROFILE_BASE64`.
 3. App Store Connect, Apps, New App: iOS, the bundle identifier, a name that is unique across the App Store (the name
-   under the icon comes from `CFBundleDisplayName`, which is `ICL_TEMPLATE_DISPLAY_NAME`), any SKU.
+   under the icon comes from `CFBundleDisplayName`, which is `ERROR_JOURNALING_DISPLAY_NAME`), any SKU.
 4. TestFlight tab: an Internal Testing group with the testers.
 5. Add the repository to the selected repositories of the organisation secrets above, and set `SIGN_IOS_UPLOAD` to `true`.
 

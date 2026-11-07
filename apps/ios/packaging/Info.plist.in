@@ -22,7 +22,7 @@
     <key>CFBundleShortVersionString</key>
     <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
     <!-- The build number. TestFlight refuses a build whose number is not higher than every earlier one for the same
-         version, so the release workflow gives the number of its run (ICL_TEMPLATE_IOS_BUILD_NUMBER). -->
+         version, so the release workflow gives the number of its run (ERROR_JOURNALING_IOS_BUILD_NUMBER). -->
     <key>CFBundleVersion</key>
     <string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
     <!-- The icon: the AppIcon set in Assets.xcassets, compiled by Xcode (the target's
