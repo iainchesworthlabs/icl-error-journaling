@@ -415,9 +415,9 @@ TEST_CASE("Replacing the log fails the commands that waited and ignores the one 
 
     rig.gateway().run_all();
 
-    // The one in flight was for the old log: it is reported, and the mirror (the new log) did not change.
+    // The one in flight was for the old log: it is reported (the store has archived that log, so it may refuse the
+    // entry), and the mirror, which is the new log, did not change either way.
     REQUIRE(results.size() == 3);
-    CHECK(results[2].has_value());
     CHECK(rig.document->id() == next_log);
     CHECK(rig.document->log().entries().empty());
     REQUIRE(rig.observer.changes().size() == 1);
@@ -684,19 +684,26 @@ TEST_CASE("Edits, deletes and shares of an archived log are journalled; new entr
 TEST_CASE("A log archived while its document is open stops taking entries", "[viewmodel][document][archived]")
 {
     DocumentRig rig;
-    REQUIRE(rig.document->add_entry(sample_error(1, 10), Origin::USER, {}));
-    // A tap that is waiting when the new day starts must not land in the old log.
-    REQUIRE(rig.document->add_entry(sample_error(2, 11), Origin::USER, {}));
     std::vector<Result<void, StorageError>> results;
+    REQUIRE(rig.document->add_entry(sample_error(1, 10), Origin::USER, rig.keep(results)));
+    // These are waiting when the new day starts and must not land in the old log.
+    REQUIRE(rig.document->add_entry(sample_error(2, 11), Origin::USER, rig.keep(results)));
     REQUIRE(rig.document->add_entry(sample_error(3, 12), Origin::USER, rig.keep(results)));
 
+    // The first has committed and the second is on its way to the store when the new day starts. The owner of the
+    // new-day start calls set_archived when the write that archived the log has committed.
+    rig.gateway().run_next();
+    REQUIRE(rig.storage().memory().start_new_log(rig.log_id(), sample_id<LogId>(2), sample_header()));
     rig.document->set_archived();
     rig.gateway().run_all();
 
     CHECK(rig.document->archived());
-    CHECK(rig.document->log().entries().size() == 1); // the one already in flight
-    REQUIRE(results.size() == 1);
-    REQUIRE_FALSE(results[0].has_value());
-    CHECK(results[0].error().m_Kind == StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(rig.document->log().entries().size() == 1); // only the one that committed before the archive
+    REQUIRE(results.size() == 3);
+    CHECK(results[0].has_value());
+    CHECK_FALSE(results[1].has_value()); // the store refused it: archiving is the boundary for new entries
+    REQUIRE_FALSE(results[2].has_value());
+    CHECK(results[2].error().m_Kind == StorageErrorKind::INVALID_ARGUMENT); // refused at the front, never sent
     CHECK(rig.observer.changes().size() == 1);
+    CHECK(rig.gateway().posted() == 2);
 }
