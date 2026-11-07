@@ -106,7 +106,10 @@ private:
         auto record = decode_record(m_Line);
         if (!record)
         {
-            m_Scan.m_UnsupportedRecords += record.error() == DecodeError::UNSUPPORTED_VERSION ? 1 : 0;
+            if (record.error() == DecodeError::UNSUPPORTED_VERSION)
+            {
+                ++m_Scan.m_UnsupportedRecords;
+            }
             return bad_line();
         }
         if (!m_Scan.m_Log)
