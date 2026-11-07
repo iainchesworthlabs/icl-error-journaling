@@ -1,0 +1,1 @@
+**Core log and header history.** `ej_core` gains the full log (time ordering, soft delete, review edits, per-type counts) and the header history behind the Correct and Change actions. Nothing changes for the person using the app yet.

@@ -30,13 +30,15 @@ struct HeaderChangeEntry
     std::string m_NewValue;
 };
 
+using EntryBody = std::variant<ErrorEntry, NoteEntry, HeaderChangeEntry>;
+
 struct Entry
 {
     EntryId m_Id;
     Timestamp m_Captured;
     std::optional<UtcMillis> m_EditedUtc;
     bool m_Deleted = false;
-    std::variant<ErrorEntry, NoteEntry, HeaderChangeEntry> m_Body;
+    EntryBody m_Body;
 };
 
 }  // namespace ej
