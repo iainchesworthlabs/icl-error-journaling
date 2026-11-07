@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/journal_record.hpp"
 
+#include "error_journaling/iso_date.hpp"
 #include "error_journaling/software_version.hpp"
 #include "error_journaling/unit_number.hpp"
 #include "error_journaling/utf8.hpp"
@@ -13,7 +14,6 @@
 #include <QJsonValue>
 #include <algorithm>
 #include <array>
-#include <charconv>
 #include <cmath>
 #include <limits>
 
@@ -239,16 +239,13 @@ void write_millis(Writer& w, UtcMillis value)
 
 void write_date(Writer& w, std::chrono::year_month_day date)
 {
-    const int year = static_cast<int>(date.year());
-    if (!date.ok() || year < 0 || year > 9999)
+    const auto text = format_iso_date(date);
+    if (!text)
     {
         w.fail("a date is out of range");
         return;
     }
-    char buffer[16];
-    const int written = std::snprintf(buffer, sizeof buffer, "%04d-%02u-%02u", year,
-                                      static_cast<unsigned>(date.month()), static_cast<unsigned>(date.day()));
-    w.string(std::string_view(buffer, static_cast<std::size_t>(written)));
+    w.string(*text);
 }
 
 void write_header(Writer& w, const HeaderValues& header)
@@ -663,21 +660,12 @@ private:
 
 std::chrono::year_month_day parse_date(const Fields& fields, const std::string& text)
 {
-    const auto number = [&text](std::size_t from, std::size_t count) -> int
-    {
-        int value = -1;
-        const auto [end, code] = std::from_chars(text.data() + from, text.data() + from + count, value);
-        return code == std::errc{} && end == text.data() + from + count ? value : -1;
-    };
-    const bool shaped = text.size() == 10 && text[4] == '-' && text[7] == '-';
-    const std::chrono::year_month_day date{std::chrono::year{shaped ? number(0, 4) : -1},
-                                           std::chrono::month{static_cast<unsigned>(shaped ? number(5, 2) : 0)},
-                                           std::chrono::day{static_cast<unsigned>(shaped ? number(8, 2) : 0)}};
-    if (!date.ok())
+    const auto date = parse_iso_date(text);
+    if (!date)
     {
         fields.bad_field();
     }
-    return date;
+    return date.value_or(std::chrono::year_month_day{});
 }
 
 HeaderValues read_header(const Fields& fields)

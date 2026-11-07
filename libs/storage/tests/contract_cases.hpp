@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The contract of LogRepository. Every case runs against every implementation in `Fixtures`, so the in-memory
-// repository cannot drift from the real one (docs/plan/stage-2.md, section 2.2).
+// The contract of LogRepository. Every case runs against every fixture in `Fixtures`, so the in-memory repository
+// cannot drift from the real one (docs/plan/stage-2.md, section 2.2).
+//
+// Include this file after defining, in the including file, the type list `Fixtures` and fixtures with
+//     LogRepository& repo();  ScriptedClock& clock();
+//     void fill_entries(LogId log, std::size_t count);   // adds `count` error entries, however quickly it can
+#pragma once
+
 #include "error_journaling/clock.hpp"
 #include "error_journaling/log_repository.hpp"
-#include "error_journaling/memory_log_repository.hpp"
 #include "storage_samples.hpp"
 
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
-#include <tuple>
 #include <type_traits>
 
 using namespace ej;
@@ -19,17 +23,6 @@ using namespace ej::test;
 
 namespace
 {
-
-struct MemoryFixture
-{
-    ScriptedClock m_Clock{sample_time(0)};
-    MemoryLogRepository m_Repository{m_Clock};
-
-    LogRepository& repo() { return m_Repository; }
-    ScriptedClock& clock() { return m_Clock; }
-};
-
-using Fixtures = std::tuple<MemoryFixture>;
 
 constexpr std::uint64_t FIRST_LOG = 1;
 
@@ -202,13 +195,68 @@ TEMPLATE_LIST_TEST_CASE("The entries of a log are bounded", "[contract][reposito
 {
     TestType f;
     start_log(f);
-    for (std::size_t i = 1; i <= MAX_ENTRIES_PER_LOG; ++i)
-    {
-        REQUIRE(
-            f.repo().add_entry(log_id(FIRST_LOG), sample_error(i, static_cast<std::int64_t>(i % 1000))).has_value());
-    }
-    CHECK(failure_of(f.repo().add_entry(log_id(FIRST_LOG), sample_error(MAX_ENTRIES_PER_LOG + 1, 1))) ==
+    f.fill_entries(log_id(FIRST_LOG), MAX_ENTRIES_PER_LOG - 1);
+    require_ok(
+        f.repo().add_entry(log_id(FIRST_LOG), sample_error(MAX_ENTRIES_PER_LOG + 1000, 1)));  // the last that fits
+    CHECK(failure_of(f.repo().add_entry(log_id(FIRST_LOG), sample_error(MAX_ENTRIES_PER_LOG + 1001, 1))) ==
           StorageErrorKind::LIMIT_EXCEEDED);
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Log.entries().size() == MAX_ENTRIES_PER_LOG);
+}
+
+TEMPLATE_LIST_TEST_CASE("Text of every kind comes back exactly as it went in", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    HeaderValues header = sample_header();
+    header.m_Facilitator = "Sam \"Example\" caf\xC3\xA9 \xF0\x9F\x98\x80";
+    require_ok(f.repo().create_log(log_id(FIRST_LOG), header));
+
+    const std::string nasty = std::string("line one\nline two\ttab \"quotes\" back\\slash NUL:") +
+                              std::string(1, '\0') + " end \xE2\x86\x92 \xF0\x9F\x98\x80 '; DROP TABLE entry; --";
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_note(1, 10, nasty)));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(2, 11, "Wrong \xE2\x86\x92 Response", nasty)));
+
+    const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(log.m_Log.initial_header().m_Facilitator == header.m_Facilitator);
+    CHECK(std::get<NoteEntry>(log.m_Log.find(entry_id(1))->m_Body).m_Value == nasty);
+    const auto& error = std::get<ErrorEntry>(log.m_Log.find(entry_id(2))->m_Body);
+    CHECK(error.m_AttachedNote == nasty);
+    CHECK(error.m_ErrorTypeLabel == "Wrong \xE2\x86\x92 Response");
+}
+
+TEMPLATE_LIST_TEST_CASE("A location by id, a note template and a header change all keep their ids",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    HeaderValues header = sample_header();
+    header.m_Location = LocationValue{sample_id<LocationId>(5), "North Site"};
+    require_ok(f.repo().create_log(log_id(FIRST_LOG), header));
+
+    Entry templated = sample_note(1, 10, "Sam Example");
+    std::get<NoteEntry>(templated.m_Body).m_Template = sample_id<NoteTemplateId>(9);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), templated));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG),
+                                  sample_change(2, 20, HeaderField::LOCATION, sample_id<LocationId>(6).format())));
+
+    const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(log.m_Log.initial_header().m_Location->m_Id == sample_id<LocationId>(5));
+    CHECK(log.m_Log.initial_header().m_Location->m_Text == "North Site");
+    CHECK(std::get<NoteEntry>(log.m_Log.find(entry_id(1))->m_Body).m_Template == sample_id<NoteTemplateId>(9));
+    CHECK(std::get<HeaderChangeEntry>(log.m_Log.find(entry_id(2))->m_Body).m_NewValue ==
+          sample_id<LocationId>(6).format());
+}
+
+TEMPLATE_LIST_TEST_CASE("A log with no unit, location or version keeps them empty", "[contract][repository]", Fixtures)
+{
+    TestType f;
+    HeaderValues header;
+    header.m_Facilitator = "Sam Example";
+    header.m_LocalDate = std::chrono::year{2026} / 11 / 8;
+    require_ok(f.repo().create_log(log_id(FIRST_LOG), header));
+    const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK_FALSE(log.m_Log.initial_header().m_UnitNumber.has_value());
+    CHECK_FALSE(log.m_Log.initial_header().m_Location.has_value());
+    CHECK_FALSE(log.m_Log.initial_header().m_SoftwareVersion.has_value());
+    CHECK(log.m_Log.initial_header().m_LocalDate == std::chrono::year{2026} / 11 / 8);
 }
 
 TEMPLATE_LIST_TEST_CASE("Edit changes the content and records the edit time", "[contract][repository]", Fixtures)

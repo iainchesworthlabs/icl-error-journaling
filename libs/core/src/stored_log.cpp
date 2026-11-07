@@ -107,6 +107,11 @@ Result<void, StorageError> validate_header(const HeaderValues& header)
     return {};
 }
 
+Result<void, StorageError> validate_draft(std::string_view text)
+{
+    return check_text(text, MAX_NOTE_CODE_POINTS, "the draft");
+}
+
 Result<void, StorageError> validate_entry(const Entry& entry)
 {
     if (entry.m_Captured.m_Zone.size() > MAX_ZONE_BYTES || !utf8_code_points(entry.m_Captured.m_Zone))

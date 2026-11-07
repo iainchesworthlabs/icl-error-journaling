@@ -17,6 +17,7 @@ add_library(ej_core
     src/export_renderer.cpp
     src/header_history.cpp
     src/header_values.cpp
+    src/iso_date.cpp
     src/journal_record.cpp
     src/log.cpp
     src/note_template.cpp

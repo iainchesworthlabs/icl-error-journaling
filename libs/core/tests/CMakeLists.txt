@@ -10,6 +10,7 @@ add_executable(ej_core_tests
     test_export_rules.cpp
     test_foundations.cpp
     test_header_history.cpp
+    test_iso_date.cpp
     test_journal_record.cpp
     test_log.cpp
     test_recovery_report.cpp
