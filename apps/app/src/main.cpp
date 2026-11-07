@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/ios_bridge.hpp"
+#include "error_journaling/qml_bridge.hpp"
 #include "error_journaling/storage.hpp"
 #include "error_journaling/version.hpp"
 
@@ -45,12 +46,15 @@ int main(int argc, char* argv[])
     parser.parse(QCoreApplication::arguments());
 
     QQmlApplicationEngine engine;
+    // What Qt does not cover on an iPhone: the share sheet and the haptics (the Stage 0 spikes).
+    error_journaling::bridge::qml_bridge platform_bridge(error_journaling::bridge::make_platform_services());
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(1); },
         Qt::QueuedConnection);
     // The placeholder reads these two through the initial properties, which shows the libraries are linked.
     engine.setInitialProperties(
-        {{QStringLiteral("versionText"), error_journaling::version_text()},
+        {{QStringLiteral("bridge"), QVariant::fromValue(&platform_bridge)},
+         {QStringLiteral("versionText"), error_journaling::version_text()},
          {QStringLiteral("platformText"),
           QStringLiteral("%1, storage: %2")
               .arg(QString::fromUtf8(error_journaling::bridge::implementation_name().data(),

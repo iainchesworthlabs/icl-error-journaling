@@ -25,7 +25,8 @@ tools/                project scripts, baselines and coverage floors
 | `ej_core` | static library, C++23 | QtCore |
 | `ej_storage` | static library | `ej_core` |
 | `ej_ios_bridge` | static library; Objective-C++ on iOS, a stub elsewhere | nothing (UIKit and Foundation on iOS) |
-| `ej_app` | Qt Quick executable (`error-journaling`) | the three libraries, Qt Quick |
+| `ej_qml_bridge` | static library; the `qml_bridge` QObject QML calls, over the `ej_ios_bridge` interface | `ej_ios_bridge`, QtCore |
+| `ej_app` | Qt Quick executable (`error-journaling`) | the libraries above, Qt Quick |
 
 Each library has a placeholder test with the `unit` label; the application has two `ui` tests (`app.smoke` starts it
 without a display and waits for the first frame, `app.version` answers `--version`). The application is the iPhone

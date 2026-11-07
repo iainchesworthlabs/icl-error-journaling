@@ -18,7 +18,7 @@ qt_add_qml_module(ej_app
     QML_FILES qml/Main.qml)
 
 target_link_libraries(ej_app
-    PRIVATE ej_core ej_storage ej_ios_bridge Qt6::Quick icl::warnings icl::hardening icl::coverage)
+    PRIVATE ej_core ej_storage ej_ios_bridge ej_qml_bridge Qt6::Quick icl::warnings icl::hardening icl::coverage)
 # qmlcachegen, rcc and moc write C++ files that the strict warning set rejects with some compilers.
 icl_relax_generated_warnings(ej_app)
 

@@ -8,7 +8,7 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 
 | Kind | Where | Example |
 |---|---|---|
-| unit | `libs/*/tests` | `ej_core_tests`, `ej_storage_tests`, `ej_ios_bridge_tests` (placeholders) |
+| unit | `libs/*/tests` | `ej_core_tests`, `ej_storage_tests`, `ej_ios_bridge_tests` (the desktop stub and the QML-facing wiring, against a fake; the iOS code is only compiled in CI) |
 | ui | `apps/app` | `app.smoke` starts the application off-screen and waits for a frame; `app.version` |
 
 ## Coverage
