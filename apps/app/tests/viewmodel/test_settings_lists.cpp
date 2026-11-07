@@ -4,7 +4,7 @@
 // the fake store and the manual gateway.
 #include "settings_rig.hpp"
 #include "viewmodel/board_layout_model.hpp"
-#include "viewmodel/colour_slot.hpp"
+#include "viewmodel/board_model.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -376,15 +376,21 @@ TEST_CASE("A list stops at 500 error types", "[viewmodel][settings][errors]")
 
 TEST_CASE("The colour of a type is its index in the master list modulo 11, plus one", "[viewmodel][settings][errors]")
 {
-    CHECK(viewmodel::colour_slot_for_index(0) == 1);
-    CHECK(viewmodel::colour_slot_for_index(10) == 11);
-    CHECK(viewmodel::colour_slot_for_index(11) == 1);
-    CHECK(viewmodel::colour_slot_for_index(12) == 2);
-    CHECK(viewmodel::colour_slot_for_index(22) == 1);
+    CHECK(viewmodel::tile_colour_slot(0) == 1);
+    CHECK(viewmodel::tile_colour_slot(10) == 11);
+    CHECK(viewmodel::tile_colour_slot(11) == 1);
+    CHECK(viewmodel::tile_colour_slot(12) == 2);
+    CHECK(viewmodel::tile_colour_slot(22) == 1);
 
-    const Configuration configuration = with_error_types(13);
-    CHECK(viewmodel::colour_slot_for(configuration, configuration.m_ErrorTypes[12].m_Id) == 2);
-    CHECK_FALSE(viewmodel::colour_slot_for(configuration, test_id<ErrorTypeId>(1)).has_value());
+    // The list models report the same rule.
+    SettingsRig rig;
+    rig.load_configuration(with_error_types(13));
+    const QAbstractItemModel& types = *rig.m_Settings.error_types();
+    for (int row = 0; row < types.rowCount(); ++row)
+    {
+        CHECK(number_at(types, row, role_named(types, "colourSlot")) ==
+              viewmodel::tile_colour_slot(static_cast<std::size_t>(row)));
+    }
 }
 
 // ------------------------------------------------------------------------------------------------------ the board

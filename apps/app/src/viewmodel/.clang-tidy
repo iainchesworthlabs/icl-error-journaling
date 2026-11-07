@@ -3,7 +3,15 @@
 # The names QML sees (properties, signals, slots, invokable functions and role names) are camelBack (ICL standard 5.2,
 # D9; docs/plan/stage-3.md, "Scope and conventions"). `CamelCase` in clang-tidy means PascalCase. Everything else is
 # the repository's .clang-tidy.
+#
+# The same classes also have the C++ functions behind a property (`READ` and `WRITE`) and the interface they implement,
+# which AGENTS.md names in snake_case (`entry_count()`, `add_observer()`). clang-tidy cannot tell the two apart, so a
+# method whose name is snake_case with more than one word is left alone; every other method name must be camelBack. The
+# public fields of the plain structs are `m_PascalCase` (AGENTS.md) and are left alone too; a public field a QML gadget
+# shows is camelBack.
 InheritParentConfig: true
 CheckOptions:
-  - { key: readability-identifier-naming.MethodCase,       value: camelBack }
-  - { key: readability-identifier-naming.PublicMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.MethodCase,          value: camelBack }
+  - { key: readability-identifier-naming.MethodIgnoredRegexp, value: '^[a-z][a-z0-9]*(_[a-z0-9]+)+$' }
+  - { key: readability-identifier-naming.PublicMemberCase,    value: camelBack }
+  - { key: readability-identifier-naming.PublicMemberIgnoredRegexp, value: '^m_[A-Z][A-Za-z0-9]*$' }

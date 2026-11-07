@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "viewmodel/error_type_list_model.hpp"
 
-#include "viewmodel/colour_slot.hpp"
+#include "viewmodel/board_model.hpp"
 
 #include <cstddef>
 #include <utility>
@@ -52,7 +52,7 @@ void ErrorTypeListModel::refresh(const Configuration& configuration)
         const ErrorType& type = configuration.m_ErrorTypes[i];
         if (!type.m_Retired)
         {
-            rows.push_back({type.m_Id, QString::fromStdString(type.m_Name), colour_slot_for_index(i),
+            rows.push_back({type.m_Id, QString::fromStdString(type.m_Name), tile_colour_slot(i),
                             type.m_BoardPosition.value_or(0)});
         }
     }
