@@ -1,0 +1,1 @@
+**The app starts a little faster.** The theme asked Qt for the list of installed fonts once for every text style, though only the monospaced one names a font family. It now asks once, and a style with no family does not look.

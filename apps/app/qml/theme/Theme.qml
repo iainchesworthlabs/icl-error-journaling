@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma Singleton
+pragma ComponentBehavior: Bound
 import QtQuick
 
 // The design tokens of docs/design/tokens.json as one singleton (Stage 4, package 4.1). A component or a screen uses
@@ -13,6 +14,10 @@ import QtQuick
 //   reduceMotion  the Reduce Motion setting
 QtObject {
     id: root
+
+    // The font families that the system has, read once for every role to share (FontRole.resolvedFamily), not once for
+    // each role.
+    readonly property var installedFamilies: Qt.fontFamilies()
 
     // ---- inputs ----
 
@@ -327,7 +332,11 @@ QtObject {
         // The first of those the system has. Qt does not read a list in one family string, and takes the system font for it,
         // so the list is looked up here; none of them found is the system font.
         readonly property string resolvedFamily: {
-            const have = Qt.fontFamilies();
+            // Most roles use the system font. Asking Qt for the installed families is slow, on macOS above all, so a role
+            // with no family does not ask, and the others share one list.
+            if (family.length === 0)
+                return "";
+            const have = root.installedFamilies;
             const names = family.split(",");
             for (let i = 0; i < names.length; ++i) {
                 const name = names[i].trim();
