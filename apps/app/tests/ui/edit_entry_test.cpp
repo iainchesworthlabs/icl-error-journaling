@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // EditEntry (docs/plan/stage-4.md, 4.10): edit.fields, edit.preview, edit.save_cancel, edit.delete, edit.time_order,
-// edit.dst, edit.header_change_entry, edit.validation and the cross-cutting checks. The sheet is part of the Review
-// screen and is opened the way the screen opens it, from a row.
+// edit.dst, edit.header_change_entry, edit.validation, edit.layout, edit.time_sheet and the cross-cutting checks. The
+// sheet is part of the Review screen and is opened the way the screen opens it, from a row; the time is chosen on the
+// second, shorter sheet (EditTimeSheet) that the screen declares after it.
 #include "review_test_support.hpp"
 // The other headers of the tests come after the project's, as the support header says.
 #include "input_components_support.hpp"
@@ -57,10 +58,16 @@ struct Editor : Screen
         return sheet()->isVisible();
     }
 
-    /// The page in front: "main", "time" or "type".
+    /// The page in front: "main" or "type".
     [[nodiscard]] QString page()
     {
         return sheet()->property("page").toString();
+    }
+
+    /// The time sheet is up, over the Edit entry sheet.
+    [[nodiscard]] bool time_open()
+    {
+        return sheet()->property("timeOpen").toBool();
     }
 
     [[nodiscard]] QString text(const char* name)
@@ -127,9 +134,9 @@ struct Editor : Screen
     void set_time(int hour, int minute)
     {
         tap_in("editSheet", "editTime");
-        REQUIRE(page() == QStringLiteral("time"));
-        QQuickItem* hours = in("editSheet", "Hours");
-        QQuickItem* minutes = in("editSheet", "Minutes");
+        REQUIRE(time_open());
+        QQuickItem* hours = in("editTimeSheet", "Hours");
+        QQuickItem* minutes = in("editTimeSheet", "Minutes");
         REQUIRE(hours != nullptr);
         REQUIRE(minutes != nullptr);
         hours->setProperty("currentIndex", hour);
@@ -139,7 +146,13 @@ struct Editor : Screen
 
     void done_time()
     {
-        tap_in("editSheet", "navTrailing");
+        tap_in("editTimeSheet", "navTrailing");
+    }
+
+    /// What the time sheet says under its columns.
+    [[nodiscard]] QString time_caption()
+    {
+        return in("editTimeSheet", "editTumbler")->property("caption").toString();
     }
 
     /// The rows of the screen by entry order, as `timeText + " " + lineText`.
@@ -214,9 +227,9 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
     SECTION("the time, with Cancel putting the old time back")
     {
         e.set_time(9, 30);
-        CHECK(text_in(e.m_Rig, QStringLiteral("editShownTime")) == QStringLiteral("Shown in the log as 09:30"));
-        e.tap_in("editSheet", "navLeading");
-        CHECK_FALSE((e.page() == QStringLiteral("time")));
+        CHECK(e.time_caption() == QStringLiteral("Shown in the log as 09:30"));
+        e.tap_in("editTimeSheet", "navLeading");
+        CHECK_FALSE(e.time_open());
         CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("11:02"));
         CHECK(e.preview() == before);
 
@@ -422,24 +435,23 @@ TEST_CASE("edit.time_format: the tumbler has the columns of the time format and 
     CHECK(e.in("editSheet", "editTime")->property("value").toString() == shown(10, 5));
     CHECK(shown(10, 5).endsWith(QStringLiteral(" am")));
     e.tap_in("editSheet", "editTime");
-    REQUIRE(e.page() == QStringLiteral("time"));
-    QQuickItem* tumbler = e.in("editSheet", "editTumbler");
+    REQUIRE(e.time_open());
+    QQuickItem* tumbler = e.in("editTimeSheet", "editTumbler");
     REQUIRE(tumbler != nullptr);
     CHECK(tumbler->property("twelveHour").toBool());
     CHECK(tumbler->property("showSeconds").toBool());
     for (const char* column : {"Hours", "Minutes", "Seconds", "AM/PM"})
     {
-        QQuickItem* item = e.in("editSheet", column);
+        QQuickItem* item = e.in("editTimeSheet", column);
         REQUIRE(item != nullptr);
         CHECK(item->isVisible());
     }
 
     // 11:05 pm: the hour column is 12, 1 ... 11, so index 11 is 11, and the meridiem column says pm.
-    e.in("editSheet", "Hours")->setProperty("currentIndex", 11);
-    e.in("editSheet", "AM/PM")->setProperty("currentIndex", 1);
+    e.in("editTimeSheet", "Hours")->setProperty("currentIndex", 11);
+    e.in("editTimeSheet", "AM/PM")->setProperty("currentIndex", 1);
     e.m_Rig.advance(std::chrono::milliseconds(100));
-    CHECK(text_in(e.m_Rig, QStringLiteral("editShownTime")) ==
-          QStringLiteral("Shown in the log as %1").arg(shown(23, 5)));
+    CHECK(e.time_caption() == QStringLiteral("Shown in the log as %1").arg(shown(23, 5)));
     e.done_time();
     e.save();
     e.commit();
@@ -447,6 +459,93 @@ TEST_CASE("edit.time_format: the tumbler has the columns of the time format and 
     REQUIRE(lines.size() == 6);
     CHECK(lines.back().startsWith(shown(23, 5) + QLatin1Char(' ')));
     CHECK(lines.back().endsWith(QStringLiteral("T| Wrong Response")));
+}
+
+TEST_CASE("edit.layout: the swatch, the time chip, the footnote and the delete button are the design's", "[ui][edit]")
+{
+    Editor e;
+    e.open(4);
+    const QVariantMap data = e.m_World.timeline().entryForEdit(id_text(4));
+
+    // The Error row has the tile colour of the type as a swatch before its name.
+    QQuickItem* type = e.in("editSheet", "editType");
+    QQuickItem* swatch = find_in(e.m_Rig, QStringLiteral("rowSwatch"), type);
+    REQUIRE(swatch != nullptr);
+    CHECK(swatch->isVisible());
+    const int slot = data.value(QStringLiteral("colourSlot")).toInt();
+    REQUIRE(slot >= 1);
+    QColor tile;
+    REQUIRE(QMetaObject::invokeMethod(e.m_Rig.theme(), "tileColour", Q_RETURN_ARG(QColor, tile), Q_ARG(int, slot)));
+    CHECK(swatch->property("color").value<QColor>() == tile);
+
+    // The Time row shows its value as a chip and has no chevron; the Time row is 52 pt and the Error row at least that.
+    QQuickItem* time = e.in("editSheet", "editTime");
+    CHECK(time->property("valueChip").toBool());
+    QQuickItem* mark = find_in(e.m_Rig, QStringLiteral("rowMark"), time);
+    CHECK((mark == nullptr || !mark->isVisible()));
+    // (The Error row grows if its value wraps, which the test font can make it do.)
+    CHECK(e.m_Rig.geometry(type).height() >= 52);
+    CHECK(e.m_Rig.geometry(time).height() == 52);
+
+    // The footnote is the model's, under the line of the shared log.
+    const QString footnote = data.value(QStringLiteral("footnote")).toString();
+    REQUIRE_FALSE(footnote.isEmpty());
+    CHECK(e.text("editFootnote") == footnote);
+    CHECK(e.m_Rig.geometry(e.in("editSheet", "editFootnote")).top() >=
+          e.m_Rig.geometry(e.in("editSheet", "editPreview")).bottom());
+
+    // "Delete entry" is 52 pt high and rests on the bottom of the sheet's content, over the home indicator.
+    QQuickItem* del = e.in("editSheet", "editDelete");
+    CHECK(e.m_Rig.geometry(del).height() == 52);
+    const QQuickItem* content = e.sheet()->property("contentArea").value<QQuickItem*>();
+    REQUIRE(content != nullptr);
+    CHECK(e.m_Rig.geometry(del).bottom() == e.m_Rig.geometry(const_cast<QQuickItem*>(content)).bottom());
+}
+
+TEST_CASE(
+    "edit.time_sheet: the time is chosen on a second, shorter sheet over the first, and Now sets the time of day now",
+    "[ui][edit]")
+{
+    Editor e;
+    e.open(4);
+    CHECK_FALSE(e.sheet("editTimeSheet")->property("isOpen").toBool());
+    e.tap_in("editSheet", "editTime");
+    REQUIRE(e.time_open());
+    QQuickItem* edit_sheet = e.sheet();
+    QQuickItem* time_sheet = e.sheet("editTimeSheet");
+    CHECK(time_sheet->property("isOpen").toBool());
+    // The Edit entry sheet is still open under it, with its page unchanged.
+    CHECK(edit_sheet->property("isOpen").toBool());
+    CHECK(e.page() == QStringLiteral("main"));
+
+    // It is declared after the Edit entry sheet in the same layer, so it is over it, and it is shorter.
+    REQUIRE(time_sheet->parentItem() == edit_sheet->parentItem());
+    const QList<QQuickItem*> siblings = edit_sheet->parentItem()->childItems();
+    CHECK(siblings.indexOf(time_sheet) > siblings.indexOf(edit_sheet));
+    QQuickItem* edit_panel = find_in(e.m_Rig, QStringLiteral("sheetPanel"), edit_sheet);
+    QQuickItem* time_panel = find_in(e.m_Rig, QStringLiteral("sheetPanel"), time_sheet);
+    REQUIRE(edit_panel != nullptr);
+    REQUIRE(time_panel != nullptr);
+    CHECK(e.m_Rig.geometry(time_panel).top() > e.m_Rig.geometry(edit_panel).top() + 100);
+    CHECK(e.m_Rig.geometry(time_panel).bottom() >= e.m_Rig.geometry(edit_panel).bottom() - 1);
+
+    // "Now" is the time of day now in the zone of the entry.
+    const int now = e.m_World.timeline().nowLocalSeconds(id_text(4));
+    REQUIRE(now >= 0);
+    REQUIRE(e.in("editTimeSheet", "tumblerNow")->isVisible());
+    e.tap_in("editTimeSheet", "tumblerNow");
+    CHECK(edit_sheet->property("localSeconds").toInt() == now);
+    CHECK(e.in("editSheet", "editTime")->property("value").toString() == e.m_World.timeline().formatLocalSeconds(now));
+
+    // A tap outside the time sheet is Done: the time is kept and the Edit entry sheet is in front again.
+    QQuickItem* scrim = find_in(e.m_Rig, QStringLiteral("sheetScrim"), time_sheet);
+    REQUIRE(scrim != nullptr);
+    e.m_Rig.tap(scrim, QPointF(40, 20));
+    e.m_Rig.advance(std::chrono::milliseconds(500));
+    CHECK_FALSE(e.time_open());
+    CHECK_FALSE(time_sheet->property("isOpen").toBool());
+    CHECK(edit_sheet->property("isOpen").toBool());
+    CHECK(edit_sheet->property("localSeconds").toInt() == now);
 }
 
 TEST_CASE("edit.dst: a time in the hour the clocks skip is refused with the model's message, and never saved",
@@ -478,20 +577,21 @@ TEST_CASE("edit.dst: a time in the hour the clocks skip is refused with the mode
 
     e.set_time(2, 30);
     // The message is the tumbler's error text, and neither Done nor Save can be pressed.
-    QQuickItem* tumbler = e.in("editSheet", "editTumbler");
+    QQuickItem* tumbler = e.in("editTimeSheet", "editTumbler");
     REQUIRE(tumbler != nullptr);
     CHECK(tumbler->property("errorText").toString() == message);
     CHECK(tumbler->property("invalid").toBool());
-    CHECK_FALSE(e.in("editSheet", "navTrailing")->isEnabled());
+    CHECK_FALSE(e.in("editTimeSheet", "navTrailing")->isEnabled());
     CHECK_FALSE(e.can_save());
 
-    // A press on Done does nothing; the time sheet stays.
+    // A press on Done does nothing; the time sheet stays, and a tap outside it does not dismiss it either.
     e.done_time();
-    CHECK((e.page() == QStringLiteral("time")));
+    CHECK(e.time_open());
+    CHECK_FALSE(e.sheet("editTimeSheet")->property("dismissible").toBool());
     // Cancel puts the entry's own time back and nothing was written.
     const std::size_t posted = e.m_World.gateway().posted();
-    e.tap_in("editSheet", "navLeading");
-    CHECK_FALSE((e.page() == QStringLiteral("time")));
+    e.tap_in("editTimeSheet", "navLeading");
+    CHECK_FALSE(e.time_open());
     CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("01:30"));
     CHECK(e.can_save());
     e.commit();
@@ -501,7 +601,7 @@ TEST_CASE("edit.dst: a time in the hour the clocks skip is refused with the mode
     e.set_time(3, 30);
     CHECK(tumbler->property("errorText").toString().isEmpty());
     e.done_time();
-    CHECK_FALSE((e.page() == QStringLiteral("time")));
+    CHECK_FALSE(e.time_open());
     REQUIRE(e.can_save());
     CHECK(e.preview() == QStringLiteral("03:30 (Free Text) Checked the volume"));
     e.save();
@@ -531,9 +631,9 @@ TEST_CASE("edit.dst: a time in the repeated hour is allowed and says that the fi
         e.m_World.timeline().localToUtc(id_text(1), QStringLiteral("2026-04-05"), 2 * 3600 + 30 * 60);
     REQUIRE(checked.value(QStringLiteral("ok")).toBool());
     REQUIRE(checked.value(QStringLiteral("repeated")).toBool());
-    CHECK(e.in("editSheet", "editTumbler")->property("errorText").toString().isEmpty());
+    CHECK(e.in("editTimeSheet", "editTumbler")->property("errorText").toString().isEmpty());
     CHECK(text_in(e.m_Rig, QStringLiteral("editTimeNote")) == checked.value(QStringLiteral("message")).toString());
-    CHECK(e.in("editSheet", "navTrailing")->isEnabled());
+    CHECK(e.in("editTimeSheet", "navTrailing")->isEnabled());
     e.done_time();
     CHECK(e.can_save());
     e.save();
@@ -544,22 +644,42 @@ TEST_CASE("edit.dst: a time in the repeated hour is allowed and says that the fi
 namespace
 {
 
-/// The sheet on its own, as the Sheet and Alert tests have theirs: nothing under it, so the checks that read the whole
-/// window see the sheet and not a screen that a real sheet would cover.
+/// The sheets on their own, as the Sheet and Alert tests have theirs: nothing under them, so the checks that read the
+/// whole window see the sheets and not a screen that a real sheet would cover. The time sheet is declared after the
+/// Edit entry sheet, as the Review screen declares it.
 struct Alone
 {
-    Alone() : m_Sheet(nullptr)
+    static constexpr const char* HOST = R"(
+        import QtQuick
+        import ErrorJournalingApp
+        Item {
+            id: host
+            required property var timeline
+            required property var picker
+            required property var settings
+            property alias editor: editSheet
+            EditEntry { id: editSheet; timeline: host.timeline; picker: host.picker; settings: host.settings }
+            EditTimeSheet { id: timeSheet; edit: editSheet; timeline: host.timeline; settings: host.settings }
+        }
+    )";
+
+    Alone() : m_Host(nullptr), m_Sheet(nullptr)
     {
         m_World.open_prd_example();
         m_Rig.attach(m_World.clock());
         m_Rig.attach(m_World.gateway());
-        m_Sheet = m_Rig.load(QStringLiteral("EditEntry"), m_World.properties());
+        QVariantMap properties = m_World.properties();
+        properties.remove(QStringLiteral("share"));
+        m_Host = m_Rig.load_source(QByteArray(HOST), properties);
         INFO(m_Rig.errors().toStdString());
+        REQUIRE(m_Host != nullptr);
+        m_Sheet = m_Host->property("editor").value<QQuickItem*>();
         REQUIRE(m_Sheet != nullptr);
     }
 
     World m_World;
     UiRig m_Rig;
+    QQuickItem* m_Host;
     QQuickItem* m_Sheet;
 
     void open(std::uint64_t entry_number)
@@ -584,7 +704,8 @@ struct Alone
 
 } // namespace
 
-TEST_CASE("edit.cross_cutting: names, targets, order and text scale, on every page, light and dark", "[ui][edit]")
+TEST_CASE("edit.cross_cutting: names, targets, order and text scale, on every page and sheet, light and dark",
+          "[ui][edit]")
 {
     Alone a;
 
@@ -612,14 +733,25 @@ TEST_CASE("edit.cross_cutting: names, targets, order and text scale, on every pa
         expect_clean(check_everything(a.m_Rig));
     }
 
-    SECTION("the time page")
+    SECTION("the time sheet")
     {
         a.open(4);
         a.tap("editTime");
-        REQUIRE(a.page() == QStringLiteral("time"));
-        expect_clean(check_everything(a.m_Rig));
+        REQUIRE(a.m_Sheet->property("timeOpen").toBool());
+        // The Edit entry sheet is under the time sheet, under its scrim and disabled, and the two overlap, so the
+        // reading order of the window (which goes by position) is not asked of the pair; each sheet has its own check,
+        // the Edit entry sheet above and this one on its own controls, here for names, targets, text scale and the safe
+        // area.
+        const auto checks = [&a]
+        {
+            expect_clean(check_names(a.m_Rig));
+            expect_clean(check_targets(a.m_Rig));
+            expect_clean(check_text_scale(a.m_Rig));
+            expect_clean(check_safe_area(a.m_Rig, 0, 0));
+        };
+        checks();
         a.m_Rig.set_dark(true);
-        expect_clean(check_everything(a.m_Rig));
+        checks();
     }
 
     SECTION("the type page")

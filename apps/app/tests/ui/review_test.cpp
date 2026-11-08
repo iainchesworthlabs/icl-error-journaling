@@ -311,7 +311,8 @@ TEST_CASE("review.past_log: any TimelineModel, with a back control, the date sha
 
     CHECK(joined(row_lines(s.m_Rig)) == joined(prd_example_lines()));
     CHECK(text_in(s.m_Rig, QStringLiteral("reviewTitle")) == QStringLiteral("Thu 5 Nov"));
-    CHECK(text_in(s.m_Rig, QStringLiteral("reviewShared")) == QStringLiteral("Shared 5 Nov at 16:58"));
+    // One line under the title, as PastLogReview has it: the entries, then when the log was shared.
+    CHECK(text_in(s.m_Rig, QStringLiteral("reviewSubtitle")) == QStringLiteral("6 entries · Shared 5 Nov at 16:58"));
     CHECK(s.item("reviewShare")->property("text").toString() == QStringLiteral("Share log again"));
 
     // The back control replaces the summary and goes back.
@@ -347,7 +348,63 @@ TEST_CASE("review.past_log: without a share time nothing is said about one", "[u
     Screen s(Options::past_log());
     s.m_Review->setProperty("sharedTimeText", QString());
     s.m_Rig.layout();
-    CHECK_FALSE(s.visible("reviewShared"));
+    CHECK(text_in(s.m_Rig, QStringLiteral("reviewSubtitle")) == QStringLiteral("6 entries"));
+}
+
+TEST_CASE("review.past_log: the entries come from the row of History when it gives them", "[ui][review]")
+{
+    Screen s(Options::past_log());
+    s.m_Review->setProperty("entriesText", QStringLiteral("12 entries"));
+    s.m_Rig.layout();
+    CHECK(text_in(s.m_Rig, QStringLiteral("reviewSubtitle")) == QStringLiteral("12 entries · Shared 5 Nov at 16:58"));
+}
+
+TEST_CASE("review.rows: the prefix of a line is in the secondary colour and the rest in the text colour",
+          "[ui][review]")
+{
+    Screen s;
+    const std::vector<QQuickItem*> rows = swipe_rows(s.m_Rig);
+    REQUIRE(rows.size() == 6);
+    const QColor secondary = input::theme_colour(s.m_Rig, "reviewTextSecondary");
+    const QColor text = input::theme_colour(s.m_Rig, "reviewText");
+    for (QQuickItem* row : rows)
+    {
+        QQuickItem* line = find_in(s.m_Rig, QStringLiteral("reviewLine"), row->parentItem());
+        REQUIRE(line != nullptr);
+        const QString shown = line->property("text").toString();
+        const QString words = words_of(line);
+        if (line->property("textFormat").toInt() == 4) // StyledText: a line with a prefix ("T|" or "(Free Text)")
+        {
+            CHECK(shown.contains(QStringLiteral("<font color=\"%1\">").arg(secondary.name())));
+            CHECK(line->property("color").value<QColor>() == text);
+            CHECK((words.startsWith(QStringLiteral("T|")) || words.startsWith(QStringLiteral("(Free Text)"))));
+        }
+        else
+        {
+            CHECK(shown == words);
+        }
+    }
+    // An error and a note have a prefix; the version change of this day has none, and shows its words as they are.
+    int styled = 0;
+    for (QQuickItem* row : rows)
+    {
+        QQuickItem* line = find_in(s.m_Rig, QStringLiteral("reviewLine"), row->parentItem());
+        styled += line->property("textFormat").toInt() == 4 ? 1 : 0;
+    }
+    CHECK(styled >= 4);
+}
+
+TEST_CASE("review.rows: markup in a row's words is shown as the words it is", "[ui][review]")
+{
+    Screen s;
+    QQuickItem* review = s.m_Review;
+    REQUIRE(review != nullptr);
+    QString styled;
+    QMetaObject::invokeMethod(review, "styledLine", Q_RETURN_ARG(QString, styled),
+                              Q_ARG(QString, QStringLiteral("(Free Text)")),
+                              Q_ARG(QString, QStringLiteral("Played <b>Medley</b> & more")));
+    CHECK(QTextDocumentFragment::fromHtml(styled).toPlainText() ==
+          QStringLiteral("(Free Text) Played <b>Medley</b> & more"));
 }
 
 TEST_CASE("review.voiceover: a row is one button reading the whole line and opening Edit", "[ui][review]")
@@ -445,12 +502,19 @@ TEST_CASE("review.cross_cutting: names, targets, order and text scale, in light,
     s.m_Rig.layout();
     REQUIRE(s.visible("reviewNotice"));
     REQUIRE(s.visible("reviewCopied"));
-    // The reading order is not checked here: with the design's 13 pt row padding (SwipeRow) the list of this fixture
-    // reaches under the floating banner, and the Review screen does not yet keep its last rows clear of what floats
-    // over them. That is the screen's part of the visual pass; the check comes back with it.
+    // The list ends above the banner and "Copied", so its last rows are not under what a screen reader reads after
+    // them.
     expect_clean(check_names(s.m_Rig));
     expect_clean(check_targets(s.m_Rig));
+    expect_clean(check_reading_order(s.m_Rig));
     expect_clean(check_text_scale(s.m_Rig));
+
+    // The list is clear of the banner: its bottom is above the top of what floats.
+    QQuickItem* list = s.named("reviewList");
+    QQuickItem* notice = s.named("reviewNotice");
+    REQUIRE(list != nullptr);
+    REQUIRE(notice != nullptr);
+    CHECK(s.m_Rig.geometry(list).bottom() <= s.m_Rig.geometry(notice).top() + 0.5);
 
     // Nothing interactive in the insets of an iPhone 17, nor in those of a taller phone.
     s.m_Review->setProperty("overrideInsets", true);

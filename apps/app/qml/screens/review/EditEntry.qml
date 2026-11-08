@@ -15,8 +15,14 @@ import ErrorJournalingApp
 // Save; Cancel writes nothing. An error entry has a type, a time and an attached note; a note entry a time and its text; a
 // header change a time and its new value. The kind of an entry cannot change.
 //
-// The time and the error type are chosen on pages of the same sheet that replace the first one (Cancel, the title and Done
-// or Save change with the page), so there is one set of controls in front of a screen reader at a time.
+// Layout (EditEntry): one card with the error type (its tile colour as a swatch before the name) and the time (as a chip, the
+// way the design draws it), the note, the line as it will be in the shared log with the footnote that the model gives it
+// ("Logged at 11:02 on UNIT-27, version 1.4.2."), and "Delete entry" at the bottom.
+//
+// The error type is chosen on a page of the same sheet that replaces the first one (Cancel and the title change with the
+// page), so there is one set of controls in front of a screen reader at a time. The time is chosen on a second, shorter sheet
+// (EditTimeSheet) that the screen declares after this one in the same SheetHost: the Time row sets `timeOpen`, and the time
+// sheet is the one in front of a screen reader while it is up.
 //
 // Every rule is the model's. The sheet sends `validateEdit` the edit it has and shows the refusal; it shows `previewLine`,
 // which the renderer makes on a scratch copy and which is the line `saveEntry` then saves. Before a time is saved it goes
@@ -34,18 +40,20 @@ Sheet {
     required property var picker
     required property var settings
 
-    // The page in front: "main", "time" or "type".
+    // The page in front: "main" or "type".
     property string page: "main"
+    // The time sheet is up (EditTimeSheet follows it).
+    property bool timeOpen: false
     // The entry being edited, as `entryForEdit` gave it when the sheet opened.
     property string entryId
     property var original: ({})
     // The draft.
     property string chosenTypeId
     property string chosenTypeName
+    // The tile colour slot of the chosen type (1 to 11, 0 when the type is gone), for the swatch of the Error row.
+    property int chosenSlot: 0
     property int localSeconds: 0
     property string noteValue
-    // The time the entry had when the time page opened, for Cancel.
-    property int timeBefore: 0
     // The last Save or Delete was refused by the model.
     property bool saveFailed: false
 
@@ -53,8 +61,9 @@ Sheet {
     readonly property bool isHeaderChange: kind === "header_change"
     readonly property bool hasEntry: entryId.length > 0
     readonly property bool showingMain: page === "main"
-    readonly property bool showingTime: page === "time"
     readonly property bool showingType: page === "type"
+    // The gap between the groups of the sheet: 22 pt in the design.
+    readonly property real groupGap: Theme.space.screenMargin + Theme.space.tileGap - Theme.border.hairline * 2
 
     // The time, through the model: `ok`, `message` and `repeated`.
     readonly property var timeCheck: hasEntry ? timeline.localToUtc(entryId, original.localDate, localSeconds) : ({
@@ -72,10 +81,16 @@ Sheet {
     readonly property string refusal: hasEntry ? timeline.validateEdit(entryId, edited) : ""
     readonly property bool canSave: hasEntry && timeError.length === 0 && refusal.length === 0
     readonly property string preview: canSave ? timeline.previewLine(entryId, edited) : ""
+    // "Logged at 11:02 on UNIT-27, version 1.4.2.", from the model.
+    readonly property string footnote: original.footnote ?? ""
 
     objectName: "editSheet"
     accessibleName: qsTr("Edit entry")
     dismissible: false
+    // The time sheet has a scrim of its own, over this sheet and what is under it: this one lets go of its own, so that the
+    // screen is dimmed once, as the design draws it.
+    scrimColour: root.timeOpen ? "transparent" : Theme.colour.sheetScrim
+    onClosed: root.timeOpen = false
 
     // The map `validateEdit`, `previewLine` and `saveEntry` take. A key left out keeps the entry's value, so each kind sends
     // the keys it can change.
@@ -104,11 +119,13 @@ Sheet {
         entryId = id;
         chosenTypeId = data.errorTypeId ?? "";
         chosenTypeName = data.errorTypeName ?? "";
+        chosenSlot = data.colourSlot ?? 0;
         localSeconds = data.localSeconds;
         noteValue = data.attachedNote ?? data.noteText ?? data.newValue ?? "";
         saveFailed = false;
         noteInput.text = noteValue;
         page = "main";
+        timeOpen = false;
         open();
     }
 
@@ -130,47 +147,47 @@ Sheet {
             saveFailed = true;
     }
 
-    function chooseType(id: string, name: string): void {
+    function chooseType(id: string, name: string, slot: int): void {
         chosenTypeId = id;
         chosenTypeName = name;
+        chosenSlot = slot;
         saveFailed = false;
         page = "main";
     }
 
     function showTimePage(): void {
-        timeBefore = localSeconds;
-        page = "time";
+        timeOpen = true;
     }
 
-    // Cancel: on the first page it leaves, on the others it goes back and puts back what the page changed.
+    // Cancel: on the first page it leaves, on the type page it goes back.
     function cancelPage(): void {
-        if (page === "time")
-            localSeconds = timeBefore;
         if (page === "main")
             close();
         else
             page = "main";
     }
 
-    // Save on the first page, Done on the time page.
+    // Save on the first page.
     function finishPage(): void {
-        if (page === "time") {
-            if (timeError.length === 0)
-                page = "main";
-        } else if (page === "main") {
+        if (page === "main")
             save();
-        }
     }
 
+    // The bar sits 8 pt up: its `inSheet` padding above the row is the 8 pt that the sheet's grabber zone already has, so the
+    // row starts 21 pt under the top of the sheet, where the design has it.
     NavBar {
         id: nav
 
+        y: -Theme.space.tileGap
         width: parent.width
-        title: root.showingTime ? qsTr("Time") : root.showingType ? qsTr("Error type") : qsTr("Edit entry")
+        // While the time sheet is over this one, nothing on this one takes a touch or is reached by a screen reader.
+        enabled: !root.timeOpen
+        inSheet: true
+        title: root.showingType ? qsTr("Error type") : qsTr("Edit entry")
         leadingText: qsTr("Cancel")
-        trailingText: root.showingTime ? qsTr("Done") : root.showingType ? "" : qsTr("Save")
-        // A time the model refuses cannot be kept, and a draft it refuses cannot be saved.
-        trailingEnabled: root.showingTime ? root.timeError.length === 0 : root.canSave
+        trailingText: root.showingType ? "" : qsTr("Save")
+        // A draft the model refuses cannot be saved.
+        trailingEnabled: root.canSave
         onLeadingTriggered: root.cancelPage()
         onTrailingTriggered: root.finishPage()
     }
@@ -180,10 +197,11 @@ Sheet {
     Item {
         id: mainPage
 
-        y: nav.height
+        y: nav.y + nav.height
         width: parent.width
         height: parent.height - y
         visible: root.showingMain
+        enabled: !root.timeOpen
 
         Flickable {
             id: flick
@@ -200,8 +218,7 @@ Sheet {
 
                 x: Theme.space.screenMargin
                 width: flick.width - 2 * Theme.space.screenMargin
-                spacing: Theme.space.screenMargin + Theme.space.tileGap / 2
-                topPadding: Theme.space.screenMargin
+                spacing: root.groupGap
                 bottomPadding: Theme.space.sectionGap
 
                 GroupedList {
@@ -213,6 +230,8 @@ Sheet {
                         visible: root.kind === "error"
                         text: qsTr("Error")
                         value: root.chosenTypeName
+                        valueSwatch: root.chosenSlot > 0 ? Theme.tileColour(root.chosenSlot) : "transparent"
+                        minimumHeight: Theme.size.rowHeightForm
                         showChevron: true
                         onActivated: root.page = "type"
                     }
@@ -221,7 +240,8 @@ Sheet {
                         objectName: "editTime"
                         text: qsTr("Time")
                         value: root.shownTime
-                        showChevron: true
+                        valueChip: true
+                        minimumHeight: Theme.size.rowHeightForm
                         onActivated: root.showTimePage()
                     }
                 }
@@ -246,7 +266,8 @@ Sheet {
 
                         objectName: "editNoteBox"
                         width: parent.width
-                        height: Math.max(Theme.size.fieldHeight * 2 + Theme.space.sectionGap, noteInput.implicitHeight)
+                        // 104 pt, as drawn; it grows with a longer note.
+                        height: Math.max(Theme.size.tileHeight, noteInput.implicitHeight)
                         radius: Theme.radius.groupedList
                         color: Theme.colour.surfaceRaised
                         border.width: noteInput.activeFocus ? Theme.border.hairline * 2 : 0
@@ -328,11 +349,31 @@ Sheet {
                             y: Theme.space.rowPadding
                             width: parent.width - 2 * Theme.space.rowPadding
                             color: root.preview.length > 0 ? Theme.colour.textPrimary : Theme.colour.textSecondary
-                            font: Theme.font.bodySmall.font
+                            font: Theme.font.previewText.font
+                            lineHeightMode: Text.FixedHeight
+                            lineHeight: Theme.font.previewText.linePitch
                             text: root.preview.length > 0 ? root.preview : qsTr("The line cannot be shown until the entry is valid.")
                             wrapMode: Text.WordWrap
                             Accessible.ignored: true
                         }
+                    }
+
+                    // Where and when it was logged, under the line: 10 pt below it and 4 pt in.
+                    Text {
+                        objectName: "editFootnote"
+                        x: Theme.space.tileGap / 2
+                        width: parent.width - 2 * x
+                        topPadding: Theme.space.tileGap + Theme.border.hairline * 2
+                        visible: root.footnote.length > 0
+                        height: visible ? implicitHeight : 0
+                        color: Theme.colour.textSecondary
+                        font: Theme.font.footnote.font
+                        lineHeightMode: Text.FixedHeight
+                        lineHeight: Theme.font.footnote.linePitch
+                        text: root.footnote
+                        wrapMode: Text.WordWrap
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: text
                     }
 
                     Text {
@@ -353,15 +394,16 @@ Sheet {
             }
         }
 
-        // Delete entry, in its own button below the fields: it is destructive and the swipe is only a shortcut to it.
+        // Delete entry, in its own button below the fields: it is destructive and the swipe is only a shortcut to it. It sits
+        // at the bottom of the sheet, on the home indicator, as the design has it.
         Item {
             id: deleteButton
 
             objectName: "editDelete"
             x: Theme.space.screenMargin
-            y: parent.height - height - Theme.space.sectionGap
+            y: parent.height - height
             width: parent.width - 2 * Theme.space.screenMargin
-            height: Math.max(Theme.size.primaryButtonHeight, deleteLabel.implicitHeight + 2 * Theme.space.sectionGap)
+            height: Math.max(Theme.size.rowHeightForm, deleteLabel.implicitHeight + 2 * Theme.space.sectionGap)
             activeFocusOnTab: true
             Accessible.role: Accessible.Button
             Accessible.name: qsTr("Delete entry")
@@ -401,76 +443,16 @@ Sheet {
         }
     }
 
-    // ---- the time ----
-
-    Flickable {
-        id: timePage
-
-        y: nav.height
-        width: parent.width
-        height: Math.max(0, parent.height - y)
-        visible: root.showingTime
-        contentWidth: width
-        contentHeight: timeColumn.height
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-
-        Column {
-            id: timeColumn
-
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
-            spacing: Theme.space.sectionGap
-            topPadding: Theme.space.screenMargin
-            bottomPadding: Theme.space.sectionGap
-
-            TimeTumbler {
-                objectName: "editTumbler"
-                width: parent.width
-                localSeconds: root.localSeconds
-                twelveHour: root.settings.timeStyle === "12h"
-                showSeconds: root.settings.timeSeconds
-                errorText: root.timeError
-                onTimeEdited: seconds => {
-                    root.localSeconds = seconds;
-                    root.saveFailed = false;
-                }
-            }
-
-            Text {
-                objectName: "editShownTime"
-                width: parent.width
-                color: Theme.colour.textSecondary
-                font: Theme.font.bodySmall.font
-                text: qsTr("Shown in the log as %1").arg(root.shownTime)
-                wrapMode: Text.WordWrap
-                Accessible.role: Accessible.StaticText
-                Accessible.name: text
-            }
-
-            Text {
-                objectName: "editTimeNote"
-                visible: root.timeNote.length > 0
-                width: parent.width
-                color: Theme.colour.textSecondary
-                font: Theme.font.caption.font
-                text: root.timeNote
-                wrapMode: Text.WordWrap
-                Accessible.role: Accessible.StaticText
-                Accessible.name: text
-            }
-        }
-    }
-
     // ---- the error type ----
 
     Flickable {
         id: typePage
 
-        y: nav.height
+        y: nav.y + nav.height
         width: parent.width
         height: Math.max(0, parent.height - y)
         visible: root.showingType
+        enabled: !root.timeOpen
         contentWidth: width
         contentHeight: typeColumn.height
         clip: true
@@ -481,7 +463,6 @@ Sheet {
 
             x: Theme.space.screenMargin
             width: parent.width - 2 * Theme.space.screenMargin
-            topPadding: Theme.space.screenMargin
             bottomPadding: Theme.space.sectionGap
 
             GroupedList {
@@ -494,12 +475,13 @@ Sheet {
                     delegate: ListRow {
                         required property string typeId
                         required property string label
+                        required property int colourSlot
 
                         objectName: "typeRow"
                         text: label
                         checkable: true
                         checked: typeId === root.chosenTypeId
-                        onActivated: root.chooseType(typeId, label)
+                        onActivated: root.chooseType(typeId, label, colourSlot)
                     }
                 }
             }

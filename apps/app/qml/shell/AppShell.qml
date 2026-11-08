@@ -253,6 +253,8 @@ Item {
                     picker: root.picker
                     settings: root.settings
                     bottomClearance: tabBar.height
+                    // The delete alert and the sheets of a past log cover the tab bar, as every sheet does.
+                    sheetLayer: root.sheetLayer
                 }
                 onLoaded: root.historyScreen.shown()
             }
@@ -431,8 +433,8 @@ Item {
             settings: root.settings
             bottomClearance: tabBar.height
             onHeaderRequested: root.showDetails(StackView.view)
-            // The edit sheet covers the tab bar, as every sheet does.
-            Component.onCompleted: editor.parent = root.sheetLayer
+            // The edit sheet and its time sheet cover the tab bar, as every sheet does.
+            sheetLayer: root.sheetLayer
         }
     }
 

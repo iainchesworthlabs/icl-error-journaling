@@ -17,6 +17,7 @@
 #include <QQuickItem>
 #include <QSignalSpy>
 #include <QString>
+#include <algorithm>
 #include <chrono>
 #include <utility>
 #include <vector>
@@ -227,16 +228,17 @@ TEST_CASE("history.sections: newest first, one heading for two logs of a date, t
     CHECK(headings[1] == QStringLiteral("6 NOV 2026"));
     CHECK(headings[2] == QStringLiteral("7 NOV 2025"));
 
-    // The rows: the unit and the site, the date and the entries, and whether and when the log was shared.
+    // The rows: the unit and the site, the entries and the version (the model's `detailText`, not the date, which the
+    // heading has), and whether and when the log was shared.
     CHECK(s.place(0) == QStringLiteral("UNIT-27 · North Site"));
-    CHECK(s.detail(0) == QStringLiteral("Sat 7 Nov · 1 entry"));
+    CHECK(s.detail(0) == QStringLiteral("1 entry · v1.4.2"));
     CHECK(s.status(0) == QStringLiteral("Not shared"));
     CHECK(s.place(1) == QStringLiteral("UNIT-27 · North Site"));
-    CHECK(s.detail(1) == QStringLiteral("Sat 7 Nov · 6 entries"));
+    CHECK(s.detail(1) == QStringLiteral("6 entries · v1.4.2"));
     CHECK(s.status(1) == QStringLiteral("Shared 17:42"));
     CHECK(s.place(2) == QStringLiteral("UNIT-27 · South Elsewhere"));
-    CHECK(s.detail(2) == QStringLiteral("Fri 6 Nov · 1 entry"));
-    CHECK(s.detail(3) == QStringLiteral("Fri 7 Nov · 2 entries"));
+    CHECK(s.detail(2) == QStringLiteral("1 entry · v1.4.2"));
+    CHECK(s.detail(3) == QStringLiteral("2 entries · v1.4.2"));
 
     // The two rows of one date touch; the rows of different dates have a heading between them.
     const QRectF first = s.m_Rig.geometry(s.row(0));
@@ -404,7 +406,7 @@ TEST_CASE("history.open: a row opens a review of the past log, its lines are the
     // The lines of the log, in the words of the export, with the date and when it was shared.
     CHECK(review::joined(review::row_lines(s.m_Rig)) == review::joined(review::prd_example_lines()));
     CHECK(s.text("reviewTitle") == QStringLiteral("Sat 7 Nov"));
-    CHECK(s.text("reviewShared") == QStringLiteral("Shared 7 Nov 2026 at 17:42"));
+    CHECK(s.text("reviewSubtitle") == QStringLiteral("6 entries · Shared 7 Nov at 17:42"));
     CHECK(s.required("reviewShare")->property("text").toString() == QStringLiteral("Share log again"));
     CHECK(s.m_World.platform().haptics().empty());
 
@@ -457,7 +459,7 @@ TEST_CASE("history.open: an entry deleted in a past log changes the count of its
     s.m_Rig.tap(s.named("reviewBack"));
     s.m_Rig.advance(700ms);
     s.m_Rig.settle();
-    CHECK(s.detail(s.index_of(HistoryWorld::MORNING)) == QStringLiteral("Sat 7 Nov · 5 entries"));
+    CHECK(s.detail(s.index_of(HistoryWorld::MORNING)) == QStringLiteral("5 entries · v1.4.2"));
 }
 
 TEST_CASE("history.open: a tap over the buttons under a closed row opens the log and does nothing else",
@@ -606,7 +608,8 @@ TEST_CASE("history.reshare: Share log again on the open past log shares that log
     REQUIRE(s.m_World.platform().sheets_presented() == 1);
     test::check_golden("prd-example", s.m_World.platform().shared_texts().front());
     // The page and the row both show the new time.
-    CHECK(s.text("reviewShared") == QStringLiteral("Shared 7 Nov 2026 at 19:10"));
+    // The day of the share, not the day of the log: the clock of this world is on 8 Nov when the share happens.
+    CHECK(s.text("reviewSubtitle") == QStringLiteral("6 entries · Shared 8 Nov at 19:10"));
     s.m_Rig.tap(s.named("reviewBack"));
     s.m_Rig.advance(700ms);
     s.m_Rig.settle();
@@ -634,9 +637,8 @@ TEST_CASE("history.delete: Delete asks for confirmation naming the date, the pla
 
     REQUIRE(s.alert_open());
     CHECK(s.text("alertTitle") == QStringLiteral("Delete this log?"));
-    CHECK(s.text("alertMessage") ==
-          QStringLiteral(
-              "Sat 7 Nov, UNIT-27 at North Site, 6 entries. It is removed from this phone and can’t be brought back."));
+    CHECK(s.text("alertMessage") == QStringLiteral("Sat 7 Nov 2026, UNIT-27 at North Site, 6 entries. It is removed "
+                                                   "from this phone and can’t be brought back."));
     // Nothing has been deleted yet.
     CHECK(s.m_World.stored(HistoryWorld::MORNING));
     CHECK(s.list_count() == 4);
@@ -811,4 +813,132 @@ TEST_CASE("history.cross_cutting: with Reduce Motion the page fades in 100 ms an
     s.m_Rig.settle();
     CHECK_FALSE(s.review_shown());
     CHECK(s.m_World.history().review_model() == nullptr);
+}
+
+TEST_CASE("history.layout: rows are 60 pt, with the thin chevron, a check or a ring, and no separator under a card's "
+          "last row",
+          "[ui][history]")
+{
+    Screen s;
+    const std::vector<QQuickItem*> rows = s.rows();
+    REQUIRE(rows.size() == 4);
+
+    const QColor strong = input::theme_colour(s.m_Rig, "borderStrong");
+    const QColor primary = input::theme_colour(s.m_Rig, "primaryText");
+    const QColor secondary = input::theme_colour(s.m_Rig, "textSecondary");
+    // The shared state of each row, in the order of the model: not shared, shared, not shared, shared.
+    for (int i = 0; i < 4; ++i)
+    {
+        QQuickItem* row = rows[static_cast<std::size_t>(i)];
+        CHECK(s.m_Rig.geometry(s.required("historySwipe", row)).height() >= 60);
+
+        QQuickItem* chevron = s.required("historyChevron", row);
+        CHECK(chevron->property("kind").toString() == QStringLiteral("chevronRight"));
+        CHECK(chevron->property("size").toDouble() == 14);
+        CHECK(chevron->property("colour").value<QColor>() == strong);
+
+        QQuickItem* status = s.required("historyStatusIcon", row);
+        const bool shared = s.status(i).startsWith(QStringLiteral("Shared"));
+        CHECK(status->property("kind").toString() == (shared ? QStringLiteral("check") : QStringLiteral("ring")));
+        CHECK(status->property("size").toDouble() == 16);
+        CHECK(status->property("colour").value<QColor>() == (shared ? primary : secondary));
+    }
+
+    // The separator is between the two rows of one date, and not under the last row of a card.
+    const auto divider = [&s, &rows](int index)
+    {
+        QQuickItem* line = s.named("swipeDivider", rows[static_cast<std::size_t>(index)]);
+        return line != nullptr && line->isVisible();
+    };
+    CHECK(divider(0));
+    CHECK_FALSE(divider(1));
+    CHECK_FALSE(divider(2));
+    CHECK_FALSE(divider(3));
+
+    // The separator runs the full width of the card.
+    QQuickItem* first = s.named("swipeDivider", rows[0]);
+    REQUIRE(first != nullptr);
+    CHECK(s.m_Rig.geometry(first).left() == s.m_Rig.geometry(rows[0]).left());
+    CHECK(s.m_Rig.geometry(first).width() == s.m_Rig.geometry(rows[0]).width());
+}
+
+TEST_CASE(
+    "history.layout: the date headings are 16 pt under the card above them and the first is 20 pt under the subtitle",
+    "[ui][history]")
+{
+    Screen s;
+    const std::vector<QQuickItem*> rows = s.rows();
+    REQUIRE(rows.size() == 4);
+    std::vector<QQuickItem*> headings;
+    for (QQuickItem* item : all_named(s.m_Rig, QStringLiteral("historySection"), s.required("historyList")))
+    {
+        if (item->isVisible())
+        {
+            headings.push_back(item);
+        }
+    }
+    REQUIRE(headings.size() == 3);
+    std::sort(headings.begin(), headings.end(),
+              [&s](QQuickItem* a, QQuickItem* b) { return s.m_Rig.geometry(a).top() < s.m_Rig.geometry(b).top(); });
+
+    // The heading text starts 16 pt under the bottom of the card above, and the card is 8 pt under the heading's text.
+    const QRectF card_above = s.m_Rig.geometry(rows[1]);
+    CHECK(s.m_Rig.geometry(headings[1]).top() == card_above.bottom() + 16);
+    CHECK(s.m_Rig.geometry(rows[2]).top() - s.m_Rig.geometry(headings[1]).bottom() == 8);
+    // The first heading is 20 pt under the subtitle (8 between the lines of the header, 4 of padding and 8 of margin).
+    CHECK(s.m_Rig.geometry(headings[0]).top() - s.m_Rig.geometry(s.required("historySubtitle")).bottom() == 20);
+}
+
+TEST_CASE("history.delete: with the shell's layer the alert is put in it, over the tab bar", "[ui][history]")
+{
+    Screen s;
+    // The shell's layer, a window-sized item over the screen and the tab bar.
+    auto* layer = new QQuickItem(s.m_History->parentItem());
+    layer->setObjectName(QStringLiteral("testSheetLayer"));
+    layer->setSize(s.m_History->size());
+    layer->setParentItem(s.m_History->parentItem());
+    s.m_History->setProperty("sheetLayer", QVariant::fromValue(static_cast<QObject*>(layer)));
+    s.m_Rig.layout();
+
+    QQuickItem* alert = find_in(s.m_Rig, QStringLiteral("deleteAlert"), layer);
+    REQUIRE(alert != nullptr);
+    CHECK(alert->parentItem() == layer);
+
+    s.tap_action(s.index_of(HistoryWorld::MORNING), "deleteAction");
+    s.m_Rig.advance(500ms);
+    REQUIRE(alert->property("isOpen").toBool());
+    // It covers the whole window, bottom included, where the tab bar is.
+    QQuickItem* scrim = find_in(s.m_Rig, QStringLiteral("sheetScrim"), alert);
+    REQUIRE(scrim != nullptr);
+    CHECK(s.m_Rig.geometry(scrim) == s.m_Rig.geometry(layer));
+    CHECK(s.m_Rig.geometry(scrim).bottom() == s.m_Rig.geometry(s.m_History).bottom());
+}
+
+TEST_CASE("history.empty: the explanation is 150 pt under the title, in 40 pt margins, with the 30 pt calendar",
+          "[ui][history]")
+{
+    Screen s(true, false);
+    QQuickItem* placeholder = s.required("historyPlaceholder");
+    const QRectF title = s.m_Rig.geometry(s.required("historyTitle"));
+    const QRectF block = s.m_Rig.geometry(placeholder);
+    CHECK(block.top() == title.bottom() + 8 + 150);
+    CHECK(block.left() == 40);
+    CHECK(block.width() == s.m_Rig.geometry(s.m_History).width() - 80);
+
+    QQuickItem* icon = s.required("historyEmptyIcon");
+    CHECK(s.m_Rig.geometry(icon).width() == 64);
+    CHECK(s.m_Rig.geometry(icon).height() == 64);
+    QQuickItem* calendar = nullptr;
+    for (QQuickItem* child : icon->childItems())
+    {
+        if (child->property("kind").toString() == QStringLiteral("calendar"))
+        {
+            calendar = child;
+        }
+    }
+    REQUIRE(calendar != nullptr);
+    CHECK(calendar->property("size").toDouble() == 30);
+    // The text has the 1.45 line height of the design: 21.75 pt a line.
+    QQuickItem* text = s.required("historyEmptyText");
+    CHECK(text->property("lineHeight").toDouble() == 21.75);
 }
