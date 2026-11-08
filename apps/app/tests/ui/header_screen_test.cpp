@@ -436,7 +436,7 @@ TEST_CASE("details.commit: a field is saved when the person is done with it, not
     {
         rig.tap(input_of(rig, unit));
         rig.type(QStringLiteral("31"));
-        rig.tap(need(rig, QStringLiteral("navLeading")));
+        rig.tap(need(rig, QStringLiteral("navLeading"), need(rig, QStringLiteral("headerNav"))));
         rig.settle();
         CHECK(world.session().unit_text() == QStringLiteral("UNIT-31"));
     }
@@ -451,7 +451,7 @@ TEST_CASE("details.start_logging: leaving the screen needs no field", "[ui][head
 
     rig.tap(need(rig, QStringLiteral("headerStart")));
     CHECK(closed.count() == 1);
-    rig.tap(need(rig, QStringLiteral("navLeading")));
+    rig.tap(need(rig, QStringLiteral("navLeading"), need(rig, QStringLiteral("headerNav"))));
     CHECK(closed.count() == 2);
     // Errors can be logged before every field is filled.
     CHECK(world.session().recordError(QStringLiteral("00000000-0000-4000-8000-0000000000a1")));

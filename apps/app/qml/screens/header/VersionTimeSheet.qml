@@ -33,7 +33,7 @@ Sheet {
 
     accessibleName: qsTr("Time")
     detent: Sheet.Content
-    contentImplicitHeight: nav.y + nav.implicitHeight + tumbler.implicitHeight
+    contentImplicitHeight: nav.implicitHeight + tumbler.implicitHeight
     onClosed: root.version.timeOpen = false
     Component.onCompleted: root.sync()
 
@@ -48,11 +48,9 @@ Sheet {
     Item {
         anchors.fill: parent
 
-        // The bar sits 8 pt up: its `inSheet` padding above the row is the 8 pt the sheet's grabber zone already has.
         NavBar {
             id: nav
 
-            y: -Theme.space.tileGap
             width: parent.width
             inSheet: true
             title: qsTr("Time")
@@ -70,7 +68,7 @@ Sheet {
 
             objectName: "versionTumbler"
             x: Theme.space.screenMargin
-            y: nav.y + nav.height
+            y: nav.height
             width: parent.width - 2 * Theme.space.screenMargin
             localSeconds: root.version.timeSeconds
             twelveHour: root.settings.timeStyle === "12h"
