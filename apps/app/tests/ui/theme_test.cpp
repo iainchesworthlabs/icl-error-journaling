@@ -302,7 +302,8 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
                     token.value(dark ? QStringLiteral("darkOpacity") : QStringLiteral("lightOpacity")).toDouble()));
                 const QColor actual = colour_of(shadow, QStringLiteral("colour"));
                 CHECK(actual.rgb() == expected.rgb());
-                CHECK_THAT(actual.alphaF(), WithinAbs(expected.alphaF(), 0.01));
+                CHECK_THAT(static_cast<double>(actual.alphaF()),
+                           WithinAbs(static_cast<double>(expected.alphaF()), 0.01));
             }
         }
         QSet<QString> declared = own_properties(group);
