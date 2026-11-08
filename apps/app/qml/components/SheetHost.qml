@@ -16,6 +16,8 @@ import ErrorJournalingApp
 //
 // While any sheet in the layer is open the screen below is disabled, which stops touches, takes keyboard focus away
 // from it and marks it unavailable to a screen reader, on top of the scrim that dims it and the focus trap of the sheet.
+// Disabling does not change the look: the components dim only when they are disabled themselves (PrimaryButton, the
+// trailing action of NavBar, the buttons of MiniBoard), so the screen under the scrim looks as the mock-ups draw it.
 // The sheets stack in the order they are declared: a later one is over an earlier one.
 Item {
     id: root

@@ -51,14 +51,13 @@ int selected_count(UiRig& rig)
     return count;
 }
 
-/// The thin rectangles of a card that are drawn rotated: the arms of the check mark, when it is shown.
+/// The check marks (an Icon of kind "check") shown in a card: one in the selected card.
 int check_mark_arms(UiRig& rig, QQuickItem* card)
 {
     int shown = 0;
     for (const Node& node : rig.tree(card))
     {
-        if (node.m_TypeName.startsWith(QStringLiteral("QQuickRectangle")) && node.m_Visible &&
-            node.m_Item->rotation() != 0)
+        if (node.m_Visible && node.m_Item->property("kind").toString() == QStringLiteral("check"))
         {
             ++shown;
         }
@@ -105,12 +104,12 @@ TEST_CASE("choice_card.select: the selected state is a check mark and a thicker 
     CHECK(border_of(changed) == 2.0);
     CHECK(border_of(typo) == 1.0);
     // The two arms of the check mark are shown in the selected card and in no other.
-    CHECK(check_mark_arms(rig, changed) == 2);
+    CHECK(check_mark_arms(rig, changed) == 1);
     CHECK(check_mark_arms(rig, typo) == 0);
 
     rig.tap(typo);
     CHECK(check_mark_arms(rig, changed) == 0);
-    CHECK(check_mark_arms(rig, typo) == 2);
+    CHECK(check_mark_arms(rig, typo) == 1);
     CHECK(border_of(typo) == 2.0);
     CHECK(border_of(changed) == 1.0);
 }

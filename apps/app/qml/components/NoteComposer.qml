@@ -18,6 +18,9 @@ import ErrorJournalingApp
 //
 // `chips` is a model with the roles `templateId` and `name` (`settings.templates`). A chip emits `chipChosen(templateId)`.
 // With `skeleton` the card draws its shapes only, in neutral colours and with no text, for the launch screen (Stage 5).
+//
+// `chipIcons` maps a templateId to an Icon kind for its chip ({"t1": "music"}); a chip without one has no icon. Look
+// (Main): 12 pt padding, 8 pt between chips, 10 pt between the chips and the field, the card shadow.
 Item {
     id: root
 
@@ -27,6 +30,8 @@ Item {
     property string placeholderText: qsTr("Add a note to today’s log…")
     property string fieldName: qsTr("Journal note")
     property string addText: qsTr("Add")
+    // An Icon kind for each template's chip, by templateId.
+    property var chipIcons: ({})
 
     readonly property bool canSubmit: field.text.trim().length > 0
 
@@ -54,6 +59,16 @@ Item {
     Component.onCompleted: field.text = draft
 
     Rectangle {
+        objectName: "noteShadow"
+        visible: !root.skeleton
+        width: parent.width
+        height: parent.height
+        y: Theme.shadow.card.offsetY
+        radius: Theme.radius.card
+        color: Theme.shadow.card.colour
+    }
+
+    Rectangle {
         anchors.fill: parent
         radius: Theme.radius.card
         color: root.skeleton ? Theme.colour.swatch : Theme.colour.surface
@@ -65,7 +80,7 @@ Item {
         x: Theme.space.sectionGap
         y: Theme.space.sectionGap
         width: parent.width - 2 * Theme.space.sectionGap
-        spacing: Theme.space.sectionGap
+        spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
         // The chips wrap onto more rows when there is no room (a long name, or a large text size).
         Flow {
@@ -86,6 +101,7 @@ Item {
 
                     objectName: "chip"
                     text: name
+                    iconKind: root.chipIcons[templateId] !== undefined ? root.chipIcons[templateId] : ""
                     maxWidth: chipRow.width
                     onClicked: root.chipChosen(templateId)
                 }

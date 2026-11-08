@@ -44,14 +44,14 @@ int separators(UiRig& rig, QQuickItem* row)
     return count;
 }
 
-/// The thin rotated rectangles of the marks of a row that are shown: two for a check, two for a chevron.
+/// The marks of a row that are shown: the check mark or the chevron (an Icon of kind "check" or "chevronRight").
 int mark_arms(UiRig& rig, QQuickItem* row)
 {
     int count = 0;
     for (const Node& node : rig.tree(row))
     {
-        if (node.m_TypeName.startsWith(QStringLiteral("QQuickRectangle")) && node.m_Visible &&
-            node.m_Item->rotation() != 0)
+        const QString kind = node.m_Item->property("kind").toString();
+        if (node.m_Visible && (kind == QStringLiteral("check") || kind == QStringLiteral("chevronRight")))
         {
             ++count;
         }
@@ -148,9 +148,9 @@ TEST_CASE("list_row.marks: a check on the chosen row, a chevron on a row that op
 {
     UiRig rig;
     REQUIRE(load_host(rig, QString::fromUtf8(ROWS)) != nullptr);
-    CHECK(mark_arms(rig, rig.find(QStringLiteral("first"))) == 2);
+    CHECK(mark_arms(rig, rig.find(QStringLiteral("first"))) == 1);
     CHECK(mark_arms(rig, rig.find(QStringLiteral("second"))) == 0);
-    CHECK(mark_arms(rig, rig.find(QStringLiteral("third"))) == 2);
+    CHECK(mark_arms(rig, rig.find(QStringLiteral("third"))) == 1);
     CHECK(mark_arms(rig, rig.find(QStringLiteral("fourth"))) == 0);
 
     // The state is also spoken, so the check is not the only sign of it.
@@ -166,7 +166,7 @@ TEST_CASE("list_row.marks: a check on the chosen row, a chevron on a row that op
     require_item(rig, QStringLiteral("second"))->setProperty("checked", true);
     require_item(rig, QStringLiteral("first"))->setProperty("checked", false);
     CHECK(mark_arms(rig, rig.find(QStringLiteral("first"))) == 0);
-    CHECK(mark_arms(rig, rig.find(QStringLiteral("second"))) == 2);
+    CHECK(mark_arms(rig, rig.find(QStringLiteral("second"))) == 1);
 }
 
 TEST_CASE("list_row.states: a destructive row has its label in the destructive colour, in light and dark",

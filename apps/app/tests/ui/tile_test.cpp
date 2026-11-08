@@ -19,6 +19,7 @@
 #include <QVariantMap>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 
 using namespace ej::ui;
 using namespace std::chrono_literals;
@@ -329,7 +330,7 @@ TEST_CASE("tile.label: the longest configured label wraps and is not cut at scal
         INFO("text scale " << test.m_Scale << ", label " << label->width() << " x " << label->height() << ", content "
                            << label->property("contentWidth").toDouble() << " x "
                            << label->property("contentHeight").toDouble() << ", pixel size "
-                           << label->property("font").value<QFont>().pixelSize() << ", family "
+                           << label->property("font").value<QFont>().pointSizeF() << " pt, family "
                            << label->property("font").value<QFont>().family().toStdString());
         CHECK_FALSE(label->property("truncated").toBool());
         CHECK(label->property("lineCount").toInt() <= test.m_MaxLines);
@@ -338,10 +339,13 @@ TEST_CASE("tile.label: the longest configured label wraps and is not cut at scal
         CHECK(label->property("contentHeight").toDouble() <= label->height() + 0.5);
         CHECK(label->property("contentWidth").toDouble() <= label->width() + 0.5);
         CHECK(label->property("elide").toInt() == 3); // Text.ElideNone
-        // A label that fits is not shrunk: at the default size it is the size of the type scale.
+        // A label that fits is not shrunk: at the default size it is the size of the type scale, 13.5 pt and not
+        // rounded to 14.
         if (test.m_Scale == 1.0)
         {
-            CHECK(label->property("font").value<QFont>().pixelSize() == 14);
+            const QFont font = label->property("font").value<QFont>();
+            const double dpi = rig.theme()->property("fontDpi").toDouble();
+            CHECK(std::abs(font.pointSizeF() * dpi / 72.0 - 13.5) < 1e-3);
         }
     }
     rig.set_text_scale(1.0);

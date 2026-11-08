@@ -66,9 +66,9 @@ QObject* theme_group(UiRig& rig, const char* name)
 
 } // namespace
 
-TEST_CASE(
-    "toast.text_and_bar: shows the text, the bar restarts on a new generation and not otherwise, in the 5 s window",
-    "[ui][toast]")
+TEST_CASE("toast.text_and_window: shows the text, a new window starts on a new generation and not otherwise, and there "
+          "is no countdown bar",
+          "[ui][toast]")
 {
     UiRig rig;
     QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Mute Delay logged at 10:20"), 1));
@@ -76,30 +76,24 @@ TEST_CASE(
 
     CHECK(require_item(rig, QStringLiteral("toastText"))->property("text").toString() ==
           QStringLiteral("Mute Delay logged at 10:20"));
-    auto* animator = object_named(toast, QStringLiteral("toastBarAnimator"));
-    CHECK(animator->property("duration").toInt() == WINDOW_MS);
-    CHECK(animator->property("running").toBool());
-    CHECK(toast->property("barRestarts").toInt() == 1);
-    CHECK(require_item(rig, QStringLiteral("toastBarTrack"))->isVisible());
+    CHECK(toast->property("windowStarts").toInt() == 1);
+    // The mock-ups have no countdown bar (owner decision), so the toast draws none.
+    CHECK(rig.find(QStringLiteral("toastBarTrack")) == nullptr);
+    // The card is the design's 52 pt.
+    CHECK(rig.geometry(require_item(rig, QStringLiteral("toastCard"))).height() == 52);
 
-    // Three seconds in, the bar is still running; the same generation with another line does not restart it.
+    // The same generation with another line is no new window.
     rig.advance(3000ms);
-    CHECK(animator->property("running").toBool());
     toast->setProperty("text", QStringLiteral("Mute Delay logged at 10:21"));
     rig.advance(16ms);
-    CHECK(toast->property("barRestarts").toInt() == 1);
+    CHECK(toast->property("windowStarts").toInt() == 1);
     CHECK(require_item(rig, QStringLiteral("toastText"))->property("text").toString() ==
           QStringLiteral("Mute Delay logged at 10:21"));
 
-    // A new generation restarts it: three more seconds is six since the start, and the bar is still running.
+    // A new generation is.
     toast->setProperty("generation", 2);
     rig.advance(16ms);
-    CHECK(toast->property("barRestarts").toInt() == 2);
-    rig.advance(3000ms);
-    CHECK(animator->property("running").toBool());
-    // And it ends with the window, five seconds after the restart.
-    rig.advance(2100ms);
-    CHECK_FALSE(animator->property("running").toBool());
+    CHECK(toast->property("windowStarts").toInt() == 2);
 }
 
 TEST_CASE("toast.undo: the button asks once, and is disabled while the undo is being committed", "[ui][toast]")
@@ -133,14 +127,18 @@ TEST_CASE("toast.undo: the button asks once, and is disabled while the undo is b
     CHECK(button->opacity() == 1.0);
 }
 
-TEST_CASE("toast.undo: the button is named for what it undoes and is at least 44 pt", "[ui][toast]")
+TEST_CASE("toast.undo: the button is named for what it undoes, drawn 40 pt high with a 44 pt touch area", "[ui][toast]")
 {
     UiRig rig;
-    load_toast(rig, toast_properties(true, QStringLiteral("Mute Delay logged at 10:20"), 1));
+    QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Mute Delay logged at 10:20"), 1));
     rig.advance(300ms);
     const QRectF rect = rig.geometry(rig.find(QStringLiteral("toastUndo")));
     CHECK(rect.width() >= 44);
-    CHECK(rect.height() >= 44);
+    CHECK(rect.height() == 40);
+    // The tap handler's margin makes the touch area 44 pt.
+    const QObject* tap = object_named(toast, QStringLiteral("toastUndoTap"));
+    CHECK(rect.height() + 2 * tap->property("margin").toDouble() >= 44);
+    expect_clean(check_targets(rig));
 
     bool found = false;
     for (const Node& node : rig.accessible_tree())
@@ -186,7 +184,7 @@ TEST_CASE("toast.repeat: a repeat changes the text in place, without the toast c
     // The new line is announced once, and the bar is a new window.
     REQUIRE(announced.count() == 1);
     CHECK(announced.at(0).at(0).toString() == QStringLiteral("Mute Delay logged ×2 at 10:21"));
-    CHECK(toast->property("barRestarts").toInt() == 2);
+    CHECK(toast->property("windowStarts").toInt() == 2);
 }
 
 TEST_CASE("toast.lifecycle: in and out, and announced once", "[ui][toast]")
@@ -234,7 +232,6 @@ TEST_CASE("toast.lifecycle: in and out, and announced once", "[ui][toast]")
     advance_through(rig, toast_ms);
     CHECK(card->opacity() == 0.0);
     CHECK_FALSE(toast->isVisible());
-    CHECK_FALSE(object_named(toast, QStringLiteral("toastBarAnimator"))->property("running").toBool());
 
     // And it opens again for the next action, announced again.
     toast->setProperty("text", QStringLiteral("Note added at 10:30"));
@@ -246,8 +243,7 @@ TEST_CASE("toast.lifecycle: in and out, and announced once", "[ui][toast]")
     CHECK(announced.at(1).at(0).toString() == QStringLiteral("Note added at 10:30"));
 }
 
-TEST_CASE("toast.lifecycle: with Reduce Motion it fades and does not move, and the bar is not shown",
-          "[ui][toast][motion]")
+TEST_CASE("toast.lifecycle: with Reduce Motion it fades and does not move", "[ui][toast][motion]")
 {
     UiRig rig;
     rig.set_reduce_motion(true);
@@ -262,7 +258,6 @@ TEST_CASE("toast.lifecycle: with Reduce Motion it fades and does not move, and t
     advance_through(rig, 100);
     CHECK(card->opacity() == 1.0);
     CHECK(card->y() == 0.0);
-    CHECK_FALSE(require_item(rig, QStringLiteral("toastBarTrack"))->isVisible());
     CHECK(object_named(toast, QStringLiteral("toastSlideIn"))->property("from").toReal() == 0.0);
     CHECK(object_named(toast, QStringLiteral("toastFadeIn"))->property("duration").toInt() == 100);
     expect_clean(check_motion_reduced(rig));

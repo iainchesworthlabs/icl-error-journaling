@@ -9,6 +9,10 @@ import ErrorJournalingApp
 //
 // `missingFields` is `session.missingFields`, the keys of the empty fields. With `skeleton` the card draws its shapes
 // only, in the neutral swatch colour and with no text, for the launch screen (Stage 5); the geometry is the same.
+//
+// Look (Main, LogBanner): the card is at least 64 pt; the right column is 12 pt, the date in 600 and white, the
+// facilitator in 400; the chevron is the 16 pt Icon. The strip under it is 41 pt: a full-width divider, 4 pt, a 30 pt
+// row with a 16 pt warning sign and the text in 13/600, both white and centred on the row, and 6 pt.
 Item {
     id: root
 
@@ -77,18 +81,18 @@ Item {
         id: main
 
         width: parent.width
-        height: Math.max(Theme.size.minTouchTarget + 2 * Theme.space.sectionGap, Math.max(leftColumn.height, rightColumn.height) + 2 * Theme.space.sectionGap)
+        height: Math.max(Theme.size.headerCardHeight, Math.max(leftColumn.height, rightColumn.height) + 2 * Theme.space.sectionGap)
 
         TextMetrics {
             id: dateMetrics
 
-            font: Theme.font.sectionLabel.font
+            font: Theme.font.captionSmall.selectedFont
             text: root.dateText
         }
         TextMetrics {
             id: facilitatorMetrics
 
-            font: Theme.font.caption.font
+            font: Theme.font.captionSmall.font
             text: facilitatorLabel.text
         }
 
@@ -129,7 +133,7 @@ Item {
 
             x: chevron.x - Theme.space.sectionGap - width
             y: (main.height - height) / 2
-            width: Math.min(Math.max(dateMetrics.advanceWidth, facilitatorMetrics.advanceWidth), main.width * 0.4)
+            width: Math.min(Math.ceil(Math.max(dateMetrics.advanceWidth, facilitatorMetrics.advanceWidth)) + Theme.border.hairline, main.width * 0.4)
             spacing: Theme.border.hairline * 2
 
             Text {
@@ -139,7 +143,7 @@ Item {
                 opacity: root.skeleton ? 0 : 1
                 horizontalAlignment: Text.AlignRight
                 color: Theme.colour.textOnHeaderCard
-                font: Theme.font.sectionLabel.font
+                font: Theme.font.captionSmall.selectedFont
                 text: root.dateText
                 wrapMode: Text.WordWrap
                 Accessible.ignored: true
@@ -151,7 +155,7 @@ Item {
                 opacity: root.skeleton ? 0 : 1
                 horizontalAlignment: Text.AlignRight
                 color: Theme.colour.headerCardTextSecondary
-                font: Theme.font.caption.font
+                font: Theme.font.captionSmall.font
                 text: root.facilitatorText.length > 0 ? root.facilitatorText : root.facilitatorPrompt
                 wrapMode: Text.WordWrap
                 Accessible.ignored: true
@@ -196,13 +200,15 @@ Item {
             color: Theme.colour.border
         }
 
-        InputGlyph {
+        Icon {
             id: chevron
 
+            objectName: "headerChevron"
             x: main.width - Theme.space.screenMargin - width
             y: (main.height - height) / 2
+            size: Theme.space.screenMargin
             visible: !root.skeleton
-            kind: "chevron"
+            kind: "chevronRight"
             colour: Theme.colour.headerCardTextSecondary
         }
     }
@@ -211,33 +217,39 @@ Item {
     Item {
         id: strip
 
+        objectName: "headerStrip"
+        // The row of the strip: 30 pt at least, between 4 pt above and 6 pt below, under the divider.
+        readonly property real rowTop: Theme.border.hairline + Theme.border.hairline * 4
+        readonly property real rowHeight: Math.max(Theme.size.badge + Theme.border.hairline * 6, stripText.implicitHeight)
+
         y: main.height
         width: parent.width
-        height: stripText.height + Theme.space.sectionGap
+        height: rowTop + rowHeight + Theme.border.hairline * 6
         visible: root.missingCount > 0 && !root.skeleton
 
         Rectangle {
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
+            objectName: "headerStripDivider"
+            width: parent.width
             height: Theme.border.hairline
             color: Qt.alpha(Theme.colour.textOnHeaderCard, 0.28)
         }
-        InputGlyph {
+        Icon {
             id: stripGlyph
 
             x: Theme.space.screenMargin
-            y: Theme.space.tileGap
-            kind: "alert"
+            y: strip.rowTop + (strip.rowHeight - height) / 2
+            size: Theme.space.screenMargin
+            kind: "warning"
             colour: Theme.colour.textOnHeaderCard
         }
         Text {
             id: stripText
 
             x: stripGlyph.x + stripGlyph.width + Theme.space.tileGap
-            y: Theme.space.tileGap
+            y: strip.rowTop + (strip.rowHeight - height) / 2
             width: parent.width - x - Theme.space.screenMargin
             color: Theme.colour.textOnHeaderCard
-            font: Theme.font.caption.font
+            font: Theme.font.caption.selectedFont
             text: qsTr("Not filled in yet: %1").arg(root.missingText)
             wrapMode: Text.WordWrap
             Accessible.ignored: true

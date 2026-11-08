@@ -11,6 +11,9 @@ import ErrorJournalingApp
 //         ListRow { text: qsTr("North Site"); checkable: true; checked: true }
 //         ListRow { text: qsTr("South Site"); checkable: true }
 //     }
+//
+// The heading is 6 pt above the card and indented by `headingInset` (4 pt, the form labels; 16 pt for the Other
+// picker's section headings). The footer is 13 pt with a 1.4 line height, 10 pt under the card.
 Item {
     id: root
 
@@ -20,6 +23,8 @@ Item {
     property string footer: ""
     // The surface behind the rows. A screen on a sheet sets the raised surface.
     property color surface: Theme.colour.surface
+    // How far the heading is indented from the card's edge.
+    property real headingInset: Theme.space.tileGap / 2
 
     default property alias rows: column.data
 
@@ -32,9 +37,9 @@ Item {
     Text {
         id: heading
 
-        x: Theme.space.tileGap / 2
+        x: root.headingInset
         width: parent.width - 2 * x
-        height: visible ? implicitHeight + Theme.space.tileGap : 0
+        height: visible ? implicitHeight + Theme.space.tileGap * 3 / 4 : 0
         visible: root.title.length > 0
         verticalAlignment: Text.AlignTop
         color: Theme.colour.textSecondary
@@ -66,11 +71,13 @@ Item {
         x: Theme.space.tileGap / 2
         y: card.y + card.height
         width: parent.width - 2 * x
-        height: visible ? implicitHeight + Theme.space.tileGap : 0
+        height: visible ? implicitHeight + Theme.space.tileGap + Theme.border.hairline * 2 : 0
         visible: root.footer.length > 0
         verticalAlignment: Text.AlignBottom
         color: Theme.colour.textSecondary
-        font: Theme.font.caption.font
+        font: Theme.font.footnote.font
+        lineHeightMode: Text.FixedHeight
+        lineHeight: Theme.font.footnote.linePitch
         text: root.footer
         wrapMode: Text.WordWrap
         Accessible.ignored: true

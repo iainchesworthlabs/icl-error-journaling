@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Shapes
 import ErrorJournalingApp
 
 // The "Last" bar of the Log screen (Stage 4, package 4.5): the latest line of the log, how many entries there are today,
@@ -18,6 +17,8 @@ import ErrorJournalingApp
 // that, the line moves under the caption and the count, so that the count is never cut off. The line is on one row and is
 // cut with an ellipsis when it is long, as the design has it (the board below must not move); the accessible name always
 // has the whole line. The bar is 44 pt high at least and grows with the text size.
+//
+// Look (Main): 14 pt padding, 10 pt gaps, the line in 14 pt, the 14 pt chevron Icon in textSecondary, the card shadow.
 Item {
     id: root
 
@@ -28,8 +29,8 @@ Item {
     signal tapped
 
     readonly property bool hasEntries: lastLine.length > 0
-    readonly property real chevronSize: Theme.size.badge * 0.6
-    readonly property real gap: Theme.space.tileGap + Theme.border.otherWidth * 2
+    readonly property real chevronSize: Theme.size.badge * 7 / 12
+    readonly property real gap: Theme.space.tileGap + Theme.border.hairline * 2
     readonly property real contentWidth: width - 2 * Theme.space.rowPadding
     // The least room the line is given beside the caption and the count: about a tile.
     readonly property real lineMinimum: Theme.size.tileWidth
@@ -48,6 +49,16 @@ Item {
     Accessible.onPressAction: {
         if (!root.skeleton)
             root.tapped();
+    }
+
+    Rectangle {
+        objectName: "lastBarShadow"
+        visible: !root.skeleton
+        width: parent.width
+        height: parent.height
+        y: Theme.shadow.card.offsetY
+        radius: Theme.radius.groupedList
+        color: Theme.shadow.card.colour
     }
 
     Rectangle {
@@ -90,7 +101,7 @@ Item {
             width: Math.max(0, root.stacked ? chevron.x - root.gap : (count.visible ? count.x : chevron.x) - root.gap - x)
             text: root.hasEntries ? root.lastLine : qsTr("No entries yet")
             color: root.hasEntries ? Theme.colour.textPrimary : Theme.colour.textSecondary
-            font: Theme.font.bodySmall.font
+            font: Theme.font.messageText.font
             elide: Text.ElideRight
             maximumLineCount: 1
             Accessible.ignored: true
@@ -113,34 +124,15 @@ Item {
             Accessible.ignored: true
         }
 
-        Item {
+        Icon {
             id: chevron
 
             objectName: "lastBarChevron"
             x: content.width - width
             y: (content.height - height) / 2
-            width: root.chevronSize
-            height: root.chevronSize
-            Accessible.ignored: true
-
-            Shape {
-                width: Theme.size.badge
-                height: Theme.size.badge
-                scale: root.chevronSize / Theme.size.badge
-                transformOrigin: Item.TopLeft
-
-                ShapePath {
-                    strokeColor: Theme.colour.textSecondary
-                    strokeWidth: Theme.border.otherWidth * 4 / 3
-                    fillColor: "transparent"
-                    capStyle: ShapePath.RoundCap
-                    joinStyle: ShapePath.RoundJoin
-
-                    PathSvg {
-                        path: "M9 6l6 6-6 6"
-                    }
-                }
-            }
+            size: root.chevronSize
+            kind: "chevronRight"
+            colour: Theme.colour.textSecondary
         }
     }
 

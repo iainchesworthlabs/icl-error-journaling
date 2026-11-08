@@ -92,12 +92,13 @@ TEST_CASE("banner.tones: a tone is an icon and an outline as well as a fill", "[
     REQUIRE(card != nullptr);
 
     // The icon of information differs in shape from that of a warning.
-    const QString information_icon = banner->property("iconPath").toString();
+    const QString information_icon = banner->property("iconKind").toString();
     banner->setProperty("tone", TONE_WARNING);
-    const QString warning_icon = banner->property("iconPath").toString();
+    const QString warning_icon = banner->property("iconKind").toString();
     banner->setProperty("tone", TONE_ERROR);
-    CHECK(information_icon != warning_icon);
-    CHECK(banner->property("iconPath").toString() == warning_icon);
+    CHECK(information_icon == QStringLiteral("info"));
+    CHECK(warning_icon == QStringLiteral("warning"));
+    CHECK(banner->property("iconKind").toString() == warning_icon);
 
     // Every tone has the outline of 1.5 pt, and the radius of the toast.
     for (const int tone : {TONE_INFORMATION, TONE_WARNING, TONE_ERROR})
@@ -116,7 +117,8 @@ TEST_CASE("banner: the geometry follows the design", "[ui][banner]")
     QQuickItem* card = rig.find(QStringLiteral("bannerCard"));
     REQUIRE(card != nullptr);
 
-    SECTION("a write-failed banner: padding, close button of 44 pt, text beside the icon")
+    SECTION("a write-failed banner: the design's padding, a 44 pt close button centred 27.5 pt from the right and 25.5 "
+            "pt from the top, the text beside the 22 pt icon")
     {
         const QRectF rect = rig.geometry(card);
         CHECK(rect.left() == 0);
@@ -126,13 +128,15 @@ TEST_CASE("banner: the geometry follows the design", "[ui][banner]")
         const QRectF close = rig.geometry(rig.find(QStringLiteral("bannerClose")));
         CHECK(close.width() == 44);
         CHECK(close.height() == 44);
-        CHECK(close.right() == rect.right());
-        CHECK(close.top() == rect.top());
+        // The 1.5 pt outline, the padding and the 10 pt the button reaches into it.
+        CHECK(close.center().x() == rect.right() - 27.5);
+        CHECK(close.center().y() == rect.top() + 25.5);
 
         const QRectF title = rig.geometry(rig.find(QStringLiteral("bannerTitle")));
         const QRectF message = rig.geometry(rig.find(QStringLiteral("bannerMessage")));
-        CHECK(title.left() == rect.left() + 14 + 24 + 12); // padding, icon, gap
-        CHECK(title.top() == rect.top() + 12);
+        CHECK(title.left() == rect.left() + 1.5 + 14 + 22 + 10); // outline, padding, icon, gap
+        CHECK(title.top() == rect.top() + 1.5 + 12);
+        CHECK(rig.geometry(rig.find(QStringLiteral("bannerIcon"))).width() == 22);
         CHECK(message.top() >= title.bottom());
         CHECK(title.right() <= close.left());
         CHECK(message.right() <= close.left());
@@ -147,7 +151,7 @@ TEST_CASE("banner: the geometry follows the design", "[ui][banner]")
         CHECK_FALSE(rig.find(QStringLiteral("bannerMessage"))->isVisible());
         CHECK_FALSE(rig.find(QStringLiteral("bannerClose"))->isVisible());
         CHECK(rig.geometry(card).height() < 70);
-        CHECK(rig.geometry(rig.find(QStringLiteral("bannerTitle"))).right() > 402 - 14 - 1);
+        CHECK(rig.geometry(rig.find(QStringLiteral("bannerTitle"))).right() > 402 - 1.5 - 14 - 1);
     }
 
     SECTION("its height is its implicit height, so a screen can anchor it and let it grow")
@@ -258,7 +262,7 @@ TEST_CASE(
         CHECK(card.height() == 400);
         CHECK(banner->property("implicitHeight").toDouble() == 400);
         const QRectF close = rig.geometry(rig.find(QStringLiteral("bannerClose")));
-        CHECK(close.top() == card.top());
+        CHECK(close.center().y() == card.top() + 25.5);
         CHECK(close.width() == 44);
         // The text is clipped to the card, and the card scrolls.
         QQuickItem* flick = nullptr;

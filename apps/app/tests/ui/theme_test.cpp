@@ -9,12 +9,14 @@
 #include <QColor>
 #include <QFile>
 #include <QFont>
+#include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMetaMethod>
 #include <QMetaProperty>
 #include <QObject>
+#include <QScreen>
 #include <QSet>
 #include <cmath>
 
@@ -264,10 +266,48 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
             CHECK(role->property("upperCase").toBool() == json_role.value(QStringLiteral("uppercase")).toBool(false));
             CHECK(role->property("tabularNumbers").toBool() ==
                   (json_role.value(QStringLiteral("numerals")).toString() == QStringLiteral("tabular")));
+            CHECK_THAT(number(role, QStringLiteral("largeLetterSpacing")),
+                       WithinAbs(json_role.value(QStringLiteral("largeLetterSpacingPt"))
+                                     .toDouble(json_role.value(QStringLiteral("letterSpacingPt")).toDouble(0)),
+                                 1e-9));
+            CHECK(role->property("family").toString() == json_role.value(QStringLiteral("family")).toString());
         }
         QSet<QString> declared = own_properties(fonts);
         declared.remove(QStringLiteral("textScale"));
+        declared.remove(QStringLiteral("dpi"));
         CHECK(declared == roles);
+    }
+
+    SECTION("shadows, light and dark")
+    {
+        const QJsonObject shadows = json.value(QStringLiteral("shadow")).toObject();
+        QObject* group = child(theme, "shadow");
+        QSet<QString> names;
+        for (const bool dark : {false, true})
+        {
+            rig.set_dark(dark);
+            for (auto it = shadows.begin(); it != shadows.end(); ++it)
+            {
+                names.insert(it.key());
+                const QJsonObject token = it.value().toObject();
+                INFO((dark ? "dark " : "light ") << it.key().toStdString());
+                REQUIRE(own_properties(group).contains(it.key()));
+                QObject* shadow = child(group, it.key().toLatin1().constData());
+                CHECK_THAT(number(shadow, QStringLiteral("offsetY")),
+                           WithinAbs(token.value(QStringLiteral("offsetYPt")).toDouble(), 1e-9));
+                CHECK_THAT(number(shadow, QStringLiteral("blur")),
+                           WithinAbs(token.value(QStringLiteral("blurPt")).toDouble(), 1e-9));
+                QColor expected(token.value(dark ? QStringLiteral("dark") : QStringLiteral("light")).toString());
+                expected.setAlphaF(static_cast<float>(
+                    token.value(dark ? QStringLiteral("darkOpacity") : QStringLiteral("lightOpacity")).toDouble()));
+                const QColor actual = colour_of(shadow, QStringLiteral("colour"));
+                CHECK(actual.rgb() == expected.rgb());
+                CHECK_THAT(actual.alphaF(), WithinAbs(expected.alphaF(), 0.01));
+            }
+        }
+        QSet<QString> declared = own_properties(group);
+        declared.remove(QStringLiteral("dark"));
+        CHECK(declared == names);
     }
 
     SECTION("motion")
@@ -400,7 +440,7 @@ TEST_CASE("theme.text_scale: Dynamic Type scales list and note text freely and c
         CHECK_THAT(size_of("bodySmall"), WithinAbs(15 * 3.1, 1e-9));
         CHECK_THAT(size_of("sheetTitle"), WithinAbs(17 * 3.1, 1e-9));
         CHECK_THAT(size_of("tileLabel"), WithinAbs(13.5 * 1.3, 1e-9));
-        CHECK_THAT(size_of("badge"), WithinAbs(13 * 1.3, 1e-9));
+        CHECK_THAT(size_of("badge"), WithinAbs(13, 1e-9));
         CHECK_THAT(size_of("tabLabel"), WithinAbs(10.5 * 1.3, 1e-9));
         CHECK_THAT(size_of("headerUnit"), WithinAbs(20 * 1.5, 1e-9));
         CHECK_THAT(scaled(theme, QStringLiteral("tileLabel")), WithinAbs(1.3, 1e-9));
@@ -416,15 +456,40 @@ TEST_CASE("theme.text_scale: Dynamic Type scales list and note text freely and c
         CHECK_THAT(size_of("body"), WithinAbs(16 * 3.1, 1e-9));
     }
 
-    SECTION("a font is a whole pixel size, a weight and a letter spacing, ready to assign to a Text")
+    SECTION("a font is the role's size, unrounded, a weight and a letter spacing, ready to assign to a Text")
     {
+        // A whole size is a pixel size; a fractional one is a point size that comes to the same pixels at the dpi the
+        // theme reads, so 13.5 pt is drawn at 13.5 and not 14 (which wrapped "Sequence Out of Order" differently).
+        const double dpi = number(theme, QStringLiteral("fontDpi"));
+        // The theme measures the dpi that Qt makes point sizes with; it is the primary screen's.
+        const QScreen* screen = QGuiApplication::primaryScreen();
+        REQUIRE(screen != nullptr);
+        CHECK_THAT(dpi, WithinAbs(screen->logicalDotsPerInchY(), 0.5));
+        const auto pixels = [&](const QFont& font)
+        { return font.pixelSize() > 0 ? font.pixelSize() : font.pointSizeF() * dpi / 72.0; };
+        CHECK_THAT(pixels(child(fonts, "tileLabel")->property("font").value<QFont>()), WithinAbs(13.5, 1e-3));
+        CHECK_THAT(pixels(child(fonts, "tabLabel")->property("font").value<QFont>()), WithinAbs(10.5, 1e-3));
+        CHECK(child(fonts, "body")->property("font").value<QFont>().pixelSize() == 16);
         rig.set_text_scale(1.3);
         const QFont font = child(fonts, "tileLabel")->property("font").value<QFont>();
-        CHECK(font.pixelSize() == 18); // 17.55 rounded
+        CHECK_THAT(pixels(font), WithinAbs(17.55, 1e-3));
         CHECK(font.weight() == QFont::DemiBold);
+        // The tile label tightens above the default size.
+        CHECK_THAT(font.letterSpacing(), WithinAbs(-0.2, 0.02)); // QFont keeps it in 1/64 pt steps
         const QFont selected = child(fonts, "tabLabel")->property("selectedFont").value<QFont>();
         CHECK(selected.weight() == QFont::DemiBold);
         CHECK(child(fonts, "tabLabel")->property("font").value<QFont>().weight() == QFont::Medium);
+        // The emphasised form of the text roles is 600, not the role's own 400.
+        for (const char* name : {"body", "bodySmall", "caption", "captionSmall", "navAction"})
+        {
+            INFO(name);
+            CHECK(child(fonts, name)->property("selectedFont").value<QFont>().weight() == QFont::DemiBold);
+            CHECK(child(fonts, name)->property("font").value<QFont>().weight() == QFont::Normal);
+        }
+        // A role with a line height has its pitch as CSS does, a multiple of the size.
+        CHECK_THAT(number(child(fonts, "tileLabel"), QStringLiteral("linePitch")), WithinAbs(17.55 * 1.2, 1e-6));
+        // Tabular figures are set on the font, not only declared.
+        CHECK(child(fonts, "timeColumn")->property("font").value<QFont>().featureTags().contains(QFont::Tag("tnum")));
     }
 }
 
