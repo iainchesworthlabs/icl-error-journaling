@@ -166,6 +166,9 @@ inline void retype(UiRig& rig, QQuickItem* form_field, const QString& text)
     QQuickItem* input = input_of(rig, form_field);
     REQUIRE(input != nullptr);
     rig.tap(input);
+    // The caret goes to the end first: a value set at the right of its row (the version sheet's) is tapped to the left
+    // of its text, which puts the caret before it.
+    rig.key(Qt::Key_End);
     const qsizetype existing = input->property("text").toString().size();
     for (qsizetype i = 0; i < existing; ++i)
     {

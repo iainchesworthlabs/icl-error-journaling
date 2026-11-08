@@ -55,10 +55,13 @@ EditorPage {
 
             x: Theme.space.screenMargin
             width: flick.width - 2 * Theme.space.screenMargin
-            spacing: Theme.space.sectionGap
+            // 20 pt between the parts, as the design has them (a 12 pt margin and the 8 pt gap).
+            spacing: Theme.space.sectionGap + Theme.space.tileGap
 
             Text {
                 width: parent.width
+                // The first label has 4 pt more above it than the others.
+                bottomPadding: Theme.space.tileGap / 2
                 color: Theme.colour.textSecondary
                 font: Theme.font.bodySmall.font
                 text: qsTr("These head every log you share.")
@@ -68,6 +71,8 @@ EditorPage {
             FormField {
                 objectName: "facilitatorField"
                 label: qsTr("Facilitator")
+                compact: true
+                border: true
                 text: root.facilitator
                 errorText: root.facilitatorRefusal
                 inputMethodHints: Qt.ImhNoPredictiveText
@@ -80,9 +85,11 @@ EditorPage {
             FormField {
                 objectName: "prefixField"
                 label: qsTr("UNIT prefix")
+                compact: true
+                border: true
                 text: root.prefix
                 placeholderText: qsTr("UNIT")
-                hint: qsTr("Added in front of the number you type each day. Letters only, for example UNIT.")
+                hint: root.settings.unitPrefixHint
                 errorText: root.prefixRefusal
                 inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 onTextEdited: text => {
@@ -102,8 +109,9 @@ EditorPage {
         anchors.bottom: parent.bottom
         anchors.leftMargin: Theme.space.screenMargin
         anchors.rightMargin: Theme.space.screenMargin
-        anchors.bottomMargin: Theme.space.sectionGap + root.keyboardHeight
-        spacing: Theme.space.sectionGap
+        anchors.bottomMargin: root.keyboardHeight
+        // The button and the line under it are 10 pt apart, and the line ends at the bottom of the safe area.
+        spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
         PrimaryButton {
             objectName: "continueButton"

@@ -36,6 +36,22 @@ constexpr auto VERSION = R"(
         onTextEdited: text => host.value = text
     })";
 
+constexpr auto ACCESSORY = R"(
+    property string accessory: ""
+    FormField {
+        id: field
+        objectName: "field"
+        property int triggered: 0
+        x: Theme.space.screenMargin
+        y: 100
+        width: host.width - 2 * Theme.space.screenMargin
+        label: "Software version"
+        text: "1.4.2"
+        valid: true
+        accessoryName: host.accessory
+        onAccessoryTriggered: triggered++
+    })";
+
 constexpr auto UNIT = R"(
     FormField {
         id: field
@@ -176,6 +192,53 @@ TEST_CASE(
     field->setProperty("text", QStringLiteral("28"));
     CHECK(input->property("text").toString() == QStringLiteral("28"));
     CHECK(edited.count() == 2);
+}
+
+TEST_CASE(
+    "form_field.accessory: the check mark is a named button of 44 pt when the screen names it, and is not otherwise",
+    "[ui][form_field]")
+{
+    UiRig rig;
+    REQUIRE(load_host(rig, QString::fromUtf8(ACCESSORY)) != nullptr);
+    INFO(rig.errors().toStdString());
+    QQuickItem* field = rig.find(QStringLiteral("field"));
+    QQuickItem* accessory = rig.find(QStringLiteral("formAccessory"), field);
+    REQUIRE(accessory != nullptr);
+
+    // No name: the check mark is the plain mark, and nothing in the accessible tree answers to it.
+    CHECK_FALSE(accessory->isVisible());
+    for (const Node& node : rig.accessible_tree(field))
+    {
+        CHECK(node.m_Item != accessory);
+    }
+    rig.tap(accessory);
+    CHECK(field->property("triggered").toInt() == 0);
+
+    // Named: it is a button, 44 pt square, centred on the mark, and a tap is its signal.
+    require_root(rig)->setProperty("accessory", QStringLiteral("The version changed during the day"));
+    rig.layout();
+    CHECK(accessory->isVisible());
+    CHECK(accessory->width() == 44.0);
+    CHECK(accessory->height() == 44.0);
+    bool found = false;
+    for (const Node& node : rig.accessible_tree(field))
+    {
+        if (node.m_Item == accessory)
+        {
+            found = true;
+            CHECK(node.m_Role == static_cast<int>(QAccessible::Button));
+            CHECK(node.m_Name == QStringLiteral("The version changed during the day"));
+        }
+    }
+    CHECK(found);
+    rig.tap(accessory);
+    CHECK(field->property("triggered").toInt() == 1);
+    CHECK(check_arms(rig) == 1);
+
+    // A refused value has no check mark, so no button.
+    field->setProperty("valid", false);
+    rig.layout();
+    CHECK_FALSE(accessory->isVisible());
 }
 
 TEST_CASE("form_field.accessibility: the label is the name of an edit field, which is not read twice",

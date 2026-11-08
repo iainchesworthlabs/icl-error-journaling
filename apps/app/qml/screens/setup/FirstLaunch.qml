@@ -21,8 +21,6 @@ Item {
 
     required property var settings
 
-    // "", "import" or "manual": the card the person chose last.
-    property string choice: ""
     // The banner for a problem with the saved settings was closed.
     property bool problemDismissed: false
 
@@ -58,8 +56,12 @@ Item {
                     Item {
                         id: content
 
+                        // The hero is 70 pt under the safe area, as drawn, or 12 pt under the banner of a saved file that
+                        // could not be used.
+                        readonly property real heroOffset: Theme.size.primaryButtonHeight + Theme.space.screenMargin
+
                         width: flick.width
-                        height: Math.max(flick.height, intro.height + cards.height + 3 * Theme.space.screenMargin)
+                        height: Math.max(flick.height, intro.height + choices.height + Theme.space.screenMargin)
 
                         Column {
                             id: intro
@@ -69,6 +71,8 @@ Item {
                             spacing: Theme.space.sectionGap
 
                             Banner {
+                                id: problemBanner
+
                                 objectName: "loadProblemBanner"
                                 width: parent.width
                                 visible: root.settings.loadProblem.length > 0 && !root.problemDismissed
@@ -78,64 +82,71 @@ Item {
                                 onCloseRequested: root.problemDismissed = true
                             }
 
-                            Rectangle {
-                                objectName: "appIcon"
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                width: Theme.size.tileMinimum
-                                height: width
-                                radius: Theme.radius.headerCard + Theme.space.tileGap / 2
-                                color: Theme.colour.headerCard
-                                Accessible.ignored: true
+                            Item {
+                                width: parent.width
+                                height: problemBanner.visible ? 0 : content.heroOffset - Theme.space.sectionGap
+                            }
 
-                                Grid {
-                                    anchors.centerIn: parent
-                                    columns: 3
-                                    spacing: Theme.border.hairline * 3
+                            // The icon, the name and the line under it: 14 pt apart, with 12 pt either side of the text.
+                            Column {
+                                id: hero
 
-                                    Repeater {
-                                        model: 9
+                                x: Theme.space.sectionGap
+                                width: parent.width - 2 * x
+                                spacing: Theme.space.rowPadding
 
-                                        delegate: Rectangle {
-                                            required property int index
+                                Rectangle {
+                                    objectName: "appIcon"
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    width: Theme.size.tileMinimum - Theme.space.tileGap / 2
+                                    height: width
+                                    radius: Theme.size.badge
+                                    color: Theme.colour.headerCard
+                                    Accessible.ignored: true
 
-                                            width: Theme.size.badge * 0.9
-                                            height: width
-                                            radius: Theme.border.hairline * 3
-                                            color: Theme.tileColour(index + 1)
-                                        }
+                                    Icon {
+                                        objectName: "appIconGlyph"
+                                        anchors.centerIn: parent
+                                        kind: "list"
+                                        size: Theme.size.badge * 5 / 3
+                                        colour: Theme.colour.textOnHeaderCard
                                     }
                                 }
-                            }
 
-                            Text {
-                                objectName: "appTitle"
-                                width: parent.width
-                                horizontalAlignment: Text.AlignHCenter
-                                color: Theme.colour.textPrimary
-                                font: Theme.font.largeTitle.font
-                                text: qsTr("CS Bingo Board")
-                                wrapMode: Text.WordWrap
-                                Accessible.role: Accessible.Heading
-                                Accessible.name: text
-                            }
+                                Text {
+                                    objectName: "appTitle"
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignHCenter
+                                    color: Theme.colour.textPrimary
+                                    font: Theme.font.largeTitle.font
+                                    text: qsTr("CS Bingo Board")
+                                    wrapMode: Text.WordWrap
+                                    Accessible.role: Accessible.Heading
+                                    Accessible.name: text
+                                }
 
-                            Text {
-                                width: parent.width
-                                horizontalAlignment: Text.AlignHCenter
-                                color: Theme.colour.textSecondary
-                                font: Theme.font.body.font
-                                text: qsTr("Log what goes wrong during a session, as it happens, and share the log at the end of the day.")
-                                wrapMode: Text.WordWrap
+                                Text {
+                                    objectName: "appSummary"
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignHCenter
+                                    color: Theme.colour.textSecondary
+                                    font: Theme.font.body.font
+                                    lineHeightMode: Text.FixedHeight
+                                    lineHeight: Theme.font.body.size * 1.45
+                                    text: qsTr("Log what goes wrong during a session, as it happens, and share the log at the end of the day.")
+                                    wrapMode: Text.WordWrap
+                                }
                             }
                         }
 
+                        // The two ways to start, at the foot, 10 pt apart.
                         Column {
-                            id: cards
+                            id: choices
 
                             x: Theme.space.screenMargin
-                            y: parent.height - height - Theme.space.screenMargin
+                            y: parent.height - height
                             width: parent.width - 2 * Theme.space.screenMargin
-                            spacing: Theme.space.sectionGap
+                            spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
                             Text {
                                 x: Theme.space.tileGap / 2
@@ -148,26 +159,36 @@ Item {
                                 Accessible.name: qsTr("How do you want to start?")
                             }
 
-                            ChoiceCard {
+                            PrimaryButton {
                                 objectName: "importCard"
-                                title: qsTr("Import a setup file")
-                                description: qsTr("A setup file holds your error types, locations and note templates. You can import one later in Settings.")
-                                selected: root.choice === "import"
-                                onClicked: {
-                                    root.choice = "import";
-                                    root.importRequested();
-                                }
+                                width: parent.width
+                                iconKind: "file"
+                                text: qsTr("Import a setup file")
+                                onClicked: root.importRequested()
                             }
 
-                            ChoiceCard {
+                            PrimaryButton {
                                 objectName: "manualCard"
-                                title: qsTr("Set up by hand")
-                                description: qsTr("Enter your name and the UNIT prefix. Error types, locations and note templates are added in Settings.")
-                                selected: root.choice === "manual"
-                                onClicked: {
-                                    root.choice = "manual";
-                                    stack.push(manualPage);
-                                }
+                                width: parent.width
+                                variant: PrimaryButton.Secondary
+                                text: qsTr("Set up by hand")
+                                onClicked: stack.push(manualPage)
+                            }
+
+                            Text {
+                                objectName: "setupFileNote"
+                                x: Theme.space.tileGap
+                                width: parent.width - 2 * x
+                                topPadding: Theme.space.tileGap / 2
+                                horizontalAlignment: Text.AlignHCenter
+                                color: Theme.colour.textSecondary
+                                font: Theme.font.footnote.font
+                                lineHeightMode: Text.FixedHeight
+                                lineHeight: Theme.font.footnote.linePitch
+                                text: qsTr("A setup file holds your error types, locations and note templates. You can import one later in Settings.")
+                                wrapMode: Text.WordWrap
+                                Accessible.role: Accessible.StaticText
+                                Accessible.name: text
                             }
                         }
                     }
@@ -181,10 +202,7 @@ Item {
 
         FirstLaunchManual {
             settings: root.settings
-            onBackRequested: {
-                root.choice = "";
-                stack.pop();
-            }
+            onBackRequested: stack.pop()
             onCompleted: root.completed()
         }
     }

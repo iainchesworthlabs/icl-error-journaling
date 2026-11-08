@@ -17,6 +17,9 @@ import ErrorJournalingApp
 //   border     a 1 pt `border` colour outline at rest; focus is always a 2 pt primaryText outline
 //   surface    the fill: surface by default, surfaceRaised on a sheet (so the field shows on the dark sheet)
 //   prefixText a fixed start the user does not type ("UNIT-"), in textSecondary, 2 pt before the value
+//   accessoryName  when it is not empty the check mark is also a button, 44 pt square and as wide as the mark is not, named
+//              by this text for a screen reader; `accessoryTriggered()` is its signal. It looks as it did: the Header's
+//              version field uses it to reach the Software version sheet without a row the design does not show.
 // The message is 13 pt with a 1.35 line height: the hint in textSecondary; the refusal in textPrimary after a 16 pt
 // warning sign in destructive, 6 pt from the text.
 //
@@ -42,12 +45,14 @@ Item {
     property bool compact: false
     property bool border: false
     property color surface: Theme.colour.surface
+    property string accessoryName: ""
 
     readonly property bool invalid: errorText.length > 0
     readonly property bool hasFocus: field.activeFocus
 
     signal textEdited(string text)
     signal accepted
+    signal accessoryTriggered
 
     function focusField(): void {
         field.forceActiveFocus();
@@ -141,6 +146,29 @@ Item {
             visible: root.valid && !root.invalid
             kind: "check"
             colour: Theme.colour.primaryText
+        }
+
+        // The check mark as a button, when the screen gave it a name: a 44 pt touch target centred on the mark.
+        Item {
+            id: accessory
+
+            objectName: "formAccessory"
+            readonly property bool active: root.accessoryName.length > 0 && checkMark.visible
+
+            visible: active
+            x: checkMark.x + (checkMark.width - width) / 2
+            y: (parent.height - height) / 2
+            width: Theme.size.minTouchTarget
+            height: Theme.size.minTouchTarget
+            Accessible.ignored: !active
+            Accessible.role: Accessible.Button
+            Accessible.name: root.accessoryName
+            Accessible.onPressAction: root.accessoryTriggered()
+
+            TapHandler {
+                enabled: accessory.active
+                onTapped: root.accessoryTriggered()
+            }
         }
     }
 

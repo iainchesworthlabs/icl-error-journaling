@@ -14,14 +14,15 @@ namespace
 
 using Start = World::Start;
 
+/// One of the two buttons at the foot of the screen: "importCard" and "manualCard".
 QQuickItem* card(World& world, const QString& name)
 {
     return item(world, name);
 }
 
-bool selected(QQuickItem* card_item)
+QString button_text(World& world, const QString& name)
 {
-    return card_item->property("selected").toBool();
+    return item(world, name)->property("text").toString();
 }
 
 /// Lets the page stack finish a push or a pop.
@@ -45,11 +46,25 @@ TEST_CASE("setup.first_launch: the screen is titled CS Bingo Board and offers tw
     CHECK(item(world, QStringLiteral("appTitle"))->property("text").toString() == QStringLiteral("CS Bingo Board"));
     REQUIRE(card(world, QStringLiteral("importCard")) != nullptr);
     REQUIRE(card(world, QStringLiteral("manualCard")) != nullptr);
-    CHECK(card(world, QStringLiteral("importCard"))->property("title").toString() ==
-          QStringLiteral("Import a setup file"));
-    CHECK(card(world, QStringLiteral("manualCard"))->property("title").toString() == QStringLiteral("Set up by hand"));
-    CHECK_FALSE(selected(card(world, QStringLiteral("importCard"))));
-    CHECK_FALSE(selected(card(world, QStringLiteral("manualCard"))));
+    CHECK(button_text(world, QStringLiteral("importCard")) == QStringLiteral("Import a setup file"));
+    CHECK(button_text(world, QStringLiteral("manualCard")) == QStringLiteral("Set up by hand"));
+
+    // The design's two buttons: the import is the primary one, with the file icon, and setting up by hand is the
+    // secondary one; a line under them says what a setup file holds. The icon of the app is the list.
+    CHECK(card(world, QStringLiteral("importCard"))->property("variant").toInt() == 0);
+    CHECK(card(world, QStringLiteral("importCard"))->property("iconKind").toString() == QStringLiteral("file"));
+    CHECK(card(world, QStringLiteral("manualCard"))->property("variant").toInt() == 1);
+    CHECK(card(world, QStringLiteral("manualCard"))->property("iconKind").toString().isEmpty());
+    CHECK(card(world, QStringLiteral("importCard"))->height() >= 54);
+    CHECK(card(world, QStringLiteral("manualCard"))->height() >= 54);
+    CHECK(item(world, QStringLiteral("setupFileNote"))->property("text").toString() ==
+          QStringLiteral("A setup file holds your error types, locations and note templates. You can import one later "
+                         "in Settings."));
+    QQuickItem* icon = item(world, QStringLiteral("appIcon"));
+    CHECK(icon->width() == 84);
+    CHECK(icon->height() == 84);
+    REQUIRE(find_item(icon, QStringLiteral("appIconGlyph")) != nullptr);
+    CHECK(find_item(icon, QStringLiteral("appIconGlyph"))->property("kind").toString() == QStringLiteral("list"));
 
     // The old working name is nowhere on the screen.
     for (const Node& node : world.m_Ui.tree())
@@ -62,8 +77,7 @@ TEST_CASE("setup.first_launch: the screen is titled CS Bingo Board and offers tw
     }
 }
 
-TEST_CASE("setup.first_launch: Import a setup file asks the shell for the file dialog and marks the card",
-          "[ui][setup]")
+TEST_CASE("setup.first_launch: Import a setup file asks the shell for the file dialog", "[ui][setup]")
 {
     World world(Start::FIRST_LAUNCH);
     QQuickItem* screen = world.load("FirstLaunch");
@@ -72,8 +86,6 @@ TEST_CASE("setup.first_launch: Import a setup file asks the shell for the file d
 
     world.m_Ui.tap(card(world, QStringLiteral("importCard")));
     CHECK(requested.count() == 1);
-    CHECK(selected(card(world, QStringLiteral("importCard"))));
-    CHECK_FALSE(selected(card(world, QStringLiteral("manualCard"))));
 
     // Nothing was loaded or changed by the tap itself: the shell does the rest.
     CHECK_FALSE(world.model().configured());
@@ -95,7 +107,7 @@ TEST_CASE("setup.first_launch: Set up by hand asks for the facilitator and the U
     CHECK(item(world, QStringLiteral("continueButton"))->isVisible());
     CHECK(shows_text(world, QStringLiteral("About you")));
 
-    // Back goes to the two choices, and neither is marked.
+    // Back goes to the two choices.
     QQuickItem* back = nullptr;
     for (QQuickItem* leading : items(world, QStringLiteral("navLeading")))
     {
@@ -108,7 +120,6 @@ TEST_CASE("setup.first_launch: Set up by hand asks for the facilitator and the U
     world.m_Ui.tap(back);
     settle_page(world);
     CHECK(card(world, QStringLiteral("manualCard"))->isVisible());
-    CHECK_FALSE(selected(card(world, QStringLiteral("manualCard"))));
     (void)screen;
 }
 
@@ -158,8 +169,7 @@ TEST_CASE("setup.first_launch: a saved file that could not be used is a banner a
     CHECK_FALSE(item(clean, QStringLiteral("loadProblemBanner"))->isVisible());
 }
 
-TEST_CASE("setup.voiceover: the choices are radio buttons with a description, and the screen passes the checks",
-          "[ui][setup]")
+TEST_CASE("setup.voiceover: the choices are named buttons, and the screen passes the checks", "[ui][setup]")
 {
     World world(Start::DAMAGED_FILE);
     world.load("FirstLaunch");
@@ -168,9 +178,8 @@ TEST_CASE("setup.voiceover: the choices are radio buttons with a description, an
     QAccessibleInterface* import_card =
         QAccessible::queryAccessibleInterface(card(world, QStringLiteral("importCard")));
     REQUIRE(import_card != nullptr);
-    CHECK(import_card->role() == QAccessible::RadioButton);
+    CHECK(import_card->role() == QAccessible::Button);
     CHECK(import_card->text(QAccessible::Name) == QStringLiteral("Import a setup file"));
-    CHECK_FALSE(import_card->text(QAccessible::Description).isEmpty());
     CHECK(name_of(card(world, QStringLiteral("manualCard"))) == QStringLiteral("Set up by hand"));
 
     expect_clean(check_everything(world.m_Ui));

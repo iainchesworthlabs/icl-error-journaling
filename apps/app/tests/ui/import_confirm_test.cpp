@@ -49,6 +49,31 @@ TEST_CASE("import.flow: the confirmation shows the file and the counts of what i
           QStringLiteral("Replace my setup"));
 }
 
+TEST_CASE("import.flow: the page is laid out as the design has it", "[ui][import]")
+{
+    World world;
+    QQuickItem* page = world.load("ImportConfirm", summary());
+    world.m_Ui.layout();
+
+    // Cancel has a back chevron, the counts end 8 pt before the row padding does, and Cancel is a plain 54 pt button.
+    QQuickItem* chevron = find_item(page, QStringLiteral("navBackChevron"));
+    REQUIRE(chevron != nullptr);
+    CHECK(chevron->isVisible());
+    for (const char* row : {"errorTypesRow", "locationsRow", "templatesRow", "preferencesRow"})
+    {
+        CHECK(item(world, QString::fromLatin1(row))->property("valueInset").toDouble() == 8.0);
+    }
+    QQuickItem* cancel = item(world, QStringLiteral("cancelButton"));
+    CHECK(cancel->property("variant").toInt() == 2);
+    CHECK(cancel->height() >= 54.0);
+    // The two buttons end at the bottom of the safe area, 10 pt apart.
+    QQuickItem* replace = item(world, QStringLiteral("replaceButton"));
+    const double gap = cancel->mapToItem(world.m_Ui.root(), QPointF(0, 0)).y() -
+                       (replace->mapToItem(world.m_Ui.root(), QPointF(0, 0)).y() + replace->height());
+    CHECK(gap == 10.0);
+    CHECK(cancel->mapToItem(world.m_Ui.root(), QPointF(0, 0)).y() + cancel->height() == world.m_Ui.root()->height());
+}
+
 TEST_CASE("import.flow: with nothing to replace the words say the file becomes the setup", "[ui][import]")
 {
     World world;
