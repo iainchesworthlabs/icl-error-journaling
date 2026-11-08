@@ -196,8 +196,29 @@ QQuickItem* UiRig::load_source(const QByteArray& source, const QVariantMap& prop
 
 // ---- touch and keys ----
 
+void UiRig::settle_geometry(QQuickItem* item)
+{
+    // The window asks for a frame with a timer on the wall clock, and the frame runs whenever the event loop next turns
+    // after it is due: on a busy machine in the middle of any call that processes events. A frame polishes what a test
+    // has just changed, such as an error message that makes a sheet taller, and moves the item a finger is aimed at. So
+    // before a touch, render until the item has stopped moving, and the touch lands where the item will stay.
+    constexpr int MAX_FRAMES = 8;
+    QRectF before = geometry(item);
+    for (int frame = 0; frame < MAX_FRAMES; ++frame)
+    {
+        layout();
+        const QRectF after = geometry(item);
+        if (after == before)
+        {
+            return;
+        }
+        before = after;
+    }
+}
+
 int UiRig::press(QQuickItem* item, std::optional<QPointF> at)
 {
+    settle_geometry(item);
     const QPointF local = at.value_or(QPointF(item->width() / 2, item->height() / 2));
     const QPoint point = item->mapToScene(local).toPoint();
     const int id = m_Impl->m_NextFinger++;
@@ -206,7 +227,9 @@ int UiRig::press(QQuickItem* item, std::optional<QPointF> at)
     {
         sequence.stationary(down.first);
     }
-    sequence.press(id, point, m_Impl->m_Window.get()).commit();
+    // The press is delivered at once and the event loop does not turn: a frame between the press and the release
+    // would move the item from under the finger, and the release would not be a tap.
+    sequence.press(id, point, m_Impl->m_Window.get()).commit(false);
     m_Impl->m_Down[id] = point;
     return id;
 }

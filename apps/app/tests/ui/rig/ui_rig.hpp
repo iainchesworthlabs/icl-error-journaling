@@ -102,6 +102,11 @@ public:
 
     /// A finger down at `at` in the item's coordinates (the middle by default), and up again. Several fingers may be
     /// down at once: each `press` returns the finger's id for `release`.
+    ///
+    /// A press renders frames until the item has stopped moving, then aims at it, and delivers the press without
+    /// turning the event loop. The window asks for its frames with a timer on the wall clock, so on a busy machine a
+    /// frame can run in the middle of any call that processes events, polish what the test just changed (a message
+    /// under a field makes a sheet taller) and move the item from under the finger; a test must not depend on when.
     int press(QQuickItem* item, std::optional<QPointF> at = std::nullopt);
     void move(int finger, QQuickItem* item, QPointF to);
     void release(int finger);
@@ -168,6 +173,7 @@ public:
 private:
     struct Impl;
     QQuickItem* adopt(QObject* created);
+    void settle_geometry(QQuickItem* item);
     Node describe(QQuickItem* item, int depth) const;
     void walk(QQuickItem* item, int depth, std::vector<Node>& out) const;
 
