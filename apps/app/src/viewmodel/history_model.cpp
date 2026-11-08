@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "viewmodel/history_model.hpp"
+
 #include "error_journaling/configuration.hpp"
 #include "error_journaling/export_format.hpp"
 #include "error_journaling/uuid.hpp"
-#include "viewmodel/history_model.hpp"
 
 #include <QPointer>
 #include <algorithm>
@@ -56,6 +57,32 @@ QString section_text(const std::chrono::year_month_day& date)
         .arg(static_cast<unsigned>(date.day()))
         .arg(month_text(date))
         .arg(static_cast<int>(date.year()));
+}
+
+/// "Thu 5 Nov 2026", the date of the log with its year; empty for a date that does not exist.
+QString long_date_text(const std::chrono::year_month_day& date)
+{
+    static constexpr std::array<std::string_view, 7> WEEKDAYS = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+    if (!date.ok())
+    {
+        return {};
+    }
+    const unsigned weekday = std::chrono::weekday{std::chrono::sys_days{date}}.c_encoding();
+    return QStringLiteral("%1 %2 %3 %4")
+        .arg(QString::fromUtf8(WEEKDAYS[weekday].data(), 3))
+        .arg(static_cast<unsigned>(date.day()))
+        .arg(month_text(date))
+        .arg(static_cast<int>(date.year()));
+}
+
+/// "5 Nov", a day without its year; empty for a date that does not exist.
+QString short_date_text(const std::chrono::year_month_day& date)
+{
+    if (!date.ok())
+    {
+        return {};
+    }
+    return QStringLiteral("%1 %2").arg(static_cast<unsigned>(date.day())).arg(month_text(date));
 }
 
 /// "Sat 7 Nov", the date of a row; empty for a date that does not exist.
@@ -134,6 +161,16 @@ QVariant HistoryModel::data(const QModelIndex& index, int role) const
         return row.m_Shared.has_value();
     case SHARED_AT_TEXT:
         return row.m_SharedAt;
+    case ENTRIES_TEXT:
+        return row.m_Entries;
+    case VERSION_TEXT:
+        return row.m_Version;
+    case DETAIL_TEXT:
+        return row.m_Detail;
+    case SHARED_DATE_TEXT:
+        return row.m_SharedDate;
+    case LONG_DATE_TEXT:
+        return row.m_LongDate;
     default:
         return {};
     }
@@ -141,9 +178,19 @@ QVariant HistoryModel::data(const QModelIndex& index, int role) const
 
 QHash<int, QByteArray> HistoryModel::roleNames() const
 {
-    return {{LOG_ID, "logId"},       {DATE_TEXT, "dateText"},         {SECTION, "section"},
-            {UNIT_TEXT, "unitText"}, {LOCATION_TEXT, "locationText"}, {ENTRY_COUNT, "entryCount"},
-            {SHARED, "shared"},      {SHARED_AT_TEXT, "sharedAtText"}};
+    return {{LOG_ID, "logId"},
+            {DATE_TEXT, "dateText"},
+            {SECTION, "section"},
+            {UNIT_TEXT, "unitText"},
+            {LOCATION_TEXT, "locationText"},
+            {ENTRY_COUNT, "entryCount"},
+            {SHARED, "shared"},
+            {SHARED_AT_TEXT, "sharedAtText"},
+            {ENTRIES_TEXT, "entriesText"},
+            {VERSION_TEXT, "versionText"},
+            {DETAIL_TEXT, "detailText"},
+            {SHARED_DATE_TEXT, "sharedDateText"},
+            {LONG_DATE_TEXT, "longDateText"}};
 }
 
 void HistoryModel::render(Row& row) const
@@ -175,12 +222,27 @@ void HistoryModel::render(Row& row) const
         }
     }
 
+    row.m_LongDate = long_date_text(row.m_Header.m_LocalDate);
+    row.m_Entries = row.m_Count == 1 ? tr("1 entry") : tr("%1 entries").arg(row.m_Count);
+    row.m_Version = row.m_Header.m_SoftwareVersion
+                        ? QStringLiteral("v") + text_of(row.m_Header.m_SoftwareVersion->format())
+                        : QString{};
+    // The separator is a middle dot (U+00B7).
+    row.m_Detail = row.m_Version.isEmpty() ? row.m_Entries : tr("%1 \xC2\xB7 %2").arg(row.m_Entries, row.m_Version);
+
     row.m_SharedAt.clear();
+    row.m_SharedDate.clear();
     if (row.m_Shared)
     {
         // The time is a UTC instant; it is shown where the device is now, in the user's time format.
-        row.m_SharedAt = m_Settings.formatTime(static_cast<qint64>(row.m_Shared->time_since_epoch().count()),
-                                               text_of(m_Environment.m_Zone.current()));
+        const std::string zone = m_Environment.m_Zone.current();
+        row.m_SharedAt =
+            m_Settings.formatTime(static_cast<qint64>(row.m_Shared->time_since_epoch().count()), text_of(zone));
+        // The day is the day of the share where the device is now, not the date of the log.
+        if (const auto local = m_Environment.m_Zones.to_local(Timestamp{*row.m_Shared, zone}); local)
+        {
+            row.m_SharedDate = short_date_text(local->m_Date);
+        }
     }
 }
 
@@ -206,6 +268,26 @@ QList<int> HistoryModel::changed_roles(const Row& before, const Row& after)
     if (before.m_SharedAt != after.m_SharedAt)
     {
         roles.push_back(SHARED_AT_TEXT);
+    }
+    if (before.m_Entries != after.m_Entries)
+    {
+        roles.push_back(ENTRIES_TEXT);
+    }
+    if (before.m_Version != after.m_Version)
+    {
+        roles.push_back(VERSION_TEXT);
+    }
+    if (before.m_Detail != after.m_Detail)
+    {
+        roles.push_back(DETAIL_TEXT);
+    }
+    if (before.m_SharedDate != after.m_SharedDate)
+    {
+        roles.push_back(SHARED_DATE_TEXT);
+    }
+    if (before.m_LongDate != after.m_LongDate)
+    {
+        roles.push_back(LONG_DATE_TEXT);
     }
     return roles;
 }

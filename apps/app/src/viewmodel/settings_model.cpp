@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "viewmodel/settings_model.hpp"
 
+#include "error_journaling/entry.hpp"
+#include "error_journaling/export_renderer.hpp"
+#include "error_journaling/log.hpp"
 #include "error_journaling/note_template.hpp"
 #include "error_journaling/time_format.hpp"
 #include "error_journaling/uuid.hpp"
 #include "viewmodel/board_layout_model.hpp"
 #include "viewmodel/board_model.hpp"
 #include "viewmodel/error_type_list_model.hpp"
+#include "viewmodel/import_messages.hpp"
 #include "viewmodel/location_list_model.hpp"
 #include "viewmodel/template_list_model.hpp"
 
+#include <QFileInfo>
 #include <QPointer>
 #include <algorithm>
 #include <array>
@@ -106,9 +111,34 @@ bool name_in_use(const std::vector<Item>& items, const std::string& name, const 
                                });
 }
 
-QString name_taken(const std::string& name)
+/// What a list holds, for the refusal of a name that is taken.
+enum class NameKind
 {
-    return SettingsModel::tr("There is already one called \"%1\".").arg(QString::fromStdString(name));
+    ERROR_TYPE,
+    LOCATION,
+    NOTE_TEMPLATE
+};
+
+QString name_taken(const std::string& name, NameKind kind)
+{
+    const QString shown = QString::fromStdString(name);
+    // The quotes are typographic (U+201C, U+201D), as in the designs.
+    switch (kind)
+    {
+    case NameKind::ERROR_TYPE:
+        return SettingsModel::tr("There is already an error type called \xE2\x80\x9C%1\xE2\x80\x9D. Names must be "
+                                 "different.")
+            .arg(shown);
+    case NameKind::LOCATION:
+        return SettingsModel::tr("There is already a location called \xE2\x80\x9C%1\xE2\x80\x9D. Names must be "
+                                 "different.")
+            .arg(shown);
+    case NameKind::NOTE_TEMPLATE:
+        break;
+    }
+    return SettingsModel::tr("There is already a note template called \xE2\x80\x9C%1\xE2\x80\x9D. Names must be "
+                             "different.")
+        .arg(shown);
 }
 
 /// A new sort order after every existing one.
@@ -128,7 +158,8 @@ QString pattern_message(PatternError error)
     switch (error)
     {
     case PatternError::MISSING_PLACEHOLDER:
-        return SettingsModel::tr("Put {value} where the typed text should go, for example \"Played {value}\".");
+        return SettingsModel::tr("The pattern needs {value} where the answer goes, for example "
+                                 "\xE2\x80\x9CPlayed {value}\xE2\x80\x9D.");
     case PatternError::UNBALANCED_BRACE:
         return SettingsModel::tr("The pattern has a stray brace. Write {{ or }} for a literal brace, and close every "
                                  "{value}.");
@@ -242,10 +273,10 @@ struct SettingsModel::ImportOutcome
 };
 
 SettingsModel::SettingsModel(StorageGateway& gateway, const Environment& environment, QObject* parent)
-    : QObject(parent), m_Gateway(gateway), m_Ids(environment.m_Ids), m_Zones(environment.m_Zones),
-      m_ShownTimeFormat(Configuration{}.m_TimeFormat), m_ErrorTypes(new ErrorTypeListModel(this)),
-      m_Locations(new LocationListModel(this)), m_Templates(new TemplateListModel(this)),
-      m_BoardLayout(new BoardLayoutModel(this))
+    : QObject(parent), m_Gateway(gateway), m_Ids(environment.m_Ids), m_Clock(environment.m_Clock),
+      m_Zone(environment.m_Zone), m_Zones(environment.m_Zones), m_ShownTimeFormat(Configuration{}.m_TimeFormat),
+      m_ErrorTypes(new ErrorTypeListModel(this)), m_Locations(new LocationListModel(this)),
+      m_Templates(new TemplateListModel(this)), m_BoardLayout(new BoardLayoutModel(this))
 {
     m_ErrorTypes->refresh(m_Setup);
     m_Locations->refresh(m_Setup);
@@ -321,6 +352,16 @@ QAbstractItemModel* SettingsModel::templates() const
 QAbstractItemModel* SettingsModel::board_layout() const
 {
     return m_BoardLayout;
+}
+
+QString SettingsModel::unit_prefix_hint() const
+{
+    return tr("Added in front of the number you type each day.");
+}
+
+QString SettingsModel::colourName(int slot) const
+{
+    return tile_colour_name(slot);
 }
 
 // ---------------------------------------------------------------------------------------------------------- loading
@@ -593,7 +634,7 @@ QString SettingsModel::addLocation(const QString& name)
                               }
                               if (name_in_use(configuration.m_Locations, value, std::optional<LocationId>{}))
                               {
-                                  return std::unexpected(name_taken(value));
+                                  return std::unexpected(name_taken(value, NameKind::LOCATION));
                               }
                               Location location;
                               location.m_Id = id;
@@ -626,7 +667,7 @@ QString SettingsModel::renameLocation(const QString& id, const QString& name)
                               }
                               if (name_in_use(configuration.m_Locations, value, std::optional<LocationId>(target)))
                               {
-                                  return std::unexpected(name_taken(value));
+                                  return std::unexpected(name_taken(value, NameKind::LOCATION));
                               }
                               const bool changed = found->m_Name != value;
                               found->m_Name = value;
@@ -724,7 +765,7 @@ std::expected<ErrorTypeId, ConfigEditError> SettingsModel::add_type(const QStrin
             }
             if (name_in_use(configuration.m_ErrorTypes, value, std::optional<ErrorTypeId>{}))
             {
-                return std::unexpected(name_taken(value));
+                return std::unexpected(name_taken(value, NameKind::ERROR_TYPE));
             }
             ErrorType type;
             type.m_Id = id;
@@ -774,7 +815,7 @@ QString SettingsModel::renameErrorType(const QString& id, const QString& name)
                               }
                               if (name_in_use(configuration.m_ErrorTypes, value, std::optional<ErrorTypeId>(target)))
                               {
-                                  return std::unexpected(name_taken(value));
+                                  return std::unexpected(name_taken(value, NameKind::ERROR_TYPE));
                               }
                               const bool changed = found->m_Name != value;
                               found->m_Name = value;
@@ -890,6 +931,60 @@ QString SettingsModel::validatePattern(const QString& pattern) const
     return checked ? QString() : checked.error();
 }
 
+QString SettingsModel::previewTemplateLine(const QString& pattern, const QString& value, int localSeconds) const
+{
+    if (localSeconds >= 24 * 60 * 60)
+    {
+        return {};
+    }
+    const auto checked = checked_pattern(pattern);
+    if (!checked)
+    {
+        return tr("Fix the pattern to see a preview.");
+    }
+
+    // The instant: now, or today's date at the seconds the caller names, in the zone the device is in.
+    Timestamp when{m_Clock.now(), m_Zone.current()};
+    if (localSeconds >= 0)
+    {
+        auto local = m_Zones.to_local(when);
+        if (!local)
+        {
+            return {};
+        }
+        local->m_SinceMidnight = std::chrono::seconds{localSeconds};
+        const auto utc = m_Zones.to_utc(*local, when.m_Zone);
+        if (!utc)
+        {
+            return {};
+        }
+        when.m_Utc = *utc;
+    }
+
+    // One note on a scratch log, rendered by the code that renders every line of the review screen.
+    NoteTemplate scratch_template;
+    scratch_template.m_Id = NoteTemplateId(Uuid::from_random(~std::uint64_t{0}, ~std::uint64_t{0}));
+    scratch_template.m_OutputPattern = *checked;
+    Entry entry;
+    entry.m_Id = EntryId(Uuid::from_random(~std::uint64_t{0}, ~std::uint64_t{0}));
+    entry.m_Captured = when;
+    const QString shown = value.trimmed().isEmpty() ? tr("Morning Medley") : value;
+    entry.m_Body = NoteEntry{scratch_template.m_Id, shown.toStdString()};
+    Log scratch{HeaderValues{}};
+    if (!scratch.add(entry))
+    {
+        return {};
+    }
+
+    ExportContext context;
+    context.m_TimeFormat = view().m_TimeFormat;
+    context.m_Zones = &m_Zones;
+    context.m_Template = [&scratch_template](NoteTemplateId id) -> const NoteTemplate*
+    { return id == scratch_template.m_Id ? &scratch_template : nullptr; };
+    const auto line = render_entry_line(scratch, entry.m_Id, context);
+    return line ? QString::fromStdString(*line) : QString();
+}
+
 QString SettingsModel::addTemplate(const QString& name, const QString& prompt, const QString& pattern)
 {
     const auto template_name = checked_name(name);
@@ -918,7 +1013,7 @@ QString SettingsModel::addTemplate(const QString& name, const QString& prompt, c
                               }
                               if (name_in_use(configuration.m_Templates, name, std::optional<NoteTemplateId>{}))
                               {
-                                  return std::unexpected(name_taken(name));
+                                  return std::unexpected(name_taken(name, NameKind::NOTE_TEMPLATE));
                               }
                               NoteTemplate note_template;
                               note_template.m_Id = id;
@@ -954,7 +1049,7 @@ QString SettingsModel::renameTemplate(const QString& id, const QString& name)
                               }
                               if (name_in_use(configuration.m_Templates, value, std::optional<NoteTemplateId>(target)))
                               {
-                                  return std::unexpected(name_taken(value));
+                                  return std::unexpected(name_taken(value, NameKind::NOTE_TEMPLATE));
                               }
                               const bool changed = found->m_Name != value;
                               found->m_Name = value;
@@ -998,7 +1093,7 @@ QString SettingsModel::updateTemplate(const QString& id, const QString& name, co
                               }
                               if (name_in_use(configuration.m_Templates, name, std::optional<NoteTemplateId>(target)))
                               {
-                                  return std::unexpected(name_taken(name));
+                                  return std::unexpected(name_taken(name, NameKind::NOTE_TEMPLATE));
                               }
                               const bool changed = found->m_Name != name || found->m_ValuePrompt != prompt ||
                                                    found->m_OutputPattern != pattern;
@@ -1066,7 +1161,7 @@ void SettingsModel::finish_import(ImportOutcome outcome)
     }
     for (const ConfigError& error : outcome.m_Errors)
     {
-        messages.push_back(QString::fromStdString(error.m_Message));
+        messages.push_back(plain_import_message(error));
     }
     emit importFailed(messages);
 }
@@ -1100,12 +1195,15 @@ void SettingsModel::exportTo(const QString& path)
 {
     if (!m_Configured)
     {
-        emit exportFinished(false, tr("There is nothing to export yet. Set up the app first."));
+        const QString message = tr("There is nothing to export yet. Set up the app first.");
+        emit exportResult(false, tr("Export failed"), QString(), message);
+        emit exportFinished(false, message);
         return;
     }
+    const QString file_name = QFileInfo(path).fileName();
     m_Gateway.run([file = path.toStdString(), text = export_configuration(m_Configuration)](StorageContext& context)
                   { return context.m_Config.write_file(file, text); },
-                  [self = QPointer<SettingsModel>(this)](Result<void, StorageError> result)
+                  [self = QPointer<SettingsModel>(this), file_name](Result<void, StorageError> result)
                   {
                       SettingsModel* model = self.data();
                       if (model == nullptr)
@@ -1114,11 +1212,15 @@ void SettingsModel::exportTo(const QString& path)
                       }
                       if (result)
                       {
-                          emit model->exportFinished(true, tr("The settings were exported."));
+                          const QString message = tr("%1 is ready to send.").arg(file_name);
+                          emit model->exportResult(true, tr("Exported to Files"), file_name, message);
+                          emit model->exportFinished(true, message);
                       }
                       else
                       {
-                          emit model->exportFinished(false, plain_message(result.error()));
+                          const QString message = plain_message(result.error());
+                          emit model->exportResult(false, tr("Export failed"), file_name, message);
+                          emit model->exportFinished(false, message);
                       }
                   });
 }

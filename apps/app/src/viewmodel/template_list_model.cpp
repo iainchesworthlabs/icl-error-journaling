@@ -26,6 +26,8 @@ QVariant TemplateListModel::data(const QModelIndex& index, int role) const
         return row->m_ValuePrompt;
     case OUTPUT_PATTERN:
         return row->m_OutputPattern;
+    case ICON:
+        return row->m_Icon;
     default:
         return {};
     }
@@ -33,8 +35,11 @@ QVariant TemplateListModel::data(const QModelIndex& index, int role) const
 
 QHash<int, QByteArray> TemplateListModel::roleNames() const
 {
-    return {
-        {TEMPLATE_ID, "templateId"}, {NAME, "name"}, {VALUE_PROMPT, "valuePrompt"}, {OUTPUT_PATTERN, "outputPattern"}};
+    return {{TEMPLATE_ID, "templateId"},
+            {NAME, "name"},
+            {VALUE_PROMPT, "valuePrompt"},
+            {OUTPUT_PATTERN, "outputPattern"},
+            {ICON, "icon"}};
 }
 
 void TemplateListModel::refresh(const Configuration& configuration)
@@ -52,7 +57,9 @@ void TemplateListModel::refresh(const Configuration& configuration)
     {
         rows.push_back({note_template->m_Id, QString::fromStdString(note_template->m_Name),
                         QString::fromStdString(note_template->m_ValuePrompt),
-                        QString::fromStdString(note_template->m_OutputPattern)});
+                        QString::fromStdString(note_template->m_OutputPattern),
+                        note_template->m_Icon.empty() ? QString::fromLatin1(DEFAULT_TEMPLATE_ICON)
+                                                      : QString::fromStdString(note_template->m_Icon)});
     }
     replace_rows(std::move(rows));
 }

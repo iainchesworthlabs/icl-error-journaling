@@ -20,9 +20,13 @@ struct TemplateRow
     QString m_Name;
     QString m_ValuePrompt;
     QString m_OutputPattern;
+    QString m_Icon; // the name of the chip's icon; "note" when the setup file names none
 
     friend bool operator==(const TemplateRow&, const TemplateRow&) = default;
 };
+
+/// The icon of a template that names none.
+inline constexpr const char* DEFAULT_TEMPLATE_ICON = "note";
 
 /// The note templates of the settings screen (PRF-06), in their sort order. A template is never removed in v1: a note
 /// entry holds the template's id, so a removed template could not be rendered.
@@ -38,9 +42,10 @@ public:
         TEMPLATE_ID = Qt::UserRole + 1,
         NAME,
         VALUE_PROMPT,
-        OUTPUT_PATTERN
+        OUTPUT_PATTERN,
+        ICON
     };
-    // roleNames(): templateId, name, valuePrompt, outputPattern
+    // roleNames(): templateId, name, valuePrompt, outputPattern, icon
 
     explicit TemplateListModel(QObject* parent = nullptr) : RowListModel(parent) {}
 

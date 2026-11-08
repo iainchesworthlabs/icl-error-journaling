@@ -351,3 +351,115 @@ TEST_CASE("Messages never echo a long value", "[config]")
     }
     CHECK(has(errors, Code::OUT_OF_RANGE, "/preferences/time_format/style"));
 }
+
+TEST_CASE("A template may name its icon; a file without the key is read as before", "[config]")
+{
+    const auto configuration = imported(sample());
+    CHECK(configuration.m_Templates[0].m_Icon == "music");
+    CHECK(configuration.m_Templates[1].m_Icon == "speech");
+
+    // The key is optional: a template without it has the default icon, and the export leaves the key out.
+    auto without = configuration;
+    without.m_Templates[0].m_Icon.clear();
+    const std::string text = ej::export_configuration(without);
+    CHECK(text.find("\"icon\": \"music\"") == std::string::npos);
+    CHECK(text.find("\"icon\": \"speech\"") != std::string::npos);
+    const auto again = imported(text);
+    CHECK(again.m_Templates[0].m_Icon.empty());
+    CHECK(again.m_Templates[1].m_Icon == "speech");
+}
+
+TEST_CASE("An icon name is lower-case letters, digits and dashes, and no longer than 32", "[config]")
+{
+    const std::string base = sample();
+    const std::string icon = "\"icon\": \"music\"";
+
+    CHECK(imported(edited(base, icon, "\"icon\": \"speech-bubble-2\"")).m_Templates[0].m_Icon == "speech-bubble-2");
+    CHECK(imported(edited(base, icon, "\"icon\": \"" + std::string(32, 'a') + "\"")).m_Templates[0].m_Icon.size() == 32);
+
+    CHECK(has(errors_of(edited(base, icon, "\"icon\": \"Music\"")), Code::OUT_OF_RANGE, "/note_templates/0/icon"));
+    CHECK(has(errors_of(edited(base, icon, "\"icon\": \"a b\"")), Code::OUT_OF_RANGE, "/note_templates/0/icon"));
+    CHECK(has(errors_of(edited(base, icon, "\"icon\": \"\"")), Code::OUT_OF_RANGE, "/note_templates/0/icon"));
+    CHECK(has(errors_of(edited(base, icon, "\"icon\": \"" + std::string(33, 'a') + "\"")), Code::OUT_OF_RANGE,
+              "/note_templates/0/icon"));
+    CHECK(has(errors_of(edited(base, icon, "\"icon\": 5")), Code::WRONG_TYPE, "/note_templates/0/icon"));
+}
+
+TEST_CASE("An error says what it is about as data, as well as in words", "[config]")
+{
+    using Problem = ConfigError::Problem;
+    const std::string base = sample();
+
+    SECTION("a blank name")
+    {
+        const auto errors = errors_of(edited(base, "\"name\": \"Mute Delay\"", "\"name\": \" \""));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Problem == Problem::EMPTY);
+        CHECK(errors[0].m_Section == "error_types");
+        CHECK(errors[0].m_Item == 8);
+        CHECK(errors[0].m_Field == "name");
+    }
+    SECTION("a missing key")
+    {
+        const auto errors = errors_of(edited(base, "      \"value_prompt\": \"Which song?\",\n", ""));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Code == Code::MISSING_FIELD);
+        CHECK(errors[0].m_Problem == Problem::EMPTY);
+        CHECK(errors[0].m_Section == "note_templates");
+        CHECK(errors[0].m_Item == 1);
+        CHECK(errors[0].m_Field == "value_prompt");
+    }
+    SECTION("a name that is too long")
+    {
+        const auto errors = errors_of(edited(base, "\"name\": \"Mute Delay\"", "\"name\": \"" + std::string(201, 'x') + "\""));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Problem == Problem::TOO_LONG);
+        CHECK(errors[0].m_Limit == 200);
+    }
+    SECTION("a name in use")
+    {
+        const auto errors = errors_of(edited(base, "\"name\": \"South Site\"", "\"name\": \"North Site\""));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Problem == Problem::NAME_TAKEN);
+        CHECK(errors[0].m_Section == "locations");
+        CHECK(errors[0].m_Item == 2);
+        CHECK(errors[0].m_Other == 1);
+        CHECK(errors[0].m_Value == "North Site");
+    }
+    SECTION("a board position in use")
+    {
+        const auto errors = errors_of(edited(base, "\"board_position\": 2", "\"board_position\": 1"));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Problem == Problem::POSITION_TAKEN);
+        CHECK(errors[0].m_Item == 2);
+        CHECK(errors[0].m_Other == 1);
+        CHECK(errors[0].m_Value == "1");
+    }
+    SECTION("the three faults of a pattern")
+    {
+        CHECK(errors_of(edited(base, "Played {value}", "Played"))[0].m_Problem == Problem::NO_PLACEHOLDER);
+        CHECK(errors_of(edited(base, "Played {value}", "Played {value"))[0].m_Problem == Problem::STRAY_BRACE);
+        CHECK(errors_of(edited(base, "Played {value}", "Played {name}"))[0].m_Problem == Problem::UNKNOWN_PLACEHOLDER);
+    }
+    SECTION("a preference and the whole file")
+    {
+        const auto preference = errors_of(edited(base, "\"style\": \"24h\"", "\"style\": \"13h\""));
+        REQUIRE(preference.size() == 1);
+        CHECK(preference[0].m_Section == "preferences");
+        CHECK(preference[0].m_Item == 0);
+        CHECK(preference[0].m_Field == "time_format/style");
+
+        const auto file = errors_of("[1]");
+        REQUIRE(file.size() == 1);
+        CHECK(file[0].m_Section.empty());
+        CHECK(file[0].m_Field.empty());
+        CHECK(file[0].m_Item == 0);
+    }
+    SECTION("a key with a slash in it")
+    {
+        const auto errors = errors_of(edited(base, "\"include_totals\": false", "\"a/b~c\": 1, \"include_totals\": false"));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Code == Code::UNKNOWN_FIELD);
+        CHECK(errors[0].m_Field == "a/b~c");
+    }
+}

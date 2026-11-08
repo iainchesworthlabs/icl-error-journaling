@@ -3,6 +3,7 @@
 
 #include "viewmodel/log_document.hpp"
 
+#include <QCoreApplication>
 #include <QList>
 #include <algorithm>
 #include <utility>
@@ -10,6 +11,37 @@
 
 namespace ej::viewmodel
 {
+
+QString tile_colour_name(int slot)
+{
+    switch (slot)
+    {
+    case 1:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Sky");
+    case 2:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Lavender");
+    case 3:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Apricot");
+    case 4:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Aqua");
+    case 5:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Orchid");
+    case 6:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Butter");
+    case 7:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Steel");
+    case 8:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Periwinkle");
+    case 9:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Sand");
+    case 10:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Oat");
+    case 11:
+        return QCoreApplication::translate("ej::viewmodel::TileColours", "Blush");
+    default:
+        return {};
+    }
+}
 
 BoardLayout board_layout(const Configuration& configuration)
 {

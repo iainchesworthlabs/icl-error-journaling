@@ -9,9 +9,11 @@
 #include <QJsonValue>
 #include <QString>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <initializer_list>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -27,6 +29,7 @@ constexpr int MAX_NAME = 200;
 constexpr int MAX_PREFIX = 20;
 constexpr int MAX_PATTERN = 500;
 constexpr int MAX_SORT_ORDER = 1'000'000;
+constexpr int MAX_ICON = 32;
 
 std::string pointer_escape(const QString& key)
 {
@@ -69,14 +72,104 @@ std::string shown(const QString& value)
     return "\"" + value.toStdString() + "\"";
 }
 
+std::string pointer_unescape(std::string_view text)
+{
+    std::string out;
+    for (std::size_t i = 0; i < text.size(); ++i)
+    {
+        if (text[i] == '~' && i + 1 < text.size() && (text[i + 1] == '0' || text[i + 1] == '1'))
+        {
+            out += text[i + 1] == '0' ? '~' : '/';
+            ++i;
+        }
+        else
+        {
+            out += text[i];
+        }
+    }
+    return out;
+}
+
+/// What else is known about a problem besides its code, path and message.
+struct Detail
+{
+    ConfigError::Problem m_Problem = ConfigError::Problem::OTHER;
+    std::size_t m_Other = 0;
+    std::string m_Value;
+    int m_Limit = 0;
+};
+
+Detail empty_detail()
+{
+    Detail detail;
+    detail.m_Problem = ConfigError::Problem::EMPTY;
+    return detail;
+}
+
+Detail problem_detail(ConfigError::Problem problem)
+{
+    Detail detail;
+    detail.m_Problem = problem;
+    return detail;
+}
+
+/// Splits a JSON pointer such as "/error_types/2/name" into the section, the 1-based item and the rest.
+void split_path(const std::string& path, ConfigError& error)
+{
+    std::vector<std::string> parts;
+    std::size_t start = 1;
+    while (!path.empty() && start <= path.size())
+    {
+        const std::size_t end = path.find('/', start);
+        const std::size_t length = end == std::string::npos ? std::string::npos : end - start;
+        parts.push_back(pointer_unescape(std::string_view(path).substr(start, length)));
+        if (end == std::string::npos)
+        {
+            break;
+        }
+        start = end + 1;
+    }
+    if (parts.empty())
+    {
+        return;
+    }
+    error.m_Section = parts[0];
+    std::size_t next = 1;
+    const bool is_list = error.m_Section == "error_types" || error.m_Section == "locations" ||
+                         error.m_Section == "note_templates";
+    if (is_list && parts.size() > 1 && !parts[1].empty() &&
+        parts[1].find_first_not_of("0123456789") == std::string::npos && parts[1].size() < 9)
+    {
+        error.m_Item = static_cast<std::size_t>(std::stoul(parts[1])) + 1;
+        next = 2;
+    }
+    for (std::size_t i = next; i < parts.size(); ++i)
+    {
+        if (i != next)
+        {
+            error.m_Field += "/";
+        }
+        error.m_Field += parts[i];
+    }
+}
+
 class Reader
 {
 public:
     std::vector<ConfigError> m_Errors;
 
-    void add(Code code, const std::string& path, const std::string& message)
+    void add(Code code, const std::string& path, const std::string& message, Detail detail = {})
     {
-        m_Errors.push_back({code, path, path.empty() ? message : path + ": " + message});
+        ConfigError error;
+        error.m_Code = code;
+        error.m_Path = path;
+        error.m_Message = path.empty() ? message : path + ": " + message;
+        error.m_Problem = detail.m_Problem;
+        error.m_Other = detail.m_Other;
+        error.m_Value = std::move(detail.m_Value);
+        error.m_Limit = detail.m_Limit;
+        split_path(path, error);
+        m_Errors.push_back(std::move(error));
     }
 
     /// Reports every key of `object` that is not in `known`.
@@ -109,7 +202,8 @@ public:
         {
             if (required)
             {
-                add(Code::MISSING_FIELD, child(path, key), std::string("this is required. Add \"") + key + "\".");
+                add(Code::MISSING_FIELD, child(path, key), std::string("this is required. Add \"") + key + "\".",
+                    empty_detail());
             }
             return std::nullopt;
         }
@@ -134,13 +228,15 @@ public:
         const auto string = value->toString();
         if (string.trimmed().isEmpty())
         {
-            add(Code::OUT_OF_RANGE, here, "this is empty. Enter some text.");
+            add(Code::OUT_OF_RANGE, here, "this is empty. Enter some text.", empty_detail());
             return std::nullopt;
         }
         if (string.size() > max_length)
         {
+            Detail detail = problem_detail(ConfigError::Problem::TOO_LONG);
+            detail.m_Limit = max_length;
             add(Code::OUT_OF_RANGE, here,
-                "this is longer than " + std::to_string(max_length) + " characters. Shorten it.");
+                "this is longer than " + std::to_string(max_length) + " characters. Shorten it.", std::move(detail));
             return std::nullopt;
         }
         return string;
@@ -229,10 +325,14 @@ public:
         const auto [it, inserted] = live_names.emplace(name.toCaseFolded().toStdString(), index);
         if (!inserted)
         {
+            Detail detail = problem_detail(ConfigError::Problem::NAME_TAKEN);
+            detail.m_Other = it->second + 1;
+            detail.m_Value = name.toStdString();
             add(Code::DUPLICATE, child(path, "name"),
                 std::string("another ") + what + " (number " + std::to_string(it->second + 1) +
                     " in the list) is already called " + shown(name) +
-                    ". Rename one of them, or mark one as retired.");
+                    ". Rename one of them, or mark one as retired.",
+                std::move(detail));
         }
     }
 
@@ -424,9 +524,13 @@ void read_error_types(Reader& r, const QJsonObject& root, Configuration& out)
             const auto [it, inserted] = positions.emplace(*position, index);
             if (!inserted)
             {
+                Detail detail = problem_detail(ConfigError::Problem::POSITION_TAKEN);
+                detail.m_Other = it->second + 1;
+                detail.m_Value = std::to_string(*position);
                 r.add(Code::DUPLICATE, child(path, "board_position"),
                       "board position " + std::to_string(*position) + " is already used by error type number " +
-                          std::to_string(it->second + 1) + ". Give each type on the board its own position.");
+                          std::to_string(it->second + 1) + ". Give each type on the board its own position.",
+                      std::move(detail));
             }
         }
         r.reject_unknown(*object, path, {"id", "name", "retired", "board_position"});
@@ -502,15 +606,18 @@ void report_pattern(Reader& r, const std::string& path, const QString& pattern, 
         case PatternError::MISSING_PLACEHOLDER:
             r.add(Code::BAD_PATTERN, path,
                   shown(pattern) +
-                      " has no {value}. Put {value} where the typed text should go, for example \"Played {value}\".");
+                      " has no {value}. Put {value} where the typed text should go, for example \"Played {value}\".",
+                  problem_detail(ConfigError::Problem::NO_PLACEHOLDER));
             break;
         case PatternError::UNBALANCED_BRACE:
             r.add(Code::BAD_PATTERN, path,
-                  shown(pattern) + " has a stray brace. Write {{ or }} for a literal brace, and close every {value}.");
+                  shown(pattern) + " has a stray brace. Write {{ or }} for a literal brace, and close every {value}.",
+                  problem_detail(ConfigError::Problem::STRAY_BRACE));
             break;
         case PatternError::UNKNOWN_PLACEHOLDER:
             r.add(Code::BAD_PATTERN, path,
-                  shown(pattern) + " uses a placeholder the app does not know. Only {value} is allowed.");
+                  shown(pattern) + " uses a placeholder the app does not know. Only {value} is allowed.",
+                  problem_detail(ConfigError::Problem::UNKNOWN_PLACEHOLDER));
             break;
     }
 }
@@ -577,12 +684,28 @@ void read_templates(Reader& r, const QJsonObject& root, Configuration& out)
         {
             usable = false;
         }
+        if (const auto icon = r.text(*object, "icon", path, false, MAX_ICON))
+        {
+            const std::string name = icon->toStdString();
+            const bool plain = std::ranges::all_of(
+                name, [](char c) { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'; });
+            if (plain)
+            {
+                entry.m_Icon = name;
+            }
+            else
+            {
+                r.add(Code::OUT_OF_RANGE, child(path, "icon"),
+                      shown(*icon) + " is not an icon name. Use lower-case letters, digits and dashes, for example "
+                                     "\"music\".");
+            }
+        }
         if (const auto order = r.integer(*object, "sort_order", path, -MAX_SORT_ORDER, MAX_SORT_ORDER,
                                          "between -1000000 and 1000000"))
         {
             entry.m_SortOrder = *order;
         }
-        r.reject_unknown(*object, path, {"id", "name", "value_prompt", "output_pattern", "sort_order"});
+        r.reject_unknown(*object, path, {"id", "name", "value_prompt", "output_pattern", "icon", "sort_order"});
         if (usable)
         {
             out.m_Templates.push_back(std::move(entry));
@@ -786,6 +909,11 @@ std::string export_configuration(const Configuration& configuration)
         write_string(out, t.m_ValuePrompt);
         out += ",\n      \"output_pattern\": ";
         write_string(out, t.m_OutputPattern);
+        if (!t.m_Icon.empty())
+        {
+            out += ",\n      \"icon\": ";
+            write_string(out, t.m_Icon);
+        }
         out += ",\n      \"sort_order\": " + std::to_string(t.m_SortOrder) + "\n    }";
     }
     out += configuration.m_Templates.empty() ? "]\n" : "\n  ]\n";

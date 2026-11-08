@@ -17,6 +17,9 @@ struct NoteTemplate
     std::string m_ValuePrompt;    // "Which song?"
     std::string m_OutputPattern;  // "Played {value}"
     int m_SortOrder = 0;
+    /// The name of the chip's icon ("music", "speech"): lower-case letters, digits and dashes. Empty is the default
+    /// icon. A name the app has no picture for is shown as the default one.
+    std::string m_Icon;
 };
 
 enum class PatternError

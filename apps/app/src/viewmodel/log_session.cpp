@@ -72,6 +72,7 @@ public:
         {
             emit m_Session.headerChanged();
         }
+        m_Session.update_unshared();
     }
 
     void on_configuration_changed(const ConfigurationSource&) override
@@ -238,6 +239,7 @@ void LogSession::finish_load(Result<Loaded, StorageError> result)
     LogDocument* const document = m_Document.get();
     m_OpenLogObservers.notify([document](OpenLogObserver& observer) { observer.on_open_log_changed(document); });
     emit headerChanged();
+    update_unshared();
 }
 
 // ------------------------------------------------------------------------------------------------- properties
@@ -273,6 +275,29 @@ QString LogSession::unit_text() const
         return to_qstring(std::string(header.m_UnitNumber->digits()));
     }
     return to_qstring(header.m_UnitNumber->format(m_Configuration.configuration().m_UnitPrefix));
+}
+
+QString LogSession::unit_digits() const
+{
+    const HeaderValues header = header_in_force();
+    return header.m_UnitNumber ? to_qstring(std::string(header.m_UnitNumber->digits())) : QString{};
+}
+
+void LogSession::update_unshared()
+{
+    const bool unshared = m_Document && m_Document->ready() && !m_Document->last_shared() && live_entry_count() > 0;
+    if (unshared != m_Unshared)
+    {
+        m_Unshared = unshared;
+        emit unsharedChanged();
+    }
+}
+
+void LogSession::announce_record_failed(const QString& type_id, const QString& type_name)
+{
+    // The apostrophe is typographic (U+2019), as in the designs.
+    emit recordFailed(type_id, type_name, tr("%1 wasn\xE2\x80\x99t saved").arg(type_name),
+                      tr("Nothing was added to the log. Tap %1 again to log it.").arg(type_name));
 }
 
 QString LogSession::location_text() const
@@ -501,16 +526,28 @@ bool LogSession::recordError(const QString& errorTypeId)
     const EntryId entry_id = entry.m_Id;
 
     ++m_OwnPending;
+    const QString type_id = to_qstring(type->m_Id.format());
+    const QString type_name = to_qstring(type->m_Name);
     auto done = make_done(OPERATION,
-                          [this, entry_id](bool succeeded)
+                          [this, entry_id, type_id, type_name](bool succeeded)
                           {
                               if (succeeded)
                               {
                                   m_Feedback.entry_recorded(entry_id);
                                   emit entryRecorded(to_qstring(entry_id.format()));
                               }
+                              else
+                              {
+                                  announce_record_failed(type_id, type_name);
+                              }
                           });
-    return settle(OPERATION, m_Document->add_entry(std::move(entry), LogChange::Origin::USER, std::move(done)));
+    const bool accepted =
+        settle(OPERATION, m_Document->add_entry(std::move(entry), LogChange::Origin::USER, std::move(done)));
+    if (!accepted)
+    {
+        announce_record_failed(type_id, type_name);
+    }
+    return accepted;
 }
 
 bool LogSession::addNote(const QString& text)

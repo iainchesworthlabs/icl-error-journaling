@@ -53,14 +53,22 @@ class TimelineModel : public QAbstractListModel,
     Q_PROPERTY(bool ready READ ready NOTIFY summaryChanged)
 
 public:
-    /// QML role names: entryId, timeText, lineText, fullLine, kind. `Qt::DisplayRole` is the full line.
+    /// QML role names: entryId, timeText, lineText, fullLine, kind, prefixText, restText. `Qt::DisplayRole` is the
+    /// full line.
+    ///
+    /// `lineText` is the line without its time ("T| Wrong Response"). It is split in two so that a screen can colour
+    /// the marker: `prefixText` is the marker of the line ("T|" for an error, "(Free Text)" for a note, empty for a
+    /// change of the header) and `restText` is what follows it ("Wrong Response"). `prefixText + " " + restText` is
+    /// `lineText` whenever the prefix is not empty, and `restText` is `lineText` when it is.
     enum Role
     {
         ENTRY_ID = Qt::UserRole + 1,
         TIME_TEXT,
         LINE_TEXT,
         FULL_LINE,
-        KIND
+        KIND,
+        PREFIX_TEXT,
+        REST_TEXT
     };
     Q_ENUM(Role)
 
@@ -123,10 +131,13 @@ public:
     // REV-02: edit. `edit` has the keys of `entryForEdit`; a key that is left out keeps the entry's value.
 
     /// What the edit sheet shows: `entryId`, `kind` ("error", "note" or "header_change"), `localDate` ("2026-11-07"),
-    /// `localSeconds` (seconds since local midnight of that date), `zone`, `timeText`; for an error `errorTypeId`,
-    /// `errorTypeName` and `attachedNote`; for a note `noteText` (the free text, or the template's value) and
-    /// `templateId` (empty for free text); for a header change `fieldKey` and `newValue` (the stored text). Empty for
-    /// an entry that is not in the bound log. A deleted entry is described too.
+    /// `localSeconds` (seconds since local midnight of that date), `zone`, `timeText`, `footnote` ("Logged at 11:02 on
+    /// UNIT-27, version 1.4.2.": the entry's time and the unit and the version in force at that time; a part the log
+    /// does not have yet is left out); for an error `errorTypeId`, `errorTypeName`, `colourSlot` (1 to 11, as on the
+    /// board; 0 when the type is not in the configuration), `colourName` ("Periwinkle") and `attachedNote`; for a note
+    /// `noteText` (the free text, or the template's value) and `templateId` (empty for free text); for a header change
+    /// `fieldKey` and `newValue` (the stored text). Empty for an entry that is not in the bound log. A deleted entry is
+    /// described too.
     Q_INVOKABLE QVariantMap entryForEdit(const QString& entryId) const;
 
     /// The plain reason `edit` cannot be saved, or an empty string when it can. Nothing is written.
@@ -155,6 +166,12 @@ public:
     /// a time themselves (PRF-07). Empty for a value outside 0 to 86399.
     Q_INVOKABLE QString formatLocalSeconds(int localSeconds) const;
 
+    /// "Now" for the time picker, in whole seconds since local midnight (0 to 86399) in the zone the entry was
+    /// captured in, which is the zone `localSeconds` is in. The date is not touched: a Now chip sets the time of day
+    /// only. In the device zone for an entry that is not in the bound log (or an empty id). -1 when the zone is not
+    /// one the zone provider knows. Nothing is written.
+    Q_INVOKABLE int nowLocalSeconds(const QString& entryId = QString()) const;
+
     /// The row of an entry, or -1.
     Q_INVOKABLE int rowOf(const QString& entryId) const;
 
@@ -175,6 +192,8 @@ private:
         QString m_Line;
         QString m_Full; // empty when the entry could not be rendered
         QString m_Kind;
+        QString m_Prefix; // the marker of the line, or empty
+        QString m_Rest;   // the line after the marker
     };
 
     struct Summary
@@ -206,6 +225,7 @@ private:
     void stop_following();
 
     // Rows
+    static void split_marker(const Entry& entry, Row& row);
     [[nodiscard]] Row make_row(const Log& log, const Entry& entry, const ExportContext& context) const;
     [[nodiscard]] std::vector<Row> make_rows(const ExportContext& context) const;
     [[nodiscard]] int find_row(EntryId id) const;
@@ -219,6 +239,7 @@ private:
     void update_summary();
 
     // Edits
+    [[nodiscard]] QString footnote_for(const Entry& entry, const QString& time_text) const;
     [[nodiscard]] Result<Edit, QString> work_out_edit(EntryId id, const QVariantMap& edit) const;
     [[nodiscard]] std::optional<EntryId> parse_id(const QString& text) const;
 

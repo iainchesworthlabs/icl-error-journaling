@@ -362,7 +362,7 @@ TEST_CASE("The roles have the names the screens bind to", "[viewmodel][history][
     Fixture fixture;
     const auto names = fixture.history().roleNames();
 
-    CHECK(names.size() == 8);
+    CHECK(names.size() == 13);
     CHECK(names.value(HistoryModel::LOG_ID) == "logId");
     CHECK(names.value(HistoryModel::DATE_TEXT) == "dateText");
     CHECK(names.value(HistoryModel::SECTION) == "section");
@@ -371,6 +371,11 @@ TEST_CASE("The roles have the names the screens bind to", "[viewmodel][history][
     CHECK(names.value(HistoryModel::ENTRY_COUNT) == "entryCount");
     CHECK(names.value(HistoryModel::SHARED) == "shared");
     CHECK(names.value(HistoryModel::SHARED_AT_TEXT) == "sharedAtText");
+    CHECK(names.value(HistoryModel::ENTRIES_TEXT) == "entriesText");
+    CHECK(names.value(HistoryModel::VERSION_TEXT) == "versionText");
+    CHECK(names.value(HistoryModel::DETAIL_TEXT) == "detailText");
+    CHECK(names.value(HistoryModel::SHARED_DATE_TEXT) == "sharedDateText");
+    CHECK(names.value(HistoryModel::LONG_DATE_TEXT) == "longDateText");
 }
 
 TEST_CASE("Summaries only: refresh lists the logs and loads none", "[viewmodel][history][unit]")
@@ -701,7 +706,8 @@ TEST_CASE("Editing and deleting an entry of a past log persists and re-renders",
     CHECK(cell(history, row, HistoryModel::ENTRY_COUNT).toInt() == 3);
     REQUIRE(changed.count() == 1);
     CHECK(changed.at(0).at(0).value<QModelIndex>().row() == row);
-    CHECK(changed.at(0).at(2).value<QList<int>>() == QList<int>{HistoryModel::ENTRY_COUNT});
+    CHECK(changed.at(0).at(2).value<QList<int>>() ==
+          QList<int>{HistoryModel::ENTRY_COUNT, HistoryModel::ENTRIES_TEXT, HistoryModel::DETAIL_TEXT});
 
     // Edit: the same entry types, a new attached note.
     const QString first = review.data(review.index(0), TimelineModel::ENTRY_ID).toString();
@@ -1256,4 +1262,94 @@ TEST_CASE("A model that is gone stops watching the open log", "[viewmodel][histo
     fixture.settle();
 
     CHECK(fixture.history().rowCount() == 5);
+}
+
+// ----------------------------------------------------------------------------------- what the visual pass binds to
+
+TEST_CASE("A row reads as the designs do: entries, version, the two joined, and the long date",
+          "[viewmodel][history][unit]")
+{
+    Fixture fixture;
+    fixture.load();
+    HistoryModel& history = fixture.history();
+
+    const int morning = row_of(history, MORNING);
+    CHECK(cell(history, morning, HistoryModel::ENTRIES_TEXT).toString() == "4 entries");
+    CHECK(cell(history, morning, HistoryModel::VERSION_TEXT).toString() == "v1.4.2");
+    CHECK(cell(history, morning, HistoryModel::DETAIL_TEXT).toString() == "4 entries \xC2\xB7 v1.4.2");
+    CHECK(cell(history, morning, HistoryModel::LONG_DATE_TEXT).toString() == "Sat 7 Nov 2026");
+
+    const int evening = row_of(history, EVENING);
+    CHECK(cell(history, evening, HistoryModel::ENTRIES_TEXT).toString() == "1 entry");
+    CHECK(cell(history, evening, HistoryModel::DETAIL_TEXT).toString() == "1 entry \xC2\xB7 v1.4.2");
+
+    CHECK(cell(history, row_of(history, LAST_YEAR), HistoryModel::LONG_DATE_TEXT).toString() == "Fri 7 Nov 2025");
+    CHECK(cell(history, row_of(history, LAST_YEAR), HistoryModel::ENTRIES_TEXT).toString() == "2 entries");
+}
+
+TEST_CASE("The shared date is the day of the share, not the date of the log", "[viewmodel][history][unit]")
+{
+    Fixture fixture;
+    fixture.load();
+    HistoryModel& history = fixture.history();
+
+    // The morning log is of 7 Nov and was shared at 21:05 UTC, which is 8 Nov in Melbourne.
+    const int morning = row_of(history, MORNING);
+    CHECK(cell(history, morning, HistoryModel::SECTION).toString() == "7 Nov 2026");
+    CHECK(cell(history, morning, HistoryModel::SHARED_DATE_TEXT).toString() == "8 Nov");
+    CHECK(cell(history, morning, HistoryModel::SHARED_AT_TEXT).toString() == "08:05");
+
+    // A log that was never shared has no date to show.
+    CHECK(cell(history, row_of(history, EVENING), HistoryModel::SHARED_DATE_TEXT).toString().isEmpty());
+}
+
+TEST_CASE("The shared date is where the device is, and follows a new share", "[viewmodel][history][unit]")
+{
+    Fixture fixture;
+    fixture.world().m_DeviceZone.set("Australia/Perth");
+    fixture.load();
+    HistoryModel& history = fixture.history();
+    const int row = row_of(history, EVENING);
+    QSignalSpy changed(&history, &QAbstractItemModel::dataChanged);
+
+    // 15:30 UTC on 7 Nov is 23:30 on 7 Nov in Perth (+08:00).
+    fixture.world().m_Clock.set_wall(utc(2026, 11, 7, 15, 30));
+    REQUIRE(fixture.share().shareLog(text_of(EVENING)));
+    fixture.settle();
+
+    CHECK(cell(history, row, HistoryModel::SHARED_DATE_TEXT).toString() == "7 Nov");
+    CHECK(cell(history, row, HistoryModel::SHARED_AT_TEXT).toString() == "23:30");
+    REQUIRE(changed.count() == 1);
+    CHECK(changed.at(0).at(2).value<QList<int>>().contains(HistoryModel::SHARED_DATE_TEXT));
+
+    // 17:00 UTC is 01:00 on 8 Nov in Perth: sharing again moves the day with the time.
+    fixture.world().m_Clock.set_wall(utc(2026, 11, 7, 17, 0));
+    REQUIRE(fixture.share().shareLog(text_of(EVENING)));
+    fixture.settle();
+    CHECK(cell(history, row, HistoryModel::SHARED_DATE_TEXT).toString() == "8 Nov");
+}
+
+TEST_CASE("A log with no version reads as its entries alone, and a correction moves the row",
+          "[viewmodel][history][unit]")
+{
+    Fixture fixture;
+    fixture.load();
+    HistoryModel& history = fixture.history();
+    history.openLog(text_of(MORNING));
+    fixture.settle();
+    const int row = row_of(history, MORNING);
+    QSignalSpy changed(&history, &QAbstractItemModel::dataChanged);
+
+    REQUIRE(history.review_document()->correct_header(HeaderField::SOFTWARE_VERSION, "", {}));
+    fixture.settle();
+
+    CHECK(cell(history, row, HistoryModel::VERSION_TEXT).toString().isEmpty());
+    CHECK(cell(history, row, HistoryModel::DETAIL_TEXT).toString() == "4 entries");
+    REQUIRE(changed.count() == 1);
+    const auto roles = changed.at(0).at(2).value<QList<int>>();
+    CHECK(roles == QList<int>{HistoryModel::VERSION_TEXT, HistoryModel::DETAIL_TEXT});
+
+    REQUIRE(history.review_document()->correct_header(HeaderField::SOFTWARE_VERSION, "1.5.0", {}));
+    fixture.settle();
+    CHECK(cell(history, row, HistoryModel::DETAIL_TEXT).toString() == "4 entries \xC2\xB7 v1.5.0");
 }

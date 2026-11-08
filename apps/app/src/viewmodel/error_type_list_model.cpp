@@ -30,6 +30,8 @@ QVariant ErrorTypeListModel::data(const QModelIndex& index, int role) const
         return row->m_BoardPosition;
     case ON_BOARD:
         return row->m_BoardPosition != 0;
+    case COLOUR_NAME:
+        return tile_colour_name(row->m_ColourSlot);
     default:
         return {};
     }
@@ -37,11 +39,9 @@ QVariant ErrorTypeListModel::data(const QModelIndex& index, int role) const
 
 QHash<int, QByteArray> ErrorTypeListModel::roleNames() const
 {
-    return {{TYPE_ID, "typeId"},
-            {NAME, "name"},
-            {COLOUR_SLOT, "colourSlot"},
-            {BOARD_POSITION, "boardPosition"},
-            {ON_BOARD, "onBoard"}};
+    return {{TYPE_ID, "typeId"},         {NAME, "name"},
+            {COLOUR_SLOT, "colourSlot"}, {BOARD_POSITION, "boardPosition"},
+            {ON_BOARD, "onBoard"},       {COLOUR_NAME, "colourName"}};
 }
 
 void ErrorTypeListModel::refresh(const Configuration& configuration)
