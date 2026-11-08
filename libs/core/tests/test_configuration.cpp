@@ -89,7 +89,7 @@ TEST_CASE("Import of an export equals the original, with unicode, retired types 
     c.m_Locations.push_back({ej::LocationId{ej::Uuid::from_random(4, 4)}, "North Site – ünïcode", 2, false});
     c.m_Locations.push_back({ej::LocationId{ej::Uuid::from_random(5, 5)}, "Gone", -1, true});
     c.m_Templates.push_back({ej::NoteTemplateId{ej::Uuid::from_random(6, 6)}, "Played song", "Which song?",
-                             "Played {value} {{twice}}", 1});
+                             "Played {value} {{twice}}", 1, ""});
 
     for (const bool twelve : {false, true})
     {
