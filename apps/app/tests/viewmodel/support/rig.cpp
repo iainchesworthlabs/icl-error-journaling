@@ -111,6 +111,12 @@ void Rig::build()
             [] {});
     }
 
+    if (m_PendingRecovery)
+    {
+        started.m_Startup.m_Recovery = std::move(*m_PendingRecovery);
+        m_PendingRecovery.reset();
+    }
+
     const app::AppPlatform platform{m_Platform, m_Platform, m_Clipboard, true};
     m_Root = std::make_unique<app::AppRoot>(environment(), platform, std::move(started));
     watch_events();

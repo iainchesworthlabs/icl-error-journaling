@@ -4,6 +4,7 @@
 #include "app_root.hpp"
 #include "error_journaling/clock.hpp"
 #include "error_journaling/log_repository.hpp"
+#include "error_journaling/recovery_report.hpp"
 #include "error_journaling/stored_log.hpp"
 #include "fake_time_zone_provider.hpp"
 #include "support/event_log.hpp"
@@ -221,6 +222,13 @@ public:
     /// `applyImport`), and settles. The model is `configured` afterwards.
     void import_sample_configuration();
 
+    /// The next `restart()` hands this report to the session as the outcome of start-up recovery, once, so that the Log
+    /// screen shows the recovery notice (DS-04) without a damaged store; the visual capture uses it.
+    void set_startup_recovery(RecoveryReport report)
+    {
+        m_PendingRecovery = std::move(report);
+    }
+
     /// Destroys every service and the gateway and builds them again on the same store, as a relaunch does. `SQLITE`:
     /// the store is closed and `Recovery::run` runs before it is opened again. Settles first.
     void restart();
@@ -289,6 +297,8 @@ private:
     bool m_StartGateClosed = false;
     std::size_t m_PastMutatingCalls = 0;
     std::set<std::thread::id> m_PastThreads;
+
+    std::optional<RecoveryReport> m_PendingRecovery;
 
     bool m_Watching = false;
     int m_WriteFailures = 0;
