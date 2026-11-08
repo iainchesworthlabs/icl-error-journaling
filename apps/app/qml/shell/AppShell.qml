@@ -377,6 +377,11 @@ Item {
                 root.settings.exportTo(path);
             }
 
+            // 5.7: a setup file that could not be used, or an export that could not be prepared (iPhone build).
+            function onFailed(message: string): void {
+                root.failureMessage = message;
+            }
+
             target: root.fileChooser
         }
 

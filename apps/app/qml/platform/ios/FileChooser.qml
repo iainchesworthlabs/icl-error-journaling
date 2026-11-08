@@ -2,25 +2,43 @@
 import QtQuick
 import ErrorJournalingApp
 
-// The file chooser of the iPhone build (Stage 4, 4.15). It has the names of `platform/desktop/FileChooser.qml` and does
-// nothing: the iOS document picker is Stage 5's (5.7), which replaces this file. The shell asks for a file and answers
-// nothing until then, so the import and export rows have no effect on a phone built from this package.
+// The file chooser of the iPhone build (Stage 4, 4.15; Stage 5, 5.7). It has the names of
+// `platform/desktop/FileChooser.qml` and answers from C++ instead of a dialog: `SetupFiles` shows the iOS document picker
+// and delivers a file from the picker, or one that AirDrop or Files opened in the application, as `fileReady`, which
+// starts the same import flow (confirmation, then `settings.loadImport`).
 //
-// What 5.7 puts here: `chooseToOpen()` shows the picker and ends with `openChosen(path, displayName)` for a file it has
-// copied where the app can read it; `chooseToSave(suggestedName)` ends with `saveChosen(path)`.
+// Export is different on a phone: there is no place to save to, the exporter writes a temporary file and opens the share
+// sheet itself, so `chooseToSave` only asks for that and `saveChosen` is never emitted.
 Item {
     id: root
 
-    // The same filters as the desktop dialog, which the picker turns into document types.
+    // The picker takes its document types from the application (Info.plist and `document_types.hpp`), so these are kept
+    // for the names the shell shares with the desktop chooser.
     property var nameFilters: [SetupFile.dialogFilter]
     property string defaultSuffix: SetupFile.exportExtension
 
     signal openChosen(string path, string displayName)
     signal saveChosen(string path)
+    // A file that was too large or could not be read or opened, or an export that could not be prepared.
+    signal failed(string message)
 
     function chooseToOpen(): void {
+        SetupFiles.pick();
     }
 
     function chooseToSave(suggestedName: string): void {
+        SetupFiles.exportSetup();
+    }
+
+    Connections {
+        function onFileReady(path: string, displayName: string): void {
+            root.openChosen(path, displayName);
+        }
+
+        function onFailed(message: string): void {
+            root.failed(message);
+        }
+
+        target: SetupFiles
     }
 }

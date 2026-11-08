@@ -22,7 +22,7 @@ Window {
     required property QtObject settings
     required property QtObject share
     required property QtObject appRoot
-    required property QtObject bridge
+    required property var bridge
     // The version of the core library and which bridge and storage are linked. They are at the foot of Settings.
     required property string versionText
     required property string platformText
@@ -36,6 +36,12 @@ Window {
 
     AppShell {
         anchors.fill: parent
+
+        // 5.7: the launch time ends when the 12 tiles accept taps.
+        onBoardEnabledChanged: {
+            if (boardEnabled)
+                root.bridge.reportBoardEnabled();
+        }
         session: root.session
         undo: root.undo
         board: root.board

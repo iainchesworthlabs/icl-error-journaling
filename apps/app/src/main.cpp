@@ -8,6 +8,7 @@
 #include "error_journaling/open_file_filter.hpp"
 #include "error_journaling/platform_services.hpp"
 #include "error_journaling/qml_bridge.hpp"
+#include "error_journaling/setup_files.hpp"
 #include "error_journaling/storage.hpp"
 #include "error_journaling/version.hpp"
 #include "qt_clipboard.hpp"
@@ -121,7 +122,10 @@ int main(int argc, char* argv[])
     // file and shares it. The Settings screens call these in Stage 4; until then only a file opened in the application
     // reaches them.
     ej::viewmodel::SettingsModel& settings = *root.settings();
-    ej::bridge::ConfigImporter importer([&settings](const QString& path) { settings.loadImport(path); });
+    // The importer hands a file to the shell (SetupFiles::fileReady), which asks for confirmation and then calls
+    // settings.loadImport; the importer deletes the file when the model has answered.
+    ej::bridge::SetupFiles* setup_files_ptr = nullptr;
+    ej::bridge::ConfigImporter importer([&setup_files_ptr](const QString& path) { setup_files_ptr->offer(path); });
     QObject::connect(&settings, &ej::viewmodel::SettingsModel::importPrepared, &importer,
                      [&importer] { importer.load_finished(); });
     QObject::connect(&settings, &ej::viewmodel::SettingsModel::importFailed, &importer,
@@ -135,7 +139,9 @@ int main(int argc, char* argv[])
         [&platform_bridge](const QString& path) { platform_bridge.shareTemporaryFile(path); });
     QObject::connect(&settings, &ej::viewmodel::SettingsModel::exportFinished, &exporter,
                      [&exporter](bool ok, const QString& message) { exporter.export_finished(ok, message); });
-    (void)document_picker; // the Settings rows call pick_and_import with it (Stage 4)
+    ej::bridge::SetupFiles setup_files(importer, document_picker, exporter);
+    setup_files_ptr = &setup_files;
+    qmlRegisterSingletonInstance("ErrorJournalingApp", 1, 0, "SetupFiles", &setup_files);
 
     QQmlApplicationEngine engine;
     // The root owns the models; QML must never delete one.
@@ -168,12 +174,14 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("settings"), QVariant::fromValue(root.settings())},
                                  {QStringLiteral("share"), QVariant::fromValue(root.share())},
                                  {QStringLiteral("appRoot"), QVariant::fromValue(&root)}});
+    // The shell says when the 12 tiles accept taps (the Log tab is shown and the session has loaded).
+    QObject::connect(&platform_bridge, &ej::bridge::QmlBridge::boardEnabled, &platform_bridge,
+                     [&launch] { launch.board_enabled(); });
     engine.loadFromModule("ErrorJournalingApp", "Main");
     launch.qml_loaded();
     // The importer can take a file now; one that launched the application cold is delivered here.
     open_files.ready();
-    // Recovery has finished: the store was opened above, before the window was made. The shell of Stage 5, 5.7 calls
-    // board_enabled() when the 12 tiles accept taps (the session is open); until then this line stands for it.
+    // Recovery has finished: the store was opened above, before the window was made.
     launch.storage_ready();
     // The store was opened and recovered above: a day check that was waiting for it runs now. Qt may not send Active
     // for the launch itself (the state was already Active when the adapter connected), so the first one is sent here;
@@ -183,7 +191,6 @@ int main(int argc, char* argv[])
     {
         lifecycle.on_event(ej::bridge::LifecycleEvent::BECAME_ACTIVE);
     }
-    launch.board_enabled();
     {
         const auto roots = engine.rootObjects();
         if (auto* window = roots.isEmpty() ? nullptr : qobject_cast<QQuickWindow*>(roots.first()))

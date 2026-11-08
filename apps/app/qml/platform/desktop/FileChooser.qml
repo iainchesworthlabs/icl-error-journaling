@@ -28,6 +28,8 @@ Item {
     signal openChosen(string path, string displayName)
     // A file to export to was chosen.
     signal saveChosen(string path)
+    // A file could not be used (the iPhone picker reports this; a desktop dialog never does).
+    signal failed(string message)
 
     // Shows the dialog to choose a file to import.
     function chooseToOpen(): void {
