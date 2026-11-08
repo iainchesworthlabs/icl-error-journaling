@@ -75,7 +75,6 @@ namespace
 {
 
 constexpr auto MODULE = "ErrorJournalingApp";
-constexpr int LOG_TAB = 0;
 constexpr int REVIEW_TAB = 1;
 constexpr int HISTORY_TAB = 2;
 constexpr int SETTINGS_TAB = 3;
