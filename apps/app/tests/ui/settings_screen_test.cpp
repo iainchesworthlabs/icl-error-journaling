@@ -225,7 +225,7 @@ double min_target(const Node& /*node*/)
 
 } // namespace
 
-TEST_CASE("settings.rows: the rows show the values and the counts of the model, and open what they name",
+TEST_CASE("settings.rows: the rows show the values of the model, with no counts, and open what they name",
           "[ui][settings_screen]")
 {
     Fixture fixture;
@@ -234,13 +234,23 @@ TEST_CASE("settings.rows: the rows show the values and the counts of the model, 
     QSignalSpy locations(fixture.m_Screen, SIGNAL(locationsRequested()));
 
     CHECK(fixture.shows(QStringLiteral("Settings")));
-    CHECK(fixture.require(QStringLiteral("settingsErrorTypes"))->property("value").toString() == "11");
-    CHECK(fixture.require(QStringLiteral("settingsTemplates"))->property("value").toString() == "2");
-    CHECK(fixture.require(QStringLiteral("settingsLocations"))->property("value").toString() == "2");
+    // The mock-up has no counts on the three lists, no value on Import or export, and six rows of 44 pt.
+    CHECK(fixture.require(QStringLiteral("settingsErrorTypes"))->property("value").toString().isEmpty());
+    CHECK(fixture.require(QStringLiteral("settingsTemplates"))->property("value").toString().isEmpty());
+    CHECK(fixture.require(QStringLiteral("settingsLocations"))->property("value").toString().isEmpty());
     CHECK(fixture.require(QStringLiteral("settingsFacilitator"))->property("value").toString() == "Sam Example");
     CHECK(fixture.require(QStringLiteral("settingsTimeFormat"))->property("value").toString() == "24-hour");
-    CHECK(fixture.require(QStringLiteral("settingsUnitPrefix"))->property("value").toString() == "UNIT");
     CHECK(fixture.require(QStringLiteral("settingsImportExport"))->property("value").toString().isEmpty());
+    for (const QString& row : {QStringLiteral("settingsErrorTypes"), QStringLiteral("settingsTemplates"),
+                               QStringLiteral("settingsLocations"), QStringLiteral("settingsFacilitator"),
+                               QStringLiteral("settingsTimeFormat"), QStringLiteral("settingsImportExport")})
+    {
+        INFO(row.toStdString());
+        CHECK(fixture.m_Ui.geometry(fixture.require(row)).height() == 44.0);
+    }
+    // The unit prefix and the totals switch are not on the list: they are on the Facilitator page.
+    CHECK(fixture.shown(QStringLiteral("settingsUnitPrefix")) == nullptr);
+    CHECK(fixture.shown(QStringLiteral("settingsTotals")) == nullptr);
 
     // The rows of the three lists leave the editors to the shell.
     fixture.tap(QStringLiteral("settingsErrorTypes"));
@@ -250,22 +260,14 @@ TEST_CASE("settings.rows: the rows show the values and the counts of the model, 
     CHECK(templates.count() == 1);
     CHECK(locations.count() == 1);
     CHECK(fixture.depth() == 1);
-
-    // The counts follow the lists: a new error type makes 12.
-    CHECK(fixture.settings().addErrorType(QStringLiteral("Echo Delay")).isEmpty());
-    fixture.m_Ui.settle();
-    CHECK(fixture.require(QStringLiteral("settingsErrorTypes"))->property("value").toString() == "12");
-    CHECK(fixture.settings().addLocation(QStringLiteral("East Depot")).isEmpty());
-    fixture.m_Ui.settle();
-    CHECK(fixture.require(QStringLiteral("settingsLocations"))->property("value").toString() == "3");
 }
 
 TEST_CASE("settings.rows: the pages the screen has itself are pushed, and Back returns to the list",
           "[ui][settings_screen]")
 {
     Fixture fixture;
-    for (const QString& row : {QStringLiteral("settingsFacilitator"), QStringLiteral("settingsUnitPrefix"),
-                               QStringLiteral("settingsTimeFormat"), QStringLiteral("settingsImportExport")})
+    for (const QString& row : {QStringLiteral("settingsFacilitator"), QStringLiteral("settingsTimeFormat"),
+                               QStringLiteral("settingsImportExport")})
     {
         INFO(row.toStdString());
         fixture.open_page(row);
@@ -328,7 +330,11 @@ TEST_CASE("settings.facilitator: Save asks the model once, a refusal shows inlin
 TEST_CASE("settings.prefix: Save asks the model once and a refusal shows inline", "[ui][settings_screen]")
 {
     Fixture fixture;
+    // The unit prefix is a row of the Facilitator page ("In the shared log"), which opens a page of its own.
+    fixture.open_page(QStringLiteral("settingsFacilitator"));
+    CHECK(fixture.require(QStringLiteral("settingsUnitPrefix"))->property("value").toString() == "UNIT");
     fixture.open_page(QStringLiteral("settingsUnitPrefix"));
+    CHECK(fixture.depth() == 3);
     CHECK(fixture.require(QStringLiteral("formInput"))->property("text").toString() == "UNIT");
 
     // A prefix with a dash is not one the importer would accept.
@@ -336,7 +342,7 @@ TEST_CASE("settings.prefix: Save asks the model once and a refusal shows inline"
     replace_text(fixture, QStringLiteral("UNIT-"));
     fixture.tap(QStringLiteral("navTrailing"));
     fixture.m_Ui.settle();
-    CHECK(fixture.depth() == 2);
+    CHECK(fixture.depth() == 3);
     CHECK(fixture.saves() == before);
     CHECK(fixture.settings().unit_prefix() == "UNIT");
     CHECK(fixture.require(QStringLiteral("settingsTextField"))->property("invalid").toBool());
@@ -345,7 +351,8 @@ TEST_CASE("settings.prefix: Save asks the model once and a refusal shows inline"
     fixture.tap(QStringLiteral("navTrailing"));
     fixture.m_Ui.advance(400ms);
     fixture.m_Ui.settle();
-    CHECK(fixture.depth() == 1);
+    // Back on the Facilitator page, which shows the prefix once it has been saved.
+    CHECK(fixture.depth() == 2);
     CHECK(fixture.saves() == before + 1);
     CHECK(fixture.settings().unit_prefix() == "CELL");
     CHECK(fixture.require(QStringLiteral("settingsUnitPrefix"))->property("value").toString() == "CELL");
@@ -395,6 +402,8 @@ TEST_CASE("settings.totals: the switch calls setIncludeTotals and moves when the
           "[ui][settings_screen]")
 {
     Fixture fixture;
+    // The switch is on the Facilitator page, under "In the shared log".
+    fixture.open_page(QStringLiteral("settingsFacilitator"));
     QQuickItem* row = fixture.require(QStringLiteral("settingsTotals"));
     CHECK_FALSE(row->property("checked").toBool());
     CHECK_FALSE(fixture.settings().include_totals());
@@ -604,14 +613,19 @@ TEST_CASE("settings.export: the rows emit the requests and the result of an expo
     CHECK(exports.count() == 1);
     CHECK(imports.count() == 0);
     // The screen asks and the shell answers: the model tells how it went.
-    fixture.settings().exportFinished(true, QStringLiteral("The settings were exported."));
+    fixture.settings().exportResult(true, QStringLiteral("Exported to Files"),
+                                    QStringLiteral("cs-bingo-board-setup.ejconfig"),
+                                    QStringLiteral("cs-bingo-board-setup.ejconfig is ready to send."));
     fixture.m_Ui.layout();
     REQUIRE(fixture.shown(QStringLiteral("settingsExportResult")) != nullptr);
-    CHECK(fixture.shows(QStringLiteral("The settings were exported.")));
+    CHECK(fixture.shows(QStringLiteral("Exported to Files")));
+    CHECK(fixture.shows(QStringLiteral("cs-bingo-board-setup.ejconfig is ready to send.")));
     fixture.tap(QStringLiteral("bannerClose"));
     CHECK(fixture.shown(QStringLiteral("settingsExportResult")) == nullptr);
 
-    fixture.settings().exportFinished(false, QStringLiteral("There was no room to write the file."));
+    fixture.settings().exportResult(false, QStringLiteral("Export failed"),
+                                    QStringLiteral("cs-bingo-board-setup.ejconfig"),
+                                    QStringLiteral("There was no room to write the file."));
     fixture.m_Ui.layout();
     CHECK(fixture.shown(QStringLiteral("settingsExportResult")) != nullptr);
     CHECK(fixture.shows(QStringLiteral("There was no room to write the file.")));
@@ -693,9 +707,12 @@ TEST_CASE("settings.voiceover: rows read their label and value, the switch reads
     const Node facilitator = name_of(QStringLiteral("settingsFacilitator"));
     CHECK(facilitator.m_Role == QAccessible::Button);
     CHECK(facilitator.m_Name == "Facilitator, Sam Example");
-    CHECK(name_of(QStringLiteral("settingsErrorTypes")).m_Name == "Error types, 11");
+    CHECK(name_of(QStringLiteral("settingsErrorTypes")).m_Name == "Error types");
     CHECK(name_of(QStringLiteral("settingsTimeFormat")).m_Name == "Time format, 24-hour");
 
+    // The totals switch is on the Facilitator page.
+    CHECK(accessible_press(fixture.require(QStringLiteral("settingsFacilitator"))));
+    fixture.m_Ui.advance(400ms);
     const Node totals = name_of(QStringLiteral("settingsTotals"));
     CHECK(totals.m_Role == QAccessible::CheckBox);
     CHECK(totals.m_Name == "Include a totals line");
@@ -709,6 +726,7 @@ TEST_CASE("settings.voiceover: rows read their label and value, the switch reads
     fixture.m_Ui.settle();
     CHECK(fixture.settings().include_totals());
     CHECK(iface->state().checked);
+    fixture.go_back();
 
     // The board: every tile but Other is a button, and the buttons for a selected tile are there for VoiceOver.
     CHECK(accessible_press(fixture.require(QStringLiteral("miniTile4"))));
@@ -760,14 +778,20 @@ TEST_CASE("settings.a11y: names, targets, reading order and the text scales, in 
             fixture.m_Ui.tap(close);
         }
 
-        for (const QString& row : {QStringLiteral("settingsFacilitator"), QStringLiteral("settingsUnitPrefix"),
-                                   QStringLiteral("settingsTimeFormat"), QStringLiteral("settingsImportExport")})
+        for (const QString& row : {QStringLiteral("settingsFacilitator"), QStringLiteral("settingsTimeFormat"),
+                                   QStringLiteral("settingsImportExport")})
         {
             INFO(row.toStdString());
             fixture.open_page(row);
             expect_clean(check_everything(fixture.m_Ui, min_target));
             fixture.go_back();
         }
+        // The unit prefix is a page of its own, opened from the Facilitator page.
+        fixture.open_page(QStringLiteral("settingsFacilitator"));
+        fixture.open_page(QStringLiteral("settingsUnitPrefix"));
+        expect_clean(check_everything(fixture.m_Ui, min_target));
+        fixture.go_back();
+        fixture.go_back();
     }
 }
 

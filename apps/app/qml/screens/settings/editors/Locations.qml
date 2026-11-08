@@ -7,9 +7,9 @@ import ErrorJournalingApp
 // top, then the locations in the order Today's details lists them.
 //
 //   a row                   opens a sheet to rename the location
-//   Move earlier / later    moves it one place (`moveLocation`, with 0-based rows). The way that needs no drag, and the one
-//                           a screen reader uses.
-//   the handle              hold and drag it up or down to move it by whole rows
+//   the handle              hold and drag it up or down to move it by whole rows (`moveLocation`, with 0-based rows). The
+//                           mock-up draws no arrows, so a screen reader moves it with the handle's "increase" and
+//                           "decrease" actions
 //   Remove                  retires the location: it leaves the list and the pickers, and past logs still name it
 //
 // A refusal of the view model (an empty or repeated name, a name over 200 characters, 500 locations) is shown under the
@@ -20,6 +20,8 @@ SheetHost {
     id: root
 
     required property var settings
+    // The layer the shell presents sheets in, so that the sheet covers the tab bar. Null keeps it in this page's layer.
+    property Item sheetLayer: null
 
     // The name in the field of the new location, and why the view model refused it.
     property string newName: ""
@@ -70,7 +72,11 @@ SheetHost {
         NavBar {
             id: bar
 
+            // The bar sits 8 pt higher than `inSheet` puts it: the sheet's body already starts 21 pt down, as the mock-ups'
+            // grabber and its 8 pt do.
+            y: -Theme.space.tileGap
             width: parent.width
+            inSheet: true
             title: qsTr("Location")
             leadingText: qsTr("Cancel")
             trailingText: qsTr("Save")
@@ -82,9 +88,9 @@ SheetHost {
         Flickable {
             id: sheetFlick
 
-            y: bar.height
+            y: bar.y + bar.height
             width: parent.width
-            height: parent.height - bar.height
+            height: parent.height - y
             clip: true
             contentWidth: width
             contentHeight: renameField.height + Theme.space.screenMargin
@@ -96,6 +102,8 @@ SheetHost {
                 objectName: "renameField"
                 x: Theme.space.screenMargin
                 width: sheetFlick.width - 2 * Theme.space.screenMargin
+                compact: true
+                surface: Theme.colour.surfaceRaised
                 label: qsTr("Name")
                 text: sheet.draftName
                 errorText: sheet.refusal
@@ -109,6 +117,13 @@ SheetHost {
         }
     }
 
+    Binding {
+        target: renameSheet
+        property: "parent"
+        value: root.sheetLayer
+        when: root.sheetLayer !== null
+    }
+
     Connections {
         function onWriteFailed(operation: string, message: string): void {
             root.problem = message;
@@ -120,7 +135,7 @@ SheetHost {
     EditorPage {
         anchors.fill: parent
         title: qsTr("Locations")
-        leadingText: qsTr("Back")
+        leadingText: qsTr("Settings")
         leadingAccessibleName: qsTr("Back to Settings")
         trailingText: qsTr("Done")
         onLeadingTriggered: root.closeRequested()
@@ -135,12 +150,14 @@ SheetHost {
             contentHeight: column.height + Theme.space.screenMargin
             boundsBehavior: Flickable.StopAtBounds
 
+            // The gaps are the mock-up's own (Locations: 8 pt between the blocks, 16 above the button, 28 below it), so
+            // they are set item by item and the column adds none.
             Column {
                 id: column
 
                 x: Theme.space.screenMargin
                 width: flick.width - 2 * Theme.space.screenMargin
-                spacing: Theme.space.sectionGap
+                spacing: 0
 
                 Banner {
                     objectName: "problemBanner"
@@ -152,8 +169,15 @@ SheetHost {
                     onCloseRequested: root.problem = ""
                 }
 
+                Item {
+                    width: parent.width
+                    height: root.problem.length > 0 ? Theme.space.tileGap : 0
+                }
+
                 FormField {
                     objectName: "newLocationField"
+                    compact: true
+                    border: true
                     label: qsTr("New location")
                     text: root.newName
                     errorText: root.newRefusal
@@ -165,11 +189,22 @@ SheetHost {
                     onAccepted: root.addLocation()
                 }
 
+                Item {
+                    width: parent.width
+                    height: Theme.space.tileGap * 2
+                }
+
                 PrimaryButton {
                     objectName: "addButton"
                     width: parent.width
+                    height: Theme.size.smallButtonHeight
                     text: qsTr("Add location")
                     onClicked: root.addLocation()
+                }
+
+                Item {
+                    width: parent.width
+                    height: Theme.space.sectionGap * 7 / 3
                 }
 
                 GroupedList {
@@ -177,7 +212,7 @@ SheetHost {
                     width: parent.width
                     visible: repeater.count > 0
                     title: qsTr("Locations · %1").arg(repeater.count)
-                    footer: qsTr("Today's details lists these in this order, then Other. Removing one does not change past logs.")
+                    footer: qsTr("The Today’s details list shows these in this order, then “Other…”. Removing one doesn’t change past logs.")
 
                     Repeater {
                         id: repeater
@@ -191,7 +226,6 @@ SheetHost {
 
                             objectName: "locationRow"
                             text: name
-                            reorderable: true
                             canMoveEarlier: index > 0
                             canMoveLater: index < repeater.count - 1
                             draggable: true

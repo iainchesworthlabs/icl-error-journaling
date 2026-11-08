@@ -19,6 +19,13 @@ Rectangle {
     property bool trailingEnabled: true
     // Whether a drag scrolls the page. The list turns it off while a tile of the board is being dragged.
     property bool scrollable: true
+    // Room above the title and between the title and the content, for a page whose title has no actions above it (the
+    // Settings list: BoardSettings has 8 pt above "Settings" and 16 pt under it). The NavBar adds its own 8 pt under a
+    // large title, so `bodyGap` is what comes on top of that.
+    property real topGap: 0
+    property real bodyGap: 0
+    // The space between the blocks of the content (the section gap of the design; 8 pt on the import page).
+    property real bodySpacing: Theme.space.sectionGap
     // Above this text scale the leading action says "Back", so that it fits beside its chevron; a screen reader says where
     // it goes at every size.
     readonly property real compactScale: 2
@@ -56,6 +63,12 @@ Rectangle {
                 height: root.topInset
             }
 
+            Item {
+                objectName: "settingsTitleGap"
+                width: parent.width
+                height: root.topGap
+            }
+
             NavBar {
                 objectName: "settingsNavBar"
                 width: parent.width
@@ -75,7 +88,8 @@ Rectangle {
 
                 x: Theme.space.screenMargin
                 width: parent.width - 2 * Theme.space.screenMargin
-                spacing: Theme.space.sectionGap
+                topPadding: root.bodyGap
+                spacing: root.bodySpacing
             }
         }
     }

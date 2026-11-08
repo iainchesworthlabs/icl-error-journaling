@@ -14,8 +14,10 @@ import ErrorJournalingApp
 //   the board        a hold and drag, or Move earlier and Move later, calls `settings.moveBoardTile(from, to)`; Replace type
 //                    opens a sheet of the error types and a choice calls `settings.assignBoardTile(position, typeId)`.
 //                    Positions are 1 to 11 and Other is 12. The page does not scroll while a tile is being dragged.
-//   the pages        the facilitator, the unit prefix, the time format and the import and export page are pushed on the
-//                    screen's own stack, with a Back in the title bar.
+//   the pages        the facilitator, the time format and the import and export page are pushed on the screen's own
+//                    stack, with a Back in the title bar. The facilitator page also holds "In the shared log": the row
+//                    of the unit prefix, which opens a page of its own, and the totals switch. The Settings mock-up has
+//                    no row for either, so they are there and not on the list.
 //   the refusals     while a save is in flight the model refuses another change, and says so in words; a refusal, and a
 //                    write that failed, show inline. While `settings.loading` the page shows its skeleton.
 //
@@ -110,9 +112,6 @@ Item {
             onFacilitatorRequested: stack.push(textPage, {
                 "kind": "facilitator"
             })
-            onUnitPrefixRequested: stack.push(textPage, {
-                "kind": "unitPrefix"
-            })
             onTimeFormatRequested: stack.push(timeFormatPage)
             onImportExportRequested: stack.push(importExportPage)
             onReplaceRequested: (position, typeId) => picker.openFor(position, typeId)
@@ -126,6 +125,9 @@ Item {
             settings: root.settings
             topInset: frame.topInset
             onCloseRequested: stack.pop()
+            onUnitPrefixRequested: stack.push(textPage, {
+                "kind": "unitPrefix"
+            })
         }
     }
 

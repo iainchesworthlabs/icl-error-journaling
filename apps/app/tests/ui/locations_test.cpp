@@ -23,6 +23,9 @@ QStringList names(World& world)
 void add_location(World& world, const QString& text)
 {
     enter_text(world, QStringLiteral("newLocationField"), text);
+    // A message under the field goes when it is edited, and the button under it moves up: it is laid out before the
+    // tap.
+    world.m_Ui.layout();
     tap(world, QStringLiteral("addButton"));
 }
 
@@ -170,24 +173,39 @@ TEST_CASE("editor.locations: Remove retires the location, which leaves the list 
     CHECK(retired == 1);
 }
 
-TEST_CASE("editor.locations: the arrows reorder with 0-based rows, and the ends cannot move past the list",
-          "[ui][editor]")
+TEST_CASE(
+    "editor.locations: the rows show no arrows, and VoiceOver reorders with the handle's actions, 0-based, and the "
+    "ends cannot move past the list",
+    "[ui][editor]")
 {
     World world;
     world.load("Locations");
     world.m_Ui.layout();
 
+    // The mock-up draws a handle and a cross and no arrows.
     QQuickItem* north = row_with(world, LOCATIONS, QStringLiteral("North Site"));
-    CHECK_FALSE(child(north, QStringLiteral("editorMoveEarlier"))->isEnabled());
-    world.m_Ui.tap(find_item(north, QStringLiteral("editorMoveLater")));
+    CHECK_FALSE(child(north, QStringLiteral("editorMoveEarlier"))->isVisible());
+    CHECK_FALSE(child(north, QStringLiteral("editorMoveLater"))->isVisible());
+    CHECK(child(north, QStringLiteral("editorHandle"))->isVisible());
+
+    // The first location cannot move earlier: the action does nothing.
+    REQUIRE(accessible_adjust(find_item(north, QStringLiteral("editorHandle")), false));
+    world.settle();
+    world.m_Ui.layout();
+    CHECK(names(world) == QStringList{QStringLiteral("North Site"), QStringLiteral("South Site")});
+
+    REQUIRE(accessible_adjust(find_item(north, QStringLiteral("editorHandle")), true));
     world.settle();
     world.m_Ui.layout();
     CHECK(names(world) == QStringList{QStringLiteral("South Site"), QStringLiteral("North Site")});
     CHECK(names_in_model(world) == names(world));
 
     QQuickItem* last = row_with(world, LOCATIONS, QStringLiteral("North Site"));
-    CHECK_FALSE(child(last, QStringLiteral("editorMoveLater"))->isEnabled());
-    world.m_Ui.tap(find_item(last, QStringLiteral("editorMoveEarlier")));
+    REQUIRE(accessible_adjust(find_item(last, QStringLiteral("editorHandle")), true));
+    world.settle();
+    world.m_Ui.layout();
+    CHECK(names(world) == QStringList{QStringLiteral("South Site"), QStringLiteral("North Site")});
+    REQUIRE(accessible_adjust(find_item(last, QStringLiteral("editorHandle")), false));
     world.settle();
     world.m_Ui.layout();
     CHECK(names(world) == QStringList{QStringLiteral("North Site"), QStringLiteral("South Site")});
@@ -229,7 +247,7 @@ TEST_CASE("editor.locations: a refused change and a failed save are shown in a b
     CHECK_FALSE(banner->isVisible());
 
     QQuickItem* north = row_with(world, LOCATIONS, QStringLiteral("North Site"));
-    world.m_Ui.tap(find_item(north, QStringLiteral("editorMoveLater")));
+    REQUIRE(accessible_adjust(find_item(north, QStringLiteral("editorHandle")), true));
     world.m_Ui.tap(find_item(north, QStringLiteral("editorRemove")));
     CHECK(banner->isVisible());
     CHECK(banner->property("message").toString().contains(QStringLiteral("still being saved")));
@@ -257,8 +275,7 @@ TEST_CASE("editor.voiceover: the location rows and buttons are named and the scr
     QQuickItem* north = row_with(world, LOCATIONS, QStringLiteral("North Site"));
     CHECK(name_of(label_of(north)) == QStringLiteral("North Site"));
     CHECK(name_of(find_item(north, QStringLiteral("editorRemove"))) == QStringLiteral("Remove North Site"));
-    CHECK(name_of(find_item(north, QStringLiteral("editorMoveLater"))) == QStringLiteral("Move North Site later"));
-    CHECK(name_of(find_item(north, QStringLiteral("editorMoveEarlier"))) == QStringLiteral("Move North Site earlier"));
+    CHECK(name_of(find_item(north, QStringLiteral("editorHandle"))) == QStringLiteral("Reorder North Site"));
     CHECK(name_of(find_item(screen, QStringLiteral("navLeading"))) == QStringLiteral("Back to Settings"));
 
     expect_clean(check_everything(world.m_Ui));

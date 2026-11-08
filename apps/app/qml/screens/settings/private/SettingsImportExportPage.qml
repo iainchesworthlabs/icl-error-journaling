@@ -13,9 +13,11 @@ SettingsPage {
 
     required property var settings
 
-    // The result of the last export, in the model's words; hidden until there is one.
+    // The result of the last export, in the model's words (`exportResult`: a title such as "Exported to Files" and a
+    // message that names the file); hidden until there is one.
     property bool exportShown: false
     property bool exportOk: false
+    property string exportTitle: ""
     property string exportText: ""
 
     // The page was left.
@@ -25,14 +27,16 @@ SettingsPage {
 
     title: qsTr("Import or export")
     leadingText: qsTr("Settings")
+    bodySpacing: Theme.space.tileGap
     onLeadingTriggered: closeRequested()
 
     Connections {
         target: root.settings
 
-        function onExportFinished(ok: bool, text: string): void {
+        function onExportResult(ok: bool, title: string, fileName: string, message: string): void {
             root.exportOk = ok;
-            root.exportText = text;
+            root.exportTitle = title;
+            root.exportText = message;
             root.exportShown = true;
         }
     }
@@ -43,13 +47,19 @@ SettingsPage {
 
         ListRow {
             objectName: "settingsImport"
-            text: qsTr("Import a setup file")
+            text: qsTr("Import a setup file…")
+            leadingIcon: "file"
+            labelColour: Theme.colour.primaryText
+            showChevron: true
             onActivated: root.importRequested()
         }
 
         ListRow {
             objectName: "settingsExport"
-            text: qsTr("Export this setup")
+            text: qsTr("Export this setup…")
+            leadingIcon: "share"
+            labelColour: Theme.colour.primaryText
+            showChevron: true
             onActivated: {
                 root.exportShown = false;
                 root.exportRequested();
@@ -61,7 +71,7 @@ SettingsPage {
         objectName: "settingsExportResult"
         width: parent.width
         visible: root.exportShown
-        title: root.exportOk ? qsTr("Export finished") : qsTr("Export failed")
+        title: root.exportTitle
         message: root.exportText
         tone: root.exportOk ? Banner.Information : Banner.Error
         onCloseRequested: root.exportShown = false

@@ -29,6 +29,8 @@ Sheet {
     property string retireRefusal: ""
 
     readonly property bool adding: typeId.length === 0
+    // The name of the colour the type keeps, such as "Periwinkle".
+    readonly property string colourName: colourSlot > 0 ? root.settings.colourName(colourSlot) : ""
 
     function openForNew(): void {
         root.typeId = "";
@@ -71,12 +73,21 @@ Sheet {
     }
 
     accessibleName: root.adding ? qsTr("New error type") : qsTr("Error type")
-    detent: Sheet.Large
+    // The mock-up's sheet starts 120 pt from the top of the window, below the large sheet's 54: its height is fixed, and the
+    // content area is what is left under the grabber and above the home indicator.
+    detent: Sheet.Content
+    contentImplicitHeight: root.height - root.sheetTopOffset - root.grabberZone - root.bottomInset
+    // The sheet's distance from the top of the window, on the design frame (ErrorTypeEdit.dc.html).
+    readonly property real sheetTopOffset: 120 // literal-ok: the mock-up's own sheet height; there is no token for it
 
     NavBar {
         id: bar
 
+        // The sheet's body starts 21 pt down, which is the mock-up's own 8 pt, grabber and 8 pt before the row, so the bar
+        // sits 8 pt higher than the 8 pt that `inSheet` adds above its row.
+        y: -Theme.space.tileGap
         width: parent.width
+        inSheet: true
         title: root.adding ? qsTr("New error type") : qsTr("Error type")
         leadingText: qsTr("Cancel")
         trailingText: qsTr("Save")
@@ -88,25 +99,38 @@ Sheet {
     Flickable {
         id: flick
 
-        y: bar.height
+        y: bar.y + bar.height
         width: parent.width
-        height: parent.height - bar.height
+        height: parent.height - y
         clip: true
         contentWidth: width
         contentHeight: column.height + Theme.space.screenMargin
         boundsBehavior: Flickable.StopAtBounds
 
+        // ErrorTypeEdit: 20 pt above the Colour heading and 28 pt above Retire, set item by item.
         Column {
             id: column
 
             x: Theme.space.screenMargin
             width: flick.width - 2 * Theme.space.screenMargin
-            spacing: Theme.space.sectionGap
+            spacing: 0
+
+            Text {
+                x: Theme.space.tileGap / 2
+                width: parent.width - 2 * x
+                color: Theme.colour.textSecondary
+                font: Theme.font.sectionLabel.font
+                text: qsTr("Name").toLocaleUpperCase()
+                Accessible.ignored: true
+            }
 
             FormField {
                 id: nameField
 
                 objectName: "nameField"
+                compact: true
+                labelVisible: false
+                surface: Theme.colour.surfaceRaised
                 label: qsTr("Name")
                 text: root.draftName
                 errorText: root.refusal
@@ -118,6 +142,11 @@ Sheet {
                 onAccepted: root.save()
             }
 
+            Item {
+                // 20 pt under the message of the field in the mock-up (the component puts 8 pt above that message).
+                height: root.adding ? 0 : root.refusal.length > 0 ? Theme.space.sectionGap : Theme.space.sectionGap * 5 / 3
+            }
+
             GroupedList {
                 width: parent.width
                 visible: !root.adding
@@ -127,33 +156,49 @@ Sheet {
                 Item {
                     id: colourRow
 
+                    objectName: "colourRow"
                     width: parent.width
-                    height: Math.max(Theme.size.listRowHeight, colourContent.height + Theme.space.sectionGap)
+                    height: Math.max(Theme.size.listRowHeight, colourText.height + Theme.space.sectionGap)
                     Accessible.role: Accessible.StaticText
-                    Accessible.name: qsTr("Colour. It stays with the type when the board is reordered.")
+                    Accessible.name: qsTr("Colour %1. It stays with the type when the board is reordered.").arg(root.colourName)
 
-                    Row {
-                        id: colourContent
-
+                    Rectangle {
+                        objectName: "editSwatch"
                         x: Theme.space.rowPadding
                         y: (parent.height - height) / 2
-                        width: parent.width - 2 * Theme.space.rowPadding
-                        spacing: Theme.space.sectionGap
+                        width: Theme.size.badge * 3 / 4
+                        height: width
+                        radius: Theme.radius.field / 3
+                        color: Theme.tileColour(root.colourSlot)
+                        border.width: Theme.border.hairline
+                        border.color: Theme.colour.border
+                        Accessible.ignored: true
+                    }
 
-                        Rectangle {
-                            objectName: "editSwatch"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: Theme.size.badge * 0.75
-                            height: width
-                            radius: Theme.radius.field / 3
-                            color: Theme.tileColour(root.colourSlot)
-                            border.width: Theme.border.hairline
-                            border.color: Theme.colour.border
+                    Column {
+                        id: colourText
+
+                        x: Theme.space.rowPadding + Theme.size.badge * 3 / 4 + Theme.space.tileGap + Theme.border.hairline * 2
+                        y: (parent.height - height) / 2
+                        width: parent.width - x - Theme.space.rowPadding
+
+                        Text {
+                            objectName: "colourName"
+                            width: parent.width
+                            color: Theme.colour.textPrimary
+                            font: Theme.font.body.font
+                            text: root.colourName
+                            wrapMode: Text.WordWrap
                             Accessible.ignored: true
                         }
 
+                        Item {
+                            width: parent.width
+                            height: Theme.border.hairline * 2
+                        }
+
                         Text {
-                            width: parent.width - Theme.size.badge * 0.75 - Theme.space.sectionGap
+                            width: parent.width
                             color: Theme.colour.textSecondary
                             font: Theme.font.caption.font
                             text: qsTr("Stays with the type when the board is reordered")
@@ -164,17 +209,65 @@ Sheet {
                 }
             }
 
+            Item {
+                width: parent.width
+                height: root.adding ? 0 : Theme.space.sectionGap * 7 / 3
+            }
+
             GroupedList {
                 width: parent.width
                 visible: !root.adding
                 surface: Theme.colour.surfaceRaised
                 footer: root.retireRefusal.length > 0 ? root.retireRefusal : qsTr("A retired type disappears from the board and from Other. It stays on entries already logged.")
 
-                ListRow {
+                // The mock-up's button: a 54 pt card with the label centred, 17/600, in the destructive colour.
+                Item {
+                    id: retireRow
+
                     objectName: "retireRow"
-                    text: qsTr("Retire this error type")
-                    destructive: true
+                    readonly property bool pressed: retireTap.pressed
+                    readonly property bool destructive: true
+
+                    signal activated
+
+                    width: parent.width
+                    height: Math.max(Theme.size.primaryButtonHeight, retireLabel.implicitHeight + 2 * Theme.space.sectionGap)
+                    activeFocusOnTab: true
+                    Accessible.role: Accessible.Button
+                    Accessible.name: qsTr("Retire this error type")
+                    Accessible.focusable: true
+                    Accessible.onPressAction: root.retire()
                     onActivated: root.retire()
+                    Keys.onReturnPressed: root.retire()
+                    Keys.onSpacePressed: root.retire()
+
+                    Rectangle {
+                        anchors.fill: parent
+                        visible: retireRow.pressed
+                        radius: Theme.radius.groupedList
+                        color: Theme.colour.primaryTint
+                    }
+
+                    Text {
+                        id: retireLabel
+
+                        objectName: "retireLabel"
+                        x: Theme.space.rowPadding
+                        width: parent.width - 2 * Theme.space.rowPadding
+                        y: (parent.height - height) / 2
+                        horizontalAlignment: Text.AlignHCenter
+                        color: Theme.colour.destructive
+                        font: Theme.font.sheetTitle.font
+                        text: qsTr("Retire this error type")
+                        wrapMode: Text.WordWrap
+                        Accessible.ignored: true
+                    }
+
+                    TapHandler {
+                        id: retireTap
+
+                        onTapped: retireRow.activated()
+                    }
                 }
             }
         }

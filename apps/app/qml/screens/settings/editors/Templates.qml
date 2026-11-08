@@ -37,7 +37,7 @@ Item {
 
         EditorPage {
             title: qsTr("Note templates")
-            leadingText: qsTr("Back")
+            leadingText: qsTr("Settings")
             leadingAccessibleName: qsTr("Back to Settings")
             onLeadingTriggered: root.closeRequested()
 
@@ -50,12 +50,13 @@ Item {
                 contentHeight: column.height + Theme.space.screenMargin
                 boundsBehavior: Flickable.StopAtBounds
 
+                // Templates: 8 pt between the blocks and 8 more above the heading, set item by item.
                 Column {
                     id: column
 
                     x: Theme.space.screenMargin
                     width: flick.width - 2 * Theme.space.screenMargin
-                    spacing: Theme.space.sectionGap
+                    spacing: 0
 
                     GroupedList {
                         width: parent.width
@@ -63,9 +64,15 @@ Item {
                         EditorRow {
                             objectName: "addRow"
                             action: true
+                            minimumHeight: Theme.size.listRowHeight
                             text: qsTr("Add a template")
                             onActivated: root.openTemplate("", "", "", "")
                         }
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: Theme.space.tileGap * 2
                     }
 
                     GroupedList {
@@ -89,6 +96,8 @@ Item {
                                 objectName: "templateRow"
                                 text: name
                                 detail: qsTr("Prompt: %1 · Output: %2").arg(valuePrompt).arg(outputPattern)
+                                chevron: true
+                                minimumHeight: Theme.size.rowHeightTall + Theme.space.tileGap / 2
                                 onActivated: root.openTemplate(templateId, name, valuePrompt, outputPattern)
                             }
                         }
