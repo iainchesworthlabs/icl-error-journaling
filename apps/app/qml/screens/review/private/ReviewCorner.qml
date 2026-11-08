@@ -12,6 +12,8 @@ Shape {
     // Which corner of the card this is.
     property bool atTop: true
     property bool atLeft: true
+    // Whether the card has a hairline (dark mode and a past log); without it the corner only rounds the card.
+    property bool outlined: true
 
     readonly property real radius: Theme.radius.groupedList
 
@@ -38,12 +40,13 @@ Shape {
 
     // The hairline of the card along the curve.
     ShapePath {
-        strokeColor: Theme.colour.reviewDivider
+        strokeColor: root.outlined ? Theme.colour.reviewDivider : "transparent"
         strokeWidth: Theme.border.hairline
         fillColor: "transparent"
 
         PathSvg {
-            path: "M%1 0A%1 %1 0 0 0 0 %1".arg(root.radius)
+            // The line runs in the middle of its hairline, as the Rectangles of the straight sides do: half a hairline in.
+            path: "M%1 %2A%3 %3 0 0 0 %2 %1".arg(root.radius).arg(Theme.border.hairline / 2).arg(root.radius - Theme.border.hairline / 2)
         }
     }
 }

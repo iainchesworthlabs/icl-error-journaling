@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Shapes
 import ErrorJournalingApp
 
 // The Review screen (Stage 4, package 4.10; REV-01, REV-03, REV-04, REV-05): the header block and the timeline of a log in
@@ -16,8 +15,8 @@ import ErrorJournalingApp
 //   picker      the ErrorPickerModel, for the list of error types of the Edit entry sheet
 //   settings    the SettingsModel, for the time format of the time tumbler
 //
-// The screen shows nothing that a model does not give it and builds no line: the rows are `timeText` and `lineText`, the
-// header block is `headerText`. A delete is `timeline.deleteEntry`; the toast that offers Undo comes from UndoController and
+// The screen shows nothing that a model does not give it and builds no line: the rows are `timeText`, `prefixText` and
+// `restText` (`lineText` when a row has no prefix), the header block is `headerText`. A delete is `timeline.deleteEntry`; the toast that offers Undo comes from UndoController and
 // is the shell's, so the screen has no toast of its own. Sharing never fires a haptic. A copy is confirmed by a short
 // "Copied" that is announced to a screen reader.
 //
@@ -31,7 +30,7 @@ Item {
     required property var settings
     // The big title: "Today’s log", or the date of a past log.
     property string title: qsTr("Today’s log")
-    // A past log of History: back control, "Shared <date> at <time>" and "Share log again".
+    // A past log of History: back control, "<n> entries · Shared <date> at <time>" and "Share log again".
     property bool pastLog: false
     // The id of the past log, for `share.shareLog`.
     property string logId
@@ -40,6 +39,8 @@ Item {
     // When the past log was last shared. Both empty = never shared, and nothing is said.
     property string sharedDateText
     property string sharedTimeText
+    // "12 entries": the first words of the line under a past log's title (HistoryModel's `entriesText`).
+    property string entriesText: timeline.entryCount === 1 ? qsTr("1 entry") : qsTr("%1 entries").arg(timeline.entryCount)
     // What the shell's tab bar covers at the bottom of the window.
     property real bottomClearance: Theme.size.tabBarHeight
 
@@ -50,8 +51,12 @@ Item {
     // Something was said to a screen reader that is not on a control: the "Copied" confirmation.
     signal announced(string message)
 
-    // The Edit entry sheet, for the shell and the tests.
+    // The Edit entry sheet and the time sheet over it, for the shell and the tests.
     property alias editor: entryEditor
+    property alias timeSheet: entryTimeSheet
+    // The layer of the window's SheetHost, when the shell has one: the two sheets are then put in it, so that they cover the tab
+    // bar too (a sheet in this screen's own SheetHost is under it). Null keeps them in the screen's own.
+    property Item sheetLayer: null
 
     // The safe-area insets. SafeFrame reads them; a test overrides them.
     property alias overrideInsets: frame.overrideInsets
@@ -63,6 +68,14 @@ Item {
     readonly property bool empty: timeline.entryCount === 0
     readonly property bool shareShown: share.available
     readonly property bool hasShared: sharedDateText.length > 0 && sharedTimeText.length > 0
+    // The line under a past log's title, as PastLogReview has it: "12 entries · Shared 5 Nov at 16:58", or the entries alone
+    // when the log was never shared.
+    readonly property string pastSubtitle: hasShared ? qsTr("%1 · Shared %2 at %3").arg(entriesText).arg(sharedDateText).arg(sharedTimeText) : entriesText
+    // The cards of the header block and the rows have a hairline in dark mode and on a past log (PastLogReview), and none on
+    // the open log in light mode (Review).
+    readonly property bool outlined: Theme.dark || pastLog
+    // The font roles of a row: the time and the line share the pitch of rowText so that their lines align.
+    readonly property real rowPitch: Theme.font.rowText.linePitch
     // The widest time of the log's format, so the lines start at one place.
     readonly property real timeColumnWidth: Math.max(Theme.size.minTouchTarget, widestA.advanceWidth, widestB.advanceWidth)
     // At the largest text sizes the time would leave the line a sliver, so it goes on a line of its own above it.
@@ -104,6 +117,13 @@ Item {
     function copyRow(row: int): void {
         if (timeline.copyLine(row))
             confirmCopied(qsTr("Copied the line"));
+    }
+
+    // A row for StyledText: the prefix in the secondary colour, and both parts with the characters that it reads as markup
+    // written out.
+    function styledLine(prefix: string, rest: string): string {
+        const safe = value => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        return "<font color=\"" + Theme.colour.reviewTextSecondary + "\">" + safe(prefix) + "</font> " + safe(rest);
     }
 
     function startShare(): void {
@@ -208,31 +228,22 @@ Item {
                         id: backRow
 
                         anchors.verticalCenter: parent.verticalCenter
+                        // The chevron is 20 pt, 2 pt from its label (PastLogReview).
+                        spacing: Theme.border.hairline * 2
 
-                        Shape {
-                            width: Theme.size.badge
-                            height: Theme.size.badge
+                        Icon {
+                            kind: "chevronLeft"
+                            size: Theme.size.badge * 5 / 6
+                            strokeWidth: Theme.border.hairline * 2.2
+                            colour: Theme.colour.primaryText
                             anchors.verticalCenter: parent.verticalCenter
-                            Accessible.ignored: true
-
-                            ShapePath {
-                                strokeColor: Theme.colour.primaryText
-                                strokeWidth: Theme.border.hairline * 2
-                                fillColor: "transparent"
-                                capStyle: ShapePath.RoundCap
-                                joinStyle: ShapePath.RoundJoin
-
-                                PathSvg {
-                                    path: "M15 18L9 12L15 6"
-                                }
-                            }
                         }
 
                         Text {
                             // The name wraps rather than push Copy-all out of the window at the largest text sizes.
                             width: Math.min(implicitWidth, bar.width - Theme.size.badge - 2 * Theme.size.minTouchTarget)
                             color: Theme.colour.primaryText
-                            font: Theme.font.sheetTitle.font
+                            font: Theme.font.navAction.font
                             text: root.backText
                             wrapMode: Text.WordWrap
                             Accessible.ignored: true
@@ -277,23 +288,11 @@ Item {
                         onTapped: root.copyAll()
                     }
 
-                    Shape {
+                    Icon {
                         anchors.centerIn: parent
-                        width: Theme.size.badge
-                        height: Theme.size.badge
-                        Accessible.ignored: true
-
-                        ShapePath {
-                            strokeColor: Theme.colour.primaryText
-                            strokeWidth: Theme.border.hairline * 2
-                            fillColor: "transparent"
-                            capStyle: ShapePath.RoundCap
-                            joinStyle: ShapePath.RoundJoin
-
-                            PathSvg {
-                                path: "M11 9H19A2 2 0 0 1 21 11V19A2 2 0 0 1 19 21H11A2 2 0 0 1 9 19V11A2 2 0 0 1 11 9Z M5 15H4A1 1 0 0 1 3 14V4A1 1 0 0 1 4 3H14A1 1 0 0 1 15 4V5"
-                            }
-                        }
+                        kind: "copy"
+                        size: Theme.size.badge * 11 / 12
+                        colour: Theme.colour.primaryText
                     }
                     Keys.onReturnPressed: root.copyAll()
                     Keys.onSpacePressed: root.copyAll()
@@ -318,9 +317,13 @@ Item {
                 x: Theme.space.screenMargin
                 y: bar.height
                 width: parent.width - 2 * Theme.space.screenMargin
-                height: bottomEdge.y - Theme.space.tileGap - y
+                // The last rows stay clear of the banner and "Copied" that float over the bottom of the page: the list ends above
+                // them, so a row is never under something a screen reader reads after it.
+                height: bottomEdge.y - Theme.space.tileGap - y - (floating.height > 0 ? floating.height + Theme.space.tileGap : 0)
                 clip: true
                 reuseItems: true
+                // No rows beyond the edges: one under the banner would be read by a screen reader before the banner.
+                cacheBuffer: 0
                 boundsBehavior: Flickable.StopAtBounds
                 bottomMargin: Theme.space.sectionGap
                 model: root.timeline
@@ -328,6 +331,8 @@ Item {
                 header: Column {
                     width: list.width
                     spacing: Theme.space.sectionGap
+                    // The title sits 8 pt under the bar: the mock-ups have a 12 pt gap and a -4 pt margin on the title.
+                    topPadding: Theme.space.tileGap
                     bottomPadding: Theme.space.sectionGap
 
                     Text {
@@ -341,41 +346,30 @@ Item {
                         Accessible.name: text
                     }
 
-                    // A past log says how many entries it has and when it was shared.
-                    Column {
+                    // A past log says how many entries it has and when it was shared, on one line.
+                    Text {
+                        objectName: "reviewSubtitle"
                         visible: root.pastLog
                         width: parent.width
-
-                        Text {
-                            width: parent.width
-                            color: Theme.colour.reviewTextSecondary
-                            font: Theme.font.bodySmall.font
-                            text: root.timeline.titleText
-                            wrapMode: Text.WordWrap
-                            Accessible.role: Accessible.StaticText
-                            Accessible.name: text
-                        }
-
-                        Text {
-                            objectName: "reviewShared"
-                            visible: root.hasShared
-                            width: parent.width
-                            color: Theme.colour.reviewTextSecondary
-                            font: Theme.font.bodySmall.font
-                            text: qsTr("Shared %1 at %2").arg(root.sharedDateText).arg(root.sharedTimeText)
-                            wrapMode: Text.WordWrap
-                            Accessible.role: Accessible.StaticText
-                            Accessible.name: text
-                        }
+                        height: visible ? implicitHeight : 0
+                        color: Theme.colour.reviewTextSecondary
+                        font: Theme.font.bodySmall.font
+                        text: root.pastSubtitle
+                        wrapMode: Text.WordWrap
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: text
                     }
 
                     // The header block: the start values, as the export prints them.
                     Item {
                         id: headerCard
 
+                        // The hairline of the card takes a point of its own, as a CSS border does.
+                        readonly property real edge: root.outlined ? Theme.border.hairline : 0
+
                         objectName: "reviewHeader"
                         width: parent.width
-                        height: headerText.implicitHeight + 2 * Theme.space.sectionGap
+                        height: headerText.implicitHeight + 2 * (Theme.space.sectionGap + headerCard.edge)
                         activeFocusOnTab: !root.pastLog
                         Accessible.role: root.pastLog ? Accessible.StaticText : Accessible.Button
                         Accessible.name: headerText.text
@@ -390,7 +384,7 @@ Item {
                             anchors.fill: parent
                             radius: Theme.radius.groupedList
                             color: headerTap.pressed ? Theme.colour.primaryTint : Theme.colour.reviewSurface
-                            border.width: Theme.border.hairline
+                            border.width: headerCard.edge
                             border.color: Theme.colour.reviewDivider
                         }
 
@@ -398,11 +392,14 @@ Item {
                             id: headerText
 
                             objectName: "reviewHeaderText"
-                            x: Theme.space.rowPadding
-                            y: Theme.space.sectionGap
-                            width: parent.width - 2 * Theme.space.rowPadding
+                            x: Theme.space.rowPadding + headerCard.edge
+                            // Qt puts a fixed line at the top of its box and CSS in the middle: half the leading moves it.
+                            y: Theme.space.sectionGap + headerCard.edge + (Theme.font.headerBlock.linePitch - Theme.font.headerBlock.linePitch / Theme.font.headerBlock.lineRatio) / 2
+                            width: parent.width - 2 * (Theme.space.rowPadding + headerCard.edge)
                             color: Theme.colour.reviewText
-                            font: Theme.font.bodySmall.font
+                            font: Theme.font.headerBlock.font
+                            lineHeightMode: Text.FixedHeight
+                            lineHeight: Theme.font.headerBlock.linePitch
                             text: root.timeline.headerText
                             wrapMode: Text.WordWrap
                             Accessible.ignored: true
@@ -435,7 +432,7 @@ Item {
                         height: emptyColumn.height + 2 * Theme.space.sectionGap
                         radius: Theme.radius.groupedList
                         color: Theme.colour.reviewSurface
-                        border.width: Theme.border.hairline
+                        border.width: root.outlined ? Theme.border.hairline : 0
                         border.color: Theme.colour.reviewDivider
                         Accessible.role: Accessible.StaticText
                         Accessible.name: qsTr("No entries yet. The errors you log are listed here.")
@@ -475,6 +472,8 @@ Item {
                     required property string entryId
                     required property string timeText
                     required property string lineText
+                    required property string prefixText
+                    required property string restText
                     required property string fullLine
 
                     readonly property bool first: index === 0
@@ -483,6 +482,10 @@ Item {
                     objectName: "reviewRow"
                     width: ListView.view.width
                     height: swipe.height
+                    // A row in the pool of the list is not on the page: it is hidden, so that a screen reader and the checks
+                    // do not find it under the banner or past the edge.
+                    ListView.onPooled: line.visible = false
+                    ListView.onReused: line.visible = true
 
                     SwipeRow {
                         id: swipe
@@ -490,21 +493,27 @@ Item {
                         objectName: "reviewSwipe"
                         accessibleName: line.fullLine.length > 0 ? line.fullLine : line.lineText
                         surface: Theme.colour.reviewSurface
+                        dividerColour: Theme.colour.reviewDivider
+                        showDivider: !line.last
                         onActivated: root.openEdit(line.entryId)
                         onCopyRequested: root.copyRow(line.index)
                         onDeleteRequested: root.timeline.deleteEntry(line.entryId)
 
                         Item {
                             width: parent.width
-                            height: root.stackTimes ? timeLabel.implicitHeight + lineLabel.implicitHeight : Math.max(timeLabel.implicitHeight, lineLabel.implicitHeight)
+                            height: root.stackTimes ? timeLabel.height + lineLabel.implicitHeight : Math.max(timeLabel.height, lineLabel.implicitHeight)
 
                             Text {
                                 id: timeLabel
 
                                 objectName: "reviewTime"
                                 width: root.stackTimes ? parent.width : root.timeColumnWidth
+                                height: root.rowPitch
                                 color: Theme.colour.reviewTextSecondary
                                 font: Theme.font.timeColumn.font
+                                lineHeightMode: Text.FixedHeight
+                                lineHeight: root.rowPitch
+                                verticalAlignment: Text.AlignVCenter
                                 text: line.timeText
                                 Accessible.ignored: true
                             }
@@ -514,11 +523,15 @@ Item {
 
                                 objectName: "reviewLine"
                                 x: root.stackTimes ? 0 : timeLabel.width + Theme.space.sectionGap
-                                y: root.stackTimes ? timeLabel.implicitHeight : 0
+                                y: root.stackTimes ? timeLabel.height : 0
                                 width: parent.width - x
                                 color: Theme.colour.reviewText
-                                font: Theme.font.bodySmall.font
-                                text: line.lineText
+                                font: Theme.font.rowText.font
+                                lineHeightMode: Text.FixedHeight
+                                lineHeight: root.rowPitch
+                                // The prefix ("T|", "(Free Text)") is in the secondary colour, as the mock-ups have it.
+                                textFormat: line.prefixText.length > 0 ? Text.StyledText : Text.PlainText
+                                text: line.prefixText.length > 0 ? root.styledLine(line.prefixText, line.restText) : line.lineText
                                 wrapMode: Text.WordWrap
                                 Accessible.ignored: true
                             }
@@ -527,12 +540,14 @@ Item {
 
                     // The card's outline: the sides of every row, and the top of the first and the bottom of the last.
                     Rectangle {
+                        visible: root.outlined
                         width: Theme.border.hairline
                         height: parent.height
                         color: Theme.colour.reviewDivider
                         Accessible.ignored: true
                     }
                     Rectangle {
+                        visible: root.outlined
                         x: parent.width - width
                         width: Theme.border.hairline
                         height: parent.height
@@ -540,14 +555,14 @@ Item {
                         Accessible.ignored: true
                     }
                     Rectangle {
-                        visible: line.first
+                        visible: root.outlined && line.first
                         width: parent.width
                         height: Theme.border.hairline
                         color: Theme.colour.reviewDivider
                         Accessible.ignored: true
                     }
                     Rectangle {
-                        visible: line.last
+                        visible: root.outlined && line.last
                         y: parent.height - height
                         width: parent.width
                         height: Theme.border.hairline
@@ -555,23 +570,27 @@ Item {
                         Accessible.ignored: true
                     }
                     ReviewCorner {
+                        outlined: root.outlined
                         visible: line.first
                         atTop: true
                         atLeft: true
                     }
                     ReviewCorner {
+                        outlined: root.outlined
                         visible: line.first
                         x: parent.width - width
                         atTop: true
                         atLeft: false
                     }
                     ReviewCorner {
+                        outlined: root.outlined
                         visible: line.last
                         y: parent.height - height
                         atTop: false
                         atLeft: true
                     }
                     ReviewCorner {
+                        outlined: root.outlined
                         visible: line.last
                         x: parent.width - width
                         y: parent.height - height
@@ -646,6 +665,7 @@ Item {
                 x: Theme.space.screenMargin
                 y: parent.height - height - Math.max(0, root.bottomClearance - frame.bottomInset) - Theme.space.sectionGap
                 width: parent.width - 2 * Theme.space.screenMargin
+                iconKind: "share"
                 text: root.pastLog ? qsTr("Share log again") : qsTr("Share log")
                 onClicked: root.startShare()
             }
@@ -658,7 +678,26 @@ Item {
                 timeline: root.timeline
                 picker: root.picker
                 settings: root.settings
+            },
+            // The time of the entry, over the Edit entry sheet: declared after it, so that it stacks over it.
+            EditTimeSheet {
+                id: entryTimeSheet
+
+                edit: entryEditor
+                timeline: root.timeline
+                settings: root.settings
             }
         ]
     }
+
+    // Puts the sheets in the shell's layer, the Edit entry sheet first, so that the time sheet is over it.
+    function placeSheets(): void {
+        if (sheetLayer === null)
+            return;
+        entryEditor.parent = sheetLayer;
+        entryTimeSheet.parent = sheetLayer;
+    }
+
+    onSheetLayerChanged: placeSheets()
+    Component.onCompleted: placeSheets()
 }

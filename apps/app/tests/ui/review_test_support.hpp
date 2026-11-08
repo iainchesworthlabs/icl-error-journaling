@@ -38,6 +38,7 @@
 #include <QObject>
 #include <QQuickItem>
 #include <QString>
+#include <QTextDocumentFragment>
 #include <QVariant>
 #include <QVariantMap>
 #include <algorithm>
@@ -421,6 +422,20 @@ private:
     return out;
 }
 
+/// The words of a Text, whatever its format: a line with a prefix is StyledText (the prefix is in the secondary
+/// colour), and what a person reads is the text without its markup.
+[[nodiscard]] inline QString words_of(QQuickItem* item)
+{
+    if (item == nullptr)
+    {
+        return {};
+    }
+    const QString text = item->property("text").toString();
+    constexpr int STYLED_TEXT = 4; // Text.StyledText
+    return item->property("textFormat").toInt() == STYLED_TEXT ? QTextDocumentFragment::fromHtml(text).toPlainText()
+                                                               : text;
+}
+
 /// The rows of the timeline as the screen shows them: the time and the line, joined by a space.
 [[nodiscard]] inline std::vector<QString> row_lines(UiRig& rig)
 {
@@ -428,7 +443,7 @@ private:
     for (QQuickItem* delegate : delegates(rig))
     {
         out.push_back(text_in(rig, QStringLiteral("reviewTime"), delegate) + QLatin1Char(' ') +
-                      text_in(rig, QStringLiteral("reviewLine"), delegate));
+                      words_of(find_in(rig, QStringLiteral("reviewLine"), delegate)));
     }
     return out;
 }

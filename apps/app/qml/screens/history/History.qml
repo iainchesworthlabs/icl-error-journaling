@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Shapes
 import QtQuick.Controls.Basic
 import ErrorJournalingApp
 
@@ -24,7 +23,14 @@ import ErrorJournalingApp
 // model formats the time of the share only. A log is opened by its row and closed by Review's back control, once the page has
 // gone: the page keeps showing the log until its slide has ended.
 //
-// The screen fills the window and keeps `bottomClearance` free at the bottom for the tab bar, which the shell draws.
+// Layout (History, HistoryEmpty, DeleteLog): rows 60 pt high with the unit and site in 16/600 and "4 entries · v1.4.2" under
+// them (the model's `detailText`), the shared state as a check and "Shared 17:42" or a ring and "Not shared", then a thin
+// chevron; the separators run the full width of the card and the last row of a card has none. The delete alert names the date in
+// full ("Thu 5 Nov 2026", the model's `longDateText`).
+//
+// The screen fills the window and keeps `bottomClearance` free at the bottom for the tab bar, which the shell draws. The shell
+// sets `sheetLayer` to the layer of its own SheetHost, so that the delete alert, and the sheets of a past log's Review, cover
+// the tab bar as well; without it they stay in the screen's own SheetHost.
 Item {
     id: root
 
@@ -34,6 +40,8 @@ Item {
     required property var settings
     // What the shell's tab bar covers at the bottom of the window.
     property real bottomClearance: Theme.size.tabBarHeight
+    // The layer of the window's SheetHost, when the shell has one; null keeps the sheets in the screen's own.
+    property Item sheetLayer: null
 
     // Something was said to a screen reader that is not on a control: a log was deleted, or Review's "Copied".
     signal announced(string message)
@@ -55,6 +63,7 @@ Item {
     property string openedTitle
     property string openedSharedDate
     property string openedSharedTime
+    property string openedEntries
     // The timeline of the log that is open. It is kept after the log is closed, so that the page that is sliding away still
     // has a model to show.
     property var reviewTimeline: null
@@ -64,6 +73,8 @@ Item {
     property bool closingReview: false
     // The list has been read since the screen was shown.
     property bool loadedOnce: false
+    // The height of the title in the header of the list, for the empty state that sits below it.
+    property real titleHeight: 0
 
     // What the banner says, if anything.
     property string noticeTitle
@@ -123,10 +134,6 @@ Item {
         return qsTr("no unit or site");
     }
 
-    function entriesText(count: int): string {
-        return count === 1 ? qsTr("1 entry") : qsTr("%1 entries").arg(count);
-    }
-
     function openRow(logId: string, title: string): void {
         if (root.opening)
             return;
@@ -151,12 +158,12 @@ Item {
     }
 
     // A swipe on Delete: the model gives a token for a log that may be deleted, and nothing for one that may not.
-    function askDelete(logId: string, dateText: string, unit: string, location: string, count: int): void {
+    function askDelete(logId: string, longDate: string, unit: string, location: string, entries: string): void {
         const token = root.history.requestDelete(logId);
         if (token.length === 0)
             return;
         root.deleteToken = token;
-        root.deleteMessage = qsTr("%1, %2, %3. It is removed from this phone and can’t be brought back.").arg(dateText).arg(root.placeSentence(unit, location)).arg(root.entriesText(count));
+        root.deleteMessage = qsTr("%1, %2, %3. It is removed from this phone and can’t be brought back.").arg(longDate).arg(root.placeSentence(unit, location)).arg(entries);
         deleteAlert.open();
     }
 
@@ -266,6 +273,15 @@ Item {
         ]
     }
 
+    // The alert in the shell's layer, over the tab bar, when there is one.
+    Binding {
+        target: deleteAlert
+        property: "parent"
+        value: root.sheetLayer
+        when: root.sheetLayer !== null
+        restoreMode: Binding.RestoreNone
+    }
+
     // The page below, which the stack adopts.
     Item {
         id: listPage
@@ -302,14 +318,16 @@ Item {
                     required property string section
 
                     width: ListView.view.width
-                    height: headingText.implicitHeight + Theme.space.sectionGap + Theme.space.tileGap
+                    // 16 pt above the heading (8 under the card before it and 8 of its own margin) and 8 under it.
+                    readonly property real above: Theme.space.sectionGap + Theme.space.tileGap / 2
+                    height: headingText.implicitHeight + above + Theme.space.tileGap
 
                     Text {
                         id: headingText
 
                         objectName: "historySection"
                         x: Theme.space.tileGap / 2
-                        y: Theme.space.sectionGap
+                        y: heading.above
                         width: parent.width - 2 * x
                         color: Theme.colour.textSecondary
                         font: Theme.font.sectionLabel.font
@@ -321,10 +339,23 @@ Item {
                 }
 
                 header: Column {
+                    id: listHeader
+
                     width: list.width
                     spacing: Theme.space.tileGap
+                    // 4 pt under the subtitle, before the first heading.
+                    bottomPadding: Theme.space.tileGap / 2
+
+                    Binding {
+                        target: root
+                        property: "titleHeight"
+                        value: titleText.height
+                        restoreMode: Binding.RestoreNone
+                    }
 
                     Text {
+                        id: titleText
+
                         objectName: "historyTitle"
                         width: parent.width
                         color: Theme.colour.textPrimary
@@ -358,14 +389,18 @@ Item {
                     required property string unitText
                     required property string locationText
                     required property int entryCount
+                    required property string entriesText
+                    required property string detailText
+                    required property string longDateText
                     required property bool shared
                     required property string sharedAtText
+                    required property string sharedDateText
 
                     readonly property bool firstInSection: ListView.previousSection !== line.section
                     readonly property bool lastInSection: ListView.nextSection !== line.section
                     readonly property bool isOpened: line.logId === root.openedLogId
                     readonly property string statusText: line.shared ? qsTr("Shared %1").arg(line.sharedAtText) : qsTr("Not shared")
-                    readonly property string rowName: qsTr("%1, %2, %3, %4").arg(line.dateText).arg(root.placeTitle(line.unitText, line.locationText)).arg(root.entriesText(line.entryCount)).arg(line.statusText)
+                    readonly property string rowName: qsTr("%1, %2, %3, %4").arg(line.dateText).arg(root.placeTitle(line.unitText, line.locationText)).arg(line.entriesText).arg(line.statusText)
 
                     objectName: "historyRow"
                     width: ListView.view.width
@@ -375,7 +410,15 @@ Item {
                     Binding {
                         target: root
                         property: "openedSharedDate"
-                        value: line.shared ? line.section : ""
+                        value: line.shared ? line.sharedDateText : ""
+                        when: line.isOpened
+                        restoreMode: Binding.RestoreNone
+                    }
+
+                    Binding {
+                        target: root
+                        property: "openedEntries"
+                        value: line.entriesText
                         when: line.isOpened
                         restoreMode: Binding.RestoreNone
                     }
@@ -387,6 +430,9 @@ Item {
                         when: line.isOpened
                         restoreMode: Binding.RestoreNone
                     }
+
+                    // The gap between the texts, the status and the chevron: 10 pt.
+                    readonly property real gap: Theme.space.tileGap + Theme.border.hairline * 2
 
                     TextMetrics {
                         id: statusMetrics
@@ -402,9 +448,13 @@ Item {
                         accessibleName: line.rowName
                         copyText: qsTr("Share")
                         showCopy: root.share.available
+                        minimumHeight: Theme.size.rowHeightTall
+                        // 8 pt above and below the two lines of text, as the design has them.
+                        verticalPadding: Theme.space.tileGap
+                        showDivider: !line.lastInSection
                         onActivated: root.openRow(line.logId, line.dateText)
                         onCopyRequested: root.shareRow(line.logId)
-                        onDeleteRequested: root.askDelete(line.logId, line.dateText, line.unitText, line.locationText, line.entryCount)
+                        onDeleteRequested: root.askDelete(line.logId, line.longDateText, line.unitText, line.locationText, line.entriesText)
 
                         Item {
                             width: parent.width
@@ -414,17 +464,14 @@ Item {
                                 id: texts
 
                                 y: (parent.height - height) / 2
-                                width: Math.max(parent.width * 0.4, parent.width - statusRow.width - chevron.width - 2 * Theme.space.tileGap)
+                                width: Math.max(parent.width * 0.4, parent.width - statusRow.width - chevron.width - 2 * line.gap)
                                 spacing: Theme.border.hairline * 2
 
                                 Text {
                                     objectName: "historyPlace"
                                     width: parent.width
                                     color: Theme.colour.textPrimary
-                                    font: Qt.font({
-                                        "pixelSize": Theme.font.body.font.pixelSize,
-                                        "weight": Font.DemiBold
-                                    })
+                                    font: Theme.font.body.selectedFont
                                     text: root.placeTitle(line.unitText, line.locationText)
                                     wrapMode: Text.WordWrap
                                     Accessible.ignored: true
@@ -435,7 +482,7 @@ Item {
                                     width: parent.width
                                     color: Theme.colour.textSecondary
                                     font: Theme.font.caption.font
-                                    text: qsTr("%1 · %2").arg(line.dateText).arg(root.entriesText(line.entryCount))
+                                    text: line.detailText
                                     wrapMode: Text.WordWrap
                                     Accessible.ignored: true
                                 }
@@ -444,13 +491,15 @@ Item {
                             Row {
                                 id: statusRow
 
-                                x: parent.width - width - chevron.width - Theme.space.tileGap
+                                x: parent.width - width - chevron.width - line.gap
                                 y: (parent.height - height) / 2
                                 spacing: Theme.border.hairline * 4
 
-                                HistoryGlyph {
+                                Icon {
+                                    objectName: "historyStatusIcon"
                                     anchors.verticalCenter: parent.verticalCenter
-                                    path: line.shared ? "M5 12L10 17L20 7" : "M12 4A8 8 0 1 0 12 20A8 8 0 1 0 12 4Z"
+                                    kind: line.shared ? "check" : "ring"
+                                    size: Theme.size.badge * 2 / 3
                                     colour: line.shared ? Theme.colour.primaryText : Theme.colour.textSecondary
                                 }
 
@@ -469,12 +518,15 @@ Item {
                                 }
                             }
 
-                            HistoryGlyph {
+                            Icon {
                                 id: chevron
 
+                                objectName: "historyChevron"
                                 x: parent.width - width
                                 y: (parent.height - height) / 2
-                                path: "M9 6L15 12L9 18"
+                                kind: "chevronRight"
+                                size: Theme.size.badge * 7 / 12
+                                colour: Theme.colour.borderStrong
                             }
                         }
                     }
@@ -513,8 +565,9 @@ Item {
 
                 objectName: "historyPlaceholder"
                 visible: root.empty || (root.history.loading && list.count === 0)
-                x: Theme.space.screenMargin + Theme.space.rowPadding
-                y: list.y + Theme.size.minTouchTarget * 3
+                // 24 pt of padding inside the margin, and 150 pt under the title (HistoryEmpty).
+                x: 2 * Theme.space.screenMargin + Theme.space.tileGap
+                y: list.y + root.titleHeight + Theme.space.tileGap + 150 // literal-ok: the offset of HistoryEmpty.dc.html, which has no token
                 width: parent.width - 2 * x
                 spacing: Theme.space.sectionGap
 
@@ -528,23 +581,11 @@ Item {
                     color: Theme.colour.primaryTint
                     Accessible.ignored: true
 
-                    Shape {
+                    Icon {
                         anchors.centerIn: parent
-                        width: Theme.size.badge
-                        height: Theme.size.badge
-                        Accessible.ignored: true
-
-                        ShapePath {
-                            strokeColor: Theme.colour.primaryText
-                            strokeWidth: Theme.border.hairline * 2
-                            fillColor: "transparent"
-                            capStyle: ShapePath.RoundCap
-                            joinStyle: ShapePath.RoundJoin
-
-                            PathSvg {
-                                path: "M5 4H19A2 2 0 0 1 21 6V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V6A2 2 0 0 1 5 4Z M16 2V6M8 2V6M3 10H21"
-                            }
-                        }
+                        kind: "calendar"
+                        size: Theme.size.badge * 5 / 4
+                        colour: Theme.colour.primaryText
                     }
                 }
 
@@ -566,7 +607,9 @@ Item {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     color: Theme.colour.textSecondary
-                    font: Theme.font.bodySmall.font
+                    font: Theme.font.alertMessage.font
+                    lineHeightMode: Text.FixedHeight
+                    lineHeight: Theme.font.alertMessage.linePitch
                     text: qsTr("When you start a new day, yesterday’s log moves here, where you can open it, copy it or share it again.")
                     wrapMode: Text.WordWrap
                     Accessible.ignored: true
@@ -616,8 +659,10 @@ Item {
             pastLog: true
             logId: root.openedLogId
             backText: qsTr("History")
+            entriesText: root.openedEntries
             sharedDateText: root.openedSharedDate
             sharedTimeText: root.openedSharedTime
+            sheetLayer: root.sheetLayer
             bottomClearance: root.bottomClearance
             overrideInsets: root.overrideInsets
             overrideTop: root.overrideTop

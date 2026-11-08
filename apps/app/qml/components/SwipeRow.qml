@@ -19,9 +19,9 @@ import ErrorJournalingApp
 // swipe. They sit under the row and are activated where they are; the swipe is the shortcut for a finger.
 //
 // Layout: the content sits 13 pt from the top and the bottom (Theme.font.rowText, 15 pt with a 1.35 line height, is the
-// text of the design), and the row is at least `minimumHeight` (48; Theme.size.rowHeightTall, 60, for History). The
-// separator runs the full width of the card; a screen sets `showDivider: false` on the last row of a card. The action
-// labels are 14/600.
+// text of the design; `verticalPadding` sets another), and the row is at least `minimumHeight` (48; Theme.size.rowHeightTall,
+// 60, for History). The separator runs the full width of the card; a screen sets `showDivider: false` on the last row of a
+// card. The action labels are 14/600.
 //
 // The row slides with a drag along x. A short drag, or one that is mostly vertical, goes back (a vertical drag scrolls
 // the list that holds the row and does not open it). A tap on an open row closes it.
@@ -47,8 +47,8 @@ Item {
     readonly property bool pressed: tap.pressed
     // How far the row slides: the width of the actions.
     readonly property real revealWidth: (showCopy ? copyButton.width : 0) + deleteButton.width
-    // The padding above and below the content: 13 pt.
-    readonly property real verticalPadding: Theme.space.rowPadding - Theme.border.hairline
+    // The padding above and below the content: 13 pt; History sets 8 (its rows are 60 pt high, with 8 pt of padding).
+    property real verticalPadding: Theme.space.rowPadding - Theme.border.hairline
 
     signal activated
     signal copyRequested
