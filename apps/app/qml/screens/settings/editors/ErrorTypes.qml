@@ -9,8 +9,10 @@ import ErrorJournalingApp
 //
 //   Add an error type        opens the sheet with an empty name
 //   a row                    opens the sheet to rename the type or retire it
-//   Move earlier / later     moves the type one tile along the board (`moveBoardTile`). It is the way to reorder that
-//                            needs no drag, and the one a screen reader uses. A type that is not on the board has none.
+//   the handle               hold and drag it up or down to move the type along the board (`moveBoardTile`); a screen
+//                            reader gets the same from the handle's "increase" and "decrease" actions
+//   Move earlier / later     the arrows of the mock-up: they move the type one tile along the board. A type that is not on
+//                            the board has none.
 //
 // The colour of a type does not change when it moves (it follows from the type's place in the master list). A refusal
 // of the view model, or a save that failed, is shown in a banner at the top of the list. Every edit is one save.
@@ -20,11 +22,21 @@ SheetHost {
     id: root
 
     required property var settings
+    // The layer the shell presents sheets in, so that the sheet covers the tab bar as the mock-up has it. Null keeps the
+    // sheet in this page's own layer.
+    property Item sheetLayer: null
 
     // The last refusal of a move, or the last failed save; empty for none.
     property string problem: ""
 
     signal closeRequested
+
+    Binding {
+        target: editSheet
+        property: "parent"
+        value: root.sheetLayer
+        when: root.sheetLayer !== null
+    }
 
     Connections {
         function onWriteFailed(operation: string, message: string): void {
@@ -37,7 +49,7 @@ SheetHost {
     EditorPage {
         anchors.fill: parent
         title: qsTr("Error types")
-        leadingText: qsTr("Back")
+        leadingText: qsTr("Settings")
         leadingAccessibleName: qsTr("Back to Settings")
         trailingText: qsTr("Done")
         onLeadingTriggered: root.closeRequested()
@@ -52,12 +64,14 @@ SheetHost {
             contentHeight: column.height + Theme.space.screenMargin
             boundsBehavior: Flickable.StopAtBounds
 
+            // The gaps are the mock-up's own (ErrorTypes: 8 pt between the blocks and 8 more above a heading), so they are
+            // set item by item and the column adds none.
             Column {
                 id: column
 
                 x: Theme.space.screenMargin
                 width: flick.width - 2 * Theme.space.screenMargin
-                spacing: Theme.space.sectionGap
+                spacing: 0
 
                 Banner {
                     objectName: "problemBanner"
@@ -69,15 +83,26 @@ SheetHost {
                     onCloseRequested: root.problem = ""
                 }
 
+                Item {
+                    width: parent.width
+                    height: root.problem.length > 0 ? Theme.space.tileGap : 0
+                }
+
                 GroupedList {
                     width: parent.width
 
                     EditorRow {
                         objectName: "addRow"
                         action: true
+                        minimumHeight: Theme.size.listRowHeight
                         text: qsTr("Add an error type")
                         onActivated: editSheet.openForNew()
                     }
+                }
+
+                Item {
+                    width: parent.width
+                    height: Theme.space.tileGap * 2
                 }
 
                 GroupedList {
@@ -110,19 +135,33 @@ SheetHost {
 
                             objectName: "typeRow"
                             text: name
-                            detail: qsTr("Board tile %1").arg(boardPosition)
+                            // The place on the board is not drawn (the mock-up has one line a row), and a screen reader
+                            // still hears it.
+                            accessibleName: qsTr("%1, board tile %2").arg(name).arg(boardPosition)
                             swatchSlot: colourSlot
                             reorderable: true
+                            draggable: true
                             canMoveEarlier: boardPosition > 1
                             canMoveLater: boardPosition < Theme.tileSlots
                             onActivated: editSheet.openFor(typeId, name, colourSlot)
                             onMoveEarlier: root.problem = root.settings.moveBoardTile(boardPosition, boardPosition - 1)
                             onMoveLater: root.problem = root.settings.moveBoardTile(boardPosition, boardPosition + 1)
+                            onDragged: rows => {
+                                if (rows !== 0)
+                                    root.problem = root.settings.moveBoardTile(boardPosition, Math.max(1, Math.min(Theme.tileSlots, boardPosition + rows)));
+                            }
                         }
                     }
                 }
 
+                Item {
+                    width: parent.width
+                    height: otherGroup.visible ? Theme.space.tileGap * 2 : 0
+                }
+
                 GroupedList {
+                    id: otherGroup
+
                     objectName: "otherGroup"
                     width: parent.width
                     visible: otherRepeater.count > 0
@@ -146,19 +185,26 @@ SheetHost {
 
                             objectName: "typeRow"
                             text: name
-                            detail: qsTr("Not on the board")
+                            accessibleName: qsTr("%1, not on the board").arg(name)
                             swatchSlot: colourSlot
                             onActivated: editSheet.openFor(typeId, name, colourSlot)
                         }
                     }
                 }
 
+                Item {
+                    width: parent.width
+                    height: Theme.space.tileGap * 5 / 4
+                }
+
                 Text {
                     x: Theme.space.tileGap / 2
                     width: parent.width - 2 * x
                     color: Theme.colour.textSecondary
-                    font: Theme.font.caption.font
-                    text: qsTr("Use the arrows to move a type to another tile. The first %1 types fill the board. Each type keeps its colour.").arg(Theme.tileSlots)
+                    font: Theme.font.footnote.font
+                    lineHeightMode: Text.FixedHeight
+                    lineHeight: Theme.font.footnote.linePitch
+                    text: qsTr("Drag the handle, or use the arrows. The first %1 types fill the board in this order. Each type keeps its colour.").arg(Theme.tileSlots)
                     wrapMode: Text.WordWrap
                 }
             }

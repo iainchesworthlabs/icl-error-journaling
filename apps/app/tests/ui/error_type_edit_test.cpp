@@ -56,6 +56,14 @@ TEST_CASE("editor.error_types: the sheet for a type shows its name and keeps the
     // The third slot of the light palette: apricot.
     const QColor apricot(world.m_Ui.theme()->property("tileFillsLight").toList().at(2).toString());
     CHECK(swatch->property("color").value<QColor>() == apricot);
+    // The row names the colour, from the model: "Apricot", with the note under it.
+    CHECK(in_sheet(world, QStringLiteral("colourName"))->property("text").toString() == QStringLiteral("Apricot"));
+    CHECK(in_sheet(world, QStringLiteral("colourName"))->property("text").toString() == world.model().colourName(3));
+    // The retire button is a card at least 54 pt high, with its label centred.
+    QQuickItem* retire = in_sheet(world, QStringLiteral("retireRow"));
+    QQuickItem* label = in_sheet(world, QStringLiteral("retireLabel"));
+    CHECK(world.m_Ui.geometry(retire).height() >= 54.0);
+    CHECK(label->property("horizontalAlignment").toInt() == Qt::AlignHCenter);
 }
 
 TEST_CASE("editor.error_types: a refused rename or retire is shown in the sheet, which stays open", "[ui][editor]")

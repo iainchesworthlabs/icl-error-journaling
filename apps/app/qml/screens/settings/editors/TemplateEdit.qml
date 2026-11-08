@@ -31,8 +31,12 @@ EditorPage {
     // The message for the pattern now in the field; empty when the renderer accepts it.
     readonly property string patternMessage: root.settings.validatePattern(root.draftPattern)
     readonly property bool patternRefused: root.patternMessage.length > 0
-    // The note the pattern makes, with a sample answer for `{value}`.
-    readonly property string previewText: root.draftPattern.split("{value}").join(qsTr("an example"))
+    // The note line the pattern makes, as the Log screen would show it ("10:30 (Free Text) Played Morning Medley"): the
+    // model builds it, with its own sample time and answer, or says "Fix the pattern to see a preview.".
+    readonly property string previewText: root.settings.previewTemplateLine(root.draftPattern, "", root.sampleSeconds)
+
+    // The time of day the preview shows, 10:30, in seconds since midnight (the mock-up's sample).
+    readonly property int sampleSeconds: 37800
 
     signal closeRequested
 
@@ -47,7 +51,7 @@ EditorPage {
     }
 
     title: root.templateName.length > 0 ? root.templateName : qsTr("New template")
-    leadingText: qsTr("Back")
+    leadingText: qsTr("Note templates")
     leadingAccessibleName: qsTr("Back to Note templates")
     trailingText: qsTr("Save")
     trailingEnabled: !root.patternRefused && root.refusal.length === 0
@@ -63,12 +67,14 @@ EditorPage {
         contentHeight: column.height + Theme.space.screenMargin
         boundsBehavior: Flickable.StopAtBounds
 
+        // TemplateEdit: the mock-up's gaps (12 from the title to Name, 20 between the fields, 24 under the hint) are set item
+        // by item.
         Column {
             id: column
 
             x: Theme.space.screenMargin
             width: flick.width - 2 * Theme.space.screenMargin
-            spacing: Theme.space.sectionGap
+            spacing: 0
 
             Banner {
                 objectName: "refusalBanner"
@@ -80,8 +86,15 @@ EditorPage {
                 closable: false
             }
 
+            Item {
+                width: parent.width
+                height: root.refusal.length > 0 ? Theme.space.tileGap : Theme.space.tileGap / 2
+            }
+
             FormField {
                 objectName: "nameField"
+                compact: true
+                border: true
                 label: qsTr("Name")
                 text: root.draftName
                 inputMethodHints: Qt.ImhNoPredictiveText
@@ -91,19 +104,32 @@ EditorPage {
                 }
             }
 
+            Item {
+                width: parent.width
+                height: Theme.space.sectionGap + Theme.space.tileGap
+            }
+
             FormField {
                 objectName: "promptField"
+                compact: true
+                border: true
                 label: qsTr("Prompt")
                 text: root.draftPrompt
-                hint: qsTr("The question asked when the chip is tapped.")
                 onTextEdited: text => {
                     root.draftPrompt = text;
                     root.refusal = "";
                 }
             }
 
+            Item {
+                width: parent.width
+                height: Theme.space.sectionGap + Theme.space.tileGap
+            }
+
             FormField {
                 objectName: "patternField"
+                compact: true
+                border: true
                 label: qsTr("Output pattern")
                 text: root.draftPattern
                 hint: qsTr("{value} is replaced by what you type when you tap the chip.")
@@ -115,9 +141,30 @@ EditorPage {
                 }
             }
 
+            // 24 pt under the hint, then the heading and 16 pt to the card (the GroupedList heading is 6, so it is drawn here).
+            Item {
+                width: parent.width
+                height: Theme.space.sectionGap * 2
+            }
+
+            Text {
+                x: Theme.space.tileGap / 2
+                width: parent.width - 2 * x
+                color: Theme.colour.textSecondary
+                font: Theme.font.sectionLabel.font
+                text: qsTr("Preview").toLocaleUpperCase()
+                Accessible.role: Accessible.Heading
+                Accessible.name: qsTr("Preview")
+            }
+
+            Item {
+                width: parent.width
+                height: Theme.space.screenMargin
+            }
+
             GroupedList {
                 width: parent.width
-                title: qsTr("Preview")
+                Accessible.name: qsTr("Preview")
 
                 Item {
                     width: parent.width
@@ -131,8 +178,10 @@ EditorPage {
                         y: Theme.space.rowPadding
                         width: parent.width - 2 * Theme.space.rowPadding
                         color: root.patternRefused ? Theme.colour.textSecondary : Theme.colour.textPrimary
-                        font: Theme.font.bodySmall.font
-                        text: root.patternRefused ? qsTr("Fix the pattern to see a preview.") : root.previewText
+                        font: Theme.font.previewText.font
+                        lineHeightMode: Text.FixedHeight
+                        lineHeight: Theme.font.previewText.linePitch
+                        text: root.previewText
                         wrapMode: Text.WordWrap
                     }
                 }

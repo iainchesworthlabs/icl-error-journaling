@@ -441,6 +441,8 @@ Item {
 
         ErrorTypes {
             settings: root.settings
+            // The sheet of the editor covers the tab bar, as every sheet does.
+            sheetLayer: root.sheetLayer
             onCloseRequested: StackView.view.pop()
         }
     }
@@ -450,6 +452,8 @@ Item {
 
         Locations {
             settings: root.settings
+            // The sheet of the editor covers the tab bar, as every sheet does.
+            sheetLayer: root.sheetLayer
             onCloseRequested: StackView.view.pop()
         }
     }

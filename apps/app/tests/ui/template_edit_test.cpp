@@ -60,9 +60,13 @@ TEST_CASE("editor.templates: an existing template shows its name, prompt and pat
     CHECK(field_text(world, QStringLiteral("promptField")) == QStringLiteral("Which song?"));
     CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played {value}"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
-    CHECK(preview(world) == QStringLiteral("Played an example"));
+    // The model builds the note line as the Log screen shows it, with its own sample time and answer.
+    CHECK(preview(world) == QStringLiteral("10:30 (Free Text) Played Morning Medley"));
+    CHECK(preview(world) == world.model().previewTemplateLine(QStringLiteral("Played {value}"), QString(), 37800));
     CHECK(save_enabled(page));
     CHECK(shows_text(world, QStringLiteral("{value} is replaced by what you type when you tap the chip."), page));
+    // The prompt has no hint of its own: the mock-up shows none.
+    CHECK_FALSE(shows_text(world, QStringLiteral("The question asked when the chip is tapped."), page));
 }
 
 TEST_CASE("editor.templates: a pattern the model refuses shows its message, no preview, and Save is dimmed",
@@ -100,7 +104,7 @@ TEST_CASE("editor.templates: a pattern the model refuses shows its message, no p
     // A good pattern brings the preview back, while the person types.
     enter_text(world, QStringLiteral("patternField"), QStringLiteral("Heard {value} twice"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
-    CHECK(preview(world) == QStringLiteral("Heard an example twice"));
+    CHECK(preview(world) == QStringLiteral("10:30 (Free Text) Heard Morning Medley twice"));
     CHECK(save_enabled(page));
 }
 

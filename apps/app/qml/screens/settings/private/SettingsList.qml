@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
-import QtQml.Models
 import ErrorJournalingApp
 
 // The Settings list (Stage 4, package 4.12; PRF-01 to 07, 10): the miniature board on top of it and, under the board, the
@@ -25,7 +24,6 @@ SettingsPage {
     signal templatesRequested
     signal locationsRequested
     signal facilitatorRequested
-    signal unitPrefixRequested
     signal timeFormatRequested
     signal importExportRequested
     // A tile of the board is to get another type: its position (1 to 11) and the type it has now.
@@ -76,27 +74,9 @@ SettingsPage {
 
     title: qsTr("Settings")
     scrollable: !board.dragging
-
-    DelegateModel {
-        id: errorTypeRows
-
-        model: root.settings.errorTypes
-        delegate: Item {}
-    }
-
-    DelegateModel {
-        id: templateRows
-
-        model: root.settings.templates
-        delegate: Item {}
-    }
-
-    DelegateModel {
-        id: locationRows
-
-        model: root.settings.locations
-        delegate: Item {}
-    }
+    // BoardSettings: 8 pt above the title and 16 pt between it and "YOUR BOARD" (8 of them are the NavBar's own).
+    topGap: Theme.space.tileGap
+    bodyGap: Theme.space.tileGap
 
     Connections {
         target: root.settings
@@ -143,9 +123,10 @@ SettingsPage {
     Column {
         id: loaded
 
+        // The spacing is the design's own, item by item (BoardSettings, BoardLayoutSelected): the gaps are set below.
         width: parent.width
         visible: !root.loading
-        spacing: Theme.space.sectionGap
+        spacing: 0
 
         Text {
             x: Theme.space.tileGap / 2
@@ -157,6 +138,11 @@ SettingsPage {
             Accessible.ignored: true
         }
 
+        Item {
+            width: parent.width
+            height: Theme.space.tileGap
+        }
+
         MiniBoard {
             id: board
 
@@ -166,14 +152,28 @@ SettingsPage {
             onReplaceRequested: position => root.replaceRequested(position, board.tileItem(position - 1).typeId)
         }
 
+        // 10 pt under the resting board and 8 pt under the panel of a selected tile, as the two mock-ups have it.
+        Item {
+            width: parent.width
+            height: board.selectedPosition > 0 ? Theme.space.tileGap : Theme.space.tileGap * 5 / 4
+        }
+
         Text {
             objectName: "settingsBoardHint"
             x: Theme.space.tileGap / 2
             width: parent.width - 2 * x
             color: Theme.colour.textSecondary
-            font: Theme.font.caption.font
+            font: Theme.font.footnote.font
+            lineHeightMode: Text.FixedHeight
+            lineHeight: Theme.font.footnote.linePitch
             text: board.selectedPosition > 0 ? qsTr("Tap a tile to select it. Hold and drag to move it, or use the buttons. Each type keeps its colour.") : qsTr("Hold and drag a tile to move it. Tap a tile to swap in a different error type. Each type keeps its colour.")
             wrapMode: Text.WordWrap
+        }
+
+        // 18 pt under the hint of the resting board and 8 pt under the hint of a selected tile.
+        Item {
+            width: parent.width
+            height: board.selectedPosition > 0 ? Theme.space.tileGap : Theme.space.sectionGap * 3 / 2
         }
 
         GroupedList {
@@ -182,7 +182,7 @@ SettingsPage {
             ListRow {
                 objectName: "settingsErrorTypes"
                 text: qsTr("Error types")
-                value: errorTypeRows.count.toString()
+                minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.errorTypesRequested()
             }
@@ -190,7 +190,7 @@ SettingsPage {
             ListRow {
                 objectName: "settingsTemplates"
                 text: qsTr("Note templates")
-                value: templateRows.count.toString()
+                minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.templatesRequested()
             }
@@ -198,7 +198,7 @@ SettingsPage {
             ListRow {
                 objectName: "settingsLocations"
                 text: qsTr("Locations")
-                value: locationRows.count.toString()
+                minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.locationsRequested()
             }
@@ -207,6 +207,7 @@ SettingsPage {
                 objectName: "settingsFacilitator"
                 text: qsTr("Facilitator")
                 value: root.settings.facilitator
+                minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.facilitatorRequested()
             }
@@ -215,6 +216,7 @@ SettingsPage {
                 objectName: "settingsTimeFormat"
                 text: qsTr("Time format")
                 value: root.timeFormatText(root.settings.timeStyle, root.settings.timeSeconds)
+                minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.timeFormatRequested()
             }
@@ -222,29 +224,9 @@ SettingsPage {
             ListRow {
                 objectName: "settingsImportExport"
                 text: qsTr("Import or export setup")
+                minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.importExportRequested()
-            }
-        }
-
-        GroupedList {
-            title: qsTr("In the shared log")
-            width: parent.width
-
-            ListRow {
-                objectName: "settingsUnitPrefix"
-                text: qsTr("Unit prefix")
-                value: root.settings.unitPrefix
-                showChevron: true
-                onActivated: root.unitPrefixRequested()
-            }
-
-            SettingsSwitchRow {
-                objectName: "settingsTotals"
-                text: qsTr("Include a totals line")
-                description: qsTr("Adds the number of each error type under the log.")
-                checked: root.settings.includeTotals
-                onToggled: wanted => root.show(root.settings.setIncludeTotals(wanted))
             }
         }
     }

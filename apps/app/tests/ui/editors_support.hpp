@@ -132,6 +132,26 @@ struct World
     return nullptr;
 }
 
+/// What VoiceOver does when it adjusts a control (a swipe up or down): the "increase" or "decrease" action of the
+/// item's accessible interface. False when the item has no such action.
+[[nodiscard]] inline bool accessible_adjust(QQuickItem* item, bool increase)
+{
+    QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(item);
+    if (iface == nullptr)
+    {
+        return false;
+    }
+    QAccessibleActionInterface* actions = iface->actionInterface();
+    const QString action =
+        increase ? QAccessibleActionInterface::increaseAction() : QAccessibleActionInterface::decreaseAction();
+    if (actions == nullptr || !actions->actionNames().contains(action))
+    {
+        return false;
+    }
+    actions->doAction(action);
+    return true;
+}
+
 /// `found`, which has to be there: the test fails here and goes no further when it is not, so the caller may use it.
 [[nodiscard]] inline QQuickItem* require(QQuickItem* found)
 {

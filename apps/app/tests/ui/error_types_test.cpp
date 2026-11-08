@@ -32,7 +32,7 @@ QStringList names(World& world)
 
 } // namespace
 
-TEST_CASE("editor.error_types: the types are listed in board order with their tile, and a type off the board is apart",
+TEST_CASE("editor.error_types: the types are listed in board order, one line each, and a type off the board is apart",
           "[ui][editor]")
 {
     World world;
@@ -47,8 +47,12 @@ TEST_CASE("editor.error_types: the types are listed in board order with their ti
 
     QQuickItem* first = row_with(world, TYPES, QStringLiteral("Wrong Response"));
     REQUIRE(first != nullptr);
-    CHECK(first->property("detail").toString() == QStringLiteral("Board tile 1"));
+    // The mock-up has one line a row: no "Board tile 1" under the name. A screen reader still hears the place.
+    CHECK(first->property("detail").toString().isEmpty());
+    CHECK(first->property("accessibleName").toString() == QStringLiteral("Wrong Response, board tile 1"));
     CHECK(first->property("swatchSlot").toInt() == 1);
+    CHECK(first->property("draggable").toBool());
+    CHECK(child(first, QStringLiteral("editorHandle"))->isVisible());
     CHECK(item(world, QStringLiteral("otherGroup"))->isVisible() == false);
 
     // A twelfth type is on no tile: it is listed under its own heading, after the board's.
@@ -60,8 +64,10 @@ TEST_CASE("editor.error_types: the types are listed in board order with their ti
     CHECK(item(world, QStringLiteral("otherGroup"))->isVisible());
     QQuickItem* twelfth = row_with(world, TYPES, QStringLiteral("Echo Delay"));
     REQUIRE(twelfth != nullptr);
-    CHECK(twelfth->property("detail").toString() == QStringLiteral("Not on the board"));
+    CHECK(twelfth->property("detail").toString().isEmpty());
+    CHECK(twelfth->property("accessibleName").toString() == QStringLiteral("Echo Delay, not on the board"));
     CHECK(child(twelfth, QStringLiteral("editorMoveEarlier"))->isVisible() == false);
+    CHECK(child(twelfth, QStringLiteral("editorHandle"))->isVisible() == false);
 }
 
 TEST_CASE("editor.error_types: adding a type asks for a name, refuses a duplicate or empty one inline, then saves",
@@ -146,7 +152,7 @@ TEST_CASE("editor.error_types: a row opens its name for renaming, and Cancel cha
     QQuickItem* renamed = row_with(world, TYPES, QStringLiteral("Mute Lag"));
     REQUIRE(renamed != nullptr);
     CHECK(row_with(world, TYPES, QStringLiteral("Mute Delay")) == nullptr);
-    CHECK(renamed->property("detail").toString() == QStringLiteral("Board tile 8"));
+    CHECK(renamed->property("accessibleName").toString() == QStringLiteral("Mute Lag, board tile 8"));
     CHECK(renamed->property("swatchSlot").toInt() == 8);
 }
 
@@ -193,7 +199,7 @@ TEST_CASE("editor.error_types: the arrows move a type along the board and its co
     CHECK(moved.at(1) == QStringLiteral("Wrong Response"));
     QQuickItem* row = row_with(world, TYPES, QStringLiteral("Wrong Response"));
     REQUIRE(row != nullptr);
-    CHECK(row->property("detail").toString() == QStringLiteral("Board tile 2"));
+    CHECK(row->property("accessibleName").toString() == QStringLiteral("Wrong Response, board tile 2"));
     CHECK(row->property("swatchSlot").toInt() == 1);
 
     // And back again, with the arrow of that row.
@@ -258,7 +264,8 @@ TEST_CASE("editor.voiceover: rows and buttons have names, the sheet is a dialog,
 
     QQuickItem* row = row_with(world, TYPES, QStringLiteral("Wrong Response"));
     REQUIRE(row != nullptr);
-    CHECK(name_of(label_of(row)) == QStringLiteral("Wrong Response, Board tile 1"));
+    CHECK(name_of(label_of(row)) == QStringLiteral("Wrong Response, board tile 1"));
+    CHECK(name_of(find_item(row, QStringLiteral("editorHandle"))) == QStringLiteral("Reorder Wrong Response"));
     CHECK(name_of(find_item(row, QStringLiteral("editorMoveLater"))) == QStringLiteral("Move Wrong Response later"));
     CHECK(name_of(find_item(row, QStringLiteral("editorMoveEarlier"))) ==
           QStringLiteral("Move Wrong Response earlier"));
@@ -273,4 +280,55 @@ TEST_CASE("editor.voiceover: rows and buttons have names, the sheet is a dialog,
     open_row(world, QStringLiteral("Wrong Response"));
     CHECK(name_of(panel(world)) == QStringLiteral("Error type"));
     expect_clean(sheet_violations(world));
+}
+
+TEST_CASE("editor.error_types: the handle moves a type by a drag, and by the accessibility actions of VoiceOver",
+          "[ui][editor]")
+{
+    World world;
+    world.load("ErrorTypes");
+    world.m_Ui.layout();
+
+    // A drag of the handle down by more than the list is long: the move stops at the last tile. (The rig works in the
+    // handle's own coordinates and the row follows the finger, so the distance of a longer drag is not exact.)
+    QQuickItem* first = row_with(world, TYPES, QStringLiteral("Wrong Response"));
+    QQuickItem* handle = find_item(first, QStringLiteral("editorHandle"));
+    REQUIRE(handle != nullptr);
+    const double row_height = world.m_Ui.geometry(first).height();
+    const QPointF from(handle->width() / 2, handle->height() / 2);
+    world.m_Ui.drag(handle, from, from + QPointF(0, row_height * 12), 12);
+    world.settle();
+    world.m_Ui.layout();
+    CHECK(names(world).back() == QStringLiteral("Wrong Response"));
+    CHECK(names(world).front() == QStringLiteral("Sequence Out of Order"));
+
+    // A short drag moves nothing.
+    const QStringList before = names(world);
+    QQuickItem* last = row_with(world, TYPES, QStringLiteral("Wrong Response"));
+    QQuickItem* last_handle = find_item(last, QStringLiteral("editorHandle"));
+    world.m_Ui.drag(last_handle, from, from + QPointF(0, row_height / 4), 6);
+    world.settle();
+    world.m_Ui.layout();
+    CHECK(names(world) == before);
+
+    // "Decrease" is Move earlier and "increase" is Move later, and a type at an end does not move past it.
+    REQUIRE(accessible_adjust(find_item(last, QStringLiteral("editorHandle")), true));
+    world.settle();
+    world.m_Ui.layout();
+    CHECK(names(world) == before);
+    REQUIRE(accessible_adjust(find_item(last, QStringLiteral("editorHandle")), false));
+    world.settle();
+    world.m_Ui.layout();
+    CHECK(names(world).at(9) == QStringLiteral("Wrong Response"));
+    QQuickItem* moved = row_with(world, TYPES, QStringLiteral("Wrong Response"));
+    REQUIRE(accessible_adjust(find_item(moved, QStringLiteral("editorHandle")), true));
+    world.settle();
+    world.m_Ui.layout();
+    CHECK(names(world) == before);
+
+    QQuickItem* top = row_with(world, TYPES, before.front());
+    REQUIRE(accessible_adjust(find_item(top, QStringLiteral("editorHandle")), false));
+    world.settle();
+    world.m_Ui.layout();
+    CHECK(names(world) == before);
 }
