@@ -176,12 +176,9 @@ Sheet {
     Item {
         anchors.fill: parent
 
-        // The sheet's content area starts where the design's bar starts, 21 pt under the top (the grabber and its 8 pt of
-        // padding), and the bar's `inSheet` padding of 8 pt above the row is that padding: the bar sits 8 pt up.
         NavBar {
             id: nav
 
-            y: -Theme.space.tileGap
             width: parent.width
             inSheet: true
             title: qsTr("Software version")
@@ -203,7 +200,7 @@ Sheet {
             }
 
             objectName: "versionScroller"
-            y: nav.y + nav.height
+            y: nav.height
             width: parent.width
             height: Math.max(0, footer.y - y - Theme.space.sectionGap)
             clip: true
