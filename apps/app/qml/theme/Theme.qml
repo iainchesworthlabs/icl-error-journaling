@@ -475,10 +475,11 @@ QtObject {
             textScale: set.textScale
             dpi: set.dpi
         }
-        // The labels of a SwipeRow's actions.
+        // The labels of a SwipeRow's actions: chrome of a fixed width, so capped at 1.3.
         readonly property FontRole actionLabel: FontRole {
             basePt: 14
             weight: 600
+            scaleCap: 1.3
             textScale: set.textScale
             dpi: set.dpi
         }

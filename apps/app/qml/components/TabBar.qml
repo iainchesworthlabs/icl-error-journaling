@@ -11,7 +11,9 @@ import ErrorJournalingApp
 // of the indicator. Place the bar with anchors at the bottom of the window and leave its height alone.
 //
 // The selected tab is shown by its colour and by a heavier label (600 against 500), as in the mock-ups, so colour is never
-// the only cue. The icon sits 8 pt below the 1 pt top border, at every text size, and the label is 3 pt under it. To a screen reader the bar is a tab list and each tab a selectable page tab. `skeleton` draws neutral shapes with no
+// the only cue. The icon sits 8 pt below the 1 pt top border and the label 3 pt under it; at a large text size the padding
+// gives way only as far as it must to keep the label above the inset. To a screen reader the bar is a tab list and each
+// tab a selectable page tab. `skeleton` draws neutral shapes with no
 // text for the launch screen, and takes no input.
 Item {
     id: root
@@ -101,8 +103,9 @@ Item {
                 required property var modelData
                 readonly property bool current: tab.index === root.currentIndex
                 readonly property color tint: tab.current ? Theme.colour.primaryText : Theme.colour.textSecondary
-                // The icon is 8 pt below the 1 pt border, whatever the label's size.
-                readonly property real topPadding: Theme.border.hairline + Theme.space.tileGap
+                // The icon is 8 pt below the 1 pt border. Only when a large label would otherwise reach the inset does the
+                // padding give way, as far as it must.
+                readonly property real topPadding: Math.max(Theme.border.hairline, Math.min(Theme.border.hairline + Theme.space.tileGap, root.contentHeight - Theme.size.badge - labelGap - label.height))
                 // The gap between the icon and the label.
                 readonly property real labelGap: Theme.border.otherWidth * 2
 
