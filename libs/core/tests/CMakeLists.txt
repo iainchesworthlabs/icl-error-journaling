@@ -53,4 +53,4 @@ target_compile_definitions(ej_core_tests
 
 # Every Catch2 case becomes a CTest test carrying the `unit` label (the labels are
 # unit, integration, system, ui, perf and fuzz).
-catch_discover_tests(ej_core_tests PROPERTIES LABELS unit)
+ej_discover_tests(ej_core_tests PROPERTIES LABELS unit)

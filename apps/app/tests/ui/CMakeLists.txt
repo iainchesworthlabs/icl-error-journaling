@@ -58,10 +58,10 @@ if(ICL_SANITIZERS MATCHES "thread")
     set(ej_ui_test_properties ENVIRONMENT "TSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tools/sanitizers/tsan.supp")
 endif()
 # Cases tagged [perf] have the label perf and run in the last phase; the others are ui.
-catch_discover_tests(ej_ui_tests
+ej_discover_tests(ej_ui_tests
     TEST_SPEC "~[perf]"
     PROPERTIES LABELS ui TIMEOUT 120 ${ej_ui_test_properties})
-catch_discover_tests(ej_ui_tests
+ej_discover_tests(ej_ui_tests
     TEST_SPEC "[perf]"
     TEST_SUFFIX " (perf)"
     PROPERTIES LABELS perf TIMEOUT 120 ${ej_ui_test_properties})

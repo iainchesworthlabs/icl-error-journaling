@@ -25,4 +25,4 @@ icl_platform_sources(ej_kill_driver DIR "${CMAKE_CURRENT_SOURCE_DIR}/platform")
 # The driver starts the worker by file name, so the worker is built whenever the driver is.
 add_dependencies(ej_kill_driver ej_kill_worker)
 
-catch_discover_tests(ej_kill_driver PROPERTIES LABELS system TIMEOUT 900)
+ej_discover_tests(ej_kill_driver PROPERTIES LABELS system TIMEOUT 900)

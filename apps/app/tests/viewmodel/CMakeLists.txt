@@ -40,7 +40,7 @@ function(ej_add_viewmodel_tests target label)
     add_executable(${target} ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/support/test_main.cpp")
     target_link_libraries(${target}
         PRIVATE ej_viewmodel_test_support Qt6::Test Catch2::Catch2 icl::warnings icl::coverage)
-    catch_discover_tests(${target} PROPERTIES LABELS ${label} ${ej_viewmodel_test_properties})
+    ej_discover_tests(${target} PROPERTIES LABELS ${label} ${ej_viewmodel_test_properties})
 endfunction()
 
 file(GLOB ej_viewmodel_unit_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp")
