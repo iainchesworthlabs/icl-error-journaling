@@ -64,8 +64,8 @@ sets `CFBundleVersion`. The identifier is `ERROR_JOURNALING_APPLICATION_ID` in `
 #### Reading the timings on a device
 
 The exit-gate figures (cold start to a usable board, tap to haptic) are read from the application itself, on a TestFlight
-build: there is no Mac, so no Instruments. Show the timing readout (five quick taps on the version text of the spike
-window) to see `launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms`. The tap figure stops at the haptic call
+build: there is no Mac, so no Instruments. Open the Settings tab, scroll to the end, and tap the small version text at the foot of
+the list five times quickly (five more hide it) to see `launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms`. The tap figure stops at the haptic call
 returning and does not include the actuator. The same launch figure goes to the system log as a `launch:` line, and the
 marks go to Points of Interest, for anyone with a Mac and Console or Instruments.
 
