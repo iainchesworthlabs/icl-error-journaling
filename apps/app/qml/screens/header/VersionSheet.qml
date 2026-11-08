@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
+import QtQuick.Controls.Basic
 import ErrorJournalingApp
 
 // The Software version sheet (Stage 4, package 4.9; design `ChangeVersion.dc.html`, HDR-07 and DAY-03): what happened to
@@ -14,9 +15,13 @@ import ErrorJournalingApp
 // same arguments `changeHeader` takes, and nothing here builds or edits it. The new value is checked as it is typed with
 // `session.validateHeaderValue`, and the button stays disabled until the value is valid and different.
 //
+// Layout (ChangeVersion): the question in 15 pt, the two choices, then one card with From, To (the new value typed at the
+// right of its row) and Time (the time as a chip), then the line the log will get in a monospace face. The time is chosen
+// on a second, shorter sheet (VersionTimeSheet) that the screen declares after this one: the Time row sets `timeOpen`.
+//
 // Open it with `show()`, which reads the version in force and the time now. The sheet closes itself when the change is
 // accepted; Cancel, the grabber and Escape leave everything as it was. A refusal that only the model can know (an
-// instant the clocks skip, or a value equal to the one in force at that instant) is shown under the new value.
+// instant the clocks skip, or a value equal to the one in force at that instant) is shown under the card.
 Sheet {
     id: root
 
@@ -75,16 +80,110 @@ Sheet {
             refusal = changing && previewText.length > 0 ? previewText : qsTr("The version was not saved. Please try again.");
     }
 
+    // The gaps of the design: 10 between the question and the cards and between the cards, 22 before each group.
+    readonly property real gapSmall: Theme.space.tileGap + Theme.border.hairline * 2
+    readonly property real gapGroup: Theme.space.screenMargin + Theme.space.tileGap - Theme.border.hairline * 2
+
+    // The new value as a row of the card: the label at the left and the value typed at the right (not a FormField, which is
+    // a field of its own with a heading and a message). Its field is `formInput`, as a FormField's is.
+    component ToRow: Item {
+        id: toRow
+
+        required property string label
+        property string text: ""
+        property string placeholderText: ""
+        property string errorText: ""
+        readonly property bool hasFocus: input.activeFocus
+        readonly property bool isLast: Positioner.isLastItem
+
+        signal textEdited(string text)
+
+        function focusField(): void {
+            input.forceActiveFocus();
+        }
+
+        width: parent ? parent.width : implicitWidth
+        implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
+        implicitHeight: Math.max(Theme.size.rowHeightForm, toLabel.height + Theme.space.sectionGap, input.implicitHeight)
+        onTextChanged: {
+            if (input.text !== text)
+                input.text = text;
+        }
+        Component.onCompleted: input.text = text
+
+        TextMetrics {
+            id: labelMetrics
+
+            font: Theme.font.body.font
+            text: toRow.label
+        }
+
+        // The field fills the row, so that a tap anywhere on it is a tap on the field (44 pt at least), and its text sits at
+        // the right, after the label. A label that is wider than half the row wraps, at the largest text sizes.
+        TextField {
+            id: input
+
+            objectName: "formInput"
+            anchors.fill: parent
+            leftPadding: toLabel.x + toLabel.width + Theme.space.tileGap
+            rightPadding: Theme.space.rowPadding
+            topPadding: Theme.space.tileGap
+            bottomPadding: Theme.space.tileGap
+            horizontalAlignment: TextInput.AlignRight
+            verticalAlignment: TextInput.AlignVCenter
+            color: Theme.colour.textPrimary
+            font: Theme.font.fieldValue.font
+            placeholderText: toRow.placeholderText
+            placeholderTextColor: Theme.colour.textPlaceholder
+            selectionColor: Theme.colour.primaryTint
+            selectedTextColor: Theme.colour.textPrimary
+            inputMethodHints: Qt.ImhFormattedNumbersOnly
+            background: null
+
+            Accessible.role: Accessible.EditableText
+            Accessible.name: toRow.label
+            Accessible.description: toRow.errorText
+
+            onTextEdited: toRow.textEdited(text)
+        }
+
+        Text {
+            id: toLabel
+
+            x: Theme.space.rowPadding
+            y: (parent.height - height) / 2
+            width: Math.min(Math.ceil(labelMetrics.advanceWidth) + Theme.border.hairline, toRow.width / 2 - Theme.space.rowPadding)
+            color: Theme.colour.textPrimary
+            font: Theme.font.body.font
+            text: toRow.label
+            wrapMode: Text.WordWrap
+            Accessible.ignored: true
+        }
+
+        Rectangle {
+            anchors.bottom: parent.bottom
+            width: parent.width
+            height: Theme.border.hairline
+            visible: !toRow.isLast
+            color: Theme.colour.divider
+        }
+    }
+
     accessibleName: qsTr("Software version")
     detent: Sheet.Large
+    onClosed: root.timeOpen = false
 
     Item {
         anchors.fill: parent
 
+        // The sheet's content area starts where the design's bar starts, 21 pt under the top (the grabber and its 8 pt of
+        // padding), and the bar's `inSheet` padding of 8 pt above the row is that padding: the bar sits 8 pt up.
         NavBar {
             id: nav
 
+            y: -Theme.space.tileGap
             width: parent.width
+            inSheet: true
             title: qsTr("Software version")
             leadingText: qsTr("Cancel")
             onLeadingTriggered: root.close()
@@ -104,9 +203,9 @@ Sheet {
             }
 
             objectName: "versionScroller"
-            y: nav.height
+            y: nav.y + nav.height
             width: parent.width
-            height: Math.max(0, footer.y - nav.height)
+            height: Math.max(0, footer.y - y - Theme.space.sectionGap)
             clip: true
             contentWidth: width
             contentHeight: column.height + Theme.space.sectionGap
@@ -117,36 +216,50 @@ Sheet {
 
                 x: Theme.space.screenMargin
                 width: parent.width - 2 * Theme.space.screenMargin
-                spacing: Theme.space.sectionGap
+                spacing: 0
 
                 Text {
+                    objectName: "versionQuestion"
                     width: parent.width
                     leftPadding: Theme.space.tileGap / 2
+                    bottomPadding: root.gapSmall
                     color: Theme.colour.textSecondary
-                    font: Theme.font.sectionLabel.font
-                    text: qsTr("What happened?").toLocaleUpperCase()
+                    font: Theme.font.bodySmall.font
+                    text: qsTr("What happened?")
                     wrapMode: Text.WordWrap
                     Accessible.role: Accessible.Heading
-                    Accessible.name: qsTr("What happened?")
+                    Accessible.name: text
                 }
 
-                ChoiceCard {
-                    objectName: "versionChanged"
-                    title: qsTr("It changed during the day")
-                    description: qsTr("For example an over-the-air update. Adds a timed entry to the log.")
-                    selected: root.changing
-                    onClicked: root.changing = true
+                Column {
+                    width: parent.width
+                    spacing: root.gapSmall
+
+                    ChoiceCard {
+                        objectName: "versionChanged"
+                        title: qsTr("It changed during the day")
+                        description: qsTr("For example an over-the-air update. Adds a timed entry to the log.")
+                        selected: root.changing
+                        onClicked: root.changing = true
+                    }
+
+                    ChoiceCard {
+                        objectName: "versionTypo"
+                        title: qsTr("I typed it wrong")
+                        description: qsTr("Corrects the value. Nothing is added to the log.")
+                        selected: !root.changing
+                        onClicked: root.changing = false
+                    }
                 }
 
-                ChoiceCard {
-                    objectName: "versionTypo"
-                    title: qsTr("I typed it wrong")
-                    description: qsTr("Corrects the value. Nothing is added to the log.")
-                    selected: !root.changing
-                    onClicked: root.changing = false
+                Item {
+                    width: parent.width
+                    height: root.gapGroup
                 }
 
+                // From, To and Time in one card, as the design has them.
                 GroupedList {
+                    objectName: "versionGroup"
                     width: parent.width
                     surface: Theme.colour.surfaceRaised
 
@@ -156,59 +269,81 @@ Sheet {
                         value: root.fromText
                         tappable: false
                     }
-                }
 
-                FormField {
-                    id: toField
+                    ToRow {
+                        id: toField
 
-                    objectName: "versionTo"
-                    label: root.changing ? qsTr("To") : qsTr("Correct version")
-                    text: root.toText
-                    placeholderText: qsTr("For example 1.5.0")
-                    inputMethodHints: Qt.ImhFormattedNumbersOnly
-                    errorText: root.toError.length > 0 ? root.toError : root.refusal
-                    valid: root.canSave
-                    onTextEdited: text => {
-                        root.toText = text;
-                        root.refusal = "";
+                        objectName: "versionTo"
+                        label: root.changing ? qsTr("To") : qsTr("Correct version")
+                        text: root.toText
+                        placeholderText: qsTr("For example 1.5.0")
+                        errorText: root.toError.length > 0 ? root.toError : root.refusal
+                        onTextEdited: text => {
+                            root.toText = text;
+                            root.refusal = "";
+                        }
+                        onHasFocusChanged: {
+                            if (hasFocus)
+                                scroller.reveal(toField);
+                        }
                     }
-                    onHasFocusChanged: {
-                        if (hasFocus)
-                            scroller.reveal(toField);
-                    }
-                }
-
-                GroupedList {
-                    visible: root.changing
-                    width: parent.width
-                    surface: Theme.colour.surfaceRaised
 
                     ListRow {
                         objectName: "versionTime"
+                        visible: root.changing
                         text: qsTr("Time")
                         value: root.timeValue
+                        valueChip: true
                         accessibleName: qsTr("Time, %1. Opens the time picker.").arg(root.timeValue)
-                        onActivated: root.timeOpen = !root.timeOpen
+                        onActivated: root.timeOpen = true
                     }
                 }
 
-                TimeTumbler {
-                    objectName: "versionTumbler"
-                    visible: root.changing && root.timeOpen
-                    height: visible ? implicitHeight : 0
-                    localSeconds: root.timeSeconds
-                    twelveHour: root.settings.timeStyle === "12h"
-                    showSeconds: root.settings.timeSeconds
-                    onTimeEdited: seconds => {
-                        root.timeSeconds = seconds;
-                        root.refusal = "";
+                // The refusal of the value, or of the change, under the card: a warning sign and the model's words.
+                Item {
+                    objectName: "versionRefusal"
+                    readonly property string message: root.toError.length > 0 ? root.toError : root.refusal
+
+                    visible: message.length > 0
+                    width: parent.width
+                    height: visible ? refusalText.height + Theme.space.tileGap : 0
+
+                    Icon {
+                        x: Theme.space.tileGap / 2
+                        y: Theme.space.tileGap + Math.max(0, (Theme.font.fieldMessage.linePitch - height) / 2)
+                        size: Theme.size.badge * 2 / 3
+                        kind: "warning"
+                        colour: Theme.colour.destructive
                     }
+
+                    Text {
+                        id: refusalText
+
+                        x: Theme.space.tileGap / 2 + Theme.size.badge * 2 / 3 + Theme.border.otherWidth * 4
+                        y: Theme.space.tileGap
+                        width: parent.width - x
+                        color: Theme.colour.textPrimary
+                        font: Theme.font.fieldMessage.font
+                        lineHeightMode: Text.FixedHeight
+                        lineHeight: Theme.font.fieldMessage.linePitch
+                        text: parent.message
+                        wrapMode: Text.WordWrap
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: text
+                    }
+                }
+
+                Item {
+                    visible: root.previewText.length > 0
+                    width: parent.width
+                    height: visible ? root.gapGroup : 0
                 }
 
                 Text {
                     visible: root.previewText.length > 0
                     width: parent.width
                     leftPadding: Theme.space.tileGap / 2
+                    bottomPadding: Theme.space.tileGap
                     color: Theme.colour.textSecondary
                     font: Theme.font.sectionLabel.font
                     text: qsTr("Adds to your log").toLocaleUpperCase()
@@ -236,7 +371,7 @@ Sheet {
                         y: Theme.space.rowPadding
                         width: parent.width - 2 * Theme.space.rowPadding
                         color: root.unchanged || root.refusal.length > 0 ? Theme.colour.destructive : Theme.colour.textPrimary
-                        font: Theme.font.timeColumn.font
+                        font: Theme.font.monospace.font
                         text: root.previewText
                         wrapMode: Text.WordWrap
                         Accessible.ignored: true
@@ -247,10 +382,13 @@ Sheet {
                     objectName: "versionExplainer"
                     visible: root.previewText.length > 0 && !root.unchanged
                     width: parent.width
+                    topPadding: root.gapSmall
                     leftPadding: Theme.space.tileGap / 2
                     rightPadding: Theme.space.tileGap / 2
                     color: Theme.colour.textSecondary
-                    font: Theme.font.caption.font
+                    font: Theme.font.footnote.font
+                    lineHeightMode: Text.FixedHeight
+                    lineHeight: Theme.font.footnote.linePitch
                     text: qsTr("Entries before %1 keep %2. Entries after it use %3.").arg(root.timeLabel).arg(root.fromText).arg(root.trimmedTo)
                     wrapMode: Text.WordWrap
                     Accessible.role: Accessible.StaticText
@@ -259,12 +397,13 @@ Sheet {
             }
         }
 
+        // The button ends at the bottom of the sheet's content area, 34 pt above the window's edge.
         Item {
             id: footer
 
             y: parent.height - height
             width: parent.width
-            height: saveButton.height + Theme.space.sectionGap
+            height: saveButton.height
 
             PrimaryButton {
                 id: saveButton

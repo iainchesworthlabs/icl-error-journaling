@@ -26,9 +26,30 @@ TEST_CASE("import.errors: every message is a row, in the order of the file", "[u
 
     CHECK(row_names(world, QStringLiteral("messageRow")) == MESSAGES);
     CHECK(item(world, QStringLiteral("messageGroup"))->property("title").toString() == QStringLiteral("3 problems"));
-    CHECK(shows_text(world, QStringLiteral("This file can't be imported")));
+    CHECK(shows_text(world, QStringLiteral("This file can’t be imported")));
     CHECK(
         shows_text(world, QStringLiteral("Nothing was changed. Fix these in the file, in this order, and try again.")));
+}
+
+TEST_CASE("import.errors: each message has the warning sign, and the buttons follow the design", "[ui][import]")
+{
+    World world;
+    world.load("ImportErrors", {{"messages", MESSAGES}});
+    world.m_Ui.layout();
+
+    // The design: a red warning triangle at the start of every row, rows 52 pt high at least, and the file icon on the
+    // primary button, with Cancel a plain button under it.
+    const std::vector<QQuickItem*> rows = items(world, QStringLiteral("messageRow"));
+    REQUIRE(rows.size() == 3);
+    for (QQuickItem* row : rows)
+    {
+        CHECK(row->property("leadingIcon").toString() == QStringLiteral("warning"));
+        CHECK(row->property("minimumHeight").toDouble() == 52.0);
+        CHECK(row->height() >= 52.0);
+    }
+    CHECK(item(world, QStringLiteral("chooseAnotherButton"))->property("iconKind").toString() ==
+          QStringLiteral("file"));
+    CHECK(item(world, QStringLiteral("cancelButton"))->property("variant").toInt() == 2);
 }
 
 TEST_CASE("import.errors: one problem is said in the singular, and a long message wraps whole", "[ui][import]")

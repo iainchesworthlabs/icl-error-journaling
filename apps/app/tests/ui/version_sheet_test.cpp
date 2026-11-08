@@ -20,11 +20,22 @@ using ej::test::RepositoryOp;
 namespace
 {
 
-// The version sheet over a log that has UNIT-27, North Site and version 1.4.2, opened and finished presenting.
-QQuickItem* open_sheet(UiRig& rig, HeaderWorld& world)
+// The version sheet over a log that has UNIT-27, North Site and version 1.4.2, opened and finished presenting. By
+// default the sheet is loaded alone. `in_screen` loads Today's details and opens its sheet, so that the time sheet that
+// stacks over it is there too (the checks of reading order cannot tell the page under a sheet from the sheet).
+QQuickItem* open_sheet(UiRig& rig, HeaderWorld& world, bool in_screen = false)
 {
     world.attach(rig);
-    QQuickItem* sheet = rig.load(QStringLiteral("VersionSheet"), world.models());
+    QQuickItem* sheet = nullptr;
+    if (in_screen)
+    {
+        REQUIRE(rig.load(QStringLiteral("HeaderScreen"), world.models()) != nullptr);
+        sheet = need(rig, QStringLiteral("versionSheet"));
+    }
+    else
+    {
+        sheet = rig.load(QStringLiteral("VersionSheet"), world.models());
+    }
     INFO(rig.errors().toStdString());
     REQUIRE(sheet != nullptr);
     REQUIRE(QMetaObject::invokeMethod(sheet, "show"));
@@ -32,6 +43,17 @@ QQuickItem* open_sheet(UiRig& rig, HeaderWorld& world)
     rig.settle();
     REQUIRE(sheet->property("isOpen").toBool());
     return sheet;
+}
+
+/// The time sheet over the version sheet, opened by the Time row and finished presenting.
+QQuickItem* open_time_sheet(UiRig& rig)
+{
+    QQuickItem* time_sheet = need(rig, QStringLiteral("versionTimeSheet"));
+    rig.tap(need(rig, QStringLiteral("versionTime")));
+    play(rig, 500);
+    rig.settle();
+    REQUIRE(time_sheet->property("isOpen").toBool());
+    return time_sheet;
 }
 
 QString preview_of(UiRig& rig)
@@ -113,15 +135,52 @@ TEST_CASE("version.change: \"It changed during the day\" records one entry at th
     CHECK(world.session().version_text() == QStringLiteral("1.5.0"));
 }
 
-TEST_CASE("version.change: the time is the one the tumbler gives, and it may be earlier than now",
-          "[ui][version_sheet]")
+TEST_CASE("version.layout: From, To and Time are one card, and the question is plain text", "[ui][version_sheet]")
 {
     HeaderWorld world(true);
     UiRig rig;
     QQuickItem* sheet = open_sheet(rig, world);
     retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
 
-    rig.tap(need(rig, QStringLiteral("versionTime")));
+    // "What happened?" in 15 pt, in the words of the design and not in capitals.
+    QQuickItem* question = need(rig, QStringLiteral("versionQuestion"));
+    CHECK(question->property("text").toString() == QStringLiteral("What happened?"));
+    CHECK(question->property("font").value<QFont>().pixelSize() == 15);
+
+    // From, To and Time are rows of one group.
+    QQuickItem* group = need(rig, QStringLiteral("versionGroup"));
+    for (const char* name : {"versionFrom", "versionTo", "versionTime"})
+    {
+        QQuickItem* row = need(rig, QString::fromLatin1(name));
+        bool inside = false;
+        for (QQuickItem* up = row->parentItem(); up != nullptr; up = up->parentItem())
+        {
+            inside = inside || up == group;
+        }
+        CHECK(inside);
+    }
+    // The value is typed at the right of its row, in 18/600, and the time is a chip.
+    const QFont typed = input_of(rig, need(rig, QStringLiteral("versionTo")))->property("font").value<QFont>();
+    CHECK(typed.pixelSize() == 18);
+    CHECK(typed.weight() == QFont::DemiBold);
+    CHECK(need(rig, QStringLiteral("versionTime"))->property("valueChip").toBool());
+    CHECK(rig.geometry(need(rig, QStringLiteral("versionTo"))).height() >= 52.0);
+
+    // The button ends at the bottom of the sheet's content area.
+    QQuickItem* save = need(rig, QStringLiteral("versionSave"));
+    CHECK(save->height() >= 54.0);
+    CHECK(rig.geometry(save).bottom() == rig.geometry(need(rig, QStringLiteral("sheetContent"), sheet)).bottom());
+}
+
+TEST_CASE("version.change: the time is the one the tumbler gives, and it may be earlier than now",
+          "[ui][version_sheet]")
+{
+    HeaderWorld world(true);
+    UiRig rig;
+    QQuickItem* sheet = open_sheet(rig, world, true);
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+
+    QQuickItem* time_sheet = open_time_sheet(rig);
     QQuickItem* tumbler = need(rig, QStringLiteral("versionTumbler"));
     REQUIRE(tumbler != nullptr);
     CHECK(tumbler->isVisible());
@@ -132,6 +191,12 @@ TEST_CASE("version.change: the time is the one the tumbler gives, and it may be 
     hours->setProperty("currentIndex", 7);
     play(rig, 64);
     CHECK(sheet->property("timeSeconds").toInt() / 3600 == 7);
+
+    // Done keeps the time, and the version sheet is under it as it was.
+    rig.tap(need(rig, QStringLiteral("navTrailing"), time_sheet));
+    play(rig, 500);
+    CHECK_FALSE(time_sheet->property("isOpen").toBool());
+    CHECK(sheet->property("isOpen").toBool());
     CHECK_FALSE(
         need(rig, QStringLiteral("versionTime"))->property("value").toString().startsWith(QStringLiteral("Now")));
 
@@ -244,7 +309,7 @@ TEST_CASE("version.time_default: the time starts at now", "[ui][version_sheet]")
 {
     HeaderWorld world(true);
     UiRig rig;
-    QQuickItem* sheet = open_sheet(rig, world);
+    QQuickItem* sheet = open_sheet(rig, world, true);
 
     const int now = world.session().now_local_seconds();
     CHECK(sheet->property("timeSeconds").toInt() == now);
@@ -252,15 +317,17 @@ TEST_CASE("version.time_default: the time starts at now", "[ui][version_sheet]")
     CHECK(need(rig, QStringLiteral("versionTime"))->property("value").toString() ==
           QStringLiteral("Now · %1").arg(clock));
 
-    // The tumbler opens on that time.
-    rig.tap(need(rig, QStringLiteral("versionTime")));
+    // The tumbler opens on that time, on a sheet of its own.
+    QQuickItem* time_sheet = open_time_sheet(rig);
     QQuickItem* tumbler = need(rig, QStringLiteral("versionTumbler"));
     REQUIRE(tumbler != nullptr);
     CHECK(tumbler->isVisible());
     CHECK(tumbler->property("localSeconds").toInt() == now);
+    rig.tap(need(rig, QStringLiteral("navTrailing"), time_sheet));
+    play(rig, 500);
 
     // Opening the sheet again reads the clock again.
-    rig.tap(need(rig, QStringLiteral("navLeading")));
+    rig.tap(need(rig, QStringLiteral("navLeading"), sheet));
     play(rig, 500);
     CHECK_FALSE(sheet->property("isOpen").toBool());
     world.clock().advance(std::chrono::minutes(10));
@@ -277,7 +344,7 @@ TEST_CASE("version.cancel: Cancel leaves the log as it was", "[ui][version_sheet
     QQuickItem* sheet = open_sheet(rig, world);
     retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
 
-    rig.tap(need(rig, QStringLiteral("navLeading")));
+    rig.tap(need(rig, QStringLiteral("navLeading"), sheet));
     play(rig, 500);
     CHECK_FALSE(sheet->property("isOpen").toBool());
     CHECK(world.session().version_text() == QStringLiteral("1.4.2"));
@@ -298,13 +365,10 @@ TEST_CASE("version.a11y: names, targets, order and text scale, in light and dark
         expect_clean(check_everything(rig));
     }
 
-    SECTION("dark, with the time picker open")
+    SECTION("dark")
     {
         rig.set_dark(true);
         retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
-        rig.tap(need(rig, QStringLiteral("versionTime")));
-        rig.settle();
-        rig.layout();
         expect_clean(check_everything(rig));
     }
 

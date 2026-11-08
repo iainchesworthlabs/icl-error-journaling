@@ -27,6 +27,29 @@ TEST_CASE("setup.first_launch: the page asks for the facilitator and the prefix 
     CHECK(field_text(world, QStringLiteral("prefixField")).isEmpty());
     CHECK(shows_text(world, QStringLiteral("About you")));
     CHECK(shows_text(world, QStringLiteral("Error types, locations and note templates are added in Settings.")));
+
+    // The line under the prefix is the model's own (`unitPrefixHint`), and the two fields are the design's 48 pt ones
+    // with a hairline border at rest.
+    CHECK(item(world, QStringLiteral("prefixField"))->property("hint").toString() == world.model().unit_prefix_hint());
+    CHECK(shows_text(world, world.model().unit_prefix_hint()));
+    for (const char* name : {"facilitatorField", "prefixField"})
+    {
+        CHECK(item(world, QString::fromLatin1(name))->property("compact").toBool());
+        CHECK(item(world, QString::fromLatin1(name))->property("border").toBool());
+    }
+}
+
+TEST_CASE("setup.first_launch: the Continue button and its line end at the bottom of the window", "[ui][setup]")
+{
+    World world(Start::FIRST_LAUNCH);
+    world.load("FirstLaunchManual");
+    world.m_Ui.layout();
+
+    QQuickItem* button = item(world, QStringLiteral("continueButton"));
+    CHECK(button->height() >= 54.0);
+    QQuickItem* column = button->parentItem();
+    REQUIRE(column != nullptr);
+    CHECK(column->mapToItem(world.m_Ui.root(), QPointF(0, 0)).y() + column->height() == world.m_Ui.root()->height());
 }
 
 TEST_CASE("setup.first_launch: one value alone is held in memory and the other is asked for", "[ui][setup]")

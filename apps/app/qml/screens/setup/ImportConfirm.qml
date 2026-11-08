@@ -24,7 +24,7 @@ EditorPage {
 
     title: qsTr("Import this setup?")
     leadingText: qsTr("Cancel")
-    leadingBack: false
+    leadingBack: true
     onLeadingTriggered: root.cancelRequested()
 
     Flickable {
@@ -44,11 +44,13 @@ EditorPage {
 
             x: Theme.space.screenMargin
             width: flick.width - 2 * Theme.space.screenMargin
-            spacing: Theme.space.sectionGap
+            // 10 pt between the parts, and 22 under the line that names the file (the 12 pt margin and the gap).
+            spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
             Text {
                 objectName: "fromText"
                 width: parent.width
+                bottomPadding: Theme.space.sectionGap
                 visible: root.fileName.length > 0
                 color: Theme.colour.textSecondary
                 font: Theme.font.bodySmall.font
@@ -63,6 +65,7 @@ EditorPage {
                     objectName: "errorTypesRow"
                     text: qsTr("Error types")
                     value: String(root.errorTypeCount)
+                    valueInset: Theme.space.tileGap
                     tappable: false
                 }
 
@@ -70,6 +73,7 @@ EditorPage {
                     objectName: "locationsRow"
                     text: qsTr("Locations")
                     value: String(root.locationCount)
+                    valueInset: Theme.space.tileGap
                     tappable: false
                 }
 
@@ -77,6 +81,7 @@ EditorPage {
                     objectName: "templatesRow"
                     text: qsTr("Note templates")
                     value: String(root.templateCount)
+                    valueInset: Theme.space.tileGap
                     tappable: false
                 }
 
@@ -84,6 +89,7 @@ EditorPage {
                     objectName: "preferencesRow"
                     text: qsTr("Preferences")
                     value: qsTr("Included")
+                    valueInset: Theme.space.tileGap
                     tappable: false
                 }
             }
@@ -94,7 +100,7 @@ EditorPage {
                 tone: root.replacing ? Banner.Warning : Banner.Information
                 closable: false
                 title: root.replacing ? qsTr("This replaces your current setup") : qsTr("This becomes your setup")
-                message: root.replacing ? qsTr("Your board, locations, templates and preferences are swapped for the ones in the file. Past logs aren't touched.") : qsTr("Your board, locations, templates and preferences are taken from the file.")
+                message: root.replacing ? qsTr("Your board, locations, templates and preferences are swapped for the ones in the file. Past logs aren’t touched.") : qsTr("Your board, locations, templates and preferences are taken from the file.")
             }
         }
     }
@@ -107,8 +113,9 @@ EditorPage {
         anchors.bottom: parent.bottom
         anchors.leftMargin: Theme.space.screenMargin
         anchors.rightMargin: Theme.space.screenMargin
-        anchors.bottomMargin: Theme.space.sectionGap
-        spacing: Theme.space.tileGap
+        anchors.bottomMargin: 0
+        // 10 pt between the buttons, the last one ending at the bottom of the safe area.
+        spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
         Banner {
             objectName: "problemBanner"
@@ -127,9 +134,10 @@ EditorPage {
             onClicked: root.replaceRequested()
         }
 
-        TextButton {
+        PrimaryButton {
             objectName: "cancelButton"
             width: parent.width
+            variant: PrimaryButton.Plain
             text: qsTr("Cancel")
             onClicked: root.cancelRequested()
         }

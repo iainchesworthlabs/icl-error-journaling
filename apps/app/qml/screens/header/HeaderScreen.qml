@@ -11,16 +11,23 @@ import ErrorJournalingApp
 //                     with `session.validateHeaderValue`, and a valid one is saved with `session.correctHeader`
 //   location          the configured locations as a list of choices, and Other with a text field
 //   software version  a field checked the same way. A first fill, and a typo, are a Correct (HDR-07); a version that
-//                     changed during the day is a Change, which the Software version sheet records
+//                     changed during the day is a Change, which the Software version sheet records. The design draws no row
+//                     for it, so the sheet opens from the check mark of the version field (its `accessory`), which is a
+//                     button, named "The version changed during the day", while the field shows the version in force
 //
 // Nothing here blocks logging (HDR-06): "Start logging" only closes the screen, and an empty or refused field is left as
 // it was. The screen holds what is typed, and the model holds what is saved; a value the model refuses is never sent.
 //
 // The last row, "Start a new log for another unit or site" (decision 8), asks first, because it archives the open log: the
-// alert says how many entries the log has (`session.liveEntryCount`) and then `session.startNewLog()` runs.
+// alert says how many entries the log has (`session.liveEntryCount`), and that the log has not been shared while
+// `session.unshared`, with "Share this log first" (`share.shareOpenLog()`; the alert comes back when the share has ended,
+// without the button once the share is recorded). Then `session.startNewLog()` runs.
 //
-// The screen is a SheetHost, so the Software version sheet and the alert cover it, and it needs a window. The shell
-// hands it the models and listens to `closeRequested`.
+// The title is a large one that collapses to the compact bar once the page has scrolled (HeaderNewLogRow): the page
+// scrolls under the bar, which draws its own background, and `nav.scrollPosition` is how far it has gone.
+//
+// The screen is a SheetHost, so the Software version sheet, its time sheet and the alert cover it, and it needs a window.
+// The shell hands it the models and listens to `closeRequested`.
 SheetHost {
     id: root
 
@@ -28,6 +35,8 @@ SheetHost {
     required property var settings
     // For the time of the version sheet (`formatLocalSeconds`); the screen does not use it itself.
     required property var timeline
+    // The ShareService, for "Share this log first"; null where the screen has none (a test), and the button is not offered.
+    property var share: null
 
     // "Log" or "Start logging" was pressed: the shell leaves this screen.
     signal closeRequested
@@ -68,16 +77,21 @@ SheetHost {
             return qsTr("%1 at %2").arg(unit).arg(place);
         if (unit.length > 0 || place.length > 0)
             return unit.length > 0 ? unit : place;
-        return qsTr("Today's log");
+        return qsTr("Today’s log");
     }
-    readonly property string newLogMessage: qsTr("%1 has %2. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator)
+    readonly property bool canShareFirst: session.unshared && share !== null && share.available
+    readonly property string newLogMessage: session.unshared ? qsTr("%1 has %2 and hasn’t been shared. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator) : qsTr("%1 has %2. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator)
     // The field being typed in, kept in view above the keyboard.
     property Item activeField: null
+    // The height of the collapsed bar: its row and the divider under it.
+    readonly property real compactBar: Theme.size.minTouchTarget + Theme.border.hairline
+    // The height of the bar as it is at rest, large: the page leaves that room at the top (`topMargin`) and scrolls under the
+    // bar, whether the bar is large or collapsed. It follows the bar while the bar is large.
+    property real restBarHeight: 0
 
     // The digits of the unit number in force: the model gives "UNIT-27" and the screen shows the prefix apart.
     function unitDigits(): string {
-        const text = session.unitText;
-        return text.startsWith(unitLead) ? text.slice(unitLead.length) : text;
+        return session.unitDigits;
     }
 
     // Saves `text` as the value of a field when the model accepts it and it is not what was saved already.
@@ -159,16 +173,22 @@ SheetHost {
         session.correctHeader("location", locationId);
     }
 
-    // Scrolls so that the field being typed in is not under the keyboard.
+    // Scrolls so that the field being typed in is not under the keyboard, nor under the bar. The page scrolls under the bar,
+    // and `contentY` is -topMargin at rest, so a position is a content coordinate and the bar covers the top `nav.height` of
+    // what is shown. The bar is collapsed (compact height) as soon as the page has scrolled.
     function reveal(item: Item): void {
         if (item === null)
             return;
-        const top = item.mapToItem(column, 0, 0).y;
+        const top = item.mapToItem(scroller.contentItem, 0, 0).y;
         const bottom = top + item.height + Theme.space.sectionGap;
-        if (top < scroller.contentY)
-            scroller.contentY = Math.max(0, top - Theme.space.sectionGap);
-        else if (bottom > scroller.contentY + scroller.height)
-            scroller.contentY = Math.min(Math.max(0, scroller.contentHeight - scroller.height), bottom - scroller.height);
+        const restY = -scroller.topMargin;
+        const shownTop = scroller.contentY + nav.height;
+        if (top - Theme.space.sectionGap < shownTop) {
+            const target = top - Theme.space.sectionGap - compactBar;
+            scroller.contentY = target <= restY ? restY : target;
+        } else if (bottom > scroller.contentY + scroller.height) {
+            scroller.contentY = Math.min(Math.max(restY, scroller.contentHeight - scroller.height), bottom - scroller.height);
+        }
     }
 
     function fieldFocusChanged(field: Item, focused: bool): void {
@@ -190,7 +210,19 @@ SheetHost {
     }
 
     onKeyboardHeightChanged: Qt.callLater(() => root.reveal(root.activeField))
-    Component.onCompleted: refresh(true)
+    Component.onCompleted: {
+        root.restBarHeight = nav.implicitHeight;
+        refresh(true);
+    }
+
+    Connections {
+        function onImplicitHeightChanged(): void {
+            if (!nav.collapsed)
+                root.restBarHeight = nav.implicitHeight;
+        }
+
+        target: nav
+    }
 
     Connections {
         target: root.session
@@ -227,12 +259,24 @@ SheetHost {
         overrideTop: root.overrideTop
         overrideBottom: root.overrideBottom
 
+        // The page scrolls under the bar, so the bar has a background of the screen's colour behind it.
+        Rectangle {
+            z: 1
+            width: parent.width
+            height: nav.height
+            color: Theme.colour.background
+            Accessible.ignored: true
+        }
+
         NavBar {
             id: nav
 
+            objectName: "headerNav"
+            z: 2
             width: parent.width
-            title: qsTr("Today's details")
+            title: qsTr("Today’s details")
             large: true
+            scrollPosition: scroller.contentY + scroller.topMargin
             leadingText: qsTr("Log")
             leadingAccessibleName: qsTr("Back to Log")
             leadingBack: true
@@ -243,21 +287,30 @@ SheetHost {
             id: scroller
 
             objectName: "headerScroller"
-            y: nav.height
             width: parent.width
             // Down to the foot bar, or to the keyboard when that is up and the bar is hidden.
-            height: Math.max(0, (footer.visible ? footer.y : parent.height - Math.max(0, root.keyboardHeight - frame.bottomInset)) - nav.height)
+            height: Math.max(0, footer.visible ? footer.y : parent.height - Math.max(0, root.keyboardHeight - frame.bottomInset))
             clip: true
+            topMargin: root.restBarHeight
             contentWidth: width
             contentHeight: column.height + Theme.space.sectionGap
             boundsBehavior: Flickable.StopAtBounds
+            // The page rests with its top under the bar, which is `topMargin` when it is not scrolled; a margin that changes (the
+            // text size, a line that wraps) moves a page that is at rest with it.
+            property real restMargin: 0
+
+            onTopMarginChanged: {
+                if (contentY <= -restMargin + Theme.border.hairline)
+                    contentY = -topMargin;
+                restMargin = topMargin;
+            }
 
             Column {
                 id: column
 
                 x: Theme.space.screenMargin
                 width: parent.width - 2 * Theme.space.screenMargin
-                spacing: Theme.space.sectionGap
+                spacing: Theme.space.sectionGap + Theme.space.tileGap
 
                 Text {
                     width: parent.width
@@ -294,9 +347,9 @@ SheetHost {
                     label: qsTr("%1 number").arg(root.settings.unitPrefix)
                     prefixText: root.unitLead
                     text: root.unitDraft
+                    valueFont: Theme.font.fieldValueLarge.font
                     hint: qsTr("Type the number only.")
                     errorText: root.unitError
-                    valid: root.unitDraft.length > 0 && root.unitError.length === 0
                     inputMethodHints: Qt.ImhDigitsOnly
                     onTextEdited: text => {
                         root.unitDraft = text;
@@ -367,10 +420,14 @@ SheetHost {
                     objectName: "headerVersion"
                     label: qsTr("Software version")
                     text: root.versionDraft
+                    valueFont: Theme.font.fieldValueLarge.font
                     placeholderText: qsTr("For example 1.4.2")
                     hint: qsTr("Format 1.4.2 – numbers only.")
                     errorText: root.versionError
                     valid: root.versionDraft.length > 0 && root.versionError.length === 0
+                    // The check mark is the way to the Software version sheet while the field shows the version in force.
+                    accessoryName: root.session.versionText.length > 0 && root.versionDraft === root.session.versionText ? qsTr("The version changed during the day") : ""
+                    onAccessoryTriggered: versionSheet.show()
                     inputMethodHints: Qt.ImhFormattedNumbersOnly
                     onTextEdited: text => {
                         root.versionDraft = text;
@@ -380,29 +437,30 @@ SheetHost {
                     onHasFocusChanged: root.fieldFocusChanged(versionField, hasFocus)
                 }
 
-                GroupedList {
-                    visible: root.session.versionText.length > 0
+                // The new-log group sits 8 pt further from the version field than the other groups (HeaderNewLogRow).
+                Item {
                     width: parent.width
+                    height: newLogGroup.height + Theme.space.tileGap
 
-                    ListRow {
-                        objectName: "headerChangeVersion"
-                        text: qsTr("The version changed during the day")
-                        showChevron: true
-                        onActivated: versionSheet.show()
-                    }
-                }
+                    GroupedList {
+                        id: newLogGroup
 
-                GroupedList {
-                    objectName: "headerNewLog"
-                    width: parent.width
-                    title: qsTr("Another unit or site")
-                    footer: qsTr("Keeps today's log in History and opens an empty one. Only the facilitator carries over.")
+                        objectName: "headerNewLog"
+                        y: Theme.space.tileGap
+                        width: parent.width
+                        title: qsTr("Another unit or site")
+                        footer: qsTr("Keeps today’s log in History and opens an empty one. Only the facilitator carries over.")
 
-                    ListRow {
-                        objectName: "headerNewLogRow"
-                        text: qsTr("Start a new log for another unit or site")
-                        showChevron: true
-                        onActivated: newLogAlert.open()
+                        ListRow {
+                            objectName: "headerNewLogRow"
+                            text: qsTr("Start a new log for another unit or site")
+                            leadingIcon: "plus"
+                            leadingIconStroke: Theme.border.hairline * 2.2
+                            labelColour: Theme.colour.primaryText
+                            minimumHeight: Theme.size.rowHeightAction
+                            showChevron: true
+                            onActivated: newLogAlert.open()
+                        }
                     }
                 }
             }
@@ -411,10 +469,20 @@ SheetHost {
         Item {
             id: footer
 
+            // The button and its note are 10 pt apart, and the note ends at the bottom of the safe area.
+            readonly property real noteGap: Theme.space.tileGap + Theme.border.hairline * 2
+
             visible: root.keyboardHeight === 0
             y: parent.height - height
             width: parent.width
-            height: startButton.height + note.height + 2 * Theme.space.tileGap + Theme.space.sectionGap
+            height: Theme.space.tileGap + startButton.height + noteGap + note.height
+
+            // The foot has the screen's colour, so that nothing of the page shows through between the button and its note.
+            Rectangle {
+                anchors.fill: parent
+                color: Theme.colour.background
+                Accessible.ignored: true
+            }
 
             PrimaryButton {
                 id: startButton
@@ -431,7 +499,7 @@ SheetHost {
                 id: note
 
                 x: Theme.space.screenMargin
-                y: startButton.y + startButton.height + Theme.space.tileGap
+                y: startButton.y + startButton.height + footer.noteGap
                 width: parent.width - 2 * Theme.space.screenMargin
                 horizontalAlignment: Text.AlignHCenter
                 color: Theme.colour.textSecondary
@@ -453,6 +521,12 @@ SheetHost {
             timeline: root.timeline
             settings: root.settings
         },
+        // The time of a change, over the version sheet: declared after it, so that it stacks over it.
+        VersionTimeSheet {
+            objectName: "versionTimeSheet"
+            version: versionSheet
+            settings: root.settings
+        },
         Alert {
             id: newLogAlert
 
@@ -461,8 +535,15 @@ SheetHost {
             message: root.newLogMessage
             icon: Alert.Calendar
             confirmText: qsTr("Start a new log")
+            alternateText: root.canShareFirst ? qsTr("Share this log first") : ""
             cancelText: qsTr("Cancel")
             onConfirmed: root.session.startNewLog()
+            // The share sheet opens over the screen; the alert is up again under it, as the new-day alert is, and has no
+            // "Share this log first" once the share is recorded.
+            onAlternated: {
+                root.share.shareOpenLog();
+                newLogAlert.open();
+            }
         }
     ]
 }

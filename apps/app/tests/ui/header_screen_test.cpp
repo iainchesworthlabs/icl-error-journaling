@@ -10,9 +10,12 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <QAccessible>
+#include <QColor>
+#include <QFont>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSignalSpy>
+#include <cmath>
 
 using namespace ej::ui;
 using namespace ej::ui::header;
@@ -51,16 +54,68 @@ QQuickItem* text_item(UiRig& rig, const QString& text)
     return nullptr;
 }
 
+/// A colour of `Theme.colour` in the scheme the rig has now.
+QColor theme_colour(UiRig& rig, const char* name)
+{
+    QObject* colours = rig.theme()->property("colour").value<QObject*>();
+    return colours != nullptr ? colours->property(name).value<QColor>() : QColor();
+}
+
+/// The accessible name of an item, or text for a `Text`.
+QString name_of_item(UiRig& rig, QQuickItem* item)
+{
+    for (const Node& node : rig.tree())
+    {
+        if (node.m_Item == item)
+        {
+            return node.m_Name;
+        }
+    }
+    return QString();
+}
+
 QString input_text(UiRig& rig, const char* field)
 {
     QQuickItem* input = input_of(rig, need(rig, QString::fromLatin1(field)));
     return input != nullptr ? input->property("text").toString() : QString();
 }
 
-QQuickItem* load_screen(UiRig& rig, HeaderWorld& world)
+/// Stands for the ShareService: whether the platform has a share sheet, and how many times "Share this log first"
+/// asked.
+class FakeShare : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(bool available READ available CONSTANT)
+
+public:
+    explicit FakeShare(bool available) : m_Available(available) {}
+
+    [[nodiscard]] bool available() const noexcept
+    {
+        return m_Available;
+    }
+
+    Q_INVOKABLE bool shareOpenLog()
+    {
+        ++m_Shares;
+        return true;
+    }
+
+    int m_Shares = 0;
+
+private:
+    bool m_Available;
+};
+
+QQuickItem* load_screen(UiRig& rig, HeaderWorld& world, FakeShare* share = nullptr)
 {
     world.attach(rig);
-    QQuickItem* screen = rig.load(QStringLiteral("HeaderScreen"), world.models());
+    QVariantMap models = world.models();
+    if (share != nullptr)
+    {
+        models.insert(QStringLiteral("share"), QVariant::fromValue(static_cast<QObject*>(share)));
+    }
+    QQuickItem* screen = rig.load(QStringLiteral("HeaderScreen"), models);
     INFO(rig.errors().toStdString());
     REQUIRE(screen != nullptr);
     rig.settle();
@@ -156,8 +211,24 @@ TEST_CASE("details.unit_keypad: the number pad, the prefix that is shown and not
         retype(rig, unit, QStringLiteral("27"));
         CHECK(unit->property("errorText").toString().isEmpty());
         CHECK(world.session().unit_text() == QStringLiteral("UNIT-27"));
-        CHECK(unit->property("valid").toBool());
+        // The design draws no check mark on the unit number, only on the version.
+        CHECK_FALSE(unit->property("valid").toBool());
         CHECK(world.timeline().entry_count() == 0);
+    }
+}
+
+TEST_CASE("details.unit_keypad: the unit number and the version are set in the 20 pt face of the design",
+          "[ui][header_screen]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+
+    for (const char* name : {"headerUnit", "headerVersion"})
+    {
+        const QFont font = input_of(rig, need(rig, QString::fromLatin1(name)))->property("font").value<QFont>();
+        CHECK(font.pixelSize() == 20);
+        CHECK(font.weight() == QFont::DemiBold);
     }
 }
 
@@ -234,6 +305,58 @@ TEST_CASE("details.version_validation: a refused version shows the message inlin
     CHECK(version->property("errorText").toString().isEmpty());
     CHECK(version->property("valid").toBool());
     CHECK(world.session().version_text() == QStringLiteral("1.4.2"));
+}
+
+TEST_CASE("details.version_change: the Software version sheet opens from the check mark of the version field",
+          "[ui][header_screen]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* version = need(rig, QStringLiteral("headerVersion"));
+    QQuickItem* sheet = need(rig, QStringLiteral("versionSheet"));
+
+    // The design has no row for it: the screen has none, and the way to the sheet is the check mark.
+    CHECK(rig.find(QStringLiteral("headerChangeVersion")) == nullptr);
+    CHECK(version->property("accessoryName").toString() == QStringLiteral("The version changed during the day"));
+    QQuickItem* accessory = need(rig, QStringLiteral("formAccessory"), version);
+    CHECK(accessory->isVisible());
+    CHECK(accessory->width() >= 44.0);
+    CHECK(accessory->height() >= 44.0);
+    CHECK(name_of_item(rig, accessory) == QStringLiteral("The version changed during the day"));
+
+    CHECK_FALSE(sheet->property("isOpen").toBool());
+    rig.tap(accessory);
+    play(rig, 500);
+    CHECK(sheet->property("isOpen").toBool());
+    CHECK(sheet->property("fromText").toString() == QStringLiteral("1.4.2"));
+
+    SECTION("a version being typed has no way to the sheet until it is the one in force")
+    {
+        rig.tap(need(rig, QStringLiteral("navLeading"), sheet));
+        play(rig, 500);
+        QQuickItem* input = input_of(rig, version);
+        rig.tap(input);
+        rig.type(QStringLiteral("0"));
+        rig.settle();
+        CHECK(version->property("accessoryName").toString().isEmpty());
+        CHECK_FALSE(need(rig, QStringLiteral("formAccessory"), version)->isVisible());
+    }
+}
+
+TEST_CASE("details.version_change: with no version yet there is nothing to change", "[ui][header_screen]")
+{
+    HeaderWorld world;
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* version = need(rig, QStringLiteral("headerVersion"));
+    CHECK(version->property("accessoryName").toString().isEmpty());
+    CHECK_FALSE(need(rig, QStringLiteral("formAccessory"), version)->isVisible());
+
+    // A first fill is a Correct: the check mark appears with the value and is a button once the value is in force.
+    retype(rig, version, QStringLiteral("1.4.2"));
+    CHECK(version->property("accessoryName").toString() == QStringLiteral("The version changed during the day"));
+    CHECK(need(rig, QStringLiteral("formAccessory"), version)->isVisible());
 }
 
 TEST_CASE("details.correct_first_fill: filling an empty field is a Correct and adds no entry", "[ui][header_screen]")
@@ -355,9 +478,10 @@ TEST_CASE("details.new_log_row: starting a new log asks first and then archives 
         CHECK(alert->property("isOpen").toBool());
         // The session is not touched until the person agrees.
         CHECK(world.storage().repository().call_count(RepositoryOp::START_NEW_LOG) == 0);
+        // The log has entries and has never been shared, and the alert says so.
         CHECK(alert->property("message").toString() ==
-              QStringLiteral("UNIT-27 at North Site has 2 entries. It stays in History. The new log starts empty, with "
-                             "Sam Example as facilitator."));
+              QStringLiteral("UNIT-27 at North Site has 2 entries and hasn’t been shared. It stays in History. The new "
+                             "log starts empty, with Sam Example as facilitator."));
         rig.tap(need(rig, QStringLiteral("alertCancel"), alert));
         play(rig, 400);
         rig.settle();
@@ -386,6 +510,140 @@ TEST_CASE("details.new_log_row: starting a new log asks first and then archives 
         CHECK(input_text(rig, "headerVersion").isEmpty());
         CHECK_FALSE(location_row(rig, QStringLiteral("North Site"))->property("checked").toBool());
     }
+}
+
+TEST_CASE("details.new_log_row: the row is the design's, with the plus, in the link colour", "[ui][header_screen]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* row = need(rig, QStringLiteral("headerNewLogRow"));
+    REQUIRE(row != nullptr);
+
+    CHECK(row->property("leadingIcon").toString() == QStringLiteral("plus"));
+    CHECK(row->property("labelColour").value<QColor>() == theme_colour(rig, "primaryText"));
+    CHECK(row->height() >= 56.0);
+    CHECK(row->property("showChevron").toBool());
+    QQuickItem* group = need(rig, QStringLiteral("headerNewLog"));
+    CHECK(group->property("title").toString() == QStringLiteral("Another unit or site"));
+    CHECK(group->property("footer").toString() ==
+          QStringLiteral("Keeps today’s log in History and opens an empty one. Only the facilitator carries over."));
+}
+
+TEST_CASE("details.new_log_row: an unshared log offers to be shared first, and the alert comes back",
+          "[ui][header_screen]")
+{
+    HeaderWorld world(true);
+    world.record_errors(2);
+    REQUIRE(world.session().unshared());
+    FakeShare share(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world, &share);
+    QQuickItem* alert = need(rig, QStringLiteral("newLogAlert"));
+
+    rig.tap(need(rig, QStringLiteral("headerNewLogRow")));
+    play(rig, 400);
+    REQUIRE(alert->property("isOpen").toBool());
+    QQuickItem* alternate = need(rig, QStringLiteral("alertAlternate"), alert);
+    CHECK(alternate->isVisible());
+    CHECK(alternate->property("label").toString() == QStringLiteral("Share this log first"));
+
+    rig.tap(alternate);
+    play(rig, 800);
+    rig.settle();
+    CHECK(share.m_Shares == 1);
+    // The log is still open and unchanged, and the alert is up again for the person to go on.
+    CHECK(world.session().live_entry_count() == 2);
+    CHECK(world.storage().repository().call_count(RepositoryOp::START_NEW_LOG) == 0);
+    CHECK(alert->property("isOpen").toBool());
+}
+
+TEST_CASE("details.new_log_row: without a share sheet, or with the log shared, there is no \"Share this log first\"",
+          "[ui][header_screen]")
+{
+    SECTION("the platform has no share sheet")
+    {
+        HeaderWorld world(true);
+        world.record_errors(1);
+        FakeShare share(false);
+        UiRig rig(TALL_WINDOW);
+        load_screen(rig, world, &share);
+        rig.tap(need(rig, QStringLiteral("headerNewLogRow")));
+        play(rig, 400);
+        CHECK_FALSE(need(rig, QStringLiteral("alertAlternate"))->isVisible());
+    }
+
+    SECTION("a log with no entries has not been left unshared")
+    {
+        HeaderWorld world(true);
+        FakeShare share(true);
+        UiRig rig(TALL_WINDOW);
+        load_screen(rig, world, &share);
+        REQUIRE_FALSE(world.session().unshared());
+        rig.tap(need(rig, QStringLiteral("headerNewLogRow")));
+        play(rig, 400);
+        CHECK_FALSE(need(rig, QStringLiteral("alertAlternate"))->isVisible());
+        CHECK(need(rig, QStringLiteral("newLogAlert"))->property("message").toString() ==
+              QStringLiteral("UNIT-27 at North Site has 0 entries. It stays in History. The new log starts empty, with "
+                             "Sam Example as facilitator."));
+    }
+}
+
+TEST_CASE("details.title: the large title collapses to the compact bar once the page has scrolled",
+          "[ui][header_screen]")
+{
+    HeaderWorld world(true);
+    UiRig rig;
+    load_screen(rig, world);
+    QQuickItem* scroller = need(rig, QStringLiteral("headerScroller"));
+    QQuickItem* nav = need(rig, QStringLiteral("headerNav"));
+    QQuickItem* large = need(rig, QStringLiteral("navTitleBelow"), nav);
+    QQuickItem* compact = need(rig, QStringLiteral("navTitle"), nav);
+    REQUIRE(scroller != nullptr);
+    REQUIRE(large != nullptr);
+    REQUIRE(compact != nullptr);
+
+    // At rest the page starts under the large title, and nothing has scrolled.
+    CHECK(large->isVisible());
+    CHECK_FALSE(compact->isVisible());
+    CHECK(large->property("text").toString() == QStringLiteral("Today’s details"));
+    CHECK(scroller->property("contentY").toDouble() == -scroller->property("topMargin").toDouble());
+    CHECK(scroller->property("topMargin").toDouble() > 0.0);
+
+    // Scrolled: the compact bar with the centred title and the divider, as HeaderNewLogRow has it.
+    scroller->setProperty("contentY", -scroller->property("topMargin").toDouble() + 40.0);
+    play(rig, 400);
+    CHECK_FALSE(large->isVisible());
+    CHECK(compact->isVisible());
+    CHECK(compact->property("text").toString() == QStringLiteral("Today’s details"));
+    const QRectF title = rig.geometry(compact);
+    CHECK(std::abs(title.center().x() - rig.window().width() / 2.0) < 1.0);
+
+    // Back at the top it is large again.
+    scroller->setProperty("contentY", -scroller->property("topMargin").toDouble());
+    play(rig, 400);
+    CHECK(large->isVisible());
+    CHECK_FALSE(compact->isVisible());
+}
+
+TEST_CASE("details.footer: the button and its line end at the bottom of the safe area, 10 pt apart",
+          "[ui][header_screen]")
+{
+    HeaderWorld world;
+    UiRig rig;
+    QQuickItem* screen = load_screen(rig, world);
+    // The window of the rig has no safe area; the design's is 59 pt above and 34 pt below.
+    screen->setProperty("overrideInsets", true);
+    screen->setProperty("overrideTop", 59.0);
+    screen->setProperty("overrideBottom", 34.0);
+    rig.layout();
+    const QRectF start = rig.geometry(need(rig, QStringLiteral("headerStart")));
+    QQuickItem* note = text_item(rig, QStringLiteral("You can log errors before every field is filled."));
+    REQUIRE(note != nullptr);
+    const QRectF line = rig.geometry(note);
+    CHECK(start.height() >= 54.0);
+    CHECK(line.top() - start.bottom() == 10.0);
+    CHECK(line.bottom() == 874.0 - 34.0);
 }
 
 TEST_CASE("details.keyboard: the foot bar steps aside and the field being typed in stays in view",
@@ -492,3 +750,5 @@ TEST_CASE("details.a11y: names, targets, order and text scale, in light and dark
         expect_clean(check_motion_reduced(rig));
     }
 }
+
+#include "header_screen_test.moc"

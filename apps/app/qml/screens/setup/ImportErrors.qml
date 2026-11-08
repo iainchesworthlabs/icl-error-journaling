@@ -14,7 +14,7 @@ EditorPage {
     signal chooseAnotherRequested
     signal cancelRequested
 
-    title: qsTr("This file can't be imported")
+    title: qsTr("This file can’t be imported")
     leadingText: qsTr("Back")
     onLeadingTriggered: root.cancelRequested()
 
@@ -35,11 +35,13 @@ EditorPage {
 
             x: Theme.space.screenMargin
             width: flick.width - 2 * Theme.space.screenMargin
-            spacing: Theme.space.sectionGap
+            // 20 pt between the parts (a 12 pt margin and the 8 pt gap), and 4 pt more above the heading.
+            spacing: Theme.space.sectionGap + Theme.space.tileGap
 
             Text {
                 objectName: "nothingChanged"
                 width: parent.width
+                bottomPadding: Theme.space.tileGap / 2
                 color: Theme.colour.textSecondary
                 font: Theme.font.bodySmall.font
                 text: qsTr("Nothing was changed. Fix these in the file, in this order, and try again.")
@@ -59,6 +61,9 @@ EditorPage {
 
                         objectName: "messageRow"
                         text: modelData
+                        leadingIcon: "warning"
+                        leadingIconColour: Theme.colour.destructive
+                        minimumHeight: Theme.size.rowHeightForm
                         tappable: false
                     }
                 }
@@ -74,19 +79,22 @@ EditorPage {
         anchors.bottom: parent.bottom
         anchors.leftMargin: Theme.space.screenMargin
         anchors.rightMargin: Theme.space.screenMargin
-        anchors.bottomMargin: Theme.space.sectionGap
-        spacing: Theme.space.tileGap
+        anchors.bottomMargin: 0
+        // 10 pt between the buttons, the last one ending at the bottom of the safe area.
+        spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
         PrimaryButton {
             objectName: "chooseAnotherButton"
             width: parent.width
+            iconKind: "file"
             text: qsTr("Choose another file")
             onClicked: root.chooseAnotherRequested()
         }
 
-        TextButton {
+        PrimaryButton {
             objectName: "cancelButton"
             width: parent.width
+            variant: PrimaryButton.Plain
             text: qsTr("Cancel")
             onClicked: root.cancelRequested()
         }

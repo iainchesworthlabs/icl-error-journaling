@@ -413,6 +413,7 @@ Item {
             session: root.session
             settings: root.settings
             timeline: root.timeline
+            share: root.share
             onCloseRequested: {
                 root.detailsOpen = false;
                 StackView.view.pop();
