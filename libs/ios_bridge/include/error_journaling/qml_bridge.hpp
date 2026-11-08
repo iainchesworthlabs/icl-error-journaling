@@ -67,6 +67,9 @@ public:
     /// The application became active or inactive. Prepares the haptics when it becomes active while the board is
     /// visible.
     Q_INVOKABLE void setApplicationActive(bool active);
+    /// The shell's board accepts taps (the Log tab is shown and the session has loaded): the end of the launch timing.
+    /// Emits `boardEnabled`, which the application connects to the launch tracker. Safe to call again.
+    Q_INVOKABLE void reportBoardEnabled();
     /// Fires the impact haptic. Call it from onPressed (touch-down), never from onClicked or onReleased: the entry is
     /// recorded on the press too, and a finger sliding off must not fire a haptic without an entry. `pressTimestamp` is
     /// the touch's event timestamp in milliseconds (`point.pressTimestamp` of the pointer handler), used only for the
@@ -88,6 +91,8 @@ signals:
     void voiceOverRunningChanged();
     /// The timing summary changed. Emitted on a queued call, never inside the press handler.
     void timingChanged();
+    /// The shell reported that the board accepts taps.
+    void boardEnabled();
 
 private:
     void begin_share(ShareRequest request, bool temporary_file);

@@ -1564,3 +1564,15 @@ TEST_CASE("setup_files: refusals and a failed picker are one message each; the e
     exporter.export_finished(true, QString());
     CHECK(shared == exported);
 }
+
+TEST_CASE("qml_bridge: reportBoardEnabled emits boardEnabled for the launch tracker", "[unit][launch]")
+{
+    AppFixture app;
+    Fakes fakes;
+    bridge::QmlBridge qml(fake_services(fakes));
+    int count = 0;
+    QObject::connect(&qml, &bridge::QmlBridge::boardEnabled, &qml, [&count] { ++count; });
+
+    qml.reportBoardEnabled();
+    CHECK(count == 1);
+}

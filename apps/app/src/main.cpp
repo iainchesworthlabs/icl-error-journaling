@@ -174,6 +174,9 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("settings"), QVariant::fromValue(root.settings())},
                                  {QStringLiteral("share"), QVariant::fromValue(root.share())},
                                  {QStringLiteral("appRoot"), QVariant::fromValue(&root)}});
+    // The shell says when the 12 tiles accept taps (the Log tab is shown and the session has loaded).
+    QObject::connect(&platform_bridge, &ej::bridge::QmlBridge::boardEnabled, &platform_bridge,
+                     [&launch] { launch.board_enabled(); });
     engine.loadFromModule("ErrorJournalingApp", "Main");
     launch.qml_loaded();
     // The importer can take a file now; one that launched the application cold is delivered here.
@@ -190,19 +193,6 @@ int main(int argc, char* argv[])
     }
     {
         const auto roots = engine.rootObjects();
-        // The shell says when the 12 tiles accept taps (the Log tab is shown and the session has loaded).
-        if (QObject* shell = roots.isEmpty() ? nullptr : roots.first()->findChild<QObject*>(QStringLiteral("appShell")))
-        {
-            const auto report = [shell, &launch]
-            {
-                if (shell->property("boardEnabled").toBool())
-                {
-                    launch.board_enabled();
-                }
-            };
-            QObject::connect(shell, SIGNAL(boardEnabledChanged()), &platform_bridge, report);
-            report();
-        }
         if (auto* window = roots.isEmpty() ? nullptr : qobject_cast<QQuickWindow*>(roots.first()))
         {
             QObject::connect(window, &QQuickWindow::frameSwapped, &platform_bridge,

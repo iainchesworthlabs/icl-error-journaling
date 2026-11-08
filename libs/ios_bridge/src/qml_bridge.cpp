@@ -199,6 +199,11 @@ void QmlBridge::setBoardVisible(bool visible)
     m_HapticPolicy.set_board_visible(visible);
 }
 
+void QmlBridge::reportBoardEnabled()
+{
+    emit boardEnabled();
+}
+
 void QmlBridge::setApplicationActive(bool active)
 {
     m_HapticPolicy.set_application_active(active);
