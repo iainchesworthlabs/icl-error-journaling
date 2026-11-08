@@ -245,6 +245,17 @@ QString register_fonts()
     {
         QGuiApplication::setFont(QFont(family));
     }
+    // The log line of the version sheet is monospaced (Theme.font.monospace takes the first of Menlo, Cascadia Mono and
+    // Consolas that exists), and the offscreen platform has no system fonts, so the platform's own face is added too.
+    for (const char* path : {"C:/Windows/Fonts/consola.ttf", "C:/Windows/Fonts/CascadiaMono.ttf",
+                             "/System/Library/Fonts/Menlo.ttc", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"})
+    {
+        if (QFile::exists(QString::fromLatin1(path)) &&
+            QFontDatabase::addApplicationFont(QString::fromLatin1(path)) >= 0)
+        {
+            break;
+        }
+    }
     return family;
 }
 
@@ -734,7 +745,8 @@ void scene_change_version(Phone& phone)
     phone.services.go_to(7, 13, 15);
     phone.services.advance(6s);
     open_details(phone);
-    phone.tap(QStringLiteral("headerChangeVersion"));
+    // As a person opens the version sheet now: the check mark of the Software version field is its button.
+    phone.tap(QStringLiteral("formAccessory"), phone.need(QStringLiteral("headerVersion")));
     phone.play();
     phone.tap(QStringLiteral("versionChanged"));
     phone.play();
@@ -747,7 +759,8 @@ void scroll_details_to_end(Phone& phone)
     QQuickItem* scroller = phone.need(QStringLiteral("headerScroller"));
     const double content = scroller->property("contentHeight").toDouble();
     scroller->setProperty("contentY", content - scroller->height());
-    phone.ui.advance(100ms);
+    // The title of the collapsed bar fades in over 240 ms; the picture is of the end of it.
+    phone.play();
 }
 
 void scene_header_new_log_row(Phone& phone)
@@ -1130,6 +1143,8 @@ TEST_CASE("capture.mockups: render each state that has a mock-up, in light and d
     {
         phone.ui.set_dark(dark);
         phone.ui.advance(50ms);
+        // The software renderer paints the rows of a list that lie under the tab bar over it (see UiRig::repaint_over).
+        phone.ui.repaint_over(phone.ui.find_item(QStringLiteral("shellTabBar")));
         const QImage image = phone.ui.grab();
         REQUIRE_FALSE(image.isNull());
         const QString file = QDir(dir).filePath(scene.m_Name + (dark ? QStringLiteral(".dark") : QString()) +

@@ -469,7 +469,9 @@ SheetHost {
         Item {
             id: footer
 
-            // The button and its note are 10 pt apart, and the note ends at the bottom of the safe area.
+            // The button and its note are 10 pt apart, and the note ends at the bottom of the safe area. Once the page has
+            // scrolled the note is gone and the button sits at the bottom of the safe area (HeaderNewLogRow); the foot keeps
+            // its height, so the page above it does not change size under the finger.
             readonly property real noteGap: Theme.space.tileGap + Theme.border.hairline * 2
 
             visible: root.keyboardHeight === 0
@@ -489,7 +491,7 @@ SheetHost {
 
                 objectName: "headerStart"
                 x: Theme.space.screenMargin
-                y: Theme.space.tileGap
+                y: nav.collapsed ? footer.height - height : Theme.space.tileGap
                 width: parent.width - 2 * Theme.space.screenMargin
                 text: qsTr("Start logging")
                 onClicked: root.leave()
@@ -498,6 +500,7 @@ SheetHost {
             Text {
                 id: note
 
+                visible: !nav.collapsed
                 x: Theme.space.screenMargin
                 y: startButton.y + startButton.height + footer.noteGap
                 width: parent.width - 2 * Theme.space.screenMargin

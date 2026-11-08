@@ -457,7 +457,7 @@ TEST_CASE("settings.board_layout: Move later calls moveBoardTile once and the bo
     CHECK(fixture.saves() == before + 1);
     CHECK(fixture.tile_label(2) == fourth);
     CHECK(fixture.tile_label(3) == third);
-    CHECK(fixture.tile_label(OTHER_ROW) == "Other");
+    CHECK(fixture.tile_label(OTHER_ROW) == QString::fromUtf8("Other\xE2\x80\xA6 (fixed)"));
     // The selection went with the tile.
     CHECK(fixture.require(QStringLiteral("miniSelectedName"))->property("text").toString() == third);
 

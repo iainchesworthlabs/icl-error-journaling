@@ -260,7 +260,7 @@ TEST_CASE("mini_board.geometry: twelve small tiles in three columns, the size of
     }
     CHECK(label_of(rig, 0) == QStringLiteral("Wrong Response"));
     CHECK(label_of(rig, 1) == QStringLiteral("Sequence Out of Order"));
-    CHECK(label_of(rig, OTHER_ROW) == QStringLiteral("Other"));
+    CHECK(label_of(rig, OTHER_ROW) == QString::fromUtf8("Other\xE2\x80\xA6 (fixed)"));
     // Nothing is selected, so there is no panel.
     CHECK_FALSE(require_item(rig, QStringLiteral("miniPanel"))->isVisible());
     CHECK(board->property("selectedPosition").toInt() == 0);
@@ -282,6 +282,12 @@ TEST_CASE("mini_board.swap: a tap selects a tile and Replace type asks for a typ
     CHECK(require_item(rig, QStringLiteral("miniSelectedName"))->property("text").toString() == layout.label(4));
     CHECK(require_item(rig, QStringLiteral("miniSelectedPlace"))->property("text").toString() ==
           QStringLiteral("Position 5 of 11"));
+    // The panel has 12 pt above its first row and 12 pt under Done, and its buttons are 52 pt at least
+    // (BoardLayoutSelected).
+    const QRectF panel_area = rig.geometry(panel);
+    CHECK(rig.geometry(require_item(rig, QStringLiteral("miniSelectedName"))).top() - panel_area.top() == 12.0);
+    CHECK(panel_area.bottom() - rig.geometry(require_item(rig, QStringLiteral("miniDone"))).bottom() == 12.0);
+    CHECK(rig.geometry(require_item(rig, QStringLiteral("miniMoveEarlier"))).height() >= 52.0);
     // Selected is shown by more than colour: a tick, and the tile is lifted and larger.
     QQuickItem* face = require_child(tile(rig, 4), QStringLiteral("miniFace4"));
     CHECK(require_child(tile(rig, 4), QStringLiteral("miniTick"))->isVisible());

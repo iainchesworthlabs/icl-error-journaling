@@ -402,7 +402,8 @@ TEST_CASE("time_tumbler.values: the columns are in place at once, with the value
                 node.m_Rect.center().y() > f.rig.geometry(column).top())
             {
                 found = true;
-                CHECK(std::abs(node.m_Rect.center().y() - middle) < 1.0);
+                // The mock-up's band is 3 pt under the row, so the figure is a little above the middle of it.
+                CHECK(std::abs(node.m_Rect.center().y() - (middle - 3.0)) < 1.0);
             }
         }
         CHECK(found);
@@ -436,7 +437,7 @@ TEST_CASE("time_tumbler.geometry: five rows of 44 pt, the selected row banded, a
     }
     REQUIRE(band != nullptr);
     CHECK(f.rig.geometry(band).height() == 44);
-    CHECK(f.rig.geometry(band).top() == f.rig.geometry(f.hours).top() + 2 * 44);
+    CHECK(f.rig.geometry(band).top() == f.rig.geometry(f.hours).top() + 2 * 44 + 3);
 
     f.rig.set_text_scale(3.1);
     CHECK(f.rig.geometry(f.hours).height() > 5 * 44);

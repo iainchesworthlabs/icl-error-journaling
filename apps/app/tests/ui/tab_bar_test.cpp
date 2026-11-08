@@ -12,6 +12,7 @@
 #include <QAccessible>
 #include <QByteArray>
 #include <QFont>
+#include <QImage>
 #include <QQuickItem>
 #include <QSignalSpy>
 
@@ -363,4 +364,107 @@ TEST_CASE("tab_bar.geometry: the inset comes from the SafeFrame of the shell, as
     CHECK(rig.geometry(tabs).bottom() == 874);
     expect_clean(check_safe_area(rig, 59, 54));
     expect_clean(check_everything(rig));
+}
+
+TEST_CASE("tab_bar.stacking: a page built after the bar draws nothing over it once the bar is painted again",
+          "[ui][tab_bar]")
+{
+    // The shell builds the tabs after Log when they are first chosen, so their nodes join the scene graph after the
+    // bar's. The software renderer (these tests, the visual capture) then paints the glyphs of the rows that lie wholly
+    // under the bar, such as the handles and arrows of Error types, over the bar and outside the clip of their list,
+    // until the bar is painted again; `repaint_over` does that, and the capture calls it before each picture. The
+    // phone's renderer does not do it.
+    UiRig rig;
+    REQUIRE(rig.load_source(QByteArrayLiteral(R"(
+        import QtQuick
+        import ErrorJournalingApp
+
+        Item {
+            Loader {
+                objectName: "page"
+                width: parent.width
+                height: 874 - 83
+                active: false
+
+                sourceComponent: Flickable {
+                    clip: true
+                    contentWidth: width
+                    contentHeight: 40 * 56
+                    boundsBehavior: Flickable.StopAtBounds
+
+                    Column {
+                        width: parent.width
+
+                        Repeater {
+                            model: 40
+
+                            delegate: Item {
+                                required property int index
+
+                                width: parent.width
+                                height: 56
+
+                                EditorGlyph {
+                                    x: 40
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    kind: "handle"
+                                    colour: "#FF0000"
+                                }
+
+                                EditorGlyph {
+                                    x: 300
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    kind: "up"
+                                    colour: "#FF0000"
+                                }
+
+                                Icon {
+                                    x: 340
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    kind: "chevronRight"
+                                    colour: "#FF0000"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            TabBar {
+                objectName: "tabs"
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                bottomInset: 34
+            }
+        })")) != nullptr);
+    INFO(rig.errors().toStdString());
+    rig.settle();
+    rig.advance(std::chrono::milliseconds(100));
+    rig.find(QStringLiteral("page"))->setProperty("active", true);
+    rig.settle();
+    rig.advance(std::chrono::milliseconds(100));
+
+    rig.repaint_over(rig.find(QStringLiteral("tabs")));
+    const QImage image = rig.grab();
+    const double scale = static_cast<double>(image.width()) / 402.0;
+    const int top = static_cast<int>((874 - 83) * scale);
+    const auto red_pixels = [&image](int from, int to)
+    {
+        int count = 0;
+        for (int y = from; y < to; ++y)
+        {
+            for (int x = 0; x < image.width(); ++x)
+            {
+                const QRgb pixel = image.pixel(x, y);
+                count += qRed(pixel) > 200 && qGreen(pixel) < 120 && qBlue(pixel) < 120 ? 1 : 0;
+            }
+        }
+        return count;
+    };
+
+    // The rows above the bar do draw their glyphs (the case would pass for nothing otherwise), and none show in the
+    // bar.
+    CHECK(red_pixels(0, top) > 0);
+    CHECK(red_pixels(top, image.height()) == 0);
 }

@@ -15,9 +15,9 @@ import ErrorJournalingApp
 // it, stays in it and returns to where it was when it closes. It is a Sheet in its centred presentation, so it is shown
 // over the whole window when it is declared in a SheetHost.
 //
-// The layout is the mock-ups': the card at Theme.size.alertTop with the alert shadow, a 26 pt icon in a 48 pt disc, 10 pt
-// between the icon, the title and the message, the message in 15 pt with a 1.45 line height, 20 pt before the buttons,
-// the filled buttons 50 pt high and the plain cancel button 46 pt, 8 pt apart.
+// The layout is the mock-ups': the card hung from Theme.size.alertAnchor (see Sheet) with the alert shadow, a 26 pt icon in
+// a 48 pt disc, 10 pt between the icon, the title and the message, the message in 15 pt with a 1.45 line height, 20 pt
+// before the buttons, the filled buttons 50 pt high and the plain cancel button 46 pt, 8 pt apart.
 //
 // The wording is the owner's: the card has no strings of its own.
 Sheet {

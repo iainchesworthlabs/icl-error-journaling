@@ -530,4 +530,16 @@ QImage UiRig::grab()
     return m_Impl->m_Window->grabWindow();
 }
 
+void UiRig::repaint_over(QQuickItem* item)
+{
+    if (item == nullptr || !item->isVisible())
+    {
+        return;
+    }
+    item->setVisible(false);
+    advance(std::chrono::milliseconds(16));
+    item->setVisible(true);
+    advance(std::chrono::milliseconds(16));
+}
+
 } // namespace ej::ui

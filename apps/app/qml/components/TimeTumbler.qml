@@ -22,7 +22,8 @@ import ErrorJournalingApp
 // Look (TimeTumbler, TimeTumbler12): the rows are 44 pt, the unselected ones 20/400 in textSecondary and the one in the
 // selection band 24/600 in textPrimary, with tabular figures; the band has a 10 pt radius; the card has 12 pt above the
 // columns and 8 pt below, and its fill is `surface` (surfaceRaised by default, as the tumbler sits on a sheet). In the
-// 24-hour format the columns are 88 pt; in the 12-hour format they are 72 pt and AM/PM 64 pt, with 8 pt colons.
+// 24-hour format the columns are 88 pt; in the 12-hour format they are 72 pt and AM/PM 64 pt, with 8 pt between them.
+// The mock-ups draw a colon between the columns, but their selection band is painted over it, so none is shown.
 //
 // Optional line under the card (12 pt below it, 10 pt apart): `nowText` shows the "Now" chip (44 pt, 18 pt side padding,
 // a 12 pt radius, primaryTint, 16/600 primaryText), which emits `nowRequested()`; `caption` is the 14 pt text beside it
@@ -70,9 +71,10 @@ Item {
     readonly property int numericColumnCount: 2 + (showSeconds ? 1 : 0)
     readonly property int columnCount: numericColumnCount + (twelveHour ? 1 : 0)
     readonly property int separatorCount: showSeconds ? 2 : 1
-    // The colon between two columns: 8 pt in the 12-hour format, otherwise a gap wide or as wide as the colon if more.
-    readonly property real separatorWidth: twelveHour ? Theme.space.tileGap : Math.max(Theme.space.sectionGap, colonMetrics.advanceWidth)
-    // The gaps of the row of columns and colons.
+    // The gap between two columns, where the mock-up has a colon that its selection band covers: 8 pt in the 12-hour
+    // format, otherwise 12 pt. Nothing is drawn in it.
+    readonly property real separatorWidth: twelveHour ? Theme.space.tileGap : Theme.space.sectionGap
+    // The gaps of the row of columns and gaps between them.
     readonly property int gapCount: columnCount + separatorCount - 1
     // The widest a column is: 88 pt, or 72 pt in the 12-hour format, where AM/PM is 64 pt.
     readonly property real columnMaximum: twelveHour ? Theme.size.minTouchTarget * 18 / 11 : Theme.size.minTouchTarget * 2
@@ -238,34 +240,6 @@ Item {
         }
     }
 
-    TextMetrics {
-        id: colonMetrics
-
-        font: Theme.font.tumblerSelected.font
-        text: ":"
-    }
-
-    // The colon between two columns, level with the selected row.
-    component Separator: Item {
-        required property real columnHeight
-        required property real headingHeight
-        required property real rowsHeight
-        required property real separatorWidth
-
-        width: separatorWidth
-        height: columnHeight
-
-        // As wide as the colon, centred on the gap: the 8 pt gap of the 12-hour format is narrower than the glyph.
-        Text {
-            x: (parent.width - width) / 2
-            y: parent.headingHeight + parent.rowsHeight / 2 - height / 2
-            color: Theme.colour.textPrimary
-            font: Theme.font.tumblerSelected.font
-            text: ":"
-            Accessible.ignored: true
-        }
-    }
-
     Rectangle {
         id: card
 
@@ -275,10 +249,11 @@ Item {
         radius: Theme.radius.groupedList
         color: root.surface
 
-        // The selection band behind the middle row.
+        // The selection band behind the middle row. The mock-up places it from a heading it takes to be 22 pt tall, and the
+        // heading is 19, so its band sits 3 pt under the row and the figures a little above the middle of it.
         Rectangle {
             x: Theme.space.tileGap
-            y: Theme.space.sectionGap + hours.headingHeight + root.rowHeight * Math.floor(root.visibleCount / 2)
+            y: Theme.space.sectionGap + hours.headingHeight + root.rowHeight * Math.floor(root.visibleCount / 2) + Theme.border.otherWidth * 2
             width: parent.width - 2 * Theme.space.tileGap
             objectName: "tumblerBand"
             height: root.rowHeight
@@ -302,11 +277,9 @@ Item {
                 columnWidth: root.columnWidth
                 onMoved: root.columnsMoved()
             }
-            Separator {
-                columnHeight: hours.height
-                headingHeight: hours.headingHeight
-                rowsHeight: root.rowsHeight
-                separatorWidth: root.separatorWidth
+            Item {
+                width: root.separatorWidth
+                height: hours.height
             }
             TimeColumn {
                 id: minutes
@@ -317,12 +290,10 @@ Item {
                 columnWidth: root.columnWidth
                 onMoved: root.columnsMoved()
             }
-            Separator {
+            Item {
                 visible: root.showSeconds
-                columnHeight: hours.height
-                headingHeight: hours.headingHeight
-                rowsHeight: root.rowsHeight
-                separatorWidth: root.separatorWidth
+                width: root.separatorWidth
+                height: hours.height
             }
             TimeColumn {
                 id: secs

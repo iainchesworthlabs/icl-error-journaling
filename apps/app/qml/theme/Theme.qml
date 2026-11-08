@@ -156,9 +156,11 @@ QtObject {
         readonly property real sheetTop: 54
         // The least height of the header card of the Log screen.
         readonly property real headerCardHeight: 64
-        // The top of an alert card on the design frame: the mock-ups pin the card near here instead of centring it.
-        // Sheet clamps it so that a tall card on a small screen stays inside the safe area.
-        readonly property real alertTop: 236
+        // Where an alert card is placed on the design frame: the point 3/8 of the way down the card sits here, 374 pt from
+        // the top of the window. The mock-ups give each alert its own top (DeleteLog 250, NewDay 236, StartNewLogConfirm
+        // 220 for cards 321, 379 and 401 pt tall), which no one rule gives exactly; this one is within 5 pt of all three, a
+        // taller card sitting higher. Sheet clamps it so that a tall card on a small screen stays inside the safe area.
+        readonly property real alertAnchor: 374
         // The range of the Dynamic Type multiplier, xSmall to accessibility 5.
         readonly property real textScaleMin: 0.82
         readonly property real textScaleMax: 3.1
@@ -322,6 +324,18 @@ QtObject {
         property bool tabularNumbers: false
         // A family, or a comma-separated list of them in order of preference; empty = the system font.
         property string family: ""
+        // The first of those the system has. Qt does not read a list in one family string, and takes the system font for it,
+        // so the list is looked up here; none of them found is the system font.
+        readonly property string resolvedFamily: {
+            const have = Qt.fontFamilies();
+            const names = family.split(",");
+            for (let i = 0; i < names.length; ++i) {
+                const name = names[i].trim();
+                if (name.length > 0 && have.indexOf(name) >= 0)
+                    return name;
+            }
+            return "";
+        }
 
         readonly property real scale: scaleCap > 0 ? Math.min(textScale, scaleCap) : textScale
         readonly property real size: basePt * scale
@@ -349,8 +363,8 @@ QtObject {
             const whole = Math.abs(size - Math.round(size)) < 0.001;
             if (whole)
                 spec.pixelSize = Math.round(size);
-            if (family.length > 0)
-                spec.family = family;
+            if (resolvedFamily.length > 0)
+                spec.family = resolvedFamily;
             if (tabularNumbers)
                 spec.features = {
                     "tnum": 1
@@ -547,7 +561,7 @@ QtObject {
             dpi: set.dpi
         }
         // A log line as the export writes it, in a monospaced face: Menlo (ui-monospace) on the phone, Cascadia Mono or
-        // Consolas on Windows. The list is one family string; Qt takes the first one it has.
+        // Consolas on Windows. The first of the list that the system has is used (FontRole.resolvedFamily).
         readonly property FontRole monospace: FontRole {
             basePt: 13
             weight: 400
