@@ -245,6 +245,17 @@ QString register_fonts()
     {
         QGuiApplication::setFont(QFont(family));
     }
+    // The log line of the version sheet is monospaced (Theme.font.monospace takes the first of Menlo, Cascadia Mono and
+    // Consolas that exists), and the offscreen platform has no system fonts, so the platform's own face is added too.
+    for (const char* path : {"C:/Windows/Fonts/consola.ttf", "C:/Windows/Fonts/CascadiaMono.ttf",
+                             "/System/Library/Fonts/Menlo.ttc", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"})
+    {
+        if (QFile::exists(QString::fromLatin1(path)) &&
+            QFontDatabase::addApplicationFont(QString::fromLatin1(path)) >= 0)
+        {
+            break;
+        }
+    }
     return family;
 }
 

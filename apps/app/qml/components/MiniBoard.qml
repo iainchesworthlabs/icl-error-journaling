@@ -145,7 +145,7 @@ Item {
 
         signal activated
 
-        height: Math.max(Theme.size.rowHeightForm, content.implicitHeight + 2 * Theme.space.tileGap)
+        height: Math.max(Theme.size.rowHeightForm, content.implicitHeight + Theme.space.tileGap)
         radius: Theme.radius.field
         color: Theme.colour.primaryTint
         // Dimmed only when it is disabled itself, not when a sheet disables the screen.
