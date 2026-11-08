@@ -229,7 +229,7 @@ TEST_CASE("The board has twelve rows with the roles of the sample configuration"
     }
 
     CHECK(fixture.value(OTHER, BoardModel::TYPE_ID).toString().isEmpty());
-    CHECK(fixture.value(OTHER, BoardModel::LABEL).toString() == "Other");
+    CHECK(fixture.value(OTHER, BoardModel::LABEL).toString() == QString::fromUtf8("Other\xE2\x80\xA6"));
     CHECK(fixture.value(OTHER, BoardModel::COLOUR_SLOT).toInt() == 0);
     CHECK(fixture.value(OTHER, BoardModel::IS_OTHER).toBool());
     CHECK_FALSE(fixture.value(OTHER, BoardModel::IS_EMPTY).toBool());

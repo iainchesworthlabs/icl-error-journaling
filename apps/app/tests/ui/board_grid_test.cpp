@@ -215,7 +215,7 @@ TEST_CASE("grid.binding: each tile shows its row of the model", "[ui][grid]")
         }
     }
     CHECK(tile_at(rig, 0)->property("label").toString() == QStringLiteral("Wrong Response"));
-    CHECK(tile_at(rig, OTHER_ROW)->property("label").toString() == QStringLiteral("Other"));
+    CHECK(tile_at(rig, OTHER_ROW)->property("label").toString() == QString::fromUtf8("Other\xE2\x80\xA6"));
     (void)colour;
 }
 

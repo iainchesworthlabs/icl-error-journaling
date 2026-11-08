@@ -169,7 +169,8 @@ QVariant BoardModel::data(const QModelIndex& index, int role) const
         return tile.m_TypeId;
     case LABEL:
     case Qt::DisplayRole:
-        return label;
+        // The tile reads "Other..." in the designs, as it opens a list; the accessible name keeps the plain word.
+        return tile.m_IsOther ? tr("Other\xE2\x80\xA6") : label;
     case COLOUR_SLOT:
         return tile.m_ColourSlot;
     case COUNT:

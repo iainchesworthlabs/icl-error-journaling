@@ -100,6 +100,32 @@ private:
     FakePlatform& m_Platform;
 };
 
+/// The part of the settings model the screen calls, with the names of `SettingsModel`: the templates for the chips, the
+/// unit prefix of the card and `previewTemplateLine`, which writes the line as the renderer does for a value (the sample
+/// "Morning Medley" while it is blank, at the sample time 10:30).
+class FakeSettings : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(QObject* templates READ templates CONSTANT)
+    Q_PROPERTY(QString unitPrefix READ unit_prefix CONSTANT)
+
+public:
+    explicit FakeSettings(QObject* templates) : m_Templates(templates) {}
+
+    [[nodiscard]] QObject* templates() const { return m_Templates; }
+    [[nodiscard]] QString unit_prefix() const { return QStringLiteral("UNIT"); }
+
+    Q_INVOKABLE QString previewTemplateLine(const QString& pattern, const QString& value, int /*localSeconds*/ = -1) const
+    {
+        QString line = pattern;
+        line.replace(QStringLiteral("{value}"), value.trimmed().isEmpty() ? QStringLiteral("Morning Medley") : value.trimmed());
+        return QStringLiteral("10:30 (Free Text) ") + line;
+    }
+
+private:
+    QObject* m_Templates;
+};
+
 /// The configuration source, with the configuration in force from the start. It is the first base of the rig, so that
 /// it is complete before any model reads it.
 struct ConfiguredSource
@@ -161,7 +187,7 @@ public:
           storage(world.m_Clock, &events), registry(m_Env, gateway), feedback(&events), platform(&events),
           session(m_Env, gateway, registry, config, feedback, StartupResult{options.m_Recovery}),
           board(config, session), undo(m_Env, config), clipboard(&events), timeline(m_Env, config, clipboard),
-          bridge(platform)
+          settings(&templates), bridge(platform)
     {
         if (options.m_Existing)
         {
@@ -222,9 +248,7 @@ public:
             {QStringLiteral("board"), QVariant::fromValue(static_cast<QObject*>(&board))},
             {QStringLiteral("undo"), QVariant::fromValue(static_cast<QObject*>(&undo))},
             {QStringLiteral("timeline"), QVariant::fromValue(static_cast<QObject*>(&timeline))},
-            {QStringLiteral("settings"),
-             QVariantMap{{QStringLiteral("templates"), QVariant::fromValue(static_cast<QObject*>(&templates))},
-                         {QStringLiteral("unitPrefix"), QStringLiteral("UNIT")}}},
+            {QStringLiteral("settings"), QVariant::fromValue(static_cast<QObject*>(&settings))},
             {QStringLiteral("bridge"), QVariant::fromValue(static_cast<QObject*>(&bridge))}};
         if (with_insets)
         {
@@ -250,6 +274,7 @@ public:
     FakeClipboard clipboard;
     TimelineModel timeline;
     TemplateListModel templates;
+    FakeSettings settings;
     FakeBridge bridge;
     viewmodel::LogDocument* observed = nullptr;
 };
@@ -676,6 +701,9 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     collect(screen.item, QStringLiteral("chip"), chips);
     REQUIRE(chips.size() == 2);
     CHECK(chips[0]->property("text").toString() == QStringLiteral("Played song"));
+    // The icons of the chips come from the templates' `icon` role.
+    CHECK(chips[0]->property("iconKind").toString() == QStringLiteral("music"));
+    CHECK(chips[1]->property("iconKind").toString() == QStringLiteral("speech"));
 
     QQuickItem* sheet = screen.named(QStringLiteral("logTemplateSheet"));
     CHECK_FALSE(sheet->property("isOpen").toBool());
@@ -687,6 +715,9 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     QQuickItem* field = screen.named(QStringLiteral("templateValueField"));
     CHECK(field->property("label").toString() == QStringLiteral("Which song?"));
     CHECK(sheet->property("accessibleName").toString() == QStringLiteral("Played song"));
+    // The line the note will have, as the settings model writes it, with the sample value while the field is blank.
+    CHECK(screen.text_of(QStringLiteral("templateValuePreviewText")) ==
+          QStringLiteral("10:30 (Free Text) Played Morning Medley"));
 
     // Add with nothing typed: refused, the sheet stays, nothing is recorded.
     screen.rig.tap(screen.named(QStringLiteral("navTrailing")));
@@ -699,6 +730,8 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     screen.rig.type(QStringLiteral("Morning Medley"));
     CHECK(field->property("text").toString() == QStringLiteral("Morning Medley"));
     CHECK(field->property("errorText").toString().isEmpty());
+    CHECK(screen.text_of(QStringLiteral("templateValuePreviewText")) ==
+          QStringLiteral("10:30 (Free Text) Played Morning Medley"));
     screen.rig.tap(screen.named(QStringLiteral("navTrailing")));
     sim.gateway.run_all();
     screen.rig.settle();
@@ -789,7 +822,11 @@ TEST_CASE("log.write_failed: a failing commit shows the banner, no count, no toa
     screen.tap_tile(sim, MUTE_DELAY_ROW);
 
     CHECK(banner->isVisible());
-    CHECK(screen.text_of(QStringLiteral("bannerMessage")).contains(QStringLiteral("could not be saved")));
+    // The banner names the type that was not saved (`session.recordFailed`), and there is one banner for it.
+    CHECK(screen.text_of(QStringLiteral("bannerTitle")) == QString::fromUtf8("Mute Delay wasn\xE2\x80\x99t saved"));
+    CHECK(screen.text_of(QStringLiteral("bannerMessage")) ==
+          QStringLiteral("Nothing was added to the log. Tap Mute Delay again to log it."));
+    CHECK(banner->property("floating").toBool());
     CHECK(sim.events.count(EventKind::WRITE_FAILED, "recordError") == 1);
     CHECK(sim.events.count(EventKind::CONFIRMATION) == 0);
     CHECK(sim.entries().empty());

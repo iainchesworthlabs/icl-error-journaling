@@ -25,7 +25,8 @@ import ErrorJournalingApp
 //   board      BoardModel: the 12 tiles
 //   undo       UndoController: the toast
 //   timeline   TimelineModel: `lastLine` and `entryCount` for the "Last" bar
-//   settings   SettingsModel: `templates` for the chips and `unitPrefix` for the card's prompt
+//   settings   SettingsModel: `templates` for the chips, `unitPrefix` for the card's prompt and `previewTemplateLine` for the
+//              "In the log" line of the value sheet
 //   bridge     QmlBridge: `hapticImpact` and `setBoardVisible`
 //
 // What it asks the shell for, by signal:
@@ -66,12 +67,17 @@ Item {
     // the values are in.
     readonly property string loadingMark: "-"
 
-    // The words of the banner for a write that failed (the session's and the undo's), empty when there is none.
+    // The words of the banner for a write that failed, empty when there is none. A tap on an error type that could not
+    // be saved says which type (`session.recordFailed`); any other failed write (a note, an undo) has the general title.
+    property string failureTitle: qsTr("Not saved")
     property string failureMessage: ""
     // The recovery notice was closed (or acted on). The notice itself is fixed for the run.
     property bool recoveryDismissed: false
     // The template whose value the sheet is asking for, or null.
     property var activeTemplate: null
+    // The icon of each template's chip, by templateId: "music" and "speech" as the setup file names them, and the speech
+    // bubble for a template that names none or one the app does not draw (the model gives "note").
+    property var chipIcons: ({})
 
     signal todaysDetailsRequested
     signal reviewRequested
@@ -83,6 +89,22 @@ Item {
             return;
         bridge.hapticImpact();
         session.recordError(typeId);
+    }
+
+    function updateChipIcons(): void {
+        const icons = {};
+        for (let i = 0; i < templateRows.count; ++i) {
+            const row = templateRows.objectAt(i) as TemplateRow;
+            if (row !== null)
+                icons[row.templateId] = row.icon === "music" ? "music" : "speech";
+        }
+        chipIcons = icons;
+    }
+
+    // Shows the banner for a failure that the screen has no better words for.
+    function fail(message: string): void {
+        failureTitle = qsTr("Not saved");
+        failureMessage = message;
     }
 
     function templateFor(templateId: string): var {
@@ -112,7 +134,7 @@ Item {
 
     onFailureMessageChanged: {
         if (failureMessage.length > 0)
-            Accessible.announce(qsTr("Not saved. %1").arg(failureMessage));
+            Accessible.announce(qsTr("%1. %2").arg(failureTitle).arg(failureMessage));
     }
     onVisibleChanged: bridge.setBoardVisible(visible)
     Component.onCompleted: {
@@ -127,8 +149,15 @@ Item {
     Connections {
         target: root.session
 
-        function onWriteFailed(operation: string, message: string): void {
+        // A tap on an error type that could not be saved: the banner names the type. The session also reports the same
+        // failure as a write failure of "recordError", which is ignored here so that two banners do not appear.
+        function onRecordFailed(errorTypeId: string, errorTypeName: string, title: string, message: string): void {
+            root.failureTitle = title;
             root.failureMessage = message;
+        }
+        function onWriteFailed(operation: string, message: string): void {
+            if (operation !== "recordError")
+                root.fail(message);
         }
         // The next entry that is saved clears the old complaint.
         function onEntryRecorded(entryId: string): void {
@@ -140,7 +169,7 @@ Item {
         target: root.undo
 
         function onWriteFailed(operation: string, message: string): void {
-            root.failureMessage = message;
+            root.fail(message);
         }
     }
 
@@ -150,6 +179,7 @@ Item {
         required property string name
         required property string valuePrompt
         required property string outputPattern
+        required property string icon
     }
 
     // The template rows, to find the one a chip names. The chips themselves are the composer's.
@@ -158,6 +188,8 @@ Item {
 
         model: root.settings.templates
         delegate: TemplateRow {}
+        onObjectAdded: root.updateChipIcons()
+        onObjectRemoved: root.updateChipIcons()
     }
 
     SafeFrame {
@@ -202,7 +234,8 @@ Item {
                 width: parent.width
                 visible: root.failureMessage.length > 0
                 tone: Banner.Error
-                title: qsTr("Not saved")
+                floating: true
+                title: root.failureTitle
                 message: root.failureMessage
                 maximumHeight: root.height / 2
                 onCloseRequested: root.failureMessage = ""
@@ -215,6 +248,7 @@ Item {
                 width: parent.width
                 visible: root.session.recoveryNotice.length > 0 && !root.recoveryDismissed
                 tone: Banner.Warning
+                floating: true
                 title: qsTr("Your log was repaired")
                 message: root.session.recoveryNotice
                 actionText: qsTr("Check the log in Review")
@@ -237,6 +271,7 @@ Item {
             anchors.topMargin: Theme.space.sectionGap
             draft: root.session.draft
             chips: root.settings.templates
+            chipIcons: root.chipIcons
             skeleton: root.loading
             onTextEdited: text => root.session.draft = text
             onSubmit: text => root.session.addNote(text)
@@ -301,6 +336,7 @@ Item {
         templateName: root.activeTemplate ? root.activeTemplate.name : ""
         valuePrompt: root.activeTemplate ? root.activeTemplate.valuePrompt : ""
         outputPattern: root.activeTemplate ? root.activeTemplate.outputPattern : ""
+        previewText: root.activeTemplate ? root.settings.previewTemplateLine(root.activeTemplate.outputPattern, templateSheet.value) : ""
         onAddRequested: value => root.addTemplated(value)
     }
 }

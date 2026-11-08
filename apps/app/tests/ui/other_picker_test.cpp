@@ -362,10 +362,11 @@ TEST_CASE("other.sections: the types by section, the counts, the swatches and th
     CHECK(swatch_colour(*sequence) == tile_colour(f.m_Rig, 2));
     CHECK(swatch_colour(*wrong_response) != swatch_colour(*sequence));
 
-    // Rows are the 48 pt of a list row at least and the width of the group, less the column of the mark.
+    // Rows are 52 pt ("not on your board") or 46 pt ("on your board") and the width of the group, less the column of
+    // the mark.
     for (const Row& row : all)
     {
-        CHECK(f.m_Rig.geometry(row.m_Item).height() >= 48);
+        CHECK(f.m_Rig.geometry(row.m_Item).height() >= 46);
         CHECK(f.m_Rig.geometry(row.m_Item).width() == 402 - 2 * 16 - 26);
     }
 
