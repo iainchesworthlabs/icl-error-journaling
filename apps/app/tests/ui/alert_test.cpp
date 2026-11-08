@@ -265,17 +265,25 @@ TEST_CASE("alert.modal: the card follows the design", "[ui][alert]")
     // 32 pt from the window's sides.
     CHECK(card.left() == 32);
     CHECK(card.right() == 402 - 32);
-    // Centred between the insets.
-    CHECK(card.center().y() == (59.0 + (874 - 34)) / 2);
+    // At the design's fixed top, Theme.size.alertTop (236 pt on the iPhone 17 frame), not centred.
+    CHECK(card.top() == 236);
     // The icon is a 48 pt circle at the top, centred.
     const QRectF icon = f.m_Rig.geometry(f.m_Rig.find(QStringLiteral("alertIcon")));
     CHECK(icon.width() == 48);
     CHECK(icon.height() == 48);
     CHECK(icon.center().x() == 201);
     CHECK(icon.top() > card.top());
-    // The buttons are 54 pt and 48 pt, and full width of the card's content.
-    CHECK(f.m_Rig.geometry(f.button("alertConfirm")).height() == 54);
-    CHECK(f.m_Rig.geometry(f.button("alertCancel")).height() == 48);
+    // The buttons are 50 pt and the plain cancel 46 pt, and full width of the card's content.
+    CHECK(f.m_Rig.geometry(f.button("alertConfirm")).height() == 50);
+    CHECK(f.m_Rig.geometry(f.button("alertCancel")).height() == 46);
+    // 10 pt between the icon, the title and the message; 20 pt before the buttons.
+    const QRectF title = f.m_Rig.geometry(f.m_Rig.find(QStringLiteral("alertTitle")));
+    const QRectF message = f.m_Rig.geometry(f.m_Rig.find(QStringLiteral("alertMessage")));
+    CHECK(title.top() == icon.bottom() + 10);
+    CHECK(message.top() == title.bottom() + 10);
+    CHECK(f.m_Rig.geometry(f.button("alertConfirm")).top() == message.bottom() + 20);
+    // The glyph is 26 pt in the 48 pt disc.
+    CHECK(f.m_Rig.geometry(f.m_Rig.find(QStringLiteral("alertIconGlyph"))).width() == 26);
     CHECK(f.m_Rig.geometry(f.button("alertConfirm")).width() == card.width() - 40);
     CHECK(f.m_Rig.geometry(f.button("alertConfirm")).bottom() < f.m_Rig.geometry(f.button("alertCancel")).top());
     // Everything is inside the card.

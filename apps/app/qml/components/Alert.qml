@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
-import QtQuick.Shapes
 import ErrorJournalingApp
 
 // The modal alert of the design (Stage 4, package 4.4): the new-day prompt, the start-a-new-log confirmation and the
@@ -16,11 +15,15 @@ import ErrorJournalingApp
 // it, stays in it and returns to where it was when it closes. It is a Sheet in its centred presentation, so it is shown
 // over the whole window when it is declared in a SheetHost.
 //
+// The layout is the mock-ups': the card at Theme.size.alertTop with the alert shadow, a 26 pt icon in a 48 pt disc, 10 pt
+// between the icon, the title and the message, the message in 15 pt with a 1.45 line height, 20 pt before the buttons,
+// the filled buttons 50 pt high and the plain cancel button 46 pt, 8 pt apart.
+//
 // The wording is the owner's: the card has no strings of its own.
 Sheet {
     id: root
 
-    enum Icon {
+    enum Glyph {
         None,
         Calendar,
         Trash,
@@ -44,7 +47,7 @@ Sheet {
     readonly property bool alarming: destructive || icon === Alert.Warning
     readonly property color iconFill: alarming ? Theme.colour.bannerError : Theme.colour.primaryTint
     readonly property color iconStroke: alarming ? Theme.colour.destructive : Theme.colour.primaryText
-    readonly property string iconPath: icon === Alert.Trash ? "M4 7H20 M10 11V17 M14 11V17 M6 7L7 20H17L18 7 M9 7V4H15V7" : icon === Alert.Warning ? "M12 3L2 21H22L12 3Z M12 10V15 M12 18H12.01" : "M5 4H19A2 2 0 0 1 21 6V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V6A2 2 0 0 1 5 4Z M16 2V6M8 2V6M3 10H21"
+    readonly property string iconKind: icon === Alert.Trash ? "trash" : icon === Alert.Warning ? "warning" : "calendar"
 
     accessibleName: root.title
     accessibleDescription: root.message
@@ -62,7 +65,7 @@ Sheet {
         property color labelColour: Theme.colour.primaryText
         property bool emphasised: false
         property bool isDefault: false
-        property real buttonHeight: Theme.size.primaryButtonHeight
+        property real buttonHeight: Theme.size.alertButtonHeight
         readonly property bool pressed: tap.pressed
 
         signal triggered
@@ -100,10 +103,7 @@ Sheet {
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
             color: button.labelColour
-            font: Qt.font({
-                "pixelSize": Theme.font.body.font.pixelSize,
-                "weight": button.emphasised ? Font.DemiBold : Font.Normal
-            })
+            font: button.emphasised ? Theme.font.body.selectedFont : Theme.font.body.font
             text: button.label
             Accessible.ignored: true
         }
@@ -121,7 +121,7 @@ Sheet {
             id: column
 
             width: parent.width
-            spacing: Theme.space.tileGap
+            spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
             Rectangle {
                 objectName: "alertIcon"
@@ -132,23 +132,12 @@ Sheet {
                 color: root.iconFill
                 Accessible.ignored: true
 
-                Shape {
+                Icon {
+                    objectName: "alertIconGlyph"
                     anchors.centerIn: parent
-                    width: Theme.size.badge
-                    height: Theme.size.badge
-                    Accessible.ignored: true
-
-                    ShapePath {
-                        strokeColor: root.iconStroke
-                        strokeWidth: Theme.border.hairline * 2
-                        fillColor: "transparent"
-                        capStyle: ShapePath.RoundCap
-                        joinStyle: ShapePath.RoundJoin
-
-                        PathSvg {
-                            path: root.iconPath
-                        }
-                    }
+                    size: Theme.size.badge * 13 / 12
+                    kind: root.iconKind
+                    colour: root.iconStroke
                 }
             }
 
@@ -170,13 +159,18 @@ Sheet {
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
                 color: Theme.colour.textBody
-                font: Theme.font.bodySmall.font
+                font: Theme.font.alertMessage.font
+                lineHeightMode: Text.FixedHeight
+                lineHeight: Theme.font.alertMessage.linePitch
                 text: root.message
                 Accessible.ignored: true
             }
 
+            // The buttons, 10 pt further down than the column's gap.
             Column {
+                objectName: "alertButtons"
                 width: parent.width
+                topPadding: Theme.space.tileGap + Theme.border.hairline * 2
                 spacing: Theme.space.tileGap
 
                 AlertButton {
@@ -211,7 +205,7 @@ Sheet {
                     objectName: "alertCancel"
                     visible: root.cancelText.length > 0
                     label: root.cancelText
-                    buttonHeight: Theme.size.listRowHeight
+                    buttonHeight: Theme.size.alertCancelHeight
                     onTriggered: {
                         root.close();
                         root.cancelled();

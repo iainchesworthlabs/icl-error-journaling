@@ -139,7 +139,8 @@ TEST_CASE("search_field.accessibility: an edit field with a search name, and a n
     CHECK(input->property("text").toString().isEmpty());
 }
 
-TEST_CASE("search_field.geometry: 44 pt high with 12 pt corners, and taller with larger text", "[ui][search_field]")
+TEST_CASE("search_field.geometry: a 40 pt pill with 10 pt corners in a 44 pt touch area, and taller with larger text",
+          "[ui][search_field]")
 {
     UiRig rig;
     REQUIRE(load_host(rig, QString::fromUtf8(PICKER)) != nullptr);
@@ -149,10 +150,15 @@ TEST_CASE("search_field.geometry: 44 pt high with 12 pt corners, and taller with
     REQUIRE(input != nullptr);
     CHECK(rig.geometry(search).height() == 44);
     CHECK(rig.geometry(search).width() == 402 - 32);
-    const QObject* background = input->property("background").value<QObject*>();
-    REQUIRE(background != nullptr);
-    CHECK(background->property("radius").toDouble() == 12);
-    CHECK(background->property("color").value<QColor>() == theme_colour(rig, "searchBackground"));
+    QQuickItem* pill = rig.find(QStringLiteral("searchPill"));
+    REQUIRE(pill != nullptr);
+    CHECK(rig.geometry(pill).height() == 40);
+    CHECK(pill->property("radius").toDouble() == 10);
+    CHECK(pill->property("color").value<QColor>() == theme_colour(rig, "searchBackground"));
+    // The 18 pt search icon, 10 pt in.
+    const QRectF icon = rig.geometry(rig.find(QStringLiteral("searchIcon")));
+    CHECK(icon.width() == 18);
+    CHECK(icon.left() == rig.geometry(search).left() + 10);
 
     rig.set_text_scale(3.1);
     CHECK(rig.geometry(search).height() > 44);

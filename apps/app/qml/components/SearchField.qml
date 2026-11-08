@@ -9,6 +9,9 @@ import ErrorJournalingApp
 // `filter` is the text. A screen sets it (`filter: picker.filter`) and listens to `filterEdited(filter)`, which fires once
 // for every change the user makes, and once when the clear button empties the field. The field never assigns `filter`
 // itself, so a binding on it is never broken.
+//
+// Look (Other): a 40 pt pill in a 44 pt touch area, a 10 pt radius, 10 pt padding, an 18 pt search
+// Icon in textSecondary 8 pt before the text, the text in 16 pt.
 Item {
     id: root
 
@@ -17,6 +20,9 @@ Item {
     // What a screen reader says for the field and for the clear button.
     property string accessibleName: placeholderText
     property string clearName: qsTr("Clear search")
+
+    // The padding inside the pill.
+    readonly property real padding: Theme.space.tileGap + Theme.border.hairline * 2
 
     // The user changed the text (typing, deleting, or the clear button).
     signal filterEdited(string filter)
@@ -29,7 +35,8 @@ Item {
     }
 
     implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
-    implicitHeight: Math.max(Theme.size.fieldHeight, field.implicitHeight)
+    // The touch area is 44 pt; the pill drawn in it is 40.
+    implicitHeight: Math.max(Theme.size.minTouchTarget, field.implicitHeight)
 
     onFilterChanged: {
         if (field.text !== filter)
@@ -42,10 +49,10 @@ Item {
 
         objectName: "searchInput"
         anchors.fill: parent
-        leftPadding: Theme.space.rowPadding + glyph.width + Theme.space.tileGap
-        rightPadding: clearButton.visible ? clearButton.width : Theme.space.rowPadding
-        topPadding: Theme.space.tileGap
-        bottomPadding: Theme.space.tileGap
+        leftPadding: glyph.x + glyph.width + Theme.space.tileGap
+        rightPadding: clearButton.visible ? clearButton.width : root.padding
+        topPadding: Theme.border.hairline * 4
+        bottomPadding: Theme.border.hairline * 4
         verticalAlignment: TextInput.AlignVCenter
         color: Theme.colour.textPrimary
         font: Theme.font.body.font
@@ -60,22 +67,30 @@ Item {
         Accessible.name: root.accessibleName
         Accessible.searchEdit: true
 
-        background: Rectangle {
-            radius: Theme.radius.field
-            color: Theme.colour.searchBackground
-            border.width: field.activeFocus ? Theme.border.otherWidth : 0
-            border.color: Theme.colour.primaryText
+        background: Item {
+            Rectangle {
+                objectName: "searchPill"
+                anchors.fill: parent
+                anchors.topMargin: Theme.border.hairline * 2
+                anchors.bottomMargin: Theme.border.hairline * 2
+                radius: Theme.radius.small
+                color: Theme.colour.searchBackground
+                border.width: field.activeFocus ? Theme.border.otherWidth : 0
+                border.color: Theme.colour.primaryText
+            }
         }
 
         onTextEdited: root.filterEdited(text)
         onAccepted: root.accepted()
     }
 
-    InputGlyph {
+    Icon {
         id: glyph
 
-        x: Theme.space.rowPadding
+        objectName: "searchIcon"
+        x: root.padding
         y: (parent.height - height) / 2
+        size: Theme.size.badge * 3 / 4
         kind: "search"
         colour: Theme.colour.textSecondary
     }
@@ -102,9 +117,10 @@ Item {
             field.forceActiveFocus();
         }
 
-        InputGlyph {
+        Icon {
             anchors.centerIn: parent
-            kind: "clear"
+            size: Theme.space.screenMargin
+            kind: "close"
             colour: Theme.colour.textSecondary
         }
         TapHandler {

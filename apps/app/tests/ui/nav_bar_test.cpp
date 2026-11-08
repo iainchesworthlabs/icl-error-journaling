@@ -144,8 +144,8 @@ TEST_CASE("nav_bar: the large shape puts the 30 pt title under the actions", "[u
     CHECK(title->property("font").value<QFont>().pixelSize() == 30);
     CHECK(title->property("font").value<QFont>().weight() == QFont::Bold);
     CHECK(rig.geometry(title).left() == 16);
-    CHECK(rig.geometry(title).top() == 44); // under the row of actions
-    CHECK(nav->property("implicitHeight").toDouble() == rig.geometry(title).bottom());
+    CHECK(rig.geometry(title).top() == 44 + 8); // 8 pt under the row of actions
+    CHECK(nav->property("implicitHeight").toDouble() == rig.geometry(title).bottom() + 8); // and 8 pt under the title
 
     SECTION("with no action there is no row, and the title is at the top")
     {
@@ -154,6 +154,64 @@ TEST_CASE("nav_bar: the large shape puts the 30 pt title under the actions", "[u
         CHECK(rig.geometry(title).top() == 0);
         CHECK(nav->property("rowHeight").toDouble() == 0);
     }
+}
+
+TEST_CASE("nav_bar.collapsed: a large bar whose page has scrolled shows the compact title and a divider",
+          "[ui][nav_bar]")
+{
+    UiRig rig;
+    QQuickItem* nav = load_nav(rig, {{QStringLiteral("title"), QStringLiteral("Today's details")},
+                                     {QStringLiteral("leadingText"), QStringLiteral("Log")},
+                                     {QStringLiteral("leadingBack"), true},
+                                     {QStringLiteral("large"), true}});
+    CHECK_FALSE(nav->property("collapsed").toBool());
+    CHECK_FALSE(rig.find(QStringLiteral("navDivider"))->isVisible());
+
+    nav->setProperty("scrollPosition", 40);
+    rig.layout();
+    CHECK(nav->property("collapsed").toBool());
+    QQuickItem* inline_title = rig.find(QStringLiteral("navTitle"));
+    REQUIRE(inline_title != nullptr);
+    CHECK(inline_title->isVisible());
+    CHECK(inline_title->property("font").value<QFont>().weight() == QFont::DemiBold);
+    CHECK(rig.geometry(inline_title).center().x() == 201);
+    CHECK_FALSE(rig.find(QStringLiteral("navTitleBelow"))->isVisible());
+    QQuickItem* divider = rig.find(QStringLiteral("navDivider"));
+    REQUIRE(divider != nullptr);
+    CHECK(divider->isVisible());
+    CHECK(rig.geometry(divider).top() == 44);
+    CHECK(rig.geometry(divider).height() == 1);
+    CHECK(nav->property("implicitHeight").toDouble() == 45);
+
+    nav->setProperty("scrollPosition", 0);
+    rig.layout();
+    CHECK_FALSE(nav->property("collapsed").toBool());
+    CHECK(rig.find(QStringLiteral("navTitleBelow"))->isVisible());
+}
+
+TEST_CASE("nav_bar.compact: a title that fits is on one line, and a sheet's bar has 8 pt above and 16 pt below",
+          "[ui][nav_bar]")
+{
+    UiRig rig;
+    QQuickItem* nav = load_nav(rig, {{QStringLiteral("title"), QStringLiteral("Time")},
+                                     {QStringLiteral("leadingText"), QStringLiteral("Cancel")},
+                                     {QStringLiteral("trailingText"), QStringLiteral("Done")},
+                                     {QStringLiteral("inSheet"), true}});
+    rig.layout();
+    INFO("width " << nav->width() << ", title " << nav->property("titleWidth").toDouble() << ", room "
+                  << nav->property("inlineRoom").toDouble());
+    QQuickItem* title = rig.find(QStringLiteral("navTitle"));
+    REQUIRE(title != nullptr);
+    REQUIRE(title->isVisible());
+    CHECK(title->property("lineCount").toInt() == 1);
+    CHECK(rig.geometry(rig.find(QStringLiteral("navLeading"))).top() == 8);
+    CHECK(nav->property("implicitHeight").toDouble() == 8 + 44 + 16);
+    // The back chevron is 20 pt, 2 pt from its label.
+    nav->setProperty("leadingBack", true);
+    rig.layout();
+    const QRectF chevron = rig.geometry(rig.find(QStringLiteral("navBackChevron")));
+    CHECK(chevron.width() == 20);
+    CHECK(rig.geometry(rig.find(QStringLiteral("navLeadingLabel"))).left() == chevron.right() + 2);
 }
 
 TEST_CASE("nav_bar: a compact title that does not fit between the actions goes to a line of its own", "[ui][nav_bar]")

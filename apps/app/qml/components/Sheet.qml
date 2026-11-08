@@ -13,8 +13,18 @@ import ErrorJournalingApp
 //              It is a barrier and not a control: a screen reader reaches "Close" on the grabber instead.
 //   grabber    the 36 x 5 pill and a 44 pt strip under it. Dragging it down past `dismissDistance` dismisses the sheet;
 //              a shorter drag lets go and the sheet springs back. For a screen reader it is a button named "Close".
-//   detents    Medium is half the window, Large is the window below the top inset. The grabber and the title sit
-//              below the top inset (SafeFrame is the only reader of the insets).
+//   detents    Medium is half the window. Large starts at Theme.size.sheetTop (54 pt on the design frame, 5 pt above the
+//              59 pt safe area; on another phone the same distance from its inset). Content is as tall as the content
+//              needs (`contentImplicitHeight`, plus the grabber and the bottom inset): the template value sheet over the
+//              keyboard, and the time picker, which is a second, shorter sheet over Edit entry or the version sheet
+//              (declare it after that sheet in the same SheetHost and it stacks over it, with its own scrim).
+//   bottom     a bottom sheet runs to the bottom edge of the window, over the tab bar. By default its content area ends
+//              above the home indicator. With `contentUnderHomeIndicator` the content area runs to the bottom edge too,
+//              and the content pads itself by `contentBottomInset`, so a list scrolls under the indicator instead of
+//              being cut 34 pt above it.
+//   shadow     a bottom sheet casts Theme.shadow.sheet upwards; an alert card casts Theme.shadow.alert.
+//   centre     the card of an alert sits at Theme.size.alertTop (236 pt on the design frame) rather than in the middle,
+//              as the mock-ups pin it; it moves up when it is too tall to fit below that, never into the top inset.
 //   keyboard   `keyboardHeight` lifts the sheet's bottom edge to the top of the keyboard; the sheet gets shorter if it
 //              would otherwise reach into the top inset, and the content area ends at the keyboard.
 //   focus      opening moves focus to the sheet; closing returns focus to the item that had it. What keeps Tab inside is
@@ -33,7 +43,8 @@ FocusScope {
 
     enum Detent {
         Medium,
-        Large
+        Large,
+        Content
     }
 
     // What a screen reader says for the sheet, such as "Log another error".
@@ -47,8 +58,10 @@ FocusScope {
     // The height of the keyboard in points; 0 when there is none. The shell's keyboard is Qt.inputMethod (assumption U5);
     // a test sets this directly.
     property real keyboardHeight: inputMethod.visible ? inputMethod.keyboardRectangle.height : 0
-    // For a centred sheet: the height its content needs, so that the card is no taller than that.
+    // For a centred sheet and the Content detent: the height its content needs, so that the sheet is no taller than that.
     property real contentImplicitHeight: 0
+    // The content area of a bottom sheet runs under the home indicator; the content pads itself by contentBottomInset.
+    property bool contentUnderHomeIndicator: false
     // How far the grabber has to be dragged down to dismiss.
     property real dismissDistance: Theme.size.tileHeight
 
@@ -81,18 +94,30 @@ FocusScope {
 
     readonly property bool centred: presentation === Sheet.Centre
     readonly property real cardMargin: 2 * Theme.space.screenMargin
-    readonly property real largeHeight: root.height - topInset
+    // The top of a large sheet: Theme.size.sheetTop on the design frame, the same distance from another phone's inset.
+    readonly property real largeTop: Math.max(0, topInset + Theme.size.sheetTop - Theme.frame.safeAreaTop)
+    readonly property real largeHeight: root.height - largeTop
+    // The padding the content keeps at the bottom when it runs under the home indicator: the inset, or 0 over a keyboard.
+    readonly property real contentBottomInset: contentUnderHomeIndicator && keyboardHeight <= 0 ? bottomInset : 0
+    // The part of a bottom sheet under its content area: the home indicator, unless the content runs under it.
+    readonly property real bottomReserve: keyboardHeight > 0 || contentUnderHomeIndicator ? 0 : bottomInset
     readonly property real mediumHeight: root.height / 2
     // The bottom edge of what the sheet may use: the window, or the top of the keyboard.
     readonly property real bottomEdge: root.height - keyboardHeight
     // The space the content may use above that edge.
-    readonly property real available: bottomEdge - topInset
+    readonly property real available: bottomEdge - (centred ? topInset : largeTop)
     // The same for a centred card, which stays clear of the home indicator when there is no keyboard.
     readonly property real centreAvailable: available - (keyboardHeight > 0 ? 0 : bottomInset)
     readonly property real bodyPadding: Theme.space.screenMargin + Theme.space.tileGap / 2
     readonly property real grabberZone: Theme.space.tileGap * 2 + Theme.border.hairline * 5
-    readonly property real panelHeight: centred ? Math.min(contentImplicitHeight + Theme.size.badge + Theme.space.screenMargin, centreAvailable - 2 * Theme.space.screenMargin) : Math.min(detent === Sheet.Medium ? mediumHeight : largeHeight, available)
-    readonly property real restY: centred ? topInset + (centreAvailable - panelHeight) / 2 : bottomEdge - panelHeight
+    // The height of the Content detent: the grabber, the content and what is kept under it.
+    readonly property real contentHeight: grabberZone + contentImplicitHeight + (keyboardHeight > 0 ? 0 : bottomInset)
+    readonly property real panelHeight: centred ? Math.min(contentImplicitHeight + Theme.size.badge + Theme.space.screenMargin, centreAvailable - 2 * Theme.space.screenMargin) : Math.min(detent === Sheet.Medium ? mediumHeight : detent === Sheet.Content ? contentHeight : largeHeight, available)
+    // The card of an alert: at alertTop on the design frame (the same distance from another phone's inset), moved up when
+    // the card would not fit under it, and never above the inset.
+    readonly property real alertTop: topInset + Theme.size.alertTop - Theme.frame.safeAreaTop
+    readonly property real centreTop: Math.max(topInset + Theme.space.screenMargin, Math.min(alertTop, topInset + centreAvailable - Theme.space.screenMargin - panelHeight))
+    readonly property real restY: centred ? centreTop : bottomEdge - panelHeight
     // The level the scrim reaches. It is a fraction of the scrim colour's own opacity, not a design colour.
     readonly property real scrimLevel: 0.6
 
@@ -222,6 +247,17 @@ FocusScope {
             event.accepted = true;
         }
 
+        // The shadow, under the panel (a child with a negative z is drawn below its parent), so it moves, scales and fades
+        // with it.
+        Shadow {
+            z: -1
+            width: parent.width
+            height: parent.height
+            radius: parent.radius
+            topCornersOnly: !root.centred
+            token: root.centred ? Theme.shadow.alert : Theme.shadow.sheet
+        }
+
         // Takes every touch that lands on the sheet outside its controls, so none reaches the scrim.
         MultiPointTouchArea {
             anchors.fill: parent
@@ -233,6 +269,9 @@ FocusScope {
 
             objectName: "sheetGrabber"
             visible: !root.centred
+            // A large sheet starts a little above the top inset, as the design has it; the strip that takes the drag
+            // starts at the inset, so nothing that takes a touch is in it. The pill is drawn where the design has it.
+            y: Math.max(0, root.topInset - root.restY)
             width: parent.width
             height: Theme.size.minTouchTarget
             Accessible.ignored: root.centred || !root.dismissible
@@ -258,7 +297,7 @@ FocusScope {
 
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
-                y: Theme.space.tileGap
+                y: Theme.space.tileGap - grabber.y
                 width: Theme.size.badge * 3 / 2
                 height: Theme.border.hairline * 5
                 radius: height / 2
@@ -275,7 +314,7 @@ FocusScope {
             x: root.centred ? root.bodyPadding : 0
             y: root.centred ? Theme.size.badge : root.grabberZone
             width: parent.width - 2 * x
-            height: root.panelHeight - y - (root.centred ? Theme.space.screenMargin : root.keyboardHeight > 0 ? 0 : root.bottomInset)
+            height: root.panelHeight - y - (root.centred ? Theme.space.screenMargin : root.bottomReserve)
         }
     }
 

@@ -169,10 +169,10 @@ TEST_CASE("sheet.present_dismiss: a closed sheet is not there, an open one slide
     CHECK(opened.count() == 1);
     CHECK(f.is_open());
 
-    SECTION("a large sheet is the window below the top inset, with the grabber below the inset")
+    SECTION("a large sheet starts at Theme.size.sheetTop (54 pt), with the grabber's touch strip below the inset")
     {
         const QRectF panel = f.panel_rect();
-        CHECK(panel.top() == 59);
+        CHECK(panel.top() == 54);
         CHECK(panel.width() == 402);
         // The sheet's bottom corners are drawn under the window's bottom edge.
         CHECK(panel.bottom() >= 874);
@@ -209,7 +209,7 @@ TEST_CASE("sheet.present_dismiss: a closed sheet is not there, an open one slide
         // It can be opened again, and closed again.
         f.open();
         CHECK(f.is_open());
-        CHECK(f.panel_rect().top() == 59);
+        CHECK(f.panel_rect().top() == 54);
         f.close();
         CHECK(closed.count() == 2);
     }
@@ -405,13 +405,13 @@ TEST_CASE("sheet.keyboard: the keyboard lifts the sheet's bottom edge, and the c
         CHECK(f.panel_rect().top() == before);
     }
 
-    SECTION("a large sheet gets shorter and stays below the top inset")
+    SECTION("a large sheet gets shorter and keeps its top")
     {
         f.open();
         f.m_Sheet->setProperty("keyboardHeight", KEYBOARD);
         f.m_Rig.layout();
-        CHECK(f.panel_rect().top() == 59);
-        CHECK(f.m_Sheet->property("panelHeight").toDouble() == 874 - KEYBOARD - 59);
+        CHECK(f.panel_rect().top() == 54);
+        CHECK(f.m_Sheet->property("panelHeight").toDouble() == 874 - KEYBOARD - 54);
         CHECK(f.m_Rig.geometry(field).bottom() <= 874 - KEYBOARD);
         expect_clean(check_names(f.m_Rig));
     }
@@ -546,7 +546,8 @@ TEST_CASE("sheet.safe_area: nothing interactive enters an inset, at 59 and 34 an
     f.m_Sheet->setProperty("overrideTop", 79);
     f.m_Sheet->setProperty("overrideBottom", 54);
     f.open();
-    CHECK(f.panel_rect().top() == 79);
+    // The same 5 pt above the inset as on the design frame.
+    CHECK(f.panel_rect().top() == 74);
     expect_clean(check_safe_area(f.m_Rig, 79, 54));
     CHECK(f.m_Rig.geometry(f.m_Rig.find(QStringLiteral("field"))).bottom() <= 874 - 54);
 }
@@ -567,7 +568,7 @@ TEST_CASE("motion.reduce: with Reduce Motion the sheet fades in 100 ms and does 
         f.open(250ms);
         expect_clean(check_motion_reduced(f.m_Rig));
         CHECK(f.is_open());
-        CHECK(f.panel_rect().top() == 59);
+        CHECK(f.panel_rect().top() == 54);
         f.close(250ms);
         CHECK_FALSE(f.is_open());
     }
