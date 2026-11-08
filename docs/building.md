@@ -78,7 +78,13 @@ no way yet to put it on a phone without a Mac; see `docs/plan/stage-5.md`, "Timi
 ### Windows (developer machine)
 
 `cmake --preset windows-msvc-release` from a Visual Studio developer prompt builds the libraries, the application and
-their tests. Put the Qt `bin` directory on `PATH` first (for example `C:\repos\common\Qt\6.12.0\msvc2022_64\bin`):
-the test executables load the Qt libraries when CTest discovers the tests. Nothing ships from Windows.
+their tests. Nothing ships from Windows.
+
+Windows has no rpath, so a test executable finds the Qt DLLs only through `PATH`. The build does this for you:
+`cmake/EjQtTestEnvironment.cmake` prepends the `bin` directory of the Qt kit that `find_package(Qt6)` found to `PATH` for
+every test, both when the build discovers the tests (`ej_discover_tests`, which wraps `catch_discover_tests`) and when CTest
+runs them. You do not need Qt on `PATH`. Without it the loader shows a dialog ("Qt6Qml.dll was not found") for each launch,
+before `main` runs, so a new Qt test must be added with `ej_discover_tests`, or with `ej_qt_test_environment(<test>)` after
+`add_test`, and not with a bare `catch_discover_tests`. On other systems both are a no-op.
 
 Put personal settings in `CMakeUserPresets.json`, which is ignored by git.

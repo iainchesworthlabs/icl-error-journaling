@@ -12,7 +12,7 @@ target_link_libraries(ej_storage_tests
     PRIVATE ej_storage Catch2::Catch2WithMain icl::warnings icl::coverage)
 # storage_samples.hpp: the sample data the core tests of the journal format share with these.
 target_include_directories(ej_storage_tests PRIVATE "${PROJECT_SOURCE_DIR}/libs/core/tests")
-catch_discover_tests(ej_storage_tests PROPERTIES LABELS unit)
+ej_discover_tests(ej_storage_tests PROPERTIES LABELS unit)
 
 # `integration`: real SQLite and real files, in a directory of the test's own under the build tree.
 find_package(Qt6 6.8 REQUIRED COMPONENTS Sql)
@@ -34,7 +34,7 @@ target_include_directories(ej_storage_integration_tests
     PRIVATE "${PROJECT_SOURCE_DIR}/libs/core/tests" "${PROJECT_SOURCE_DIR}/libs/storage/src")
 # platform/<os>/unreadable_file.cpp: makes a file unreadable the way the system does (C13), which differs by system.
 icl_platform_sources(ej_storage_integration_tests DIR "${CMAKE_CURRENT_SOURCE_DIR}/platform")
-catch_discover_tests(ej_storage_integration_tests PROPERTIES LABELS integration)
+ej_discover_tests(ej_storage_integration_tests PROPERTIES LABELS integration)
 
 # `system`: the kill harness, a worker process and the driver that kills it.
 add_subdirectory(kill)
@@ -52,5 +52,5 @@ set(ej_perf_budget_factor 1)
 if(ICL_SANITIZERS OR ICL_ENABLE_COVERAGE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(ej_perf_budget_factor 10)
 endif()
-catch_discover_tests(ej_storage_perf_tests
+ej_discover_tests(ej_storage_perf_tests
     PROPERTIES LABELS perf TIMEOUT 600 ENVIRONMENT "EJ_PERF_BUDGET_FACTOR=${ej_perf_budget_factor}")

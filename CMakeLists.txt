@@ -47,6 +47,8 @@ if(ERROR_JOURNALING_BUILD_TESTS)
     include(CTest)
     find_package(Catch2 3 CONFIG REQUIRED)
     include(Catch)
+    # Puts the Qt DLLs on PATH for the tests on Windows; see the file.
+    include(EjQtTestEnvironment)
 endif()
 
 add_subdirectory(libs/core)

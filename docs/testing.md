@@ -218,7 +218,8 @@ two processes, so a random-kill failure may not repeat at once, and the saved st
 Crash-point failures repeat every time.
 
 To run the harness by hand, build `ej_kill_driver` (which builds the worker) and run the driver from the directory it was built
-in, with the Qt libraries on the path:
+in, with the Qt libraries on the path (CTest arranges this itself on Windows, where a program started by hand needs the Qt
+`bin` directory on `PATH`; `docs/building.md`, "Windows"):
 
 ```bash
 EJ_KILL_SEED=0x1234 EJ_KILL_ITERATIONS=100 build/linux-debug/libs/storage/tests/kill/ej_kill_driver "kill: random kills*"

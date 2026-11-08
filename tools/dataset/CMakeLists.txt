@@ -19,3 +19,5 @@ add_test(NAME dataset.small COMMAND ej_dataset --out "${ej_dataset_small_dir}" -
 set_tests_properties(dataset.clean PROPERTIES LABELS integration FIXTURES_SETUP dataset_small_dir)
 set_tests_properties(dataset.small PROPERTIES LABELS integration TIMEOUT 120 FIXTURES_REQUIRED dataset_small_dir
     PASS_REGULAR_EXPRESSION "wrote 3 logs, 60 entries")
+# ej_dataset links Qt Core and Qt SQL: on Windows it needs the Qt DLLs on PATH (cmake/EjQtTestEnvironment.cmake).
+ej_qt_test_environment(dataset.small)

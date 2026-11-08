@@ -10,5 +10,5 @@ target_compile_definitions(ej_ios_bridge_tests
             EJ_SAMPLE_CONFIG="${PROJECT_SOURCE_DIR}/config/sample-config.json")
 
 # The tags in the test names choose the label: [integration] uses real files, everything else is a fake.
-catch_discover_tests(ej_ios_bridge_tests TEST_SPEC "~[integration]" PROPERTIES LABELS unit)
-catch_discover_tests(ej_ios_bridge_tests TEST_SPEC "[integration]" TEST_SUFFIX " (integration)" PROPERTIES LABELS integration)
+ej_discover_tests(ej_ios_bridge_tests TEST_SPEC "~[integration]" PROPERTIES LABELS unit)
+ej_discover_tests(ej_ios_bridge_tests TEST_SPEC "[integration]" TEST_SUFFIX " (integration)" PROPERTIES LABELS integration)
