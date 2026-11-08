@@ -28,7 +28,7 @@ Sheet {
     // The time the sheet was opened with, which Cancel puts back.
     property int savedSeconds: 0
     // What the content needs: the bar and the tumbler, the note of the repeated hour under it.
-    readonly property real neededHeight: nav.implicitHeight - Theme.space.tileGap + tumbler.implicitHeight + (note.visible ? note.implicitHeight : 0)
+    readonly property real neededHeight: nav.implicitHeight + tumbler.implicitHeight + (note.visible ? note.implicitHeight : 0)
     // The design draws this sheet from 330 pt down to the bottom of the window, with room under the "Now" line, so the sheet
     // reaches that high on the design frame and never less than its content needs.
     readonly property real designTop: 330 // literal-ok: where the sheet of TimeTumbler.dc.html starts; the design has no token for it
@@ -69,11 +69,9 @@ Sheet {
     Item {
         anchors.fill: parent
 
-        // The bar sits 8 pt up: its `inSheet` padding above the row is the 8 pt that the sheet's grabber zone already has.
         NavBar {
             id: nav
 
-            y: -Theme.space.tileGap
             width: parent.width
             inSheet: true
             title: qsTr("Time")
@@ -93,7 +91,7 @@ Sheet {
 
             objectName: "editTumbler"
             x: Theme.space.screenMargin
-            y: nav.y + nav.height
+            y: nav.height
             width: parent.width - 2 * Theme.space.screenMargin
             localSeconds: root.edit.localSeconds
             twelveHour: root.settings.timeStyle === "12h"

@@ -173,12 +173,9 @@ Sheet {
             save();
     }
 
-    // The bar sits 8 pt up: its `inSheet` padding above the row is the 8 pt that the sheet's grabber zone already has, so the
-    // row starts 21 pt under the top of the sheet, where the design has it.
     NavBar {
         id: nav
 
-        y: -Theme.space.tileGap
         width: parent.width
         // While the time sheet is over this one, nothing on this one takes a touch or is reached by a screen reader.
         enabled: !root.timeOpen
@@ -197,7 +194,7 @@ Sheet {
     Item {
         id: mainPage
 
-        y: nav.y + nav.height
+        y: nav.height
         width: parent.width
         height: parent.height - y
         visible: root.showingMain
@@ -448,7 +445,7 @@ Sheet {
     Flickable {
         id: typePage
 
-        y: nav.y + nav.height
+        y: nav.height
         width: parent.width
         height: Math.max(0, parent.height - y)
         visible: root.showingType

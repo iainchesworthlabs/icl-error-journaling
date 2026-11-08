@@ -1,0 +1,1 @@
+**Edit entry and its time sheet no longer move their bars to make up for the sheet's offset.** The sheet now places its content where the design's bars start, so both sheets sit where the design has them without a correction of their own.
