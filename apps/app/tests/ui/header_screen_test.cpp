@@ -689,8 +689,10 @@ TEST_CASE("details.a11y: on the phone's window the names, targets and large text
     expect_clean(check_names(rig));
     expect_clean(check_targets(rig));
     expect_clean(check_text_scale(rig));
-    // The content is longer than the window, so it scrolls; the foot bar stays.
-    CHECK(scroller->property("contentHeight").toDouble() > scroller->height());
+    // The content is longer than the window, so it scrolls; the foot bar stays. The page starts under the bar, so the
+    // room it needs is its height and that margin.
+    CHECK(scroller->property("contentHeight").toDouble() + scroller->property("topMargin").toDouble() >
+          scroller->height());
     CHECK(need(rig, QStringLiteral("headerStart"))->isVisible());
 
     rig.set_text_scale(3.1);
