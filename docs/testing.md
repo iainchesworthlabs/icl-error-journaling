@@ -91,6 +91,21 @@ Not proved by these tests: how it looks, what VoiceOver says, the real insets, D
 delivers them, the frame rate, a real finger. The plan lists them under "What cannot be verified here"; they are the device
 checklist.
 
+## Visual capture
+
+Comparing how the app looks with the mock-ups of `docs/design/screens` is done by eye, on pairs of pictures that
+`tools/visual/run_capture.py` makes (the commands are in its header). It is not a test and no CI phase runs it.
+`apps/app/tests/ui/visual_capture_test.cpp` holds one hidden case, `capture.mockups` (tag `[.capture]`: Catch2 does not select a
+hidden case with the exclusion-only spec `~[perf]` that `catch_discover_tests` uses, so `ctest -N` does not list it, and the case
+skips itself unless `EJ_CAPTURE_DIR` is set). For each of the 34 mock-ups it brings the real shell, over the Stage 3 services and a
+fake clock, to the state that the mock-up draws, as a person would (taps, a swipe, typing), under the safe-area insets of an
+iPhone 17 (59 pt and 34 pt, put in by an item above the shell), and writes `<Name>.app.png` and `<Name>.dark.app.png` at
+`QT_SCALE_FACTOR` (2: 804 by 1748) with `capture-manifest.json`, which says what differs in the data. The offscreen platform has no
+usable system font on the developer machine, so the case registers the `.ttf` files of `EJ_CAPTURE_FONTS` (Inter, from
+`tools/visual/fetch_inter.py` into `build/visual/fonts`, never committed). The phone uses the system font, so the font is not a finding.
+`render_mockups.py` renders the mock-ups in headless Edge with the same font files, and `make_pairs.py` puts the two side by side
+and writes `index.html`. `Rig::set_startup_recovery` hands the next `restart()` a recovery report, for the Recovery mock-up.
+
 ## Golden tests and fixtures
 
 The export format is pinned by golden files: `libs/core/tests/golden/<name>.txt` holds the exact bytes an export must
