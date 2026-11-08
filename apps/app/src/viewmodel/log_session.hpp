@@ -64,6 +64,7 @@ class LogSession : public QObject, public OpenLogSource
     // values.
     Q_PROPERTY(QString facilitator READ facilitator NOTIFY headerChanged)
     Q_PROPERTY(QString unitText READ unit_text NOTIFY headerChanged)         // "UNIT-27", or empty
+    Q_PROPERTY(QString unitDigits READ unit_digits NOTIFY headerChanged)     // "27", or empty: the number alone
     Q_PROPERTY(QString locationText READ location_text NOTIFY headerChanged) // the name, resolved from the id
     Q_PROPERTY(QString versionText READ version_text NOTIFY headerChanged)
     Q_PROPERTY(QString dateText READ date_text NOTIFY headerChanged) // "Sat 7 Nov"
@@ -72,6 +73,11 @@ class LogSession : public QObject, public OpenLogSource
     // What a new log would archive: the live (not deleted) entries of the open log, every kind. It follows commits and
     // undo, so it is notified with the header: any change of the log is a `headerChanged`, except a share.
     Q_PROPERTY(int liveEntryCount READ live_entry_count NOTIFY headerChanged)
+    // True when the open log has at least one live entry and has never been shared: starting a new log would archive
+    // work that has not left the phone ("...and hasn't been shared", with "Share this log first"). The rule of
+    // `DayWatcher::unshared`. Not true for an empty log, which has nothing to share. Follows commits, undo, a share and
+    // a new log.
+    Q_PROPERTY(bool unshared READ unshared NOTIFY unsharedChanged)
     // The clock in the device zone as seconds since local midnight, for the "now" default of the version sheet.
     Q_PROPERTY(int nowLocalSeconds READ now_local_seconds)
     Q_PROPERTY(QString draft READ draft WRITE set_draft NOTIFY draftChanged) // NOTE-03
@@ -114,6 +120,11 @@ public:
     [[nodiscard]] State state() const;
     [[nodiscard]] QString facilitator() const;
     [[nodiscard]] QString unit_text() const;
+    [[nodiscard]] QString unit_digits() const;
+    [[nodiscard]] bool unshared() const
+    {
+        return m_Unshared;
+    }
     [[nodiscard]] QString location_text() const;
     [[nodiscard]] QString version_text() const;
     [[nodiscard]] QString date_text() const;
@@ -180,7 +191,14 @@ signals:
     void draftChanged();
     void pendingWritesChanged();
     void entryRecorded(const QString& entryId); // after the commit; BRD-07 opens the note sheet from it
-    void newLogStarted();                       // Stage 4 opens Today's details
+    void unsharedChanged();
+    /// A tap on an error type could not be saved: the commit failed or too many writes were waiting. Emitted just after
+    /// the `writeFailed("recordError", ...)` of the same failure, which is unchanged, so a screen that wants the name
+    /// of the type listens to this one. `title` is "Mute Delay wasn't saved" and `message` is "Nothing was added to the
+    /// log. Tap Mute Delay again to log it.", with the typographic apostrophe, both through `tr`.
+    void recordFailed(const QString& errorTypeId, const QString& errorTypeName, const QString& title,
+                      const QString& message);
+    void newLogStarted(); // Stage 4 opens Today's details
     void writeFailed(const QString& operation, const QString& message);
 
 private:
@@ -209,6 +227,10 @@ private:
     [[nodiscard]] std::optional<Timestamp> timestamp_for_local(int local_seconds) const;
     [[nodiscard]] bool change_header_at(const QString& field_key, const QString& text, Timestamp when);
 
+    // The unshared flag and the failure of a tap.
+    void update_unshared();
+    void announce_record_failed(const QString& type_id, const QString& type_name);
+
     // Draft.
     void arm_draft_timer();
     void write_draft_now();
@@ -234,6 +256,7 @@ private:
     ObserverList<OpenLogObserver> m_OpenLogObservers;
     std::unique_ptr<Listener> m_Listener;
 
+    bool m_Unshared = false;
     int m_OwnPending = 0; // commands this session submitted and has not heard back from
     bool m_StartingNewLog = false;
     TimerId m_NewLogTimer = NO_TIMER;

@@ -98,6 +98,7 @@
       "name": "Played song",
       "value_prompt": "Which song?",
       "output_pattern": "Played {value}",
+      "icon": "music",
       "sort_order": 1
     },
     {
@@ -105,6 +106,7 @@
       "name": "Visitor interaction",
       "value_prompt": "Who visited?",
       "output_pattern": "Visitor: {value}",
+      "icon": "speech",
       "sort_order": 2
     }
   ]

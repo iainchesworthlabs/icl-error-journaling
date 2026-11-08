@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include "error_journaling/clock.hpp"
 #include "error_journaling/configuration.hpp"
 #include "error_journaling/ids.hpp"
 #include "error_journaling/result.hpp"
@@ -74,6 +75,8 @@ class SettingsModel : public QObject, public ConfigurationSource, public Configu
     Q_PROPERTY(QAbstractItemModel* locations READ locations CONSTANT)              // PRF-03
     Q_PROPERTY(QAbstractItemModel* templates READ templates CONSTANT)              // PRF-06
     Q_PROPERTY(QAbstractItemModel* boardLayout READ board_layout CONSTANT)         // PRF-05
+    // The line under the unit prefix field: "Added in front of the number you type each day." (FirstLaunchManual.)
+    Q_PROPERTY(QString unitPrefixHint READ unit_prefix_hint CONSTANT)
 
 public:
     /// `gateway` and what `environment` refers to (the ids and the zones) must outlive the model. Nothing is read until
@@ -108,6 +111,7 @@ public:
     [[nodiscard]] QAbstractItemModel* locations() const;
     [[nodiscard]] QAbstractItemModel* templates() const;
     [[nodiscard]] QAbstractItemModel* board_layout() const;
+    [[nodiscard]] QString unit_prefix_hint() const;
 
     // ConfigurationSource
     [[nodiscard]] bool configured() const override
@@ -166,6 +170,18 @@ public:
     /// "" for a pattern the renderer accepts, or the message to show while the person types.
     Q_INVOKABLE QString validatePattern(const QString& pattern) const;
 
+    /// The log line a note made from `pattern` and `value` would have, made by the renderer that makes the review
+    /// screen's lines: "10:30 (Free Text) Played Morning Medley". The time is `localSeconds` (seconds since local
+    /// midnight, 0 to 86399) on today's date in the device zone, in the user's time format; a negative value means
+    /// now. A blank `value` is shown as "Morning Medley", the designs' sample. For a pattern that is not valid it
+    /// returns "Fix the pattern to see a preview." (check `validatePattern` to style it differently), and for a
+    /// `localSeconds` above 86399 an empty string. Nothing is written.
+    Q_INVOKABLE QString previewTemplateLine(const QString& pattern, const QString& value, int localSeconds = -1) const;
+
+    /// The name of a tile colour slot: "Periwinkle" for 8. Empty for 0 and for a slot above 11. The `colourSlot` of the
+    /// error type rows, the board tiles and `TimelineModel::entryForEdit` is the argument.
+    Q_INVOKABLE QString colourName(int slot) const;
+
     /// Reads and checks the file at `path` (at most 1 MiB) on the storage thread; nothing changes. Ends with
     /// `importPrepared` or `importFailed`.
     Q_INVOKABLE void loadImport(const QString& path);
@@ -187,6 +203,11 @@ signals:
     /// The file could not be used: the core's plain-English messages, in file order. Nothing changed.
     void importFailed(const QStringList& messages);
     void exportFinished(bool ok, const QString& message);
+    /// The same end of an export, in the words of the banner: `title` ("Exported to Files", or "Export failed"),
+    /// `fileName` (the last part of the path, "cs-bingo-board-setup.ejconfig"; empty when nothing was written) and
+    /// `message` ("cs-bingo-board-setup.ejconfig is ready to send.", or the reason). Emitted just before
+    /// `exportFinished`, whose `message` is the same text.
+    void exportResult(bool ok, const QString& title, const QString& fileName, const QString& message);
     void writeFailed(const QString& operation, const QString& message);
 
 private:
@@ -215,6 +236,8 @@ private:
 
     StorageGateway& m_Gateway;
     IdGenerator& m_Ids;
+    const Clock& m_Clock;
+    const DeviceZone& m_Zone;
     const TimeZoneProvider& m_Zones;
     TimeFormat m_ShownTimeFormat; // what the last `publish` showed, to tell whether the format changed
 

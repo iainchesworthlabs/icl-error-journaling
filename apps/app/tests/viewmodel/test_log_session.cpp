@@ -1233,3 +1233,149 @@ TEST_CASE("A session that goes tells its followers there is no open log before i
     REQUIRE(observer.documents().size() == 1);
     CHECK(observer.documents().front() == nullptr);
 }
+
+// ----------------------------------------------------------------------------------- what the visual pass binds to
+
+TEST_CASE("The unit number alone is a property of its own", "[viewmodel][session]")
+{
+    SessionRig rig(Options().existing());
+    QSignalSpy header(rig.session.get(), &LogSession::headerChanged);
+
+    CHECK(rig.session->unit_text() == QStringLiteral("UNIT-27"));
+    CHECK(rig.session->unit_digits() == QStringLiteral("27"));
+    CHECK(rig.session->property("unitDigits").toString() == QStringLiteral("27"));
+
+    REQUIRE(rig.session->correctHeader(QStringLiteral("unit_number"), QStringLiteral("30")));
+    rig.gateway.run_all();
+    CHECK(rig.session->unit_digits() == QStringLiteral("30"));
+    CHECK(header.count() == 1);
+
+    // A log with no unit has none.
+    SessionRig fresh;
+    CHECK(fresh.session->unit_digits().isEmpty());
+}
+
+TEST_CASE("A log is unshared while it has entries and has never been shared", "[viewmodel][session]")
+{
+    SessionRig rig(Options().existing());
+    QSignalSpy changed(rig.session.get(), &LogSession::unsharedChanged);
+
+    // Nothing to share in an empty log.
+    CHECK_FALSE(rig.session->unshared());
+    CHECK(rig.session->property("unshared").toBool() == false);
+
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.gateway.run_all();
+    CHECK(rig.session->unshared());
+    CHECK(changed.count() == 1);
+
+    // A second entry changes nothing: it is still unshared, and nobody is told again.
+    rig.world.m_Clock.advance(1s);
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.gateway.run_all();
+    CHECK(rig.session->unshared());
+    CHECK(changed.count() == 1);
+
+    // A share turns it off, and the share is the only thing that does so here.
+    QSignalSpy header(rig.session.get(), &LogSession::headerChanged);
+    REQUIRE(rig.document().mark_shared(rig.world.m_Clock.now(), {}));
+    rig.gateway.run_all();
+    CHECK_FALSE(rig.session->unshared());
+    CHECK(changed.count() == 2);
+    CHECK(header.count() == 0); // a share still changes nothing the header card shows
+}
+
+TEST_CASE("Unshared follows delete and undo, and a log with no live entry is not unshared", "[viewmodel][session]")
+{
+    SessionRig rig(Options().existing());
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.gateway.run_all();
+    REQUIRE(rig.session->unshared());
+    const EntryId only = rig.entries().front().m_Id;
+
+    REQUIRE(rig.document().set_deleted(only, true, LogChange::Origin::USER, {}));
+    rig.gateway.run_all();
+    CHECK_FALSE(rig.session->unshared());
+
+    REQUIRE(rig.document().set_deleted(only, false, LogChange::Origin::UNDO, {}));
+    rig.gateway.run_all();
+    CHECK(rig.session->unshared());
+}
+
+TEST_CASE("A new log starts out not unshared, and a log that is loaded already shared is not unshared",
+          "[viewmodel][session]")
+{
+    SessionRig rig(Options().existing());
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.gateway.run_all();
+    REQUIRE(rig.session->unshared());
+    QSignalSpy changed(rig.session.get(), &LogSession::unsharedChanged);
+
+    rig.world.m_Clock.advance(24h);
+    REQUIRE(rig.session->startNewLog());
+    rig.gateway.run_all();
+
+    CHECK_FALSE(rig.session->unshared());
+    CHECK(changed.count() == 1);
+
+    // A log that has a share time when the app starts.
+    SessionRig shared(Options().existing().no_load());
+    REQUIRE(shared.storage.memory().add_entry(shared.log_id, sample_error(7, 0)));
+    REQUIRE(shared.storage.memory().mark_shared(shared.log_id, shared.world.m_Clock.now()));
+    shared.session->load();
+    shared.gateway.run_all();
+    CHECK(shared.session->live_entry_count() == 1);
+    CHECK_FALSE(shared.session->unshared());
+
+    // And one that has entries and no share time.
+    SessionRig unshared_log(Options().existing().no_load());
+    REQUIRE(unshared_log.storage.memory().add_entry(unshared_log.log_id, sample_error(7, 0)));
+    unshared_log.session->load();
+    unshared_log.gateway.run_all();
+    CHECK(unshared_log.session->unshared());
+}
+
+TEST_CASE("A tap that is not saved says which type, with the words of the banner", "[viewmodel][session]")
+{
+    SessionRig rig;
+    QSignalSpy failed(rig.session.get(), &LogSession::recordFailed);
+    QSignalSpy write_failed(rig.session.get(), &LogSession::writeFailed);
+    rig.storage.repository().fail_next(RepositoryOp::ADD_ENTRY);
+
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.gateway.run_all();
+
+    // The old signal is unchanged, and the new one follows it.
+    REQUIRE(write_failed.count() == 1);
+    CHECK(write_failed.at(0).at(0).toString() == QStringLiteral("recordError"));
+    REQUIRE(failed.count() == 1);
+    CHECK(failed.at(0).at(0).toString() == WRONG_RESPONSE);
+    CHECK(failed.at(0).at(1).toString() == QStringLiteral("Wrong Response"));
+    CHECK(failed.at(0).at(2).toString() == QStringLiteral("Wrong Response wasn’t saved"));
+    CHECK(failed.at(0).at(3).toString() ==
+          QStringLiteral("Nothing was added to the log. Tap Wrong Response again to log it."));
+
+    // A tap that is saved says nothing of the kind.
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.gateway.run_all();
+    CHECK(failed.count() == 1);
+}
+
+TEST_CASE("A tap refused because too many writes wait also says which type", "[viewmodel][session]")
+{
+    SessionRig rig;
+    QSignalSpy failed(rig.session.get(), &LogSession::recordFailed);
+    for (int i = 0; i < 65; ++i)
+    {
+        REQUIRE(rig.session->recordError(SEQUENCE_OUT_OF_ORDER));
+        rig.world.m_Clock.advance(1ms);
+    }
+    CHECK(failed.count() == 0);
+
+    CHECK_FALSE(rig.session->recordError(SEQUENCE_OUT_OF_ORDER));
+
+    REQUIRE(failed.count() == 1);
+    CHECK(failed.at(0).at(1).toString() == QStringLiteral("Sequence Out of Order"));
+    CHECK(failed.at(0).at(2).toString() == QStringLiteral("Sequence Out of Order wasn’t saved"));
+    rig.gateway.run_all();
+}

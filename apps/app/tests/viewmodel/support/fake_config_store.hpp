@@ -56,6 +56,10 @@ public:
 
     Result<void, StorageError> write_file(std::string_view path, std::string_view text) override
     {
+        if (m_FailWrite)
+        {
+            return fail(std::exchange(m_FailWrite, std::nullopt).value());
+        }
         m_Files[std::string(path)] = std::string(text);
         return {};
     }
@@ -79,6 +83,10 @@ public:
     void fail_next_save(StorageError error)
     {
         m_FailSave = std::move(error);
+    }
+    void fail_next_write_file(StorageError error)
+    {
+        m_FailWrite = std::move(error);
     }
 
     [[nodiscard]] const std::optional<std::string>& saved() const
@@ -104,6 +112,7 @@ private:
     std::map<std::string, std::string> m_Files;
     std::optional<StorageError> m_FailLoad;
     std::optional<StorageError> m_FailSave;
+    std::optional<StorageError> m_FailWrite;
     std::size_t m_Loads = 0;
 };
 

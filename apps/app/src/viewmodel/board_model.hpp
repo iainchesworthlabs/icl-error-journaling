@@ -45,6 +45,10 @@ inline constexpr int NO_TILE_COLOUR = 0;
     return static_cast<int>(master_index % static_cast<std::size_t>(TILE_COLOUR_SLOTS)) + 1;
 }
 
+/// The name of a tile colour slot, as the error type editor shows it ("Periwinkle" for slot 8; the names are those of
+/// `docs/design/tokens.json`). Empty for slot 0 (Other, an empty tile) and for a slot outside 1 to 11.
+[[nodiscard]] QString tile_colour_name(int slot);
+
 /// The master-list index of the live type on each board position (index `p - 1` for position `p`), or nothing for an
 /// empty position. A retired type is left out of the layout, a position outside 1 to 11 is not a position, and if two
 /// live types claim one position the first in the master list has it and the other is off the board.

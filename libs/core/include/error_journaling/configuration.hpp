@@ -69,9 +69,32 @@ struct ConfigError
         BAD_ID
     };
 
+    /// Which problem it is, finer than `m_Code`: what a screen needs to put it in a sentence of its own.
+    enum class Problem
+    {
+        OTHER,
+        EMPTY,                // a required value is missing or blank
+        TOO_LONG,             // longer than `m_Limit` characters
+        NAME_TAKEN,           // `m_Value` is also the name of item `m_Other`
+        POSITION_TAKEN,       // board position `m_Value` is also used by item `m_Other`
+        NO_PLACEHOLDER,       // a pattern without {value}
+        STRAY_BRACE,          // a pattern with a brace that is not closed or doubled
+        UNKNOWN_PLACEHOLDER   // a pattern with a placeholder other than {value}
+    };
+
     Code m_Code = Code::MALFORMED_JSON;
     std::string m_Path;     // JSON pointer, e.g. "/error_types/3/name"; empty for the whole file
     std::string m_Message;  // plain English for the person who prepared the file
+
+    // The same problem as data, so that the app can say it in its own words. All are worked out from the path except
+    // `m_Problem`, `m_Other`, `m_Value` and `m_Limit`.
+    Problem m_Problem = Problem::OTHER;
+    std::string m_Section;    // "preferences", "error_types", "locations", "note_templates" or "" (the whole file)
+    std::size_t m_Item = 0;   // the 1-based place of the item in its list, or 0
+    std::string m_Field;      // the key concerned, e.g. "name" or "time_format/style"
+    std::size_t m_Other = 0;  // the 1-based place of the other item, for NAME_TAKEN and POSITION_TAKEN
+    std::string m_Value;      // the name or the position that is taken
+    int m_Limit = 0;          // the most characters, for TOO_LONG
 };
 
 /// Reads a configuration file (UTF-8, a leading byte-order mark is accepted). Every problem found is returned, in file
