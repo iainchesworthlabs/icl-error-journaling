@@ -190,8 +190,8 @@ TEST_CASE("import.errors: the core's messages are shown in file order and nothin
         REQUIRE(page(flow) == QStringLiteral("errors"));
         const QStringList shown = row_names(world, QStringLiteral("messageRow"));
         REQUIRE(shown.size() == 2);
-        CHECK(shown.at(0).startsWith(QStringLiteral("/error_types/1/id")));
-        CHECK(shown.at(1).startsWith(QStringLiteral("/error_types/2/name")));
+        CHECK(shown.at(0) == QStringLiteral("Error type 2 uses an id that another one already has."));
+        CHECK(shown.at(1) == QStringLiteral("Error types 1 and 3 are both called Wrong Response."));
         CHECK(item(world, QStringLiteral("messageGroup"))->property("title").toString() ==
               QStringLiteral("2 problems"));
     }
