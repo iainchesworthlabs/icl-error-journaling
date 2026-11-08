@@ -13,6 +13,7 @@ import ErrorJournalingApp
 //   leadingIcon        an Icon kind drawn 20 pt before the label, 10 pt from it ("plus" for the new-log row)
 //   leadingIconColour  primaryText by default; leadingIconStroke is its stroke on the 24 grid (2.2 for the plus)
 //   labelColour        textPrimary by default (destructive when `destructive`); primaryText for an action row
+//   labelFont          body (16) by default; Theme.font.rowText.font (15) for the rows of the Other picker's board group
 //   valueFont          body (16) by default; Theme.font.caption.font (13) for a count
 //   valueInset         extra room right of the value (8 for the counts of ImportConfirm)
 //   valueSwatch        a colour for a 12 pt swatch (3 pt radius) 10 pt before the value: the type's tile colour on
@@ -45,6 +46,7 @@ Item {
     property color leadingIconColour: Theme.colour.primaryText
     property real leadingIconStroke: Theme.border.hairline * 2
     property color labelColour: destructive ? Theme.colour.destructive : Theme.colour.textPrimary
+    property font labelFont: Theme.font.body.font
     property font valueFont: Theme.font.body.font
     property real valueInset: 0
     property color valueSwatch: "transparent"
@@ -115,7 +117,7 @@ Item {
             return Math.max(root.contentWidth * 0.4, end - x);
         }
         color: root.labelColour
-        font: Theme.font.body.font
+        font: root.labelFont
         text: root.text
         wrapMode: Text.WordWrap
         Accessible.ignored: true

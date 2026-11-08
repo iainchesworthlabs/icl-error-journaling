@@ -62,6 +62,8 @@ Sheet {
     }
 
     accessibleName: qsTr("Log another error")
+    // The list scrolls under the home indicator and pads its end by the inset, instead of being cut above it.
+    contentUnderHomeIndicator: true
 
     onClosed: {
         root.picker.filter = "";
@@ -102,16 +104,20 @@ Sheet {
     }
 
     // A row of a group with a mark in front of its text. A ListRow has no place for one, so the row starts after the mark
-    // column and the mark and the pressed highlight of the column are drawn to the left of it, outside the row's own
-    // bounds.
+    // column and the mark, the pressed highlight and the separator of the column are drawn to the left of it, outside the
+    // row's own bounds (the mock-up's separator runs the full width of the card).
     component MarkedRow: ListRow {
         id: marked
 
+        // The width of the mark: 14 pt for a swatch, 20 pt for the plus sign.
+        property real markWidth: Theme.space.rowPadding
         // The mark column: the swatch or the plus sign is in the padding of the row, and the text starts 12 pt after it.
-        readonly property real markIndent: Theme.space.rowPadding + Theme.space.sectionGap
+        readonly property real markIndent: marked.markWidth + Theme.space.sectionGap
 
         x: marked.markIndent
         width: parent ? parent.width - marked.markIndent : implicitWidth
+        showSeparator: false
+        valueFont: Theme.font.caption.font
 
         Rectangle {
             x: -marked.markIndent
@@ -123,9 +129,21 @@ Sheet {
             bottomLeftRadius: marked.isLast ? Theme.radius.groupedList : 0
             Accessible.ignored: true
         }
+
+        Rectangle {
+            objectName: "pickerSeparator"
+            x: -marked.markIndent
+            y: marked.height - height
+            width: marked.width + marked.markIndent
+            height: Theme.border.hairline
+            visible: !marked.isLast
+            color: Theme.colour.divider
+            Accessible.ignored: true
+        }
     }
 
-    // One error type. The swatch is the colour of its tile when it is on the board and neutral when it is not.
+    // One error type. The swatch is the colour of its tile when it is on the board, and neutral with an outline when it is
+    // not. The rows of "Not on your board" are 52 pt and 16 pt text; those of "On your board" are 46 pt and 15 pt.
     component TypeRow: MarkedRow {
         id: typeRow
 
@@ -138,16 +156,18 @@ Sheet {
         objectName: "pickerRow:" + typeId
         text: typeRow.label
         value: typeRow.count > 0 ? qsTr("%n today", "", typeRow.count) : ""
+        minimumHeight: typeRow.onTheBoard ? Theme.size.rowHeightPicker : Theme.size.rowHeightForm
+        labelFont: typeRow.onTheBoard ? Theme.font.rowText.font : Theme.font.body.font
 
         Rectangle {
             objectName: "pickerSwatch"
-            x: -Theme.space.sectionGap
+            x: Theme.space.rowPadding - typeRow.markIndent
             y: (typeRow.height - height) / 2
-            width: Theme.space.rowPadding
+            width: typeRow.markWidth
             height: width
             radius: Theme.space.tileGap / 2
             color: typeRow.onTheBoard ? Theme.tileColour(typeRow.colourSlot) : Theme.colour.swatch
-            border.width: Theme.border.hairline
+            border.width: typeRow.onTheBoard ? 0 : Theme.border.hairline
             border.color: Theme.colour.border
             Accessible.ignored: true
         }
@@ -160,6 +180,7 @@ Sheet {
         anchors.right: parent.right
         anchors.top: parent.top
         title: qsTr("Log another error")
+        inSheet: true
         leadingText: qsTr("Cancel")
         onLeadingTriggered: root.close()
     }
@@ -169,7 +190,8 @@ Sheet {
 
         objectName: "pickerSearch"
         anchors.top: nav.bottom
-        anchors.topMargin: Theme.space.tileGap
+        // The bar of a sheet leaves 16 pt under its row and the picker's search field has 12.
+        anchors.topMargin: -Theme.space.tileGap * 3 / 4
         x: Theme.space.screenMargin
         width: parent.width - 2 * Theme.space.screenMargin
         filter: root.picker.filter
@@ -189,7 +211,7 @@ Sheet {
         anchors.bottom: parent.bottom
         clip: true
         contentWidth: width
-        contentHeight: sections.height + Theme.space.screenMargin
+        contentHeight: sections.height + Theme.space.screenMargin + root.contentBottomInset
         boundsBehavior: Flickable.StopAtBounds
         // While the form is open it is kept in view, as the keyboard shortens the sheet and the message under the field grows.
         onHeightChanged: {
@@ -206,12 +228,14 @@ Sheet {
 
             x: Theme.space.screenMargin
             width: flick.width - 2 * Theme.space.screenMargin
-            spacing: Theme.space.sectionGap
+            spacing: Theme.space.screenMargin
 
             GroupedList {
                 title: qsTr("Not on your board")
                 width: parent.width
                 visible: offRepeater.count > 0
+                surface: Theme.colour.surfaceRaised
+                headingInset: 0
 
                 Repeater {
                     id: offRepeater
@@ -230,6 +254,8 @@ Sheet {
                 title: qsTr("On your board")
                 width: parent.width
                 visible: onRepeater.count > 0
+                surface: Theme.colour.surfaceRaised
+                headingInset: 0
 
                 Repeater {
                     id: onRepeater
@@ -260,40 +286,29 @@ Sheet {
 
             GroupedList {
                 width: parent.width
+                surface: Theme.colour.surfaceRaised
 
                 MarkedRow {
+                    id: addRow
+
                     objectName: "pickerAdd"
                     text: qsTr("Add a new error type")
-                    showSeparator: false
+                    markWidth: Theme.size.badge * 5 / 6
+                    minimumHeight: Theme.size.rowHeightForm
+                    labelColour: Theme.colour.primaryText
+                    labelFont: Theme.font.body.make(Font.Medium, false)
                     onActivated: {
                         form.open = true;
                         newName.focusField();
                     }
 
                     // The plus sign, in the colour of an action.
-                    Item {
-                        x: -Theme.space.sectionGap
-                        y: (parent.height - height) / 2
-                        width: Theme.space.rowPadding
-                        height: width
-                        Accessible.ignored: true
-
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: parent.width
-                            height: Theme.border.hairline * 2
-                            radius: height / 2
-                            color: Theme.colour.primaryText
-                            Accessible.ignored: true
-                        }
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: Theme.border.hairline * 2
-                            height: parent.height
-                            radius: width / 2
-                            color: Theme.colour.primaryText
-                            Accessible.ignored: true
-                        }
+                    Icon {
+                        x: Theme.space.rowPadding - addRow.markIndent
+                        y: (addRow.height - height) / 2
+                        size: addRow.markWidth
+                        kind: "plus"
+                        colour: Theme.colour.primaryText
                     }
                 }
             }
@@ -315,6 +330,8 @@ Sheet {
                     anchors.rightMargin: Theme.space.tileGap
                     label: qsTr("New error type")
                     labelVisible: false
+                    compact: true
+                    surface: Theme.colour.surfaceRaised
                     placeholderText: qsTr("Name of the new error type")
                     text: form.name
                     errorText: form.refused ? root.picker.addTypeError : ""

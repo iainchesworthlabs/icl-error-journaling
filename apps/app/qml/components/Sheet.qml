@@ -109,7 +109,9 @@ FocusScope {
     // The same for a centred card, which stays clear of the home indicator when there is no keyboard.
     readonly property real centreAvailable: available - (keyboardHeight > 0 ? 0 : bottomInset)
     readonly property real bodyPadding: Theme.space.screenMargin + Theme.space.tileGap / 2
-    readonly property real grabberZone: Theme.space.tileGap * 2 + Theme.border.hairline * 5
+    // The grabber: 8 pt above it and the 5 pt pill. The bar of the sheet (NavBar `inSheet`) has the 8 pt under it, so the
+    // row of its actions starts 21 pt under the top of the sheet, as the mock-ups have it.
+    readonly property real grabberZone: Theme.space.tileGap + Theme.border.hairline * 5
     // The height of the Content detent: the grabber, the content and what is kept under it.
     readonly property real contentHeight: grabberZone + contentImplicitHeight + (keyboardHeight > 0 ? 0 : bottomInset)
     readonly property real panelHeight: centred ? Math.min(contentImplicitHeight + Theme.size.badge + Theme.space.screenMargin, centreAvailable - 2 * Theme.space.screenMargin) : Math.min(detent === Sheet.Medium ? mediumHeight : detent === Sheet.Content ? contentHeight : largeHeight, available)
