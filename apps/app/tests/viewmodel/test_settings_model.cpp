@@ -564,8 +564,8 @@ TEST_CASE("A file that cannot be imported is refused with messages in file order
         REQUIRE(failed.count() == 1);
         const QStringList messages = failed.at(0).at(0).toStringList();
         REQUIRE(messages.size() == 2);
-        CHECK(messages.at(0).startsWith("/error_types/1/id"));
-        CHECK(messages.at(1).startsWith("/error_types/2/name"));
+        CHECK(messages.at(0) == "Error type 2 uses an id that another one already has.");
+        CHECK(messages.at(1) == "Error types 1 and 3 are both called Wrong Response.");
     }
     SECTION("a file of 2 MiB")
     {

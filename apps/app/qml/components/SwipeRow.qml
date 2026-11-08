@@ -18,6 +18,11 @@ import ErrorJournalingApp
 // in the accessibility tree, named after the row ("Copy, 10:20 Mute Delay"), that a screen reader reaches without a
 // swipe. They sit under the row and are activated where they are; the swipe is the shortcut for a finger.
 //
+// Layout: the content sits 13 pt from the top and the bottom (Theme.font.rowText, 15 pt with a 1.35 line height, is the
+// text of the design), and the row is at least `minimumHeight` (48; Theme.size.rowHeightTall, 60, for History). The
+// separator runs the full width of the card; a screen sets `showDivider: false` on the last row of a card. The action
+// labels are 14/600.
+//
 // The row slides with a drag along x. A short drag, or one that is mostly vertical, goes back (a vertical drag scrolls
 // the list that holds the row and does not open it). A tap on an open row closes it.
 Item {
@@ -31,12 +36,19 @@ Item {
     property color surface: Theme.colour.surface
     // The row is open (its actions are shown). A swipe sets it; a screen sets it to false to close the row.
     property bool revealed: false
+    property real minimumHeight: Theme.size.listRowHeight
+    // The separator under the row; false for the last row of a card.
+    property bool showDivider: true
+    // Review passes its own divider colour, as it does its surface.
+    property color dividerColour: Theme.colour.divider
 
     default property alias content: contentItem.data
 
     readonly property bool pressed: tap.pressed
     // How far the row slides: the width of the actions.
     readonly property real revealWidth: (showCopy ? copyButton.width : 0) + deleteButton.width
+    // The padding above and below the content: 13 pt.
+    readonly property real verticalPadding: Theme.space.rowPadding - Theme.border.hairline
 
     signal activated
     signal copyRequested
@@ -44,7 +56,7 @@ Item {
 
     implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
     width: parent ? parent.width : implicitWidth
-    implicitHeight: Math.max(Theme.size.listRowHeight, contentItem.childrenRect.height + Theme.space.sectionGap)
+    implicitHeight: Math.max(minimumHeight, contentItem.childrenRect.height + 2 * verticalPadding)
     clip: true
 
     // A button of the revealed strip.
@@ -76,7 +88,7 @@ Item {
         TextMetrics {
             id: metrics
 
-            font: Theme.font.badge.font
+            font: Theme.font.actionLabel.font
             text: action.label
         }
         Rectangle {
@@ -91,7 +103,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             color: action.labelColour
-            font: Theme.font.badge.font
+            font: Theme.font.actionLabel.font
             text: action.label
             wrapMode: Text.Wrap
             Accessible.ignored: true
@@ -129,11 +141,12 @@ Item {
         }
 
         Rectangle {
+            objectName: "swipeDivider"
             anchors.bottom: parent.bottom
-            x: Theme.space.rowPadding
-            width: parent.width - Theme.space.rowPadding
+            visible: root.showDivider
+            width: parent.width
             height: Theme.border.hairline
-            color: Theme.colour.divider
+            color: root.dividerColour
         }
 
         TapHandler {

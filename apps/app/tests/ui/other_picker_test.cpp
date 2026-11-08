@@ -739,7 +739,7 @@ TEST_CASE("other.safe_area: nothing interactive enters an inset, at 59 and 34 an
     SECTION("59 and 34")
     {
         f.open();
-        CHECK(f.m_Rig.geometry(f.find(QStringLiteral("sheetPanel"))).top() == 59);
+        CHECK(f.m_Rig.geometry(f.find(QStringLiteral("sheetPanel"))).top() == 54);
         expect_clean(check_safe_area(f.m_Rig, 59, 34));
     }
 
@@ -748,7 +748,7 @@ TEST_CASE("other.safe_area: nothing interactive enters an inset, at 59 and 34 an
         f.m_Sheet->setProperty("overrideTop", 79);
         f.m_Sheet->setProperty("overrideBottom", 54);
         f.open();
-        CHECK(f.m_Rig.geometry(f.find(QStringLiteral("sheetPanel"))).top() == 79);
+        CHECK(f.m_Rig.geometry(f.find(QStringLiteral("sheetPanel"))).top() == 74);
         expect_clean(check_safe_area(f.m_Rig, 79, 54));
     }
 }
@@ -761,7 +761,7 @@ TEST_CASE("motion.reduce: with Reduce Motion the sheet fades in 100 ms and does 
     f.open(250ms);
     expect_clean(check_motion_reduced(f.m_Rig));
     CHECK(f.is_open());
-    CHECK(f.m_Rig.geometry(f.find(QStringLiteral("sheetPanel"))).top() == 59);
+    CHECK(f.m_Rig.geometry(f.find(QStringLiteral("sheetPanel"))).top() == 54);
 }
 
 #include "other_picker_test.moc"

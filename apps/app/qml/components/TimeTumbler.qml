@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
 import ErrorJournalingApp
@@ -18,6 +19,15 @@ import ErrorJournalingApp
 // never broken. A new value from outside moves the columns without emitting. With the seconds column hidden the seconds
 // of the value are kept.
 //
+// Look (TimeTumbler, TimeTumbler12): the rows are 44 pt, the unselected ones 20/400 in textSecondary and the one in the
+// selection band 24/600 in textPrimary, with tabular figures; the band has a 10 pt radius; the card has 12 pt above the
+// columns and 8 pt below, and its fill is `surface` (surfaceRaised by default, as the tumbler sits on a sheet). In the
+// 24-hour format the columns are 88 pt; in the 12-hour format they are 72 pt and AM/PM 64 pt, with 8 pt colons.
+//
+// Optional line under the card (12 pt below it, 10 pt apart): `nowText` shows the "Now" chip (44 pt, 18 pt side padding,
+// a 12 pt radius, primaryTint, 16/600 primaryText), which emits `nowRequested()`; `caption` is the 14 pt text beside it
+// ("Shown in the log as 11:02"). Both are empty by default, and the line is not drawn.
+//
 // VoiceOver. Each column is an adjustable item (a spin box): swipe up or down to change it by one, and it reads its name
 // and its value.
 Item {
@@ -35,6 +45,11 @@ Item {
     property string secondsLabel: qsTr("Seconds")
     property string meridiemLabel: qsTr("AM/PM")
     property var meridiemNames: [qsTr("AM"), qsTr("PM")]
+    property color surface: Theme.colour.surfaceRaised
+    // The "Now" chip's label; empty for no chip.
+    property string nowText: ""
+    // The text beside the chip; empty for none.
+    property string caption: ""
 
     readonly property bool invalid: errorText.length > 0
     // The time the columns show, in seconds since midnight. The tumbler keeps it; a screen reads `localSeconds`.
@@ -42,6 +57,8 @@ Item {
 
     // The user changed the time.
     signal timeEdited(int localSeconds)
+    // The "Now" chip was tapped: the screen sets the time to now.
+    signal nowRequested
 
     property bool syncing: false
 
@@ -50,16 +67,23 @@ Item {
     readonly property int visibleCount: 5
     readonly property real rowsHeight: rowHeight * visibleCount
     // The width of a column: 88 pt, or less when the 12-hour format with seconds has four of them to fit.
-    readonly property int columnCount: 2 + (showSeconds ? 1 : 0) + (twelveHour ? 1 : 0)
+    readonly property int numericColumnCount: 2 + (showSeconds ? 1 : 0)
+    readonly property int columnCount: numericColumnCount + (twelveHour ? 1 : 0)
     readonly property int separatorCount: showSeconds ? 2 : 1
-    // The colon between two columns: a gap wide, or as wide as the colon in the font if that is more.
-    readonly property real separatorWidth: Math.max(Theme.space.sectionGap, colonMetrics.advanceWidth)
+    // The colon between two columns: 8 pt in the 12-hour format, otherwise a gap wide or as wide as the colon if more.
+    readonly property real separatorWidth: twelveHour ? Theme.space.tileGap : Math.max(Theme.space.sectionGap, colonMetrics.advanceWidth)
     // The gaps of the row of columns and colons.
     readonly property int gapCount: columnCount + separatorCount - 1
-    readonly property real columnWidth: Math.min(Theme.size.minTouchTarget * 2, (width - 2 * Theme.space.tileGap - separatorCount * separatorWidth - gapCount * columns.spacing) / columnCount)
+    // The widest a column is: 88 pt, or 72 pt in the 12-hour format, where AM/PM is 64 pt.
+    readonly property real columnMaximum: twelveHour ? Theme.size.minTouchTarget * 18 / 11 : Theme.size.minTouchTarget * 2
+    // AM/PM is 64 pt at the default text size; above it, it takes an even share so that its larger text fits.
+    readonly property real evenWidth: (width - 2 * Theme.space.tileGap - separatorCount * separatorWidth - gapCount * columns.spacing) / columnCount
+    readonly property real meridiemWidth: Theme.font.tumbler.enlarged ? evenWidth : Math.min(Theme.miniBoard.tile, evenWidth)
+    readonly property real columnWidth: Math.min(columnMaximum, (width - 2 * Theme.space.tileGap - separatorCount * separatorWidth - gapCount * columns.spacing - (twelveHour ? meridiemWidth : 0)) / numericColumnCount)
+    readonly property bool hasNowLine: nowText.length > 0 || caption.length > 0
 
     implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
-    implicitHeight: card.height + message.height
+    implicitHeight: card.height + message.height + (hasNowLine ? nowLine.height + Theme.space.sectionGap : 0)
     width: parent ? parent.width : implicitWidth
 
     Accessible.role: Accessible.Grouping
@@ -198,13 +222,16 @@ Item {
 
             delegate: Text {
                 required property var modelData
+                required property int index
 
-                readonly property bool selected: Math.abs(Tumbler.displacement) < 0.5
+                // The row in the band: the current index, which the Tumbler moves as the column turns.
+                readonly property bool selected: index === tumbler.currentIndex
 
+                objectName: "tumblerRow"
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 color: selected ? Theme.colour.textPrimary : Theme.colour.textSecondary
-                font: selected ? Theme.font.headerUnit.font : Theme.font.body.font
+                font: selected ? Theme.font.tumblerSelected.font : Theme.font.tumbler.font
                 text: String(modelData)
                 Accessible.ignored: true
             }
@@ -214,7 +241,7 @@ Item {
     TextMetrics {
         id: colonMetrics
 
-        font: Theme.font.headerUnit.font
+        font: Theme.font.tumblerSelected.font
         text: ":"
     }
 
@@ -228,12 +255,12 @@ Item {
         width: separatorWidth
         height: columnHeight
 
+        // As wide as the colon, centred on the gap: the 8 pt gap of the 12-hour format is narrower than the glyph.
         Text {
-            width: parent.width
+            x: (parent.width - width) / 2
             y: parent.headingHeight + parent.rowsHeight / 2 - height / 2
-            horizontalAlignment: Text.AlignHCenter
             color: Theme.colour.textPrimary
-            font: Theme.font.headerUnit.font
+            font: Theme.font.tumblerSelected.font
             text: ":"
             Accessible.ignored: true
         }
@@ -243,17 +270,19 @@ Item {
         id: card
 
         width: parent.width
-        height: columns.height + 2 * Theme.space.tileGap + Theme.space.sectionGap
+        objectName: "tumblerCard"
+        height: columns.height + Theme.space.sectionGap + Theme.space.tileGap
         radius: Theme.radius.groupedList
-        color: Theme.colour.surface
+        color: root.surface
 
         // The selection band behind the middle row.
         Rectangle {
             x: Theme.space.tileGap
             y: Theme.space.sectionGap + hours.headingHeight + root.rowHeight * Math.floor(root.visibleCount / 2)
             width: parent.width - 2 * Theme.space.tileGap
+            objectName: "tumblerBand"
             height: root.rowHeight
-            radius: Theme.radius.field
+            radius: Theme.radius.small
             color: Theme.colour.timeChipBackground
         }
 
@@ -313,7 +342,7 @@ Item {
                 wrap: false
                 rowHeight: root.rowHeight
                 visibleCount: root.visibleCount
-                columnWidth: root.columnWidth
+                columnWidth: root.meridiemWidth
                 onMoved: root.columnsMoved()
             }
         }
@@ -333,5 +362,65 @@ Item {
         text: root.errorText
         wrapMode: Text.WordWrap
         Accessible.ignored: true
+    }
+
+    // The "Now" chip and the caption beside it.
+    Item {
+        id: nowLine
+
+        objectName: "tumblerNowLine"
+        visible: root.hasNowLine
+        y: message.y + message.height + Theme.space.sectionGap
+        width: parent.width
+        height: Math.max(nowChip.visible ? nowChip.height : 0, captionText.implicitHeight)
+
+        Rectangle {
+            id: nowChip
+
+            objectName: "tumblerNow"
+            visible: root.nowText.length > 0
+            width: visible ? nowLabel.implicitWidth + 2 * (Theme.space.screenMargin + Theme.border.hairline * 2) : 0
+            height: Math.max(Theme.size.minTouchTarget, nowLabel.implicitHeight + Theme.space.tileGap)
+            anchors.verticalCenter: parent.verticalCenter
+            radius: Theme.radius.field
+            color: nowTap.pressed ? Theme.colour.primaryPressed : Theme.colour.primaryTint
+            activeFocusOnTab: true
+            Accessible.role: Accessible.Button
+            Accessible.name: root.nowText
+            Accessible.focusable: true
+            Accessible.onPressAction: root.nowRequested()
+            Keys.onReturnPressed: root.nowRequested()
+            Keys.onSpacePressed: root.nowRequested()
+
+            Text {
+                id: nowLabel
+
+                anchors.centerIn: parent
+                color: nowTap.pressed ? Theme.colour.textOnPrimary : Theme.colour.primaryText
+                font: Theme.font.body.selectedFont
+                text: root.nowText
+                Accessible.ignored: true
+            }
+
+            TapHandler {
+                id: nowTap
+
+                onTapped: root.nowRequested()
+            }
+        }
+
+        Text {
+            id: captionText
+
+            objectName: "tumblerCaption"
+            x: nowChip.visible ? nowChip.width + Theme.space.tileGap + Theme.border.hairline * 2 : 0
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - x
+            visible: root.caption.length > 0
+            color: Theme.colour.textSecondary
+            font: Theme.font.messageText.font
+            text: root.caption
+            wrapMode: Text.WordWrap
+        }
     }
 }

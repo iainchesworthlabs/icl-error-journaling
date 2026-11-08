@@ -10,6 +10,7 @@
 #include "error_journaling/stored_log.hpp"
 #include "error_journaling/time_format.hpp"
 #include "error_journaling/time_zone_provider.hpp"
+#include "viewmodel/board_model.hpp"
 #include "viewmodel/export_context_builder.hpp"
 
 #include <QByteArray>
@@ -63,6 +64,23 @@ QString kind_text(const Entry& entry)
         return QStringLiteral("note");
     }
     return QStringLiteral("header_change");
+}
+
+/// The marker an error line or a note line starts with, without the space after it ("T|", "(Free Text)"); empty for
+/// a change of the header.
+std::string_view line_marker(const Entry& entry)
+{
+    if (std::holds_alternative<ErrorEntry>(entry.m_Body))
+    {
+        std::string_view marker = export_format::ERROR_MARKER;
+        marker.remove_suffix(1); // the space
+        return marker;
+    }
+    if (std::holds_alternative<NoteEntry>(entry.m_Body))
+    {
+        return export_format::NOTE_MARKER;
+    }
+    return {};
 }
 
 bool is_header_change(const Entry* entry)
@@ -352,6 +370,10 @@ QVariant TimelineModel::data(const QModelIndex& index, int role) const
         return row.m_Full;
     case KIND:
         return row.m_Kind;
+    case PREFIX_TEXT:
+        return row.m_Prefix;
+    case REST_TEXT:
+        return row.m_Rest;
     default:
         return {};
     }
@@ -359,11 +381,27 @@ QVariant TimelineModel::data(const QModelIndex& index, int role) const
 
 QHash<int, QByteArray> TimelineModel::roleNames() const
 {
-    return {{ENTRY_ID, "entryId"},
-            {TIME_TEXT, "timeText"},
-            {LINE_TEXT, "lineText"},
-            {FULL_LINE, "fullLine"},
-            {KIND, "kind"}};
+    return {{ENTRY_ID, "entryId"}, {TIME_TEXT, "timeText"},     {LINE_TEXT, "lineText"}, {FULL_LINE, "fullLine"},
+            {KIND, "kind"},        {PREFIX_TEXT, "prefixText"}, {REST_TEXT, "restText"}};
+}
+
+/// Splits `row.m_Line` into the marker and the rest.
+void TimelineModel::split_marker(const Entry& entry, Row& row)
+{
+    const std::string_view marker = line_marker(entry);
+    const std::string line = row.m_Line.toStdString();
+    if (!marker.empty() && line.starts_with(marker))
+    {
+        row.m_Prefix = text_of(std::string(marker));
+        std::string_view rest = std::string_view(line).substr(marker.size());
+        if (rest.starts_with(' '))
+        {
+            rest.remove_prefix(1);
+        }
+        row.m_Rest = text_of(std::string(rest));
+        return;
+    }
+    row.m_Rest = row.m_Line;
 }
 
 TimelineModel::Row TimelineModel::make_row(const Log& log, const Entry& entry, const ExportContext& context) const
@@ -386,10 +424,12 @@ TimelineModel::Row TimelineModel::make_row(const Log& log, const Entry& entry, c
             row.m_Time = text_of(time);
             row.m_Line = text_of(line->substr(prefix.size()));
             row.m_Full = text_of(*line);
+            split_marker(entry, row);
             return row;
         }
     }
     row.m_Line = tr("This entry cannot be shown.");
+    row.m_Rest = row.m_Line;
     return row;
 }
 
@@ -700,8 +740,16 @@ QVariantMap TimelineModel::entryForEdit(const QString& entryId) const
     map.insert(QStringLiteral("zone"), text_of(entry->m_Captured.m_Zone));
     map.insert(QStringLiteral("timeText"), text_of(format_time(*local, m_Configuration.configuration().m_TimeFormat)));
 
+    map.insert(QStringLiteral("footnote"), footnote_for(*entry, map.value(QStringLiteral("timeText")).toString()));
+
     if (const auto* error = std::get_if<ErrorEntry>(&entry->m_Body))
     {
+        const auto& types = m_Configuration.configuration().m_ErrorTypes;
+        const auto type = std::ranges::find(types, error->m_ErrorType, &ErrorType::m_Id);
+        const int slot =
+            type == types.end() ? NO_TILE_COLOUR : tile_colour_slot(static_cast<std::size_t>(type - types.begin()));
+        map.insert(QStringLiteral("colourSlot"), slot);
+        map.insert(QStringLiteral("colourName"), tile_colour_name(slot));
         map.insert(QStringLiteral("errorTypeId"), text_of(error->m_ErrorType.format()));
         map.insert(QStringLiteral("errorTypeName"), text_of(error->m_ErrorTypeLabel));
         map.insert(QStringLiteral("attachedNote"), text_of(error->m_AttachedNote.value_or(std::string{})));
@@ -720,6 +768,34 @@ QVariantMap TimelineModel::entryForEdit(const QString& entryId) const
         map.insert(QStringLiteral("newValue"), text_of(change.m_NewValue));
     }
     return map;
+}
+
+QString TimelineModel::footnote_for(const Entry& entry, const QString& time_text) const
+{
+    // The unit and the version that were in force when the entry was made.
+    const HeaderValues header = HeaderHistory(m_Document->log()).at(entry.m_Captured.m_Utc);
+    QString unit;
+    if (header.m_UnitNumber)
+    {
+        unit = m_Configuration.configured()
+                   ? text_of(header.m_UnitNumber->format(m_Configuration.configuration().m_UnitPrefix))
+                   : text_of(std::string(header.m_UnitNumber->digits()));
+    }
+    const QString version = header.m_SoftwareVersion ? text_of(header.m_SoftwareVersion->format()) : QString();
+
+    if (!unit.isEmpty() && !version.isEmpty())
+    {
+        return tr("Logged at %1 on %2, version %3.").arg(time_text, unit, version);
+    }
+    if (!unit.isEmpty())
+    {
+        return tr("Logged at %1 on %2.").arg(time_text, unit);
+    }
+    if (!version.isEmpty())
+    {
+        return tr("Logged at %1, version %2.").arg(time_text, version);
+    }
+    return tr("Logged at %1.").arg(time_text);
 }
 
 Result<TimelineModel::Edit, QString> TimelineModel::work_out_edit(EntryId id, const QVariantMap& edit) const
@@ -1021,6 +1097,20 @@ QString TimelineModel::formatLocalSeconds(int localSeconds) const
     }
     const LocalTime time{std::chrono::year{1970} / 1 / 1, std::chrono::seconds{localSeconds}};
     return text_of(format_time(time, m_Configuration.configuration().m_TimeFormat));
+}
+
+int TimelineModel::nowLocalSeconds(const QString& entryId) const
+{
+    std::string zone = m_Environment.m_Zone.current();
+    if (const auto id = parse_id(entryId); id && m_Document != nullptr && m_Document->ready())
+    {
+        if (const Entry* entry = m_Document->log().find(*id); entry != nullptr)
+        {
+            zone = entry->m_Captured.m_Zone;
+        }
+    }
+    const auto local = m_Environment.m_Zones.to_local(Timestamp{m_Environment.m_Clock.now(), zone});
+    return local ? static_cast<int>(local->m_SinceMidnight.count()) : -1;
 }
 
 int TimelineModel::rowOf(const QString& entryId) const

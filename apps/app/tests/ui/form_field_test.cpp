@@ -62,14 +62,13 @@ QQuickItem* text_item(UiRig& rig, const QString& text)
     return nullptr;
 }
 
-/// The thin rotated rectangles that are shown: the arms of a check mark.
+/// The check marks (an Icon of kind "check") that are shown.
 int check_arms(UiRig& rig)
 {
     int count = 0;
     for (const Node& node : rig.tree())
     {
-        if (node.m_TypeName.startsWith(QStringLiteral("QQuickRectangle")) && node.m_Visible &&
-            node.m_Item->rotation() != 0)
+        if (node.m_Visible && node.m_Item->property("kind").toString() == QStringLiteral("check"))
         {
             ++count;
         }
@@ -96,7 +95,7 @@ TEST_CASE("form_field.validation: the refusal appears inline, is the field's des
     CHECK(text_item(rig, QStringLiteral("Format 1.4.2, numbers only.")) != nullptr);
     CHECK(iface->text(QAccessible::Description) == QStringLiteral("Format 1.4.2, numbers only."));
     CHECK(require_root(rig)->property("canSave").toBool());
-    CHECK(check_arms(rig) == 2);
+    CHECK(check_arms(rig) == 1);
     CHECK(input->property("background")
               .value<QObject*>()
               ->property("border")
@@ -112,7 +111,14 @@ TEST_CASE("form_field.validation: the refusal appears inline, is the field's des
     QQuickItem* shown = text_item(rig, message);
     REQUIRE(shown != nullptr);
     CHECK(text_item(rig, QStringLiteral("Format 1.4.2, numbers only.")) == nullptr);
-    CHECK(shown->property("color").value<QColor>() == theme_colour(rig, "destructive"));
+    // The refusal is textPrimary after a warning sign in the destructive colour (ErrorTypeEdit), so it is not colour
+    // alone.
+    CHECK(shown->property("color").value<QColor>() == theme_colour(rig, "textPrimary"));
+    QQuickItem* sign = rig.find(QStringLiteral("formErrorIcon"));
+    REQUIRE(sign != nullptr);
+    CHECK(sign->isVisible());
+    CHECK(sign->property("kind").toString() == QStringLiteral("warning"));
+    CHECK(sign->property("colour").value<QColor>() == theme_colour(rig, "destructive"));
     CHECK(rig.geometry(shown).top() >= rig.geometry(input).bottom());
     CHECK(iface->text(QAccessible::Description) == message);
     CHECK(field->property("invalid").toBool());

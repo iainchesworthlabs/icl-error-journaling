@@ -137,6 +137,28 @@ QtObject {
         readonly property real toastHeight: 52
         readonly property real tabBarHeight: 83
         readonly property real listRowHeight: 48
+        // The named row heights of the design: settings rows (44), the Other picker's rows (46), the rows of a form such
+        // as Edit entry and the import errors (52), an action row such as "Start a new log for another unit or site"
+        // (56) and a History row (60). A ListRow or SwipeRow takes one as its `minimumHeight`.
+        readonly property real rowHeightCompact: 44
+        readonly property real rowHeightPicker: 46
+        readonly property real rowHeightForm: 52
+        readonly property real rowHeightAction: 56
+        readonly property real rowHeightTall: 60
+        // A field in its compact form (FirstLaunchManual) and a small button (48); the buttons of an alert (50) and its
+        // plain cancel button (46).
+        readonly property real compactFieldHeight: 48
+        readonly property real smallButtonHeight: 48
+        readonly property real alertButtonHeight: 50
+        readonly property real alertCancelHeight: 46
+        // The top of a large sheet on the design frame (54, five points above the 59 pt safe area). On a phone with
+        // another inset the sheet keeps the same distance from the inset.
+        readonly property real sheetTop: 54
+        // The least height of the header card of the Log screen.
+        readonly property real headerCardHeight: 64
+        // The top of an alert card on the design frame: the mock-ups pin the card near here instead of centring it.
+        // Sheet clamps it so that a tall card on a small screen stays inside the safe area.
+        readonly property real alertTop: 236
         // The range of the Dynamic Type multiplier, xSmall to accessibility 5.
         readonly property real textScaleMin: 0.82
         readonly property real textScaleMax: 3.1
@@ -155,6 +177,10 @@ QtObject {
         readonly property real sheetTop: 16
         readonly property real alert: 22
         readonly property real primaryButton: 14
+        // The time chip of Edit entry and the version sheet.
+        readonly property real timeChip: 8
+        // The search field, the tumbler's selection band and the toast's Undo button.
+        readonly property real small: 10
     }
 
     readonly property Radius radius: Radius {}
@@ -168,13 +194,20 @@ QtObject {
 
     readonly property Space space: Space {}
 
-    // The miniature board of the settings screen (docs/design/screens/BoardSettings.dc.html): a tile, the gap between tiles,
-    // the label size in points (a whole pixel size is made from it: 11.5 is 12) and the scale of a selected tile's lift.
+    // The miniature board of the settings screen (docs/design/screens/BoardSettings.dc.html and BoardLayoutSelected): a
+    // tile, the gap between tiles, the label size in points, the scale of a selected tile's lift and how far it rises,
+    // the selected ring (3 pt, 1 pt outside the face) and the tick (a 20 pt disc 6 pt in from the corner).
     component MiniBoard: QtObject {
         readonly property real tile: 64
         readonly property real gap: 6
         readonly property real labelSize: 11.5
         readonly property real selectedScale: 1.04
+        readonly property real lift: 4
+        readonly property real ringWidth: 3
+        readonly property real ringGap: 1
+        readonly property real tick: 20
+        readonly property real tickInset: 6
+        readonly property real labelInset: 8
     }
 
     readonly property MiniBoard miniBoard: MiniBoard {}
@@ -187,81 +220,348 @@ QtObject {
 
     readonly property Border border: Border {}
 
+    // ---- shadows ----
+
+    // The shadows of the design, as CSS draws them: a vertical offset, a blur radius and a colour with its opacity, which
+    // differ by scheme for the card, the toast and the lifted tile. components/private/Shadow.qml draws one.
+    //   card    the tiles, the note card and the "Last" bar: 0 1 2, so faint that Shadow draws it without an effect
+    //   toast   the undo toast and the floating banners: 0 8 24
+    //   alert   the alert card: 0 20 48
+    //   sheet   a bottom sheet, cast upwards: 0 -4 24
+    //   lift    the selected tile of the miniature board: 0 10 20
+    component ShadowToken: QtObject {
+        required property real offsetY
+        required property real blur
+        required property color colour
+    }
+
+    component Shadows: QtObject {
+        id: shadows
+
+        required property bool dark
+        readonly property ShadowToken card: ShadowToken {
+            offsetY: 1
+            blur: 2
+            colour: shadows.dark ? Qt.alpha("#000000", 0.5) : Qt.alpha("#14212B", 0.06)
+        }
+        readonly property ShadowToken toast: ShadowToken {
+            offsetY: 8
+            blur: 24
+            colour: shadows.dark ? Qt.alpha("#000000", 0.5) : Qt.alpha("#14212B", 0.25)
+        }
+        readonly property ShadowToken alert: ShadowToken {
+            offsetY: 20
+            blur: 48
+            colour: Qt.alpha("#000000", 0.3)
+        }
+        readonly property ShadowToken sheet: ShadowToken {
+            offsetY: -4
+            blur: 24
+            colour: Qt.alpha("#000000", 0.25)
+        }
+        readonly property ShadowToken lift: ShadowToken {
+            offsetY: 10
+            blur: 20
+            colour: Qt.alpha("#000000", 0.3)
+        }
+    }
+
+    readonly property Shadows shadow: Shadows {
+        dark: root.dark
+    }
+
     // ---- type ----
 
+    // The logical dots per inch that Qt turns a point size into pixels with: 72 on iOS, where a point is a pixel, and 96
+    // on a desktop. A fractional size is set as a point size, so the font is made at exactly the size of the role. It is
+    // measured, the same font at 1000 px and at 750 pt (750 pt is 1000 px at 96 dpi), because the screen objects of
+    // Qt.application are not something qmllint can read.
+    readonly property real fontDpi: pixelProbe.height > 0 ? 96 * pointProbe.height / pixelProbe.height : 72
+
+    readonly property FontMetrics pixelProbe: FontMetrics {
+        font: Qt.font({
+            "pixelSize": 1000,
+            "hintingPreference": Font.PreferNoHinting
+        })
+    }
+    readonly property FontMetrics pointProbe: FontMetrics {
+        font: Qt.font({
+            "pointSize": 750,
+            "hintingPreference": Font.PreferNoHinting
+        })
+    }
+
     // One type role. `size` is in points (a logical pixel on the phone) and already multiplied by the role's scale;
-    // `font` is ready to assign to a Text. A pixel size is a whole number, so 13.5 pt becomes 14. Each role sets its
-    // own scale from the textScale it is given, because an inline component cannot see the ids of the file around it.
+    // `font` is ready to assign to a Text, `selectedFont` is the same in `selectedWeight` (a selected tab, the
+    // emphasised form of the role) and `linkFont` is the selected form underlined. Each role sets its own scale from the textScale it is given, because an inline
+    // component cannot see the ids of the file around it.
+    //
+    // The size stays fractional (13.5 pt is 13.5, not 14): a whole size is set as a pixel size and a fractional one as a
+    // point size that comes to the same pixels. Read `size`, not `font.pixelSize`, for the size of a role.
+    //
+    // A role with a `lineHeight` other than 1 has it as CSS does, a multiple of the size: a Text sets
+    // `lineHeightMode: Text.FixedHeight` and `lineHeight: role.linePitch`. `linePitch` is the natural pitch of the font
+    // for a role without a line height, so a component can set both for any role.
     component FontRole: QtObject {
+        id: role
+
         required property real basePt
         required property int weight
         required property real textScale
+        required property real dpi
         property real letterSpacing: 0
+        // The letter spacing above the default text size (the tile label tightens at its larger sizes).
+        property real largeLetterSpacing: letterSpacing
         // The cap on the multiplier for chrome whose geometry is fixed by design; 0 = no cap.
         property real scaleCap: 0
         property real lineHeight: 1.0
         property int maxLines: 0
         property int selectedWeight: weight
         property bool upperCase: false
+        // Tabular figures (OpenType "tnum"), so the digits of a time keep their place as they change.
         property bool tabularNumbers: false
+        // A family, or a comma-separated list of them in order of preference; empty = the system font.
+        property string family: ""
 
         readonly property real scale: scaleCap > 0 ? Math.min(textScale, scaleCap) : textScale
         readonly property real size: basePt * scale
-        readonly property font font: Qt.font({
-            "pixelSize": Math.round(size),
-            "weight": weight,
-            "letterSpacing": letterSpacing
-        })
-        readonly property font selectedFont: Qt.font({
-            "pixelSize": Math.round(size),
-            "weight": selectedWeight,
-            "letterSpacing": letterSpacing
-        })
+        // Above the default text size.
+        readonly property bool enlarged: scale > 1
+        readonly property real effectiveLetterSpacing: enlarged ? largeLetterSpacing : letterSpacing
+        readonly property real linePitch: lineHeight !== 1.0 ? size * lineHeight : metrics.height
+        // The same pitch as a multiple of the font's own line, for Text.ProportionalHeight. A text that shrinks to fit
+        // (fontSizeMode) uses it: the ratio shrinks with the text, and Fit allows for it, where a fixed pitch is not.
+        readonly property real lineRatio: metrics.height > 0 ? linePitch / metrics.height : 1
+        readonly property font font: role.make(weight, false)
+        readonly property font selectedFont: role.make(selectedWeight, false)
+        // The selected weight, underlined: a text link (a banner's action).
+        readonly property font linkFont: role.make(selectedWeight, true)
+
+        // Qt.font() takes a whole point size only, so a fractional size is set on the font afterwards. Hinting is off, as
+        // on iOS, so that a fractional size keeps its own advances on a desktop instead of those of the nearest pixel.
+        function make(fontWeight: int, underline: bool): font {
+            const spec = {
+                "weight": fontWeight,
+                "letterSpacing": effectiveLetterSpacing,
+                "underline": underline,
+                "hintingPreference": Font.PreferNoHinting
+            };
+            const whole = Math.abs(size - Math.round(size)) < 0.001;
+            if (whole)
+                spec.pixelSize = Math.round(size);
+            if (family.length > 0)
+                spec.family = family;
+            if (tabularNumbers)
+                spec.features = {
+                    "tnum": 1
+                };
+            const made = Qt.font(spec);
+            if (!whole)
+                made.pointSize = size * 72 / dpi;
+            return made;
+        }
+
+        readonly property FontMetrics metrics: FontMetrics {
+            font: role.font
+        }
     }
 
     component FontSet: QtObject {
         id: set
 
         required property real textScale
+        required property real dpi
         readonly property FontRole largeTitle: FontRole {
             basePt: 30
             weight: 700
             letterSpacing: -0.4
             textScale: set.textScale
+            dpi: set.dpi
         }
         readonly property FontRole headerUnit: FontRole {
             basePt: 20
             weight: 700
+            letterSpacing: -0.2
             scaleCap: 1.5
             textScale: set.textScale
+            dpi: set.dpi
         }
         readonly property FontRole sheetTitle: FontRole {
             basePt: 17
             weight: 600
             textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The actions of a navigation bar: "Cancel" and the back label in 400, the action that finishes a page in 600.
+        readonly property FontRole navAction: FontRole {
+            basePt: 17
+            weight: 400
+            selectedWeight: 600
+            textScale: set.textScale
+            dpi: set.dpi
         }
         readonly property FontRole body: FontRole {
             basePt: 16
             weight: 400
+            selectedWeight: 600
             textScale: set.textScale
+            dpi: set.dpi
         }
         readonly property FontRole bodySmall: FontRole {
             basePt: 15
             weight: 400
+            selectedWeight: 600
             textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The text of a SwipeRow (the Review timeline, History).
+        readonly property FontRole rowText: FontRole {
+            basePt: 15
+            weight: 400
+            selectedWeight: 600
+            lineHeight: 1.35
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The value in a field: the Header unit and version (fieldValueLarge), the "To" field of the version sheet
+        // (fieldValue) and a plain form field (fieldText).
+        readonly property FontRole fieldValueLarge: FontRole {
+            basePt: 20
+            weight: 600
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        readonly property FontRole fieldValue: FontRole {
+            basePt: 18
+            weight: 600
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        readonly property FontRole fieldText: FontRole {
+            basePt: 17
+            weight: 400
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The header block of Review.
+        readonly property FontRole headerBlock: FontRole {
+            basePt: 14
+            weight: 400
+            lineHeight: 1.55
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The preview of a line as the log will show it (Edit entry, the template value sheet).
+        readonly property FontRole previewText: FontRole {
+            basePt: 14
+            weight: 400
+            lineHeight: 1.45
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The message of a banner, the toast's line and the line of the "Last" bar.
+        readonly property FontRole messageText: FontRole {
+            basePt: 14
+            weight: 400
+            lineHeight: 1.4
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The explanation of a choice card.
+        readonly property FontRole description: FontRole {
+            basePt: 14
+            weight: 400
+            lineHeight: 1.35
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The labels of a SwipeRow's actions: chrome of a fixed width, so capped at 1.3.
+        readonly property FontRole actionLabel: FontRole {
+            basePt: 14
+            weight: 600
+            scaleCap: 1.3
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The title of a banner.
+        readonly property FontRole bannerTitle: FontRole {
+            basePt: 15
+            weight: 600
+            lineHeight: 1.3
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The message of an alert.
+        readonly property FontRole alertMessage: FontRole {
+            basePt: 15
+            weight: 400
+            lineHeight: 1.45
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The label of a compact button ("Add", the toast's "Undo").
+        readonly property FontRole buttonCompact: FontRole {
+            basePt: 15
+            weight: 600
+            textScale: set.textScale
+            dpi: set.dpi
         }
         readonly property FontRole tileLabel: FontRole {
             basePt: 13.5
             weight: 600
             lineHeight: 1.2
+            largeLetterSpacing: -0.2
             maxLines: 4
             scaleCap: 1.3
             textScale: set.textScale
+            dpi: set.dpi
         }
         readonly property FontRole caption: FontRole {
             basePt: 13
             weight: 400
+            selectedWeight: 600
             textScale: set.textScale
+            dpi: set.dpi
+        }
+        // A note under a group or a page.
+        readonly property FontRole footnote: FontRole {
+            basePt: 13
+            weight: 400
+            lineHeight: 1.4
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The hint or the refusal under a field.
+        readonly property FontRole fieldMessage: FontRole {
+            basePt: 13
+            weight: 400
+            lineHeight: 1.35
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The name on a template chip.
+        readonly property FontRole chip: FontRole {
+            basePt: 13
+            weight: 500
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // A log line as the export writes it, in a monospaced face: Menlo (ui-monospace) on the phone, Cascadia Mono or
+        // Consolas on Windows. The list is one family string; Qt takes the first one it has.
+        readonly property FontRole monospace: FontRole {
+            basePt: 13
+            weight: 400
+            family: "Menlo, Cascadia Mono, Consolas, monospace"
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The right column of the header card: the date in 600, the facilitator in 400.
+        readonly property FontRole captionSmall: FontRole {
+            basePt: 12
+            weight: 400
+            selectedWeight: 600
+            textScale: set.textScale
+            dpi: set.dpi
         }
         readonly property FontRole sectionLabel: FontRole {
             basePt: 12
@@ -269,6 +569,7 @@ QtObject {
             letterSpacing: 0.5
             upperCase: true
             textScale: set.textScale
+            dpi: set.dpi
         }
         readonly property FontRole tabLabel: FontRole {
             basePt: 10.5
@@ -276,23 +577,54 @@ QtObject {
             selectedWeight: 600
             scaleCap: 1.3
             textScale: set.textScale
+            dpi: set.dpi
         }
+        // The count badge of a tile: it keeps its 24 pt pill, so the number does not grow past the default size.
         readonly property FontRole badge: FontRole {
             basePt: 13
             weight: 700
-            scaleCap: 1.3
+            scaleCap: 1.0
             textScale: set.textScale
+            dpi: set.dpi
         }
         readonly property FontRole timeColumn: FontRole {
             basePt: 15
             weight: 400
             tabularNumbers: true
             textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The time on a time chip.
+        readonly property FontRole timeChip: FontRole {
+            basePt: 16
+            weight: 500
+            tabularNumbers: true
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        // The rows of a time tumbler, and its selected row and colon.
+        // Capped at 1.5, as the columns are a fixed width.
+        readonly property FontRole tumbler: FontRole {
+            basePt: 20
+            weight: 400
+            scaleCap: 1.5
+            tabularNumbers: true
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        readonly property FontRole tumblerSelected: FontRole {
+            basePt: 24
+            weight: 600
+            scaleCap: 1.5
+            tabularNumbers: true
+            textScale: set.textScale
+            dpi: set.dpi
         }
     }
 
     readonly property FontSet font: FontSet {
         textScale: root.clampedScale
+        dpi: root.fontDpi
     }
 
     // ---- motion ----

@@ -393,6 +393,7 @@ AppRoot::~AppRoot() = default;
 void AppRoot::connect_write_failures()
 {
     connect(&m_Session, &vm::LogSession::writeFailed, this, &AppRoot::writeFailed);
+    connect(&m_Session, &vm::LogSession::recordFailed, this, &AppRoot::recordFailed);
     connect(&m_Undo, &vm::UndoController::writeFailed, this, &AppRoot::writeFailed);
     connect(&m_Timeline, &vm::TimelineModel::writeFailed, this, &AppRoot::writeFailed);
     connect(&m_Share, &vm::ShareService::writeFailed, this, &AppRoot::writeFailed);

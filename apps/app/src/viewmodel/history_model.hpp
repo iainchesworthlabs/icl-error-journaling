@@ -79,8 +79,15 @@ class HistoryModel : public QAbstractListModel,
     Q_PROPERTY(TimelineModel* reviewModel READ review_model NOTIFY reviewModelChanged)
 
 public:
-    /// QML role names: logId, dateText, section, unitText, locationText, entryCount, shared, sharedAtText.
-    /// `Qt::DisplayRole` is `dateText`.
+    /// QML role names: logId, dateText, section, unitText, locationText, entryCount, shared, sharedAtText, entriesText,
+    /// versionText, detailText, sharedDateText, longDateText. `Qt::DisplayRole` is `dateText`.
+    ///
+    /// Beyond the first eight, for the designs: `entriesText` is "12 entries" ("1 entry"), `versionText` is the
+    /// software version the log started with, "v1.4.2" (empty when it had none), `detailText` is the two joined as the
+    /// row reads, "4 entries, middle dot, v1.4.2" (just the entries when there is no version), `sharedDateText` is the
+    /// day of the last share, in the device zone, "5 Nov" (empty when the log has not been shared), and `longDateText`
+    /// is the date of the log with its year, "Thu 5 Nov 2026", for the delete alert. `sharedAtText` is the time of that
+    /// share, and "Shared 5 Nov at 16:58" is made of the two.
     enum Role
     {
         LOG_ID = Qt::UserRole + 1,
@@ -90,7 +97,12 @@ public:
         LOCATION_TEXT,
         ENTRY_COUNT,
         SHARED,
-        SHARED_AT_TEXT
+        SHARED_AT_TEXT,
+        ENTRIES_TEXT,
+        VERSION_TEXT,
+        DETAIL_TEXT,
+        SHARED_DATE_TEXT,
+        LONG_DATE_TEXT
     };
     Q_ENUM(Role)
 
@@ -186,6 +198,11 @@ private:
         QString m_Unit;
         QString m_Location;
         QString m_SharedAt;
+        QString m_Entries;
+        QString m_Version;
+        QString m_Detail;
+        QString m_SharedDate;
+        QString m_LongDate;
     };
 
     struct Token

@@ -204,17 +204,14 @@ TEST_CASE("tab_bar.selection: the selected cue is not colour only", "[ui][tab_ba
     const QFont other = font_of(label_of(rig, QStringLiteral("tabLog")));
     CHECK(selected.weight() > other.weight());
 
-    // 2. A bar over the icon, on the selected tab only.
-    int bars = 0;
-    for (const Node& node : rig.tree())
-    {
-        if (node.m_ObjectName == QStringLiteral("tabSelectedBar") && node.m_Visible)
-        {
-            ++bars;
-            CHECK(tab_item(rig, QStringLiteral("tabHistory"))->isAncestorOf(node.m_Item));
-        }
-    }
-    CHECK(bars == 1);
+    // 2. No indicator bar: the mock-ups mark the selected tab by colour and weight only (owner decision).
+    CHECK(rig.find(QStringLiteral("tabSelectedBar")) == nullptr);
+    // The icon is 8 pt under the 1 pt top border, and the label 3 pt under the icon.
+    QQuickItem* icon = rig.find(QStringLiteral("tabIcon"), tab_item(rig, QStringLiteral("tabHistory")));
+    REQUIRE(icon != nullptr);
+    const QRectF history = rig.geometry(tab_item(rig, QStringLiteral("tabHistory")));
+    CHECK(rig.geometry(icon).top() == history.top() + 9);
+    CHECK(rig.geometry(label_of(rig, QStringLiteral("tabHistory"))).top() == rig.geometry(icon).bottom() + 3);
 
     // 3. The accessibility state, which is what a screen reader says.
     for (const QString& name : TABS)

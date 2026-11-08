@@ -412,7 +412,9 @@ TEST_CASE("The roles have the names QML binds to", "[viewmodel][timeline]")
     CHECK(names.value(TimelineModel::LINE_TEXT) == "lineText");
     CHECK(names.value(TimelineModel::FULL_LINE) == "fullLine");
     CHECK(names.value(TimelineModel::KIND) == "kind");
-    CHECK(names.size() == 5);
+    CHECK(names.value(TimelineModel::PREFIX_TEXT) == "prefixText");
+    CHECK(names.value(TimelineModel::REST_TEXT) == "restText");
+    CHECK(names.size() == 7);
 }
 
 TEST_CASE("An entry edited to an earlier time moves with one rowsMoved", "[viewmodel][timeline]")
@@ -1656,4 +1658,163 @@ TEST_CASE("Local time to UTC and saving agree on an ordinary day", "[viewmodel][
         CHECK(rig.model().rowOf(text_of(2)) == 1);
         CHECK(full_line(rig.model(), 1) == "00:05 T| B");
     }
+}
+
+// ----------------------------------------------------------------------------------- what the visual pass binds to
+
+namespace
+{
+
+/// The entries as a vector, built by `push_back`.
+template <typename... Entries>
+std::vector<Entry> list_of(Entries... entries)
+{
+    std::vector<Entry> out;
+    (out.push_back(std::move(entries)), ...);
+    return out;
+}
+
+} // namespace
+
+TEST_CASE("A row splits its line into the marker and the rest", "[viewmodel][timeline]")
+{
+    Rig rig;
+    Entry unshowable = error_at(5, 12, 0);
+    unshowable.m_Captured.m_Zone = "Nowhere/Land";
+    rig.start(list_of(error_at(1, 9, 42), error_at(2, 10, 5, "Wrong Track Played", "asked for Evening Song"),
+                      note_at(3, 10, 30, "Played Morning Medley"),
+                      change_at(4, 11, 0, HeaderField::SOFTWARE_VERSION, "1.5.0"), unshowable));
+
+    CHECK(row_text(rig.model(), 0, TimelineModel::LINE_TEXT) == "T| Wrong Response");
+    CHECK(row_text(rig.model(), 0, TimelineModel::PREFIX_TEXT) == "T|");
+    CHECK(row_text(rig.model(), 0, TimelineModel::REST_TEXT) == "Wrong Response");
+
+    CHECK(row_text(rig.model(), 1, TimelineModel::PREFIX_TEXT) == "T|");
+    CHECK(row_text(rig.model(), 1, TimelineModel::REST_TEXT) ==
+          "Wrong Track Played \xE2\x80\x93 asked for Evening Song");
+
+    CHECK(row_text(rig.model(), 2, TimelineModel::PREFIX_TEXT) == "(Free Text)");
+    CHECK(row_text(rig.model(), 2, TimelineModel::REST_TEXT) == "Played Morning Medley");
+
+    // A change of the header has no marker: the rest is the whole line.
+    CHECK(row_text(rig.model(), 3, TimelineModel::PREFIX_TEXT).isEmpty());
+    CHECK_FALSE(row_text(rig.model(), 3, TimelineModel::REST_TEXT).isEmpty());
+    CHECK(row_text(rig.model(), 3, TimelineModel::REST_TEXT) == row_text(rig.model(), 3, TimelineModel::LINE_TEXT));
+
+    // A line that cannot be rendered has no marker either.
+    CHECK(row_text(rig.model(), 4, TimelineModel::PREFIX_TEXT).isEmpty());
+    CHECK(row_text(rig.model(), 4, TimelineModel::REST_TEXT) == "This entry cannot be shown.");
+}
+
+TEST_CASE("The marker and the rest make the line again", "[viewmodel][timeline]")
+{
+    Rig rig;
+    rig.start(list_of(error_at(1, 9, 42), note_at(2, 10, 30, "Played Morning Medley")));
+
+    for (int row = 0; row < rig.model().rowCount(); ++row)
+    {
+        const QString prefix = row_text(rig.model(), row, TimelineModel::PREFIX_TEXT);
+        const QString rest = row_text(rig.model(), row, TimelineModel::REST_TEXT);
+        CHECK(prefix + " " + rest == row_text(rig.model(), row, TimelineModel::LINE_TEXT));
+        CHECK(row_text(rig.model(), row, TimelineModel::TIME_TEXT) + " " + prefix + " " + rest ==
+              full_line(rig.model(), row));
+    }
+}
+
+TEST_CASE("Edit: the sheet has the colour of the type and its name", "[viewmodel][timeline]")
+{
+    Rig rig;
+    const Configuration configuration = sample_configuration();
+    Entry mute = error_at(1, 11, 2, "Mute Delay");
+    std::get<ErrorEntry>(mute.m_Body).m_ErrorType = type_named(configuration, "Mute Delay");
+    Entry stranger = error_at(2, 11, 5, "Gone Type"); // a type the configuration does not have
+    rig.start(list_of(mute, stranger, note_at(3, 11, 10, "Robot restarted")));
+
+    // Mute Delay is the eighth type of the sample: slot 8, Periwinkle.
+    const QVariantMap sheet = rig.model().entryForEdit(text_of(1));
+    CHECK(sheet.value("colourSlot") == 8);
+    CHECK(sheet.value("colourName") == "Periwinkle");
+
+    const QVariantMap unknown = rig.model().entryForEdit(text_of(2));
+    CHECK(unknown.value("colourSlot") == 0);
+    CHECK(unknown.value("colourName") == "");
+
+    // Only an error has a colour.
+    CHECK_FALSE(rig.model().entryForEdit(text_of(3)).contains("colourSlot"));
+}
+
+TEST_CASE("Edit: the footnote says when the entry was logged and on which unit and version", "[viewmodel][timeline]")
+{
+    SECTION("the unit and the version in force")
+    {
+        Rig rig;
+        rig.start(list_of(error_at(1, 11, 2, "Mute Delay"), change_at(2, 12, 0, HeaderField::SOFTWARE_VERSION, "1.5.0"),
+                          note_at(3, 13, 0, "Robot restarted")));
+
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on UNIT-27, version 1.4.2.");
+        // After the change of the version, the version of the day is the new one.
+        CHECK(rig.model().entryForEdit(text_of(3)).value("footnote") == "Logged at 13:00 on UNIT-27, version 1.5.0.");
+    }
+    SECTION("the time follows the time format")
+    {
+        Rig rig;
+        rig.start(list_of(error_at(1, 14, 5)));
+        Configuration configuration = sample_configuration();
+        configuration.m_TimeFormat.m_Style = TimeStyle::H12;
+        rig.config().set(configuration);
+
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") ==
+              "Logged at 02:05 PM on UNIT-27, version 1.4.2.");
+    }
+    SECTION("the unit alone, the version alone, and neither")
+    {
+        HeaderValues header = sample_header();
+        header.m_SoftwareVersion.reset();
+        Rig unit_only;
+        unit_only.start(list_of(error_at(1, 11, 2)), header);
+        CHECK(unit_only.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on UNIT-27.");
+
+        header = sample_header();
+        header.m_UnitNumber.reset();
+        Rig version_only;
+        version_only.start(list_of(error_at(1, 11, 2)), header);
+        CHECK(version_only.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02, version 1.4.2.");
+
+        header.m_SoftwareVersion.reset();
+        Rig neither;
+        neither.start(list_of(error_at(1, 11, 2)), header);
+        CHECK(neither.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02.");
+    }
+    SECTION("with no configuration the unit is its number")
+    {
+        Rig rig;
+        rig.start(list_of(error_at(1, 11, 2)));
+        rig.config().clear();
+
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on 27, version 1.4.2.");
+    }
+}
+
+TEST_CASE("Now is the clock in the zone of the entry", "[viewmodel][timeline]")
+{
+    Rig rig;
+    Entry perth = error_at(2, 11, 2);
+    perth.m_Captured.m_Zone = "Australia/Perth";
+    Entry nowhere = error_at(3, 11, 3);
+    nowhere.m_Captured.m_Zone = "Nowhere/Land";
+    rig.start(list_of(error_at(1, 11, 1), perth, nowhere));
+
+    // The clock of the rig is 08:55 in Melbourne (+11:00), which is 05:55 in Perth (+08:00).
+    CHECK(rig.model().nowLocalSeconds(text_of(1)) == seconds_of(8, 55));
+    CHECK(rig.model().nowLocalSeconds(text_of(2)) == seconds_of(5, 55));
+    // No entry, or one that is not in the log: the zone of the device, Melbourne.
+    CHECK(rig.model().nowLocalSeconds() == seconds_of(8, 55));
+    CHECK(rig.model().nowLocalSeconds("not an id") == seconds_of(8, 55));
+    CHECK(rig.model().nowLocalSeconds(text_of(99)) == seconds_of(8, 55));
+    // A zone the provider does not know has no local time.
+    CHECK(rig.model().nowLocalSeconds(text_of(3)) == -1);
+
+    // It moves with the clock.
+    rig.clock().advance(5min + 7s);
+    CHECK(rig.model().nowLocalSeconds(text_of(1)) == seconds_of(9, 0, 7));
 }

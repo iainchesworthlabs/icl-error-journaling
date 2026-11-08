@@ -4,7 +4,8 @@ import ErrorJournalingApp
 
 // A template chip: the 32 pt pill with a hairline border that starts a note ("Played song"). It is drawn 32 pt high and
 // its touch area is 44 pt, through the margin of its tap handler. The name never truncates: a name wider than `maxWidth`
-// wraps onto more lines and the chip grows.
+// wraps onto more lines and the chip grows. The name is 13/500 with 12 pt either side; `iconKind` adds a 14 pt Icon in
+// primaryText 6 pt before it (the music note of "Played song", the speech bubble of "Visitor interaction").
 Item {
     id: root
 
@@ -12,13 +13,19 @@ Item {
     // The widest the chip may be; 0 = as wide as the name needs.
     property real maxWidth: 0
     property string accessibleName: text
+    // An Icon kind before the name; empty for none.
+    property string iconKind: ""
 
     readonly property bool pressed: tap.pressed
+    readonly property bool hasIcon: iconKind.length > 0
+    readonly property real iconSize: Theme.size.badge * 7 / 12
+    // The room the icon and its gap take before the name.
+    readonly property real iconRoom: hasIcon ? iconSize + Theme.border.otherWidth * 4 : 0
 
     signal clicked
 
     implicitWidth: {
-        const wanted = label.implicitWidthUnwrapped + 2 * Theme.space.sectionGap;
+        const wanted = Math.ceil(label.implicitWidthUnwrapped) + root.iconRoom + 2 * Theme.space.sectionGap;
         return maxWidth > 0 ? Math.min(wanted, maxWidth) : wanted;
     }
     implicitHeight: Math.max(Theme.size.chipHeight, label.implicitHeight + Theme.space.tileGap * 2)
@@ -39,6 +46,16 @@ Item {
         border.color: root.activeFocus ? Theme.colour.primaryText : Theme.colour.border
     }
 
+    Icon {
+        objectName: "chipIcon"
+        visible: root.hasIcon
+        x: Theme.space.sectionGap
+        y: (root.height - height) / 2
+        size: root.iconSize
+        kind: root.iconKind
+        colour: Theme.colour.primaryText
+    }
+
     Text {
         id: label
 
@@ -46,12 +63,12 @@ Item {
         readonly property real implicitWidthUnwrapped: metrics.advanceWidth
 
         anchors.fill: parent
-        anchors.leftMargin: Theme.space.sectionGap
+        anchors.leftMargin: Theme.space.sectionGap + root.iconRoom
         anchors.rightMargin: Theme.space.sectionGap
-        horizontalAlignment: Text.AlignHCenter
+        horizontalAlignment: root.hasIcon ? Text.AlignLeft : Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         color: Theme.colour.textPrimary
-        font: Theme.font.caption.font
+        font: Theme.font.chip.font
         text: root.text
         wrapMode: Text.WordWrap
         Accessible.ignored: true

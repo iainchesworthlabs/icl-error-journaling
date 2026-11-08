@@ -24,7 +24,11 @@ import ErrorJournalingApp
 // follows the tile when the model moves it. Other is fixed: it is shown and named, and neither selected nor moved. An empty
 // position can be selected, to put a type in it.
 //
-// The sizes are those of the design (64 pt tiles, 6 pt gaps, 11.5 pt labels, a lift of 1.04) from Theme.miniBoard.
+// The sizes are those of the design (BoardLayoutSelected) from Theme.miniBoard: 64 pt tiles, 6 pt gaps, 11.5/600 labels
+// 8 pt in on the font's own line, 1.2 times the size (Other's in textSecondary), and a selected tile that rises 4 pt, grows by 1.04, casts
+// the lift shadow and has a 3 pt ring 1 pt outside its face and a 20 pt tick 6 pt in from the corner. The panel under the
+// board has 12 pt and 14 pt padding and 10 pt gaps; the name in 16/600 with "Position 9 of 11" on the right of the same
+// row; 52 pt buttons with a 20 pt icon 2 pt over a 13/600 label; Done 32 pt high.
 Item {
     id: root
 
@@ -38,10 +42,12 @@ Item {
     readonly property real gap: Theme.miniBoard.gap
     readonly property real tileWidth: (width + gap) / Theme.size.boardColumns - gap
     readonly property real tileHeight: Theme.miniBoard.tile
-    readonly property real labelPixels: Math.round(Theme.miniBoard.labelSize * Theme.font.tileLabel.scale)
+    // The label size, unrounded, as a point size.
+    readonly property real labelSize: Theme.miniBoard.labelSize * Theme.font.tileLabel.scale
+    readonly property real labelPoints: labelSize * 72 / Theme.fontDpi
     readonly property real liftScale: Theme.miniBoard.selectedScale
-    readonly property real liftOffset: Theme.space.tileGap / 2
-    readonly property real outlineWidth: Theme.border.otherWidth * 4 / 3
+    readonly property real liftOffset: Theme.miniBoard.lift
+    readonly property real outlineWidth: Theme.miniBoard.ringWidth
     // Tiles that can be moved: the positions 1 to 11 (the last row, Other, is fixed).
     readonly property int positions: tiles.count - 1
     readonly property var selectedTile: tiles.count > 0 && selectedPosition >= 1 ? tiles.itemAt(selectedPosition - 1) : null
@@ -139,10 +145,11 @@ Item {
 
         signal activated
 
-        height: Math.max(Theme.size.primaryButtonHeight, content.implicitHeight + 2 * Theme.space.tileGap)
+        height: Math.max(Theme.size.rowHeightForm, content.implicitHeight + 2 * Theme.space.tileGap)
         radius: Theme.radius.field
         color: Theme.colour.primaryTint
-        opacity: enabled ? 1 : 0.4
+        // Dimmed only when it is disabled itself, not when a sheet disables the screen.
+        opacity: !enabled && (parent === null || parent.enabled) ? 0.4 : 1
         Accessible.role: Accessible.Button
         Accessible.name: button.label
         Accessible.focusable: true
@@ -156,32 +163,14 @@ Item {
 
             anchors.centerIn: parent
             width: parent.width - 2 * Theme.space.tileGap
-            spacing: Theme.border.otherWidth
+            spacing: Theme.border.hairline * 2
 
-            Item {
+            Icon {
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: Theme.size.badge * 0.85
-                height: width
-                Accessible.ignored: true
-
-                Shape {
-                    width: Theme.size.badge
-                    height: Theme.size.badge
-                    scale: parent.width / Theme.size.badge
-                    transformOrigin: Item.TopLeft
-
-                    ShapePath {
-                        strokeColor: Theme.colour.primaryText
-                        strokeWidth: Theme.border.otherWidth * 4 / 3
-                        fillColor: "transparent"
-                        capStyle: ShapePath.RoundCap
-                        joinStyle: ShapePath.RoundJoin
-
-                        PathSvg {
-                            path: button.glyph
-                        }
-                    }
-                }
+                size: Theme.size.badge * 5 / 6
+                kind: button.glyph
+                strokeWidth: button.glyph === "swap" ? Theme.border.hairline * 2 : Theme.border.hairline * 2.2
+                colour: Theme.colour.primaryText
             }
 
             Text {
@@ -270,13 +259,36 @@ Item {
                         opacity: tile.lifted ? 0.35 : 1
                         z: tile.selected ? 1 : 0
 
+                        // The lift shadow of the selected tile.
+                        Shadow {
+                            visible: tile.selected
+                            anchors.fill: parent
+                            radius: Theme.radius.field
+                            token: Theme.shadow.lift
+                        }
+
                         Rectangle {
                             objectName: "miniBackground"
                             anchors.fill: parent
                             visible: !tile.isEmpty && !tile.isOther
                             radius: Theme.radius.field
                             color: Theme.tileColour(tile.colourSlot)
-                            border.width: tile.selected ? root.outlineWidth : 0
+                            Accessible.ignored: true
+                        }
+
+                        // The selection ring: 3 pt, 1 pt outside the face.
+                        Rectangle {
+                            objectName: "miniRing"
+                            readonly property real reach: Theme.miniBoard.ringGap + root.outlineWidth
+
+                            visible: tile.selected
+                            x: -reach
+                            y: -reach
+                            width: parent.width + 2 * reach
+                            height: parent.height + 2 * reach
+                            radius: Theme.radius.field + reach
+                            color: "transparent"
+                            border.width: root.outlineWidth
                             border.color: Theme.colour.primaryText
                             Accessible.ignored: true
                         }
@@ -287,8 +299,8 @@ Item {
                             visible: tile.isEmpty
                             radius: Theme.radius.field
                             color: "transparent"
-                            border.width: tile.selected ? root.outlineWidth : Theme.border.hairline
-                            border.color: tile.selected ? Theme.colour.primaryText : Theme.colour.border
+                            border.width: Theme.border.hairline
+                            border.color: Theme.colour.border
                             Accessible.ignored: true
                         }
 
@@ -318,49 +330,41 @@ Item {
                         Text {
                             objectName: "miniLabel"
                             anchors.fill: parent
-                            anchors.margins: root.gap
+                            anchors.margins: Theme.miniBoard.labelInset
                             visible: !tile.isEmpty
                             text: tile.label
-                            color: Theme.colour.tileText
-                            font.pixelSize: root.labelPixels
+                            color: tile.isOther ? Theme.colour.textSecondary : Theme.colour.tileText
+                            font.pointSize: root.labelPoints
+                            font.hintingPreference: Font.PreferNoHinting
                             font.weight: Theme.font.tileLabel.weight
+                            // The font's own line, 1.2 of the size for the system font; a ratio of it would not be
+                            // allowed for when the label shrinks to fit the 48 pt box.
                             wrapMode: Text.Wrap
                             verticalAlignment: Text.AlignBottom
                             fontSizeMode: Text.Fit
-                            minimumPixelSize: Math.round(root.labelPixels * 0.6)
+                            minimumPointSize: root.labelPoints * 0.5
                             Accessible.ignored: true
                         }
 
-                        // The tick that says "selected" without colour.
+                        // The tick that says "selected" without colour: a 20 pt disc 6 pt in, with a white check.
                         Rectangle {
                             objectName: "miniTick"
                             anchors.top: parent.top
                             anchors.right: parent.right
-                            anchors.margins: Theme.space.tileGap / 2
-                            width: Theme.size.badge * 0.75
+                            anchors.margins: Theme.miniBoard.tickInset
+                            width: Theme.miniBoard.tick
                             height: width
                             radius: width / 2
                             visible: tile.selected
-                            color: Theme.colour.primaryText
+                            color: Theme.colour.primary
                             Accessible.ignored: true
 
-                            Shape {
-                                width: Theme.size.badge
-                                height: Theme.size.badge
-                                scale: parent.width / Theme.size.badge
-                                transformOrigin: Item.TopLeft
-
-                                ShapePath {
-                                    strokeColor: Theme.colour.background
-                                    strokeWidth: Theme.border.otherWidth * 5 / 3
-                                    fillColor: "transparent"
-                                    capStyle: ShapePath.RoundCap
-                                    joinStyle: ShapePath.RoundJoin
-
-                                    PathSvg {
-                                        path: "M5 12l5 5L20 7"
-                                    }
-                                }
+                            Icon {
+                                anchors.centerIn: parent
+                                size: parent.width * 13 / 20
+                                kind: "check"
+                                strokeWidth: Theme.border.otherWidth * 2
+                                colour: Theme.colour.textOnPrimary
                             }
                         }
                     }
@@ -445,22 +449,29 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                anchors.margins: Theme.space.rowPadding
-                spacing: Theme.space.sectionGap
+                anchors.leftMargin: Theme.space.rowPadding
+                anchors.rightMargin: Theme.space.rowPadding
+                anchors.topMargin: Theme.space.sectionGap
+                spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
-                Flow {
+                // The swatch and the name on the left, the position on the right; the position goes under the name when
+                // the text is too large for one row.
+                Item {
                     id: heading
 
+                    readonly property bool oneRow: swatch.width + Theme.space.tileGap + selectedName.implicitWidth + Theme.space.tileGap + selectedPlace.implicitWidth <= width
+
                     width: parent.width
-                    spacing: Theme.space.tileGap
+                    height: oneRow ? Math.max(swatch.height, selectedName.height, selectedPlace.height) : selectedName.height + selectedPlace.height
 
                     Rectangle {
                         id: swatch
 
                         objectName: "miniSwatch"
+                        y: (Math.max(selectedName.height, height) - height) / 2
                         width: Theme.size.badge * 0.75
                         height: Theme.size.badge * 0.75
-                        radius: Theme.border.otherWidth * 2.5
+                        radius: Theme.border.otherWidth * 8 / 3
                         color: root.selectedTile && !root.selectedTile.isEmpty ? Theme.tileColour(root.selectedTile.colourSlot) : "transparent"
                         border.width: Theme.border.hairline
                         border.color: Theme.colour.border
@@ -471,10 +482,11 @@ Item {
                         id: selectedName
 
                         objectName: "miniSelectedName"
-                        width: Math.min(implicitWidth, heading.width - swatch.width - heading.spacing)
+                        x: swatch.width + Theme.space.tileGap
+                        width: heading.width - x - (heading.oneRow ? selectedPlace.width + Theme.space.tileGap : 0)
                         text: root.selectedTile ? (root.selectedTile.isEmpty ? qsTr("Empty tile") : root.selectedTile.label) : ""
                         color: Theme.colour.textPrimary
-                        font: Theme.font.sheetTitle.font
+                        font: Theme.font.body.selectedFont
                         wrapMode: Text.Wrap
                         Accessible.role: Accessible.StaticText
                         Accessible.name: root.selectedTile ? root.selectedTile.accessibleName : ""
@@ -484,7 +496,9 @@ Item {
                         id: selectedPlace
 
                         objectName: "miniSelectedPlace"
-                        width: Math.min(implicitWidth, heading.width)
+                        x: heading.oneRow ? heading.width - width : selectedName.x
+                        y: heading.oneRow ? (selectedName.height - height) / 2 : selectedName.height
+                        width: Math.min(implicitWidth, heading.width - (heading.oneRow ? 0 : selectedName.x))
                         text: qsTr("Position %1 of %2").arg(root.selectedPosition).arg(root.positions)
                         color: Theme.colour.textSecondary
                         font: Theme.font.caption.font
@@ -506,7 +520,7 @@ Item {
                         objectName: "miniMoveEarlier"
                         width: actions.buttonWidth
                         label: qsTr("Move earlier")
-                        glyph: "M15 18l-6-6 6-6"
+                        glyph: "chevronLeft"
                         enabled: root.selectedTile !== null && root.selectedTile.movable && root.selectedPosition > 1
                         onActivated: root.requestMove(root.selectedPosition, root.selectedPosition - 1)
                     }
@@ -515,7 +529,7 @@ Item {
                         objectName: "miniMoveLater"
                         width: actions.buttonWidth
                         label: qsTr("Move later")
-                        glyph: "M9 6l6 6-6 6"
+                        glyph: "chevronRight"
                         enabled: root.selectedTile !== null && root.selectedTile.movable && root.selectedPosition < root.positions
                         onActivated: root.requestMove(root.selectedPosition, root.selectedPosition + 1)
                     }
@@ -524,7 +538,7 @@ Item {
                         objectName: "miniReplace"
                         width: actions.buttonWidth
                         label: qsTr("Replace type")
-                        glyph: "M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7"
+                        glyph: "swap"
                         onActivated: root.replaceRequested(root.selectedPosition)
                     }
                 }
@@ -532,7 +546,7 @@ Item {
                 Item {
                     objectName: "miniDone"
                     width: parent.width
-                    height: Theme.size.minTouchTarget
+                    height: Theme.size.chipHeight
                     Accessible.role: Accessible.Button
                     Accessible.name: qsTr("Done")
                     Accessible.focusable: true
@@ -547,6 +561,8 @@ Item {
                     }
 
                     TapHandler {
+                        // A 44 pt touch area round the 32 pt row.
+                        margin: (Theme.size.minTouchTarget - Theme.size.chipHeight) / 2
                         onTapped: root.selectedPosition = 0
                     }
                 }
@@ -572,10 +588,11 @@ Item {
 
         Text {
             anchors.fill: parent
-            anchors.margins: Theme.space.tileGap
+            anchors.margins: Theme.miniBoard.labelInset
             text: dragState.source ? dragState.source.label : ""
             color: Theme.colour.tileText
-            font.pixelSize: root.labelPixels
+            font.pointSize: root.labelPoints
+            font.hintingPreference: Font.PreferNoHinting
             font.weight: Theme.font.tileLabel.weight
             wrapMode: Text.Wrap
             verticalAlignment: Text.AlignBottom

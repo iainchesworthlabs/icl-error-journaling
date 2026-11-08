@@ -41,9 +41,10 @@ public:
         NAME,
         COLOUR_SLOT,
         BOARD_POSITION,
-        ON_BOARD
+        ON_BOARD,
+        COLOUR_NAME
     };
-    // roleNames(): typeId, name, colourSlot, boardPosition, onBoard
+    // roleNames(): typeId, name, colourSlot, boardPosition, onBoard, colourName
 
     explicit ErrorTypeListModel(QObject* parent = nullptr) : RowListModel(parent) {}
 

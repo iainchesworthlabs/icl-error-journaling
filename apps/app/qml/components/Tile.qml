@@ -19,6 +19,11 @@ import ErrorJournalingApp
 // The press scale runs on the render thread (ScaleAnimator), so it answers the finger at once and keeps going while the
 // GUI thread is busy with the commit. It reverses on release and on cancel. An empty position and a skeleton draw a
 // shape and take no touch; the skeleton draws neutral shapes only, with no text, count or type colour (the launch screen).
+//
+// Look: 12 pt padding (10 pt above the default text size, so four lines fit at the 1.3 cap), the label 13.5/600 with a
+// line of 1.2 times its size, the card shadow (Theme.shadow.card, a plain offset rectangle, so the press costs nothing
+// more), the count badge 24 pt with 7 pt side padding and a number that does not grow past the default size, and on
+// Other the 24 pt search icon in the top left corner.
 Item {
     id: root
 
@@ -41,7 +46,7 @@ Item {
     readonly property bool down: tap.pressed
     // The largest number the badge writes in full; from here on it reads "99+" (the accessible name has the full count).
     readonly property int badgeLimit: 99
-    readonly property real padding: Theme.space.sectionGap
+    readonly property real padding: Theme.font.tileLabel.enlarged ? Theme.space.sectionGap - Theme.border.hairline * 2 : Theme.space.sectionGap
     // The floor of the label's fit (fontSizeMode), as a share of its size: the label wraps and shrinks to this, never elides.
     readonly property real labelFloor: 0.75
     readonly property bool dashed: isOther && !skeleton
@@ -80,6 +85,17 @@ Item {
             border.color: Theme.colour.border
         }
 
+        // The card shadow of a tile with a type: a plain rectangle a point lower, under the fill.
+        Rectangle {
+            objectName: "tileShadow"
+            width: parent.width
+            height: parent.height
+            y: Theme.shadow.card.offsetY
+            visible: !root.isEmpty && !root.dashed && !root.skeleton
+            radius: Theme.radius.tile
+            color: Theme.shadow.card.colour
+        }
+
         // A tile with a type, and the skeleton.
         Rectangle {
             objectName: "tileBackground"
@@ -116,36 +132,14 @@ Item {
             }
         }
 
-        // The magnifying glass of Other, drawn from two shapes so that it takes its colour from the theme.
-        Item {
-            id: glass
-
+        // The search icon of Other.
+        Icon {
             objectName: "tileOtherIcon"
             x: root.padding
             y: root.padding
-            width: Theme.size.badge
-            height: Theme.size.badge
             visible: root.dashed
-            Accessible.ignored: true
-
-            Rectangle {
-                width: parent.width * 0.62
-                height: width
-                radius: width / 2
-                color: "transparent"
-                border.width: parent.width / 12
-                border.color: Theme.colour.primaryText
-            }
-            Rectangle {
-                x: parent.width * 0.55
-                y: parent.width * 0.78
-                width: parent.width * 0.4
-                height: parent.width / 12
-                radius: height / 2
-                color: Theme.colour.primaryText
-                transformOrigin: Item.Left
-                rotation: 45
-            }
+            kind: "search"
+            colour: Theme.colour.primaryText
         }
 
         Text {
@@ -166,7 +160,10 @@ Item {
             text: root.label
             color: Theme.colour.tileText
             font: Theme.font.tileLabel.font
-            lineHeight: Theme.font.tileLabel.lineHeight
+            // A line is 1.2 times the size, as CSS has it (16.2 pt at 13.5), not 1.2 times the font's own line. It is
+            // given as a ratio of the font's line, because the label shrinks to fit (fontSizeMode) and a ratio shrinks
+            // with it.
+            lineHeight: Theme.font.tileLabel.lineRatio
             lineHeightMode: Text.ProportionalHeight
             // Wraps at words, and inside a word that is wider than the tile; never elides (NFR-02, decision 9).
             wrapMode: Text.Wrap
@@ -175,6 +172,8 @@ Item {
             // The tile never grows, so a label that would not fit shrinks, down to a floor, before it is cut.
             fontSizeMode: Text.Fit
             minimumPixelSize: Math.round(Theme.font.tileLabel.size * root.labelFloor)
+            // A fractional size is a point size, and Fit then shrinks to the point floor.
+            minimumPointSize: Theme.font.tileLabel.size * root.labelFloor * 72 / Theme.fontDpi
             Accessible.ignored: true
         }
 
@@ -186,7 +185,7 @@ Item {
             anchors.right: parent.right
             anchors.margins: Theme.space.tileGap
             visible: root.hasCount && !root.skeleton && !root.isEmpty
-            width: Math.max(Theme.size.badge, badgeText.implicitWidth + Theme.space.tileGap * 2)
+            width: Math.max(Theme.size.badge, badgeText.implicitWidth + (Theme.space.tileGap - Theme.border.hairline) * 2)
             height: Theme.size.badge
             radius: height / 2
             color: Theme.colour.badgeBackground
