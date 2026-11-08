@@ -615,6 +615,9 @@ TEST_CASE("details.title: the large title collapses to the compact bar once the 
     play(rig, 400);
     CHECK_FALSE(large->isVisible());
     CHECK(compact->isVisible());
+    // The compact title fades in over 240 ms and ends in the full ink of the design (HeaderNewLogRow), not part way.
+    CHECK(compact->opacity() == 1.0);
+    CHECK(compact->property("color").value<QColor>() == theme_colour(rig, "textPrimary"));
     CHECK(compact->property("text").toString() == QStringLiteral("Today’s details"));
     const QRectF title = rig.geometry(compact);
     CHECK(std::abs(title.center().x() - rig.window().width() / 2.0) < 1.0);
@@ -644,6 +647,38 @@ TEST_CASE("details.footer: the button and its line end at the bottom of the safe
     CHECK(start.height() >= 54.0);
     CHECK(line.top() - start.bottom() == 10.0);
     CHECK(line.bottom() == 874.0 - 34.0);
+}
+
+TEST_CASE("details.footer: once the page has scrolled the line goes and the button sits at the bottom of the safe area",
+          "[ui][header_screen]")
+{
+    HeaderWorld world(true);
+    UiRig rig;
+    QQuickItem* screen = load_screen(rig, world);
+    screen->setProperty("overrideInsets", true);
+    screen->setProperty("overrideTop", 59.0);
+    screen->setProperty("overrideBottom", 34.0);
+    rig.layout();
+    QQuickItem* scroller = need(rig, QStringLiteral("headerScroller"));
+    QQuickItem* start = need(rig, QStringLiteral("headerStart"));
+    QQuickItem* note = text_item(rig, QStringLiteral("You can log errors before every field is filled."));
+    REQUIRE(note != nullptr);
+
+    // At rest, the line is under the button.
+    CHECK(note->isVisible());
+    const double page_bottom = rig.geometry(scroller).bottom();
+
+    scroller->setProperty("contentY", -scroller->property("topMargin").toDouble() + 40.0);
+    play(rig, 400);
+    CHECK_FALSE(note->isVisible());
+    CHECK(rig.geometry(start).bottom() == 874.0 - 34.0);
+    // The page above the foot did not change size, so that it does not move under the finger.
+    CHECK(rig.geometry(scroller).bottom() == page_bottom);
+
+    scroller->setProperty("contentY", -scroller->property("topMargin").toDouble());
+    play(rig, 400);
+    CHECK(note->isVisible());
+    CHECK(rig.geometry(note).bottom() == 874.0 - 34.0);
 }
 
 TEST_CASE("details.keyboard: the foot bar steps aside and the field being typed in stays in view",

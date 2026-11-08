@@ -9,6 +9,7 @@
 #include <QColor>
 #include <QFile>
 #include <QFont>
+#include <QFontDatabase>
 #include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -336,6 +337,37 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
         CHECK(frame.value(QStringLiteral("safeAreaTopPt")).toInt() == 59);
         CHECK(frame.value(QStringLiteral("homeIndicatorPt")).toInt() == 34);
     }
+}
+
+TEST_CASE("theme.font_family: a list of families gives the first one the system has, as a monospaced role needs",
+          "[ui][theme]")
+{
+    UiRig rig;
+    QObject* theme = rig.theme();
+    REQUIRE(theme != nullptr);
+    QObject* mono = child(child(theme, "font"), "monospace");
+    REQUIRE(mono != nullptr);
+
+    // What the first available of the roles' own list is on this machine; Qt itself reads the whole string as one name.
+    const QStringList available = QFontDatabase::families();
+    QString expected;
+    for (const QString& name : mono->property("family").toString().split(QLatin1Char(',')))
+    {
+        if (expected.isEmpty() && available.contains(name.trimmed()))
+        {
+            expected = name.trimmed();
+        }
+    }
+    INFO("available: " << available.join(QStringLiteral(", ")).toStdString());
+    CHECK(mono->property("resolvedFamily").toString() == expected);
+    if (!expected.isEmpty())
+    {
+        CHECK(mono->property("font").value<QFont>().family() == expected);
+    }
+    // A role with no family is the system font.
+    QObject* body = child(child(theme, "font"), "body");
+    REQUIRE(body != nullptr);
+    CHECK(body->property("resolvedFamily").toString().isEmpty());
 }
 
 TEST_CASE("theme.dark_resolves: switching the scheme changes the colours, and switching back restores them",

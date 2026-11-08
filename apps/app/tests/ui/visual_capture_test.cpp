@@ -734,7 +734,8 @@ void scene_change_version(Phone& phone)
     phone.services.go_to(7, 13, 15);
     phone.services.advance(6s);
     open_details(phone);
-    phone.tap(QStringLiteral("headerChangeVersion"));
+    // As a person opens the version sheet now: the check mark of the Software version field is its button.
+    phone.tap(QStringLiteral("formAccessory"), phone.need(QStringLiteral("headerVersion")));
     phone.play();
     phone.tap(QStringLiteral("versionChanged"));
     phone.play();
@@ -747,7 +748,8 @@ void scroll_details_to_end(Phone& phone)
     QQuickItem* scroller = phone.need(QStringLiteral("headerScroller"));
     const double content = scroller->property("contentHeight").toDouble();
     scroller->setProperty("contentY", content - scroller->height());
-    phone.ui.advance(100ms);
+    // The title of the collapsed bar fades in over 240 ms; the picture is of the end of it.
+    phone.play();
 }
 
 void scene_header_new_log_row(Phone& phone)
@@ -1130,6 +1132,8 @@ TEST_CASE("capture.mockups: render each state that has a mock-up, in light and d
     {
         phone.ui.set_dark(dark);
         phone.ui.advance(50ms);
+        // The software renderer paints the rows of a list that lie under the tab bar over it (see UiRig::repaint_over).
+        phone.ui.repaint_over(phone.ui.find_item(QStringLiteral("shellTabBar")));
         const QImage image = phone.ui.grab();
         REQUIRE_FALSE(image.isNull());
         const QString file = QDir(dir).filePath(scene.m_Name + (dark ? QStringLiteral(".dark") : QString()) +

@@ -6,6 +6,7 @@
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -265,8 +266,8 @@ TEST_CASE("alert.modal: the card follows the design", "[ui][alert]")
     // 32 pt from the window's sides.
     CHECK(card.left() == 32);
     CHECK(card.right() == 402 - 32);
-    // At the design's fixed top, Theme.size.alertTop (236 pt on the iPhone 17 frame), not centred.
-    CHECK(card.top() == 236);
+    // Hung from Theme.size.alertAnchor (374 pt on the iPhone 17 frame): 3/8 of the card's height above it, not centred.
+    CHECK(card.top() == Catch::Approx(374 - card.height() * 3 / 8).margin(0.01));
     // The icon is a 48 pt circle at the top, centred.
     const QRectF icon = f.m_Rig.geometry(f.m_Rig.find(QStringLiteral("alertIcon")));
     CHECK(icon.width() == 48);
@@ -293,6 +294,24 @@ TEST_CASE("alert.modal: the card follows the design", "[ui][alert]")
         CHECK(part.top() >= card.top());
         CHECK(part.bottom() <= card.bottom());
     }
+}
+
+TEST_CASE("alert.modal: a taller card sits higher, as in the mock-ups, and none is centred", "[ui][alert]")
+{
+    Fixture shorter;
+    shorter.open();
+    const QRectF short_card = shorter.m_Rig.geometry(shorter.panel());
+    Fixture taller(NEW_DAY);
+    taller.open();
+    const QRectF tall_card = taller.m_Rig.geometry(taller.panel());
+
+    // NEW_DAY has three buttons to DELETE_LOG's two.
+    REQUIRE(tall_card.height() > short_card.height());
+    CHECK(tall_card.top() < short_card.top());
+    // Hung, not centred: the part above the card's middle is the smaller share of its height, so the middle is lower
+    // than the anchor.
+    CHECK(tall_card.center().y() > 374);
+    CHECK(short_card.center().y() > 374);
 }
 
 TEST_CASE("alert.modal: a card taller than the window scrolls instead of leaving it", "[ui][alert]")

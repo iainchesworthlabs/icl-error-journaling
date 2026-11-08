@@ -241,7 +241,9 @@ TEST_CASE("The board layout puts a type on the tile of its position and never re
     CHECK(model.data(model.index(10), BoardLayoutModel::COLOUR_SLOT).toInt() == 1);
     CHECK(model.data(model.index(4), BoardLayoutModel::IS_EMPTY).toBool());
     CHECK(model.data(model.index(11), BoardLayoutModel::IS_OTHER).toBool());
-    CHECK(model.data(model.index(11), BoardLayoutModel::LABEL).toString() == "Other");
+    CHECK(model.data(model.index(11), BoardLayoutModel::LABEL).toString() ==
+          QString::fromUtf8("Other\xE2\x80\xA6 (fixed)"));
+    CHECK(model.data(model.index(11), BoardLayoutModel::ACCESSIBLE_NAME).toString() == "Other");
 }
 
 TEST_CASE("The board layout reports one dataChanged over the tiles that differ and nothing else",

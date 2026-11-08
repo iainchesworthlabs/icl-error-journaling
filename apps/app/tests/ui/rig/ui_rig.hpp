@@ -157,6 +157,13 @@ public:
     void layout();
     /// The rendered window, for the few tests that look at pixels.
     [[nodiscard]] QImage grab();
+    /// Makes the nodes of `item` again, so that they are painted after everything that was added to the scene graph
+    /// before this call. The software renderer paints the glyphs (the `Shape` of an Icon) of a page that was built
+    /// after the first frame, and that lie wholly outside the clip of their list, over an item declared after the page,
+    /// such as the tab bar over a tab that is built when it is first chosen. Qt's other renderers, the one of the phone
+    /// included, do not. Call it for that item before a `grab`, as the visual capture does. It hides and shows the
+    /// item, one frame each.
+    void repaint_over(QQuickItem* item);
 
 private:
     struct Impl;

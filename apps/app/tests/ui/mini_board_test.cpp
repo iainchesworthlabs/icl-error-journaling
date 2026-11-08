@@ -260,7 +260,7 @@ TEST_CASE("mini_board.geometry: twelve small tiles in three columns, the size of
     }
     CHECK(label_of(rig, 0) == QStringLiteral("Wrong Response"));
     CHECK(label_of(rig, 1) == QStringLiteral("Sequence Out of Order"));
-    CHECK(label_of(rig, OTHER_ROW) == QStringLiteral("Other"));
+    CHECK(label_of(rig, OTHER_ROW) == QString::fromUtf8("Other\xE2\x80\xA6 (fixed)"));
     // Nothing is selected, so there is no panel.
     CHECK_FALSE(require_item(rig, QStringLiteral("miniPanel"))->isVisible());
     CHECK(board->property("selectedPosition").toInt() == 0);

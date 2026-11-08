@@ -23,8 +23,9 @@ import ErrorJournalingApp
 //              and the content pads itself by `contentBottomInset`, so a list scrolls under the indicator instead of
 //              being cut 34 pt above it.
 //   shadow     a bottom sheet casts Theme.shadow.sheet upwards; an alert card casts Theme.shadow.alert.
-//   centre     the card of an alert sits at Theme.size.alertTop (236 pt on the design frame) rather than in the middle,
-//              as the mock-ups pin it; it moves up when it is too tall to fit below that, never into the top inset.
+//   centre     the card of an alert hangs from Theme.size.alertAnchor (374 pt on the design frame): the point 3/8 of the way
+//              down the card is there, so a taller card sits higher, as in the mock-ups, and none is centred; it moves up
+//              when it is too tall to fit below that, never into the top inset.
 //   keyboard   `keyboardHeight` lifts the sheet's bottom edge to the top of the keyboard; the sheet gets shorter if it
 //              would otherwise reach into the top inset, and the content area ends at the keyboard.
 //   focus      opening moves focus to the sheet; closing returns focus to the item that had it. What keeps Tab inside is
@@ -115,9 +116,9 @@ FocusScope {
     // The height of the Content detent: the grabber, the content and what is kept under it.
     readonly property real contentHeight: grabberZone + contentImplicitHeight + (keyboardHeight > 0 ? 0 : bottomInset)
     readonly property real panelHeight: centred ? Math.min(contentImplicitHeight + Theme.size.badge + Theme.space.screenMargin, centreAvailable - 2 * Theme.space.screenMargin) : Math.min(detent === Sheet.Medium ? mediumHeight : detent === Sheet.Content ? contentHeight : largeHeight, available)
-    // The card of an alert: at alertTop on the design frame (the same distance from another phone's inset), moved up when
-    // the card would not fit under it, and never above the inset.
-    readonly property real alertTop: topInset + Theme.size.alertTop - Theme.frame.safeAreaTop
+    // The card of an alert: 3/8 of its height above alertAnchor on the design frame (the same distance from another phone's
+    // inset), moved up when the card would not fit under that, and never above the inset.
+    readonly property real alertTop: topInset + Theme.size.alertAnchor - Theme.frame.safeAreaTop - panelHeight * 3 / 8
     readonly property real centreTop: Math.max(topInset + Theme.space.screenMargin, Math.min(alertTop, topInset + centreAvailable - Theme.space.screenMargin - panelHeight))
     readonly property real restY: centred ? centreTop : bottomEdge - panelHeight
     // The level the scrim reaches. It is a fraction of the scrim colour's own opacity, not a design colour.

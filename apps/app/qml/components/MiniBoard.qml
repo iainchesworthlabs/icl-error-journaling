@@ -27,7 +27,7 @@ import ErrorJournalingApp
 // The sizes are those of the design (BoardLayoutSelected) from Theme.miniBoard: 64 pt tiles, 6 pt gaps, 11.5/600 labels
 // 8 pt in on the font's own line, 1.2 times the size (Other's in textSecondary), and a selected tile that rises 4 pt, grows by 1.04, casts
 // the lift shadow and has a 3 pt ring 1 pt outside its face and a 20 pt tick 6 pt in from the corner. The panel under the
-// board has 12 pt and 14 pt padding and 10 pt gaps; the name in 16/600 with "Position 9 of 11" on the right of the same
+// board has 12 pt of padding above and below and 14 pt at the sides, and 10 pt gaps; the name in 16/600 with "Position 9 of 11" on the right of the same
 // row; 52 pt buttons with a 20 pt icon 2 pt over a 13/600 label; Done 32 pt high.
 Item {
     id: root
@@ -435,7 +435,7 @@ Item {
 
             objectName: "miniPanel"
             width: parent.width
-            height: panelColumn.implicitHeight + 2 * Theme.space.rowPadding
+            height: panelColumn.implicitHeight + 2 * Theme.space.sectionGap
             visible: root.selectedTile !== null && root.selectedPosition > 0
             radius: Theme.radius.groupedList
             color: Theme.colour.surface
