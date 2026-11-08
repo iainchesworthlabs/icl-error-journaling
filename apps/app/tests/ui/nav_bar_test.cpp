@@ -171,11 +171,13 @@ TEST_CASE("nav_bar.collapsed: a large bar whose page has scrolled shows the comp
     rig.layout();
     CHECK(nav->property("collapsed").toBool());
     QQuickItem* inline_title = rig.find(QStringLiteral("navTitle"));
+    REQUIRE(inline_title != nullptr);
     CHECK(inline_title->isVisible());
     CHECK(inline_title->property("font").value<QFont>().weight() == QFont::DemiBold);
     CHECK(rig.geometry(inline_title).center().x() == 201);
     CHECK_FALSE(rig.find(QStringLiteral("navTitleBelow"))->isVisible());
     QQuickItem* divider = rig.find(QStringLiteral("navDivider"));
+    REQUIRE(divider != nullptr);
     CHECK(divider->isVisible());
     CHECK(rig.geometry(divider).top() == 44);
     CHECK(rig.geometry(divider).height() == 1);
@@ -199,6 +201,7 @@ TEST_CASE("nav_bar.compact: a title that fits is on one line, and a sheet's bar 
     INFO("width " << nav->width() << ", title " << nav->property("titleWidth").toDouble() << ", room "
                   << nav->property("inlineRoom").toDouble());
     QQuickItem* title = rig.find(QStringLiteral("navTitle"));
+    REQUIRE(title != nullptr);
     REQUIRE(title->isVisible());
     CHECK(title->property("lineCount").toInt() == 1);
     CHECK(rig.geometry(rig.find(QStringLiteral("navLeading"))).top() == 8);
