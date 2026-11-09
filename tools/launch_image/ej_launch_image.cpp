@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Draws the launch image (Stage 5, package 5.8): the Log screen's skeleton (qml/screens/launch/LaunchSkeleton.qml) rendered
-// offscreen at the size of the design frame, 402 x 874 pt, at a device pixel ratio of 3 (1206 x 2622 px), in light and in
-// dark. The two PNGs are the image of the launch screen in the asset catalogue (LaunchBoard.imageset).
+// Draws the launch image (Stage 5, package 5.8): the Log screen's skeleton (qml/screens/launch/LaunchSkeleton.qml)
+// rendered offscreen at the size of the design frame, 402 x 874 pt, at a device pixel ratio of 3 (1206 x 2622 px), in
+// light and in dark. The two PNGs are the image of the launch screen in the asset catalogue (LaunchBoard.imageset).
 //
 //     ej_launch_image [--out <directory>]     write launch-light.png and launch-dark.png (default: the image set)
-//     ej_launch_image --check [<directory>]   render again and compare with the PNGs there; exit 1 with the command to run
-//     ej_launch_image --self-test             check that the comparison fails on a drift and not on a rounding
+//     ej_launch_image --check [<directory>]   render again and compare with the PNGs there; exit 1 with the command to
+//     run ej_launch_image --self-test             check that the comparison fails on a drift and not on a rounding
 //
-// The skeleton is shapes only, and every size in it comes from the design tokens and not from a font, so the pictures come
-// out the same on every machine. The comparison is exact inside the tile rectangles (corners apart) and allows a difference
-// of 2 in a channel elsewhere, which is the rounding of anti-aliased edges and corners between renderers.
+// The skeleton is shapes only, and every size in it comes from the design tokens and not from a font, so the pictures
+// come out the same on every machine. The comparison is exact inside the tile rectangles (corners apart) and allows a
+// difference of 2 in a channel elsewhere, which is the rounding of anti-aliased edges and corners between renderers.
 #include <QByteArray>
 #include <QColor>
 #include <QCoreApplication>
@@ -85,8 +85,8 @@ void collect(QQuickItem* item, const QString& name, std::vector<QQuickItem*>& ou
     }
 }
 
-/// Renders the skeleton in one appearance. The window is the size of the frame, the scale factor is the iPhone's, and the
-/// software renderer draws it, so no graphics hardware is involved.
+/// Renders the skeleton in one appearance. The window is the size of the frame, the scale factor is the iPhone's, and
+/// the software renderer draws it, so no graphics hardware is involved.
 [[nodiscard]] std::optional<Picture> render(const Appearance& appearance)
 {
     QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
@@ -101,7 +101,8 @@ void collect(QQuickItem* item, const QString& name, std::vector<QQuickItem*>& ou
         std::fprintf(stderr, "error: the module %s has no Theme\n", MODULE);
         return std::nullopt;
     }
-    theme->setProperty("colourScheme", static_cast<int>(appearance.m_Dark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light));
+    theme->setProperty("colourScheme",
+                       static_cast<int>(appearance.m_Dark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light));
 
     QQmlComponent component(&engine, MODULE, TYPE);
     std::unique_ptr<QObject> created(component.create());
@@ -120,8 +121,8 @@ void collect(QQuickItem* item, const QString& name, std::vector<QQuickItem*>& ou
     const QSize expected(FRAME_WIDTH * SCALE, FRAME_HEIGHT * SCALE);
     if (grabbed.size() != expected)
     {
-        std::fprintf(stderr, "error: the picture is %dx%d px, expected %dx%d (is QT_SCALE_FACTOR set?)\n", grabbed.width(),
-                     grabbed.height(), expected.width(), expected.height());
+        std::fprintf(stderr, "error: the picture is %dx%d px, expected %dx%d (is QT_SCALE_FACTOR set?)\n",
+                     grabbed.width(), grabbed.height(), expected.width(), expected.height());
         return std::nullopt;
     }
 
@@ -156,7 +157,8 @@ void collect(QQuickItem* item, const QString& name, std::vector<QQuickItem*>& ou
                                });
 }
 
-/// The first place where `actual` and `expected` differ more than the comparison allows, as text; empty when they agree.
+/// The first place where `actual` and `expected` differ more than the comparison allows, as text; empty when they
+/// agree.
 [[nodiscard]] QString difference(const QImage& actual, const QImage& expected, const std::vector<QRect>& tiles)
 {
     if (actual.size() != expected.size())
@@ -252,15 +254,17 @@ int check_all(const QString& directory)
     }
     if (status != 0)
     {
-        std::fprintf(stderr,
-                     "The launch image is out of date. Run `ej_launch_image` (it writes the PNGs in\n%s)\n"
-                     "and commit them. Delete the app from the phone before judging the launch screen: iOS caches it.\n",
-                     EJ_LAUNCH_IMAGE_DIR);
+        std::fprintf(
+            stderr,
+            "The launch image is out of date. Run `ej_launch_image` (it writes the PNGs in\n%s)\n"
+            "and commit them. Delete the app from the phone before judging the launch screen: iOS caches it.\n",
+            EJ_LAUNCH_IMAGE_DIR);
     }
     return status;
 }
 
-/// The comparison must fail on a tile that moved and pass on a rounding of one level; a check that cannot fail is no check.
+/// The comparison must fail on a tile that moved and pass on a rounding of one level; a check that cannot fail is no
+/// check.
 int self_test()
 {
     const auto picture = render(APPEARANCES[0]);
