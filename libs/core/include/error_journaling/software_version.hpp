@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
-#include "error_journaling/result.hpp"
-
+#include <algorithm>
+#include <array>
 #include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>
-#include <utility>
+
+#include "error_journaling/result.hpp"
 
 namespace ej
 {
@@ -59,7 +60,7 @@ public:
     /// Empty when the version has no commit.
     [[nodiscard]] std::string_view commit() const
     {
-        return m_Commit;
+        return {m_Commit.data(), m_CommitLength};
     }
     /// What is stored, and what `parse_stored` reads back: "1.4.2" or "1.4.2+a1b2c3d".
     [[nodiscard]] std::string stored() const;
@@ -69,15 +70,20 @@ public:
     friend auto operator<=>(const SoftwareVersion&, const SoftwareVersion&) = default;
 
 private:
-    SoftwareVersion(std::uint32_t major, std::uint32_t minor, std::uint32_t patch, std::string commit)
-        : m_Major(major), m_Minor(minor), m_Patch(patch), m_Commit(std::move(commit))
+    SoftwareVersion(std::uint32_t major, std::uint32_t minor, std::uint32_t patch, std::string_view commit)
+        : m_Major(major), m_Minor(minor), m_Patch(patch), m_CommitLength(static_cast<std::uint8_t>(commit.size()))
     {
+        std::copy(commit.begin(), commit.end(), m_Commit.begin());
     }
 
     std::uint32_t m_Major = 0;
     std::uint32_t m_Minor = 0;
     std::uint32_t m_Patch = 0;
-    std::string m_Commit;
+    // The commit is at most `MAX_COMMIT_LENGTH` characters, so it is kept in the object and not in a string: a header
+    // is copied and destroyed in many places, and GCC's analysis of a variant that holds one reports another string in
+    // it as possibly uninitialised (a false warning, as in journal_seed.cpp).
+    std::array<char, MAX_COMMIT_LENGTH> m_Commit{};
+    std::uint8_t m_CommitLength = 0;
 };
 
 }  // namespace ej
