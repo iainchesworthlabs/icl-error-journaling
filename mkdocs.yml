@@ -20,9 +20,11 @@ nav:
       - Stage 8 (iPad): plan/stage-8.md
       - Stage 9: plan/stage-9.md
       - Stage 13 (foldables): plan/stage-13.md
+      - About page: plan/about-page.md
   - Design: design/README.md
   - Building: building.md
   - Architecture: architecture.md
+  - Licences and the About page: licensing.md
   - Testing: testing.md
   - Continuous integration: ci.md
   - Releasing: releasing.md

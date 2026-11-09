@@ -64,8 +64,8 @@ sets `CFBundleVersion`. The identifier is `ERROR_JOURNALING_APPLICATION_ID` in `
 #### Reading the timings on a device
 
 The exit-gate figures (cold start to a usable board, tap to haptic) are read from the application itself, on a TestFlight
-build: there is no Mac, so no Instruments. Open the Settings tab, scroll to the end, and tap the small version text at the foot of
-the list five times quickly (five more hide it) to see `launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms`. The tap figure stops at the haptic call
+build: there is no Mac, so no Instruments. Open the Settings tab, scroll to the end, open About CS Bingo Board, and tap the Version row
+five times quickly (five more hide it) to see `launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms`. The tap figure stops at the haptic call
 returning and does not include the actuator. The same launch figure goes to the system log as a `launch:` line, and the
 marks go to Points of Interest, for anyone with a Mac and Console or Instruments.
 
@@ -81,6 +81,29 @@ no way yet to put it on a phone without a Mac; see `docs/plan/stage-5.md`, "Timi
 layout, the tab bar or the header card's shapes, and commit the two PNGs; `ctest -R launch.` fails until you do, and so does
 CI. `ej_launch_image --check` compares without writing. iOS caches launch screens: delete the app from the phone before
 judging a new image.
+
+### The About page: commit, date and licences
+
+`apps/app` runs two small Python programs on every build (`cmake/EjAbout.cmake`; the build needs a Python 3 on `PATH`,
+found as `python3` or `python`). Neither adds a preprocessor directive or a compile definition.
+
+- `tools/licences/build_info.py` writes `about/build_info_values.cpp` in the build directory: the short commit hash, the tag
+  or branch, the build number and the date of the commit. Outside git, or without it, the values are `unknown` and the build goes on.
+  The build number is `ERROR_JOURNALING_IOS_BUILD_NUMBER` (the `CFBundleVersion`; the project version when empty) on iOS, else
+  `$GITHUB_RUN_NUMBER`. The date is `$SOURCE_DATE_EPOCH` when it is set (a reproducible build, or CI), else the date of the commit,
+  and never the time of the build, so building one commit twice gives one program. The file changes only when a value does.
+- `tools/licences/notices.py` reads the resolved link line of `ej_app` from the CMake file API and writes
+  `about/third-party-notices.json` (embedded as the resource `:/about/third-party-notices.json`) and `THIRD-PARTY-NOTICES.txt`:
+  Qt and what Qt bundles (from the SBOMs in `tools/licences/data/qt-modules.json`), and the vcpkg ports that are linked (from the
+  installed tree). Test-only ports (`catch2`) are listed in `tools/licences/data/manifest.json` and left out. A linked library with
+  no entry fails the build. `docs/licensing.md` has the design.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `ERROR_JOURNALING_NOTICES_STRICT` | `ON` | A linked component that the notices cannot account for fails the build. Turn it `OFF` only to get past a problem while it is being fixed; the test `about.notices` still fails. |
+
+After a Qt upgrade run `python -I tools/licences/qt_sbom_manifest.py --sbom <platform>=<qt>/sbom ... --out tools/licences/data/qt-modules.json`
+and review the diff (`docs/licensing.md`, "Maintaining it").
 
 ### Windows (developer machine)
 

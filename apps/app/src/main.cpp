@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app_root.hpp"
+#include "build_info.hpp"
 #include "error_journaling/config_exporter.hpp"
 #include "error_journaling/config_importer.hpp"
 #include "error_journaling/launch_tracker.hpp"
@@ -12,11 +13,13 @@
 #include "error_journaling/storage.hpp"
 #include "error_journaling/version.hpp"
 #include "qt_clipboard.hpp"
+#include "viewmodel/about_model.hpp"
 #include "viewmodel/settings_model.hpp"
 
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QCoreApplication>
+#include <QFile>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlEngine>
@@ -143,7 +146,34 @@ int main(int argc, char* argv[])
     setup_files_ptr = &setup_files;
     qmlRegisterSingletonInstance("ErrorJournalingApp", 1, 0, "SetupFiles", &setup_files);
 
+    // The About pages (PRF-12): the facts of this build, which the build wrote (tools/licences/build_info.py), and the
+    // third-party notices it generated from the real link line (tools/licences/notices.py, the resource below). The
+    // notices are read when the About pages are first opened and not before, so they cost the launch nothing.
+    const auto backend = error_journaling::storage::backend_name();
+    const ej::app::BuildInfo build = ej::app::generated_build_info();
+    const auto from_view = [](std::string_view text)
+    { return QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size())); };
+    ej::viewmodel::AboutFacts about_facts;
+    about_facts.m_Name = QStringLiteral("CS Bingo Board");
+    about_facts.m_Version = error_journaling::version_text();
+    about_facts.m_BuildNumber = from_view(build.m_BuildNumber);
+    about_facts.m_Commit = from_view(build.m_Commit);
+    about_facts.m_Dirty = build.m_Dirty;
+    about_facts.m_Ref = from_view(build.m_Ref);
+    about_facts.m_BuildDate = from_view(build.m_BuildDate);
+    about_facts.m_Platform = share_available ? QStringLiteral("ios") : QStringLiteral("desktop-stub");
+    about_facts.m_Storage = from_view(std::string_view(backend.data(), backend.size()));
+    about_facts.m_QtVersion = QString::fromLatin1(qVersion());
+    about_facts.m_SourceUrl = from_view(build.m_SourceUrl);
+    ej::viewmodel::AboutModel about(std::move(about_facts),
+                                    []
+                                    {
+                                        QFile notices(QStringLiteral(":/about/third-party-notices.json"));
+                                        return notices.open(QIODevice::ReadOnly) ? notices.readAll() : QByteArray();
+                                    });
+
     QQmlApplicationEngine engine;
+    QQmlEngine::setObjectOwnership(&about, QQmlEngine::CppOwnership);
     // The root owns the models; QML must never delete one.
     QObject* const models[] = {root.session(), root.undo(), root.board(),    root.picker(), root.timeline(),
                                root.history(), root.day(),  root.settings(), root.share()};
@@ -157,7 +187,6 @@ int main(int argc, char* argv[])
     // The window reads the models as required properties (Stage 4, decision 3), and the root itself for its one
     // write-failed signal, which the shell shows as a banner. The version and platform text show the libraries are
     // linked.
-    const auto backend = error_journaling::storage::backend_name();
     engine.setInitialProperties({{QStringLiteral("bridge"), QVariant::fromValue(&platform_bridge)},
                                  {QStringLiteral("versionText"), error_journaling::version_text()},
                                  {QStringLiteral("platformText"),
@@ -173,7 +202,8 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("day"), QVariant::fromValue(root.day())},
                                  {QStringLiteral("settings"), QVariant::fromValue(root.settings())},
                                  {QStringLiteral("share"), QVariant::fromValue(root.share())},
-                                 {QStringLiteral("appRoot"), QVariant::fromValue(&root)}});
+                                 {QStringLiteral("appRoot"), QVariant::fromValue(&root)},
+                                 {QStringLiteral("about"), QVariant::fromValue(&about)}});
     // The shell says when the 12 tiles accept taps (the Log tab is shown and the session has loaded).
     QObject::connect(&platform_bridge, &ej::bridge::QmlBridge::boardEnabled, &platform_bridge,
                      [&launch] { launch.board_enabled(); });

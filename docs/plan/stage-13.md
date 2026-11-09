@@ -201,7 +201,7 @@ Two Stage 8 behaviours change, and neither is a full-screen iPad layout:
 That is [decision 1](#decisions-for-the-owner). `T13-2` pins the table, so any other change to a phone or iPad size fails
 a test.
 
-**In code.** `Layout.qml` (8.1) gains:
+**In code.** `WindowLayout.qml` (8.1, on `develop`) gains:
 - the second `Wide` condition;
 - the `Regular` height clamp;
 - `rail` (a boolean) and `railEdge` (left or right);
@@ -284,7 +284,7 @@ Posture classify_posture(QSizeF window, std::span<const Fold> folds);
 ```
 
 A `PostureModel` QObject wraps the source and is registered as the `Posture` QML singleton. It exposes `posture`,
-`foldRect` and `foldOrientation`. `Layout.qml` binds to it.
+`foldRect` and `foldOrientation`. `WindowLayout.qml` binds to it.
 
 | Platform | `src/platform/<os>/posture.*` | What it does |
 |---|---|---|
@@ -417,7 +417,7 @@ pass with no change to their expected values, apart from the two window sizes of
 | # | Package | Contents | Needs | Tests |
 |---|---|---|---|---|
 | 13.1 | Classes and rail | The second `Wide` condition, the `Regular` height clamp, and the rail mode of `TabBar` with its edge from the insets. Short `Compact` gaps and the toast in the Last bar's slot. Narrow-width checks. The UI rig gains the foldable sizes and side insets. Emulator profiles are measured, and the sizes recorded here. | 8.1 to 8.5 | T13-1, T13-2, T13-4, T13-9, T13-10 |
-| 13.2 | Posture interface | `posture.hpp`, `classify_posture`, `PostureModel` and the `Posture` singleton, the desktop source and the fake. `Rig::set_folds`. `Layout.posture` and `foldRect`. There is no visible change. | 13.1 | T13-3 |
+| 13.2 | Posture interface | `posture.hpp`, `classify_posture`, `PostureModel` and the `Posture` singleton, the desktop source and the fake. `UiRig::set_folds`. `WindowLayout.posture` and `foldRect`. There is no visible change. | 13.1 | T13-3 |
 | 13.3 | Posture layouts | `LogScreen`'s Book and Tabletop arrangements, which move items and do not make them again. The log strip, a new `LogStrip.qml` that reuses the log pane's rows. Sheets and alerts placed by region. The fold rule. | 13.2, 8.6 | T13-5, T13-8, T13-11, T13-16 |
 | 13.4 | State across a fold | Sheet text in the sheet controllers. Focus, cursor and input method restored. Scroll anchors. The combination tests. | 13.3 | T13-6, T13-7 |
 | 13.5 | Android shim and orientation | `androidx.window` in Gradle. `EjActivity`'s `WindowInfoTracker` listener calls the native method, which calls `posture.cpp`. The run-time orientation rule. Manifest checks. Emulator runs (checklist E1 to E12). A `changelog.d` fragment ("Adapts to foldable phones, folded, unfolded and half folded"). | 9.1, 9.7, 13.3 | T13-12, T13-14 |
@@ -431,7 +431,7 @@ The rest of the layout is already there from Stage 8.
 ## Tests
 
 The labels are those in `docs/testing.md`. Every `ui` test runs in the offscreen app at the size it names. The rig places
-the folds with `Rig::set_folds`.
+the folds with `UiRig::set_folds`.
 
 **Sizes:**
 - 841 × 701 and 701 × 841 (insets 24 and 20);
@@ -523,7 +523,7 @@ A check on a real foldable is recommended before release but not required by thi
 ## Coordination with the other stages
 
 - **Stage 8 (iPad).**
-  - This stage builds on `Layout.qml`, Wide, form sheets and 8.6's state keeping.
+  - This stage builds on `WindowLayout.qml`, Wide, form sheets and 8.6's state keeping.
   - It changes Stage 8's rules only as in [decision 1](#decisions-for-the-owner).
   - It reuses `ipad_mockups.py`'s blocks, so a change to the copy there changes the foldable pages on the next run of
     `fold_mockups.py`.
