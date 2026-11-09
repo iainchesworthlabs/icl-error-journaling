@@ -40,8 +40,9 @@
     "LicenseRef-Qt-Commercial": "The Qt Company's commercial licence is an offer of theirs, not a licence this app is under; there is no text to reproduce."
   },
   "textAliases": {
-    "_comment": "An id whose text is the same file as another's: the GNU General Public License version 3 has one text.",
-    "GPL-3.0-only": "GPL-3.0-or-later"
+    "_comment": "An id whose text is the same file as another's: the GNU General Public License has one text for each version.",
+    "GPL-3.0-only": "GPL-3.0-or-later",
+    "GPL-2.0-or-later": "GPL-2.0-only"
   },
   "displayNames": {
     "_comment": "How a component that Qt bundles is named in the list; the SBOM's own names are used for the rest (keys are lower case).",

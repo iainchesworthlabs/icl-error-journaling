@@ -244,6 +244,10 @@ class Vcpkg:
     def owner_of(self, relative: str) -> str:
         return self.m_Owner.get(relative.lower(), "")
 
+    def ships_files(self, port: str) -> bool:
+        """Whether the port installs anything outside share/ (a library, a header, a program)."""
+        return any(owner == port and not relative.startswith("share/") for relative, owner in self.m_Owner.items())
+
     def has_copyright(self, port: str) -> bool:
         return self.m_Dir is not None and (self.m_Dir / "share" / port / "copyright").is_file()
 
@@ -597,7 +601,10 @@ class Notices:
             })
 
         # vcpkg ports the link line reached, and their dependencies.
+        directly_linked = set(self.m_Ports)
         for port in self.m_Vcpkg.closure(sorted(set(self.m_Ports))):
+            if port not in directly_linked and not self.m_Vcpkg.ships_files(port):
+                continue  # a build helper (vcpkg-cmake) or a meta port (pthreads): it installs nothing that is linked
             if not self.m_Vcpkg.has_copyright(port):
                 self.unresolved(f"vcpkg port {port} is linked but has no share/{port}/copyright")
                 continue
@@ -677,10 +684,18 @@ class Notices:
             wanted.extend((i, component["name"]) for i in component["textIds"])
             if component.get("ownText"):
                 self.m_Texts[component["id"]] = component.pop("ownText")
+        choices = {c["name"]: c["licence"] for c in self.m_Components}
+        choices[project["name"]] = project["licence"]
         for identifier, needed_by in wanted:
             if identifier in self.m_Texts:
                 continue
             text = self.text_for(identifier)
+            if not text and " OR " in choices.get(needed_by, "") and any(
+                    other in self.m_Texts or self.text_for(other) or other in self.exemptions()
+                    for other in spdx_ids(choices[needed_by]) if other != identifier):
+                # A licence offered as a choice ("AFL-2.1 OR GPL-2.0-or-later") needs the text of one option, which is there.
+                self.warning(f"No licence text for {identifier}, one of the options of {needed_by}; another option has its text")
+                continue
             if not text:
                 message = (f"No licence text for {identifier} (needed by {needed_by}): add "
                            f"tools/licences/data/texts/{identifier}.txt and say where it came from in the README there")
