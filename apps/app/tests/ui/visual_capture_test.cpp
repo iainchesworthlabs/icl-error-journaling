@@ -855,6 +855,80 @@ void scene_delete_log(Phone& phone)
     phone.play();
 }
 
+void open_settings_page(Phone& phone, const QString& row);
+
+/// The sample setup with only its first `kept` error types, of which the first `placed` are on the board: the setup of
+/// a person who has started the board by hand. It is imported as the person imports a file.
+void use_short_board(Phone& phone, int kept, int placed)
+{
+    QJsonObject setup = QJsonDocument::fromJson(sample_setup_text()).object();
+    QJsonArray types;
+    const QJsonArray all = setup.value(QStringLiteral("error_types")).toArray();
+    for (int i = 0; i < kept && i < all.size(); ++i)
+    {
+        QJsonObject type = all.at(i).toObject();
+        if (i >= placed)
+        {
+            type.remove(QStringLiteral("board_position"));
+        }
+        types.append(type);
+    }
+    setup.insert(QStringLiteral("error_types"), types);
+    choose_file_to_import(phone, QJsonDocument(setup).toJson(), QStringLiteral("short-board.json"));
+    // The confirmation, as the person answers it.
+    phone.tap(QStringLiteral("replaceButton"));
+    phone.services.settle();
+    phone.play();
+}
+
+/// Four types on the board and a fifth, Track Skipped, off it: positions 5 to 11 are empty.
+void board_settings_empty(Phone& phone)
+{
+    use_short_board(phone, 5, 4);
+    phone.choose_tab(SETTINGS_TAB);
+}
+
+void scene_board_settings_empty(Phone& phone)
+{
+    board_settings_empty(phone);
+}
+
+void scene_board_type_picker(Phone& phone)
+{
+    board_settings_empty(phone);
+    phone.tap(QStringLiteral("miniTile4"));
+    phone.play();
+}
+
+void scene_error_type_new_on_board(Phone& phone)
+{
+    scene_board_type_picker(phone);
+    phone.tap(QStringLiteral("settingsPickerNewType"));
+    phone.play();
+    phone.type_into(QStringLiteral("nameField"), QStringLiteral("Audio Drop Out"));
+    phone.play();
+}
+
+void scene_error_types_added(Phone& phone)
+{
+    use_short_board(phone, 5, 4);
+    open_settings_page(phone, QStringLiteral("settingsErrorTypes"));
+    phone.tap(QStringLiteral("addRow"));
+    phone.play();
+    phone.type_into(QStringLiteral("nameField"), QStringLiteral("Audio Drop Out"));
+    phone.tap(QStringLiteral("navTrailing"), phone.sheet_of(phone.need(QStringLiteral("nameField"))));
+    phone.services.settle();
+    phone.play();
+}
+
+void scene_log_empty_board(Phone& phone)
+{
+    // A setup made by hand: no error types yet.
+    use_short_board(phone, 0, 0);
+    fill_header(phone);
+    phone.play();
+}
+
 void scene_board_settings(Phone& phone)
 {
     phone.choose_tab(SETTINGS_TAB);
@@ -1070,6 +1144,19 @@ std::vector<Scene> scenes()
              "The sample setup with an unnamed error type, a repeated location name and a pattern with no {value}.")},
         {QStringLiteral("BoardLayoutSelected"), TODAY, scene_board_layout_selected,
          QStringLiteral("Position 9 (Speech Delay) selected.")},
+        {QStringLiteral("LogEmptyBoard"), TODAY, scene_log_empty_board,
+         QStringLiteral("The sample setup with no error types, the header filled in.")},
+        {QStringLiteral("BoardSettingsEmpty"), TODAY, scene_board_settings_empty,
+         QStringLiteral("The sample's first five types, four of them on the board.")},
+        {QStringLiteral("BoardTypePicker"), TODAY, scene_board_type_picker,
+         QStringLiteral("The empty position 5 tapped on that board.")},
+        {QStringLiteral("ErrorTypeNewOnBoard"), TODAY, scene_error_type_new_on_board,
+         QStringLiteral("New error type chosen in the picker, \"Audio Drop Out\" typed; there is no keyboard in the "
+                        "capture, and the field shows its own focus.")},
+        {QStringLiteral("ErrorTypesAdded"), TODAY, scene_error_types_added,
+         QStringLiteral(
+             "Audio Drop Out added in Error types on that board. The mock-up's list is the sample's; the app "
+             "lists the six types it has.")},
         {QStringLiteral("TileLabels"), TODAY, scene_tile_labels,
          QStringLiteral("\"Sequence Out of Order\" logged three times; the mock-up's dashed design note is not UI and "
                         "is not in the app.")},

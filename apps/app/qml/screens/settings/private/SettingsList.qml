@@ -5,7 +5,8 @@ import ErrorJournalingApp
 // The Settings list (Stage 4, package 4.12; PRF-01 to 07, 10): the miniature board on top of it and, under the board, the
 // rows. The board is MiniBoard over `settings.boardLayout`; a move it asks for goes to `settings.moveBoardTile` and the
 // choice of a type for a tile is the screen's (`replaceRequested`), which opens the picker and calls
-// `settings.assignBoardTile`. The rows that open an editor of the lists emit a signal and the shell shows the editor
+// `settings.assignBoardTile`. Change error type in the panel of a selected tile and a tap on an empty tile both ask for it;
+// an empty tile has no type, so its `typeId` is empty. The rows that open an editor of the lists emit a signal and the shell shows the editor
 // (package 4.13); the others open a page of this screen.
 //
 // A refusal of the model, a write that failed and a setup that could not be read are shown inline, above the board.
@@ -150,6 +151,7 @@ SettingsPage {
             model: root.settings.boardLayout
             onMoveRequested: (fromPosition, toPosition) => root.move(fromPosition, toPosition)
             onReplaceRequested: position => root.replaceRequested(position, board.tileItem(position - 1).typeId)
+            onAddRequested: position => root.replaceRequested(position, "")
         }
 
         // 10 pt under the resting board and 8 pt under the panel of a selected tile, as the two mock-ups have it.
@@ -166,7 +168,7 @@ SettingsPage {
             font: Theme.font.footnote.font
             lineHeightMode: Text.FixedHeight
             lineHeight: Theme.font.footnote.linePitch
-            text: board.selectedPosition > 0 ? qsTr("Tap a tile to select it. Hold and drag to move it, or use the buttons. Each type keeps its colour.") : qsTr("Hold and drag a tile to move it. Tap a tile to swap in a different error type. Each type keeps its colour.")
+            text: board.selectedPosition > 0 ? qsTr("Tap a tile to select it. Hold and drag to move it, or use the buttons. Each type keeps its colour.") : qsTr("Hold and drag a tile to move it. Tap a tile to change its error type, or + to add one. Each type keeps its colour.")
             wrapMode: Text.WordWrap
         }
 

@@ -62,7 +62,7 @@ QVariantMap empty_properties(int position)
             {QStringLiteral("hasCount"), false},
             {QStringLiteral("isOther"), false},
             {QStringLiteral("isEmpty"), true},
-            {QStringLiteral("accessibleName"), QStringLiteral("Empty tile, position %1").arg(position)}};
+            {QStringLiteral("accessibleName"), QStringLiteral("Position %1, empty. Add error type").arg(position)}};
 }
 
 /// The tile at the size it has on the board: the rig sizes a loaded item to the window.
@@ -363,7 +363,7 @@ TEST_CASE("tile.label: a label with a very long word wraps inside the word inste
     CHECK(label->property("contentHeight").toDouble() <= label->height() + 0.5);
 }
 
-TEST_CASE("tile.empty: an empty position has no handler, no role and is not announced", "[ui][tile]")
+TEST_CASE("tile.empty: an empty position is a button with a plus that taps and never presses", "[ui][tile]")
 {
     UiRig rig;
     QQuickItem* tile = load_tile(rig, empty_properties(5));
@@ -372,12 +372,12 @@ TEST_CASE("tile.empty: an empty position has no handler, no role and is not anno
 
     rig.tap(tile);
     CHECK(pressed.count() == 0);
-    CHECK(tapped.count() == 0);
-    (void)accessible_press(tile);
+    CHECK(tapped.count() == 1);
+    CHECK(accessible_press(tile));
     CHECK(pressed.count() == 0);
-    CHECK(tapped.count() == 0);
+    CHECK(tapped.count() == 2);
 
-    // No press feedback either.
+    // No press feedback: there is nothing to record.
     QQuickItem* face = rig.find(QStringLiteral("tileFace"));
     REQUIRE(face != nullptr);
     const int finger = rig.press(tile);
@@ -387,10 +387,27 @@ TEST_CASE("tile.empty: an empty position has no handler, no role and is not anno
 
     const std::vector<Node> nodes = rig.accessible_tree();
     const auto self = std::ranges::find_if(nodes, [tile](const Node& node) { return node.m_Item == tile; });
-    CHECK((self == nodes.end() || !self->m_InAccessibleTree));
+    REQUIRE(self != nodes.end());
+    CHECK(self->m_InAccessibleTree);
+    CHECK(self->m_Role == QAccessible::Button);
+    CHECK(self->m_Name == QStringLiteral("Position 5, empty. Add error type"));
     CHECK(require_item(rig, QStringLiteral("tileEmptySlot"))->isVisible());
+    CHECK(require_item(rig, QStringLiteral("tileAddIcon"))->isVisible());
     CHECK_FALSE(require_item(rig, QStringLiteral("tileLabel"))->isVisible());
     CHECK_FALSE(require_item(rig, QStringLiteral("tileBadge"))->isVisible());
+}
+
+TEST_CASE("tile.empty_skeleton: an empty position of the loading board takes no touch and has no plus", "[ui][tile]")
+{
+    UiRig rig;
+    QVariantMap properties = empty_properties(5);
+    properties.insert(QStringLiteral("skeleton"), true);
+    QQuickItem* tile = load_tile(rig, properties);
+    QSignalSpy tapped(tile, SIGNAL(tapped()));
+
+    rig.tap(tile);
+    CHECK(tapped.count() == 0);
+    CHECK_FALSE(require_item(rig, QStringLiteral("tileAddIcon"))->isVisible());
 }
 
 TEST_CASE("tile.other: neutral fill, a dashed border of the token width, and the name", "[ui][tile]")

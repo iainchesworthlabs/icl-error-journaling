@@ -266,7 +266,7 @@ TEST_CASE("mini_board.geometry: twelve small tiles in three columns, the size of
     CHECK(board->property("selectedPosition").toInt() == 0);
 }
 
-TEST_CASE("mini_board.swap: a tap selects a tile and Replace type asks for a type for that position",
+TEST_CASE("mini_board.swap: a tap selects a tile and Change error type asks for a type for that position",
           "[ui][mini_board]")
 {
     Layout layout;
@@ -312,7 +312,7 @@ TEST_CASE("mini_board.swap: a tap selects a tile and Replace type asks for a typ
     CHECK_FALSE(panel->isVisible());
 }
 
-TEST_CASE("mini_board.swap: Other is fixed, an empty position can be filled", "[ui][mini_board]")
+TEST_CASE("mini_board.swap: Other is fixed, an empty position asks for a type at once", "[ui][mini_board]")
 {
     Configuration configuration = sample_configuration();
     configuration.m_ErrorTypes.at(5).m_BoardPosition = std::nullopt;
@@ -320,6 +320,7 @@ TEST_CASE("mini_board.swap: Other is fixed, an empty position can be filled", "[
     UiRig rig;
     QQuickItem* board = load_board(rig, layout);
     QSignalSpy replace(board, SIGNAL(replaceRequested(int)));
+    QSignalSpy add(board, SIGNAL(addRequested(int)));
     QSignalSpy moved(board, SIGNAL(moveRequested(int, int)));
 
     // Other is shown and named, and neither selected nor moved.
@@ -327,21 +328,35 @@ TEST_CASE("mini_board.swap: Other is fixed, an empty position can be filled", "[
     CHECK(board->property("selectedPosition").toInt() == 0);
     CHECK_FALSE(require_item(rig, QStringLiteral("miniPanel"))->isVisible());
 
-    // The empty position (6) is selected, named as empty, cannot move, and can be given a type.
-    tap_item(rig, tile(rig, 5));
-    CHECK(board->property("selectedPosition").toInt() == 6);
-    CHECK(require_item(rig, QStringLiteral("miniSelectedName"))->property("text").toString() ==
-          QStringLiteral("Empty tile"));
-    QQuickItem* earlier = rig.find_item(QStringLiteral("miniMoveEarlier"));
-    QQuickItem* later = rig.find_item(QStringLiteral("miniMoveLater"));
-    CHECK_FALSE(earlier->isEnabled());
-    CHECK_FALSE(later->isEnabled());
-    tap_item(rig, earlier);
-    tap_item(rig, later);
-    CHECK(moved.count() == 0);
-    tap_item(rig, rig.find_item(QStringLiteral("miniReplace")));
+    // The empty position (6) reads "Add error type" and a tap asks for a type for it, with no panel first.
+    QQuickItem* empty = tile(rig, 5);
+    QQuickItem* plus = rig.find_item(QStringLiteral("miniAddIcon"), empty);
+    QQuickItem* words = rig.find_item(QStringLiteral("miniLabel"), empty);
+    REQUIRE(plus != nullptr);
+    REQUIRE(words != nullptr);
+    CHECK(plus->isVisible());
+    CHECK(words->property("text").toString() == QStringLiteral("Add error type"));
+    tap_item(rig, empty);
+    CHECK(board->property("selectedPosition").toInt() == 0);
+    CHECK_FALSE(require_item(rig, QStringLiteral("miniPanel"))->isVisible());
+    REQUIRE(add.count() == 1);
+    CHECK(add.at(0).at(0).toInt() == 6);
+    CHECK(replace.count() == 0);
+
+    // A tile with a type keeps the panel, whose button is now "Change error type".
+    tap_item(rig, tile(rig, 2));
+    CHECK(board->property("selectedPosition").toInt() == 3);
+    QQuickItem* change = require_item(rig, QStringLiteral("miniReplace"));
+    CHECK(change->property("label").toString() == QStringLiteral("Change error type"));
+    tap_item(rig, change);
     REQUIRE(replace.count() == 1);
-    CHECK(replace.at(0).at(0).toInt() == 6);
+    CHECK(replace.at(0).at(0).toInt() == 3);
+    CHECK(moved.count() == 0);
+
+    // A tap on the empty tile while another is selected clears the selection and asks for a type.
+    tap_item(rig, empty);
+    CHECK(board->property("selectedPosition").toInt() == 0);
+    CHECK(add.count() == 2);
 }
 
 TEST_CASE("mini_board.buttons: Move earlier and Move later do what the drag does, and the selection follows the tile",
@@ -596,14 +611,14 @@ TEST_CASE("mini_board.a11y: names, targets, reading order and the text scales, i
     CHECK(buttons == 11);
 }
 
-TEST_CASE("mini_board.a11y: an empty position is named, selectable and a button", "[ui][mini_board][a11y]")
+TEST_CASE("mini_board.a11y: an empty position is a named button whose press asks for a type", "[ui][mini_board][a11y]")
 {
     Configuration configuration = sample_configuration();
     configuration.m_ErrorTypes.at(3).m_BoardPosition = std::nullopt;
     Layout layout(std::move(configuration));
     UiRig rig;
     QQuickItem* board = load_board(rig, layout);
-    board->setProperty("selectedPosition", 4);
+    QSignalSpy add(board, SIGNAL(addRequested(int)));
     rig.layout();
     expect_clean(check_everything(rig, min_target));
     bool found = false;
@@ -612,10 +627,15 @@ TEST_CASE("mini_board.a11y: an empty position is named, selectable and a button"
         if (node.m_ObjectName == QStringLiteral("miniTile3"))
         {
             found = true;
-            CHECK(node.m_Name == QStringLiteral("Empty tile, position 4"));
+            CHECK(node.m_Name == QStringLiteral("Position 4, empty. Add error type"));
+            CHECK(node.m_Role == QAccessible::Button);
         }
     }
     CHECK(found);
+    CHECK(accessible_press(tile(rig, 3)));
+    REQUIRE(add.count() == 1);
+    CHECK(add.at(0).at(0).toInt() == 4);
+    CHECK(board->property("selectedPosition").toInt() == 0);
 }
 
 #include "mini_board_test.moc"

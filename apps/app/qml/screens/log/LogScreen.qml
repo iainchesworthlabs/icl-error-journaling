@@ -33,6 +33,12 @@ import ErrorJournalingApp
 //   todaysDetailsRequested()   the header card was tapped (Today's details, 4.9)
 //   reviewRequested()          the "Last" bar was tapped, or "Check the log in Review" on the recovery banner (4.10)
 //   otherRequested()           the Other tile was tapped (the picker, 4.8); nothing was recorded
+//   boardSetupRequested(position)  an empty tile was tapped (its position, 1 to 11), or "Add error types" of the empty
+//                              board (0): the board setup in Settings, with the picker open for that position when there
+//                              is one. Nothing is recorded.
+//
+// A board with no error type on it (a setup made by hand) says so over the tiles (docs/design/screens/LogEmptyBoard):
+// "Your board is empty" and "Add error types". The empty tiles stay buttons under it.
 //
 // The screen fills the window. `bottomClearance` is the height of the tab bar at the foot of it, which the toast stays
 // above; the shell sets it if the screen does not extend behind the tab bar. The template value sheet is a child of
@@ -82,6 +88,7 @@ Item {
     signal todaysDetailsRequested
     signal reviewRequested
     signal otherRequested
+    signal boardSetupRequested(int position)
 
     // The impact on touch-down, then the entry. Other records nothing and fires nothing: it opens the picker on its tap.
     function pressTile(typeId: string, isOther: bool): void {
@@ -292,6 +299,110 @@ Item {
             onTapped: root.reviewRequested()
         }
 
+        // The empty board: a card over the first three rows of tiles (LogEmptyBoard), with the way to the board setup.
+        // It is made only while the board is empty, so the board as it is used pays one item for it (perf.scene). It
+        // comes before the board in the tree, so a screen reader reads it first, and the tiles under it are skipped.
+        Loader {
+            id: emptyBoardLoader
+
+            // The first three rows: the board without its last row and the gap above it.
+            readonly property real rowsHeight: grid.boardHeight - Theme.size.tileHeight - Theme.space.tileGap
+
+            x: grid.x
+            y: grid.y
+            z: 1
+            width: grid.width
+            height: rowsHeight
+            active: root.board.boardEmpty && !root.loading
+            sourceComponent: emptyBoardCard
+        }
+
+        Component {
+            id: emptyBoardCard
+
+            Item {
+                id: emptyBoard
+
+                objectName: "logEmptyBoard"
+                width: emptyBoardLoader.width
+                height: Math.max(emptyBoardLoader.height, emptyColumn.implicitHeight + 2 * emptyColumn.x)
+                Accessible.role: Accessible.Grouping
+                Accessible.name: qsTr("Your board is empty")
+
+                Shadow {
+                    anchors.fill: emptyCard
+                    radius: emptyCard.radius
+                    token: Theme.shadow.toast
+                }
+
+                Rectangle {
+                    id: emptyCard
+
+                    anchors.fill: parent
+                    radius: Theme.radius.headerCard
+                    color: Theme.colour.surface
+
+                    // A barrier, as a sheet's scrim is: a touch on the card does not reach the empty tile under it.
+                    MultiPointTouchArea {
+                        anchors.fill: parent
+                        mouseEnabled: true
+                    }
+                }
+
+                Column {
+                    id: emptyColumn
+
+                    x: Theme.space.sectionGap + Theme.space.tileGap
+                    y: (parent.height - implicitHeight) / 2
+                    width: parent.width - 2 * x
+                    spacing: Theme.space.tileGap
+
+                    Icon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        size: Theme.size.badge * 4 / 3
+                        kind: "board"
+                        colour: Theme.colour.primaryText
+                    }
+
+                    Text {
+                        objectName: "logEmptyBoardTitle"
+                        width: parent.width
+                        topPadding: Theme.border.hairline * 4
+                        horizontalAlignment: Text.AlignHCenter
+                        color: Theme.colour.textPrimary
+                        font: Theme.font.sheetTitle.font
+                        text: qsTr("Your board is empty")
+                        wrapMode: Text.WordWrap
+                        Accessible.ignored: true
+                    }
+
+                    Text {
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        color: Theme.colour.textSecondary
+                        font: Theme.font.bodySmall.font
+                        text: qsTr("Add the error types you log. Each one becomes a tile here.")
+                        wrapMode: Text.WordWrap
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: text
+                    }
+
+                    // 16 pt above the button: the column's gap on each side of this.
+                    Item {
+                        width: parent.width
+                        height: 0
+                    }
+
+                    PrimaryButton {
+                        objectName: "logAddErrorTypes"
+                        width: parent.width
+                        text: qsTr("Add error types")
+                        onClicked: root.boardSetupRequested(0)
+                    }
+                }
+            }
+        }
+
         BoardGrid {
             id: grid
 
@@ -302,11 +413,13 @@ Item {
             anchors.topMargin: Theme.space.sectionGap
             model: root.board
             skeleton: root.loading
+            coveredTiles: emptyBoardLoader.active ? Theme.size.boardColumns * (Theme.size.boardRows - 1) : 0
             onTilePressed: (row, typeId, isOther) => root.pressTile(typeId, isOther)
             onTileTapped: (row, typeId, isOther) => {
                 if (isOther)
                     root.otherRequested();
             }
+            onEmptyTapped: position => root.boardSetupRequested(position)
         }
     }
 

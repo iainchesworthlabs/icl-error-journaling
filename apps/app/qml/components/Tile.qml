@@ -16,9 +16,12 @@ import ErrorJournalingApp
 // A VoiceOver activation has no touch-down, so it sends the same pair, pressed() and then tapped() (decision 7), and the
 // screen's two calls are the same however the tile was reached.
 //
+// An empty position is a button too, with a plus in it, so that a new board shows where its types go: it sends tapped()
+// alone, never pressed(), because there is nothing to record. The screen takes the person to the board setup.
+//
 // The press scale runs on the render thread (ScaleAnimator), so it answers the finger at once and keeps going while the
-// GUI thread is busy with the commit. It reverses on release and on cancel. An empty position and a skeleton draw a
-// shape and take no touch; the skeleton draws neutral shapes only, with no text, count or type colour (the launch screen).
+// GUI thread is busy with the commit. It reverses on release and on cancel. The skeleton draws a shape and takes no
+// touch; it draws neutral shapes only, with no text, count or type colour (the launch screen).
 //
 // Look: 12 pt padding (10 pt above the default text size, so four lines fit at the 1.3 cap), the label 13.5/600 with a
 // line of 1.2 times its size, the card shadow (Theme.shadow.card, a plain offset rectangle, so the press costs nothing
@@ -36,12 +39,16 @@ Item {
     required property bool isEmpty
     required property string accessibleName
     property bool skeleton: false
+    // Under the empty-board card of the Log screen: drawn, but out of the screen reader's way (the card is read instead).
+    property bool covered: false
 
     signal pressed
     signal tapped
 
     // The tile takes touch and is announced as a button. Empty positions and the skeleton are neither.
     readonly property bool interactive: !isEmpty && !skeleton
+    // An empty position: a button that only taps (it records nothing).
+    readonly property bool addable: isEmpty && !skeleton
     // A finger is down on the tile.
     readonly property bool down: tap.pressed
     // The largest number the badge writes in full; from here on it reads "99+" (the accessible name has the full count).
@@ -55,14 +62,16 @@ Item {
     implicitWidth: Theme.size.tileWidth
     implicitHeight: Theme.size.tileHeight
 
-    Accessible.role: root.interactive ? Accessible.Button : Accessible.NoRole
+    Accessible.role: root.interactive || root.addable ? Accessible.Button : Accessible.NoRole
     Accessible.name: root.accessibleName
-    Accessible.description: root.isOther ? qsTr("Opens the list of error types") : ""
-    Accessible.ignored: !root.interactive
-    Accessible.focusable: root.interactive
+    Accessible.description: root.isOther ? qsTr("Opens the list of error types") : root.addable ? qsTr("Opens the board setup in Settings") : ""
+    Accessible.ignored: root.covered || (!root.interactive && !root.addable)
+    Accessible.focusable: !root.covered && (root.interactive || root.addable)
     Accessible.onPressAction: {
         if (root.interactive) {
             root.pressed();
+            root.tapped();
+        } else if (root.addable) {
             root.tapped();
         }
     }
@@ -83,6 +92,16 @@ Item {
             color: "transparent"
             border.width: Theme.border.hairline
             border.color: Theme.colour.border
+        }
+
+        // The plus of an empty position: where a type can go.
+        Icon {
+            objectName: "tileAddIcon"
+            anchors.centerIn: parent
+            visible: root.addable
+            size: Theme.size.badge
+            kind: "plus"
+            colour: Theme.colour.textSecondary
         }
 
         // The card shadow of a tile with a type: a plain rectangle a point lower, under the fill.
@@ -228,10 +247,13 @@ Item {
         id: tap
 
         objectName: "tileTap"
-        enabled: root.interactive
+        // A covered tile is under a card that takes its touches; it has none of its own.
+        enabled: !root.covered && (root.interactive || root.addable)
         // The tap is cancelled when the finger leaves the tile, so sliding off neither taps nor leaves the tile pressed.
         gesturePolicy: TapHandler.WithinBounds
         onPressedChanged: {
+            if (root.addable)
+                return;
             if (pressed) {
                 // First, before anything that draws: the screen's haptic and record are in this signal.
                 root.pressed();

@@ -17,7 +17,7 @@ import ErrorJournalingApp
 //                (2.2) and the plus of the new-log row (2.2) do.
 //
 // Kinds: chevronRight, chevronLeft, plus, close, check, warning, info, ring (an empty circle), search, share (upload),
-// file, list, music, speech (a speech bubble), calendar, grip (six dots), copy, trash, swap (Replace type), board (the
+// file, list, music, speech (a speech bubble), calendar, grip (six dots), copy, trash, swap (Change error type), board (the
 // Log tab: four rounded squares), sun (the Settings tab: a ring with eight rays). The tabs use list for Review and
 // calendar for History. An unknown kind draws nothing.
 Item {

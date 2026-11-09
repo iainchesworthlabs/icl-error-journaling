@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board – choose an error type – dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8FC6E6}a:hover{color:#8FC6E6}
+input::placeholder{color:#93A3B0}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #05080B; font-family: Inter, -apple-system, system-ui, sans-serif; color: #EEF2F6">
+  <div style="position: absolute; left: 0; right: 0; top: 54px; bottom: 0; background: #141C24; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; padding: 0 16px; box-shadow: 0 -4px 24px rgba(0,0,0,0.25)">
+    <div style="display: flex; justify-content: center; padding-top: 8px">
+      <div style="width: 36px; height: 5px; border-radius: 3px; background: #34434F"></div>
+    </div>
+    <div style="display: flex; align-items: center; padding: 8px 0 12px">
+      <a href="BoardSettingsEmpty.dc.html" style="font-size: 17px; text-decoration: none; color: #8FC6E6; min-width: 64px; height: 44px; display: flex; align-items: center">Cancel</a>
+      <h1 style="flex-grow: 1; margin: 0; text-align: center; font-size: 17px; font-weight: 600">Add error type</h1>
+      <div style="min-width: 64px"></div>
+    </div>
+    <p style="margin: 0 4px 12px; font-size: 13px; color: #A7B6C3; line-height: 1.4">For position 5 of 11. A type already on the board swaps places with it.</p>
+    <div style="background: #212C37; border-radius: 14px; overflow: hidden; margin-bottom: 20px">
+      <a href="ErrorTypeNewOnBoard.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; box-sizing: border-box; font-size: 16px; color: #8FC6E6; text-decoration: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FC6E6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg><span style="flex-grow: 1; padding: 6px 0">New error type…</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#74869A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+    </div>
+    <div style="margin-top: 0px; font-size: 12px; font-weight: 600; color: #A7B6C3; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px 6px">Error types</div>
+    <div style="background: #212C37; border-radius: 14px; overflow: hidden">
+      <div role="button" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-bottom: 1px solid #27333E; box-sizing: border-box; font-size: 16px; color: #EEF2F6"><span style="flex-grow: 1; padding: 6px 0">Wrong Response</span><span style="font-size: 15px; color: #A7B6C3">Position 1</span></div>
+      <div role="button" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-bottom: 1px solid #27333E; box-sizing: border-box; font-size: 16px; color: #EEF2F6"><span style="flex-grow: 1; padding: 6px 0">Sequence Out of Order</span><span style="font-size: 15px; color: #A7B6C3">Position 2</span></div>
+      <div role="button" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-bottom: 1px solid #27333E; box-sizing: border-box; font-size: 16px; color: #EEF2F6"><span style="flex-grow: 1; padding: 6px 0">Wrong Track Played</span><span style="font-size: 15px; color: #A7B6C3">Position 3</span></div>
+      <div role="button" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-bottom: 1px solid #27333E; box-sizing: border-box; font-size: 16px; color: #EEF2F6"><span style="flex-grow: 1; padding: 6px 0">Track Not Found</span><span style="font-size: 15px; color: #A7B6C3">Position 4</span></div>
+      <div role="button" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; box-sizing: border-box; font-size: 16px; color: #EEF2F6"><span style="flex-grow: 1; padding: 6px 0">Track Skipped</span><span style="font-size: 15px; color: #A7B6C3">Not on the board</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -254,7 +254,7 @@ TEST_CASE("grid.signals: a touch on a tile says which one, at the press, and Oth
     CHECK(pressed.at(2).at(0).toInt() == 2);
 }
 
-TEST_CASE("grid.signals: an empty position is inert", "[ui][grid]")
+TEST_CASE("grid.signals: an empty position never presses, and its tap asks for the board setup", "[ui][grid]")
 {
     Configuration configuration = sample_configuration();
     configuration.m_ErrorTypes.at(4).m_BoardPosition = std::nullopt;
@@ -265,17 +265,25 @@ TEST_CASE("grid.signals: an empty position is inert", "[ui][grid]")
 
     QSignalSpy pressed(grid, SIGNAL(tilePressed(int, QString, bool)));
     QSignalSpy tapped(grid, SIGNAL(tileTapped(int, QString, bool)));
+    QSignalSpy empty_tapped(grid, SIGNAL(emptyTapped(int)));
     rig.tap(tile_at(rig, 4));
     CHECK(pressed.count() == 0);
     CHECK(tapped.count() == 0);
+    REQUIRE(empty_tapped.count() == 1);
+    CHECK(empty_tapped.at(0).at(0).toInt() == 5);
 
-    // It is drawn as an empty slot and VoiceOver does not read it as a button.
+    // It is drawn as an empty slot with a plus, and VoiceOver reads it as a button that does the same.
     CHECK(require_child(tile_at(rig, 4), QStringLiteral("tileEmptySlot"))->isVisible());
+    CHECK(require_child(tile_at(rig, 4), QStringLiteral("tileAddIcon"))->isVisible());
     const std::vector<Node> nodes = rig.accessible_tree();
     const auto empty = std::ranges::find_if(
         nodes, [](const Node& node)
-        { return node.m_Name.startsWith(QStringLiteral("Empty tile")) && node.m_InAccessibleTree; });
-    CHECK(empty == nodes.end());
+        { return node.m_Name == QStringLiteral("Position 5, empty. Add error type") && node.m_InAccessibleTree; });
+    REQUIRE(empty != nodes.end());
+    CHECK(empty->m_Role == QAccessible::Button);
+    REQUIRE(accessible_press(tile_at(rig, 4)));
+    CHECK(pressed.count() == 0);
+    CHECK(empty_tapped.count() == 2);
 
     // The other tiles are not affected, and the check passes with a hole in the board.
     rig.tap(tile_at(rig, 5));

@@ -115,6 +115,20 @@ Item {
         tabBar.currentIndex = index;
     }
 
+    // The board setup in Settings, from the Log screen's empty board or an empty tile: the Settings list, and the picker
+    // for the tile at `position` (1 to 11) when there is one.
+    function showBoardSetup(position: int): void {
+        selectTab(settingsIndex);
+        // The Settings tab is made when it is first shown.
+        Qt.callLater(() => {
+            if (!settingsScreen)
+                return;
+            settingsScreen.popToRoot();
+            if (position > 0)
+                settingsScreen.addTypeAt(position);
+        });
+    }
+
     // The tab that was tapped again goes back to its first page.
     function popToRoot(tab: int): void {
         if (tab === logIndex)
@@ -220,6 +234,7 @@ Item {
                     onTodaysDetailsRequested: root.showDetails(logStack)
                     onReviewRequested: root.selectTab(root.reviewIndex)
                     onOtherRequested: otherPicker.open()
+                    onBoardSetupRequested: position => root.showBoardSetup(position)
                 }
             }
 

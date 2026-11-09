@@ -184,7 +184,7 @@ QVariant BoardModel::data(const QModelIndex& index, int role) const
     case ACCESSIBLE_NAME:
         if (empty)
         {
-            return tr("Empty tile, position %1").arg(index.row() + 1);
+            return tr("Position %1, empty. Add error type").arg(index.row() + 1);
         }
         return tile.m_Count > 0 ? tr("%1, %2 today").arg(label).arg(tile.m_Count) : label;
     default:
@@ -237,13 +237,23 @@ BoardModel::Built BoardModel::build() const
     return built;
 }
 
+bool BoardModel::board_empty() const
+{
+    return std::ranges::all_of(m_Tiles, [](const Tile& tile) { return tile.m_IsOther || tile.m_TypeId.isEmpty(); });
+}
+
 void BoardModel::refresh_everything()
 {
+    const bool was_empty = board_empty();
     Built built = build();
     m_Tiles = std::move(built.m_Tiles);
     m_Total = built.m_Total;
     emit dataChanged(index(0), index(BOARD_ROWS - 1)); // no roles listed: every role
     emit countsChanged();
+    if (board_empty() != was_empty)
+    {
+        emit boardEmptyChanged();
+    }
 }
 
 void BoardModel::refresh_counts()

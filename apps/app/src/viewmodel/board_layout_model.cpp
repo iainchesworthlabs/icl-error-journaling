@@ -49,7 +49,7 @@ QVariant BoardLayoutModel::data(const QModelIndex& index, int role) const
         }
         if (tile.m_TypeId.isEmpty())
         {
-            return tr("Empty tile, position %1").arg(index.row() + 1);
+            return tr("Position %1, empty. Add error type").arg(index.row() + 1);
         }
         return tile.m_Label;
     default:

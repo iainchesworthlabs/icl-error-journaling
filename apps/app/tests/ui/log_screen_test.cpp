@@ -6,8 +6,9 @@
 // is the order of the log: haptic, then commit, then count and toast.
 //
 // Cases: log.loading_placeholder, log.tap_flow, log.slide_off, log.undo, log.note, log.template, log.banner,
-// log.write_failed, log.recovery_notice, log.empty_tiles, log.other, log.voiceover, log.skeleton_matches, log.opens,
-// log.safe_area, log.text_scale, perf.press_path, perf.scene and perf.first_frame for the screen.
+// log.write_failed, log.recovery_notice, log.empty_tiles, log.empty_board, log.other, log.voiceover,
+// log.skeleton_matches, log.opens, log.safe_area, log.text_scale, perf.press_path, perf.scene and perf.first_frame for
+// the screen.
 //
 // The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the
 // Windows headers behind Qt Quick define as a macro. clang-format would sort board_test_support.hpp first, so it is
@@ -594,29 +595,75 @@ TEST_CASE("log.other: the Other tile opens the picker and never records", "[ui][
     CHECK(other.count() == 2);
 }
 
-TEST_CASE("log.empty_tiles: a nine-type configuration shows two inert tiles", "[ui][log]")
+TEST_CASE("log.empty_tiles: an empty tile records nothing and asks for the board setup at its position", "[ui][log]")
 {
     Configuration configuration = sample_configuration();
     configuration.m_ErrorTypes.resize(9);
     LogRig sim(Options().existing().configuration(std::move(configuration)));
     sim.load();
     Screen screen(sim);
+    QSignalSpy setup(screen.item, SIGNAL(boardSetupRequested(int)));
 
     for (const int row : {9, 10})
     {
         CAPTURE(row);
         QQuickItem* tile = screen.tile(row);
         CHECK(screen.inside(tile, QStringLiteral("tileEmptySlot"))->isVisible());
+        CHECK(screen.inside(tile, QStringLiteral("tileAddIcon"))->isVisible());
         CHECK_FALSE(tile->property("interactive").toBool());
+        CHECK(tile->property("addable").toBool());
+        CHECK(tile->property("accessibleName").toString() ==
+              QStringLiteral("Position %1, empty. Add error type").arg(row + 1));
         screen.rig.tap(tile);
-        CHECK_FALSE(accessible_press(tile));
+        REQUIRE(setup.count() == 1);
+        CHECK(setup.takeFirst().at(0).toInt() == row + 1);
+        // VoiceOver's double tap is the same tap.
+        CHECK(accessible_press(tile));
+        REQUIRE(setup.count() == 1);
+        CHECK(setup.takeFirst().at(0).toInt() == row + 1);
     }
     sim.gateway.run_all();
     CHECK(sim.events.count(EventKind::HAPTIC) == 0);
     CHECK(sim.entries().empty());
+    // A board with types is not the empty board.
+    CHECK(screen.rig.find_item(QStringLiteral("logEmptyBoard")) == nullptr);
     // The real tiles still work.
     screen.tap_tile(sim, 0);
     CHECK(sim.entries().size() == 1);
+}
+
+TEST_CASE("log.empty_board: a board with no types says so and leads to the board setup", "[ui][log]")
+{
+    Configuration configuration = sample_configuration();
+    configuration.m_ErrorTypes.clear();
+    LogRig sim(Options().existing().configuration(std::move(configuration)));
+    sim.load();
+    Screen screen(sim);
+    QSignalSpy setup(screen.item, SIGNAL(boardSetupRequested(int)));
+
+    QQuickItem* card = screen.named(QStringLiteral("logEmptyBoard"));
+    CHECK(card->isVisible());
+    CHECK(screen.named(QStringLiteral("logEmptyBoardTitle"))->property("text").toString() ==
+          QStringLiteral("Your board is empty"));
+    // Over the board, inside its width, and above Other's row.
+    QQuickItem* grid = screen.named(QStringLiteral("logBoard"));
+    const QRectF on_screen = card->mapRectToScene(QRectF(0, 0, card->width(), card->height()));
+    const QRectF board = grid->mapRectToScene(QRectF(0, 0, grid->width(), grid->height()));
+    CHECK(board.contains(on_screen));
+    CHECK(on_screen.bottom() <= screen.tile(9)->mapToScene(QPointF(0, 0)).y());
+
+    QQuickItem* button = screen.named(QStringLiteral("logAddErrorTypes"));
+    screen.rig.tap(button);
+    REQUIRE(setup.count() == 1);
+    CHECK(setup.takeFirst().at(0).toInt() == 0);
+    CHECK(accessible_press(button));
+    CHECK(setup.count() == 1);
+
+    // Every element of the card is reachable and named, and the empty tiles under it are buttons.
+    expect_clean(check_everything(screen.rig, [](const Node& node)
+                                  { return node.m_ObjectName.startsWith(QStringLiteral("tile")) ? 88.0 : 44.0; }));
+    sim.gateway.run_all();
+    CHECK(sim.entries().empty());
 }
 
 // ------------------------------------------------------------------------------------------------- notes

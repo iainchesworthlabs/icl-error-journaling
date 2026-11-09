@@ -3,12 +3,16 @@ import QtQuick
 import ErrorJournalingApp
 
 // The sheet that adds, renames or retires an error type (docs/design/screens/ErrorTypeEdit.dc.html). The Error types
-// screen declares one and opens it with `openForNew()` or `openFor(typeId, name, colourSlot)`.
+// screen declares one and opens it with `openForNew()` or `openFor(typeId, name, colourSlot)`; the board setup of Settings
+// declares one and opens it with `openForPosition(position)` (ErrorTypeNewOnBoard).
 //
 //   Name     a field; Save asks the view model (`addErrorType` or `renameErrorType`). A refusal (an empty name, a name that
 //            is already used by another type, ignoring case, a name over 200 characters, 500 types) is shown under the
 //            field, which then has a red border, and Save is dimmed until the person edits the name.
-//   Colour   the swatch the type keeps. It is not chosen: the colour follows from the type's place in the master list.
+//   Colour   the swatch the type keeps. It is not chosen: the colour follows from the type's place in the master list. A
+//            new type shows the colour it will get (`settings.nextColourSlot`) and, under it, where it goes on the board:
+//            the position it was opened for (`addErrorTypeAt`), else the first empty one (`addErrorType` puts it there),
+//            else that it stays in Other because the board is full.
 //   Retire   "Retire this error type" (`retireErrorType`). The type leaves the board and Other and stays on the entries
 //            already logged. Not shown for a new type.
 //
@@ -20,8 +24,10 @@ Sheet {
     // The type being edited; empty for a new one.
     property string typeId: ""
     property string typeName: ""
-    // The colour slot of the type (1 to 11); 0 for a new type, which has none yet.
+    // The colour slot of the type (1 to 11); 0 for a new type, which shows the one it will get.
     property int colourSlot: 0
+    // The board position a new type is for (1 to 11), from the board setup; 0 for the first empty one.
+    property int boardPosition: 0
 
     // What the field shows, and why the view model refused it.
     property string draftName: ""
@@ -30,12 +36,25 @@ Sheet {
 
     readonly property bool adding: typeId.length === 0
     // The name of the colour the type keeps, such as "Periwinkle".
-    readonly property string colourName: colourSlot > 0 ? root.settings.colourName(colourSlot) : ""
+    readonly property int shownSlot: root.adding ? root.settings.nextColourSlot : root.colourSlot
+    readonly property string colourName: shownSlot > 0 ? root.settings.colourName(shownSlot) : ""
+    // Where a new type goes on the board: 0 when the board is full.
+    readonly property int targetPosition: root.boardPosition > 0 ? root.boardPosition : root.settings.firstEmptyPosition
 
     function openForNew(): void {
         root.typeId = "";
         root.typeName = "";
         root.colourSlot = 0;
+        root.boardPosition = 0;
+        root.start();
+    }
+
+    // A new type for the board position `position` (1 to 11), from the board setup's picker.
+    function openForPosition(position: int): void {
+        root.typeId = "";
+        root.typeName = "";
+        root.colourSlot = 0;
+        root.boardPosition = position;
         root.start();
     }
 
@@ -43,6 +62,7 @@ Sheet {
         root.typeId = id;
         root.typeName = name;
         root.colourSlot = slot;
+        root.boardPosition = 0;
         root.start();
     }
 
@@ -57,7 +77,13 @@ Sheet {
     function save(): void {
         if (root.refusal.length > 0)
             return;
-        const message = root.adding ? root.settings.addErrorType(root.draftName) : root.settings.renameErrorType(root.typeId, root.draftName);
+        let message = "";
+        if (!root.adding)
+            message = root.settings.renameErrorType(root.typeId, root.draftName);
+        else if (root.boardPosition > 0)
+            message = root.settings.addErrorTypeAt(root.draftName, root.boardPosition);
+        else
+            message = root.settings.addErrorType(root.draftName);
         if (message.length === 0)
             root.close();
         else
@@ -143,14 +169,17 @@ Sheet {
             }
 
             Item {
-                // 20 pt under the message of the field in the mock-up (the component puts 8 pt above that message).
-                height: root.adding ? 0 : root.refusal.length > 0 ? Theme.space.sectionGap : Theme.space.sectionGap * 5 / 3
+                // 20 pt under the message of the field in the mock-up (the component puts 8 pt above that message). It
+                // needs a width: a Column skips an item of zero width.
+                width: parent.width
+                height: root.refusal.length > 0 ? Theme.space.sectionGap : Theme.space.sectionGap * 5 / 3
             }
 
             GroupedList {
+                objectName: "colourGroup"
                 width: parent.width
-                visible: !root.adding
                 title: qsTr("Colour")
+                footer: !root.adding ? "" : root.targetPosition > 0 ? qsTr("It goes on the board at position %1.").arg(root.targetPosition) : qsTr("The board is full, so it goes in Other. Tap a tile in Settings to put it on the board.")
                 surface: Theme.colour.surfaceRaised
 
                 Item {
@@ -169,7 +198,7 @@ Sheet {
                         width: Theme.size.badge * 3 / 4
                         height: width
                         radius: Theme.radius.field / 3
-                        color: Theme.tileColour(root.colourSlot)
+                        color: Theme.tileColour(root.shownSlot)
                         border.width: Theme.border.hairline
                         border.color: Theme.colour.border
                         Accessible.ignored: true
