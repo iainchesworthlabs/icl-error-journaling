@@ -8,7 +8,7 @@ import ErrorJournalingApp
 // shell as the window holds it.
 //
 // Given by main.cpp: the nine services of AppRoot (Stage 3, 3.11), AppRoot itself for its one write-failed signal, the
-// bridge to what Qt does not cover on an iPhone, and the version and platform text of the build.
+// bridge to what Qt does not cover on an iPhone, the model of the About pages, and the version and platform text of the build.
 Window {
     id: root
 
@@ -22,6 +22,8 @@ Window {
     required property QtObject settings
     required property QtObject share
     required property QtObject appRoot
+    // The model of the About pages: the build's commit and date, the licence and the open-source components.
+    required property QtObject about
     required property var bridge
     // The version of the core library and which bridge and storage are linked. They are at the foot of Settings.
     required property string versionText
@@ -57,6 +59,7 @@ Window {
         share: root.share
         appRoot: root.appRoot
         bridge: root.bridge
+        about: root.about
         aboutText: qsTr("%1 · %2").arg(root.versionText).arg(root.platformText)
     }
 }

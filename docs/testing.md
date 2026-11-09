@@ -18,6 +18,9 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 | ui | `apps/app/tests/ui/*_test.cpp` | `ej_ui_tests`: Catch2 cases that load the QML offscreen and drive it from C++ (below) |
 | ui | `tools/launch_image` | `launch.image_current`: the PNGs of the launch image in the asset catalogue are what `LaunchSkeleton.qml` draws now, light and dark (`ej_launch_image --check`); `launch.image_compare`: that comparison fails on a moved tile and passes on a rounding |
 | perf | `apps/app/tests/ui/*_test.cpp`, cases tagged `[perf]` | the same program: `perf.press_path`, `perf.scene` and `perf.first_frame` (below) |
+| unit | `apps/app/tests/viewmodel/test_about_model.cpp` | `AboutModel`: the facts of the build, the list of components and the page of a licence from made-up notices, the paragraphs of a licence text, and a document that cannot be read |
+| ui | `apps/app/tests/ui/settings_screen_test.cpp`, `app_flow_test.cpp` | the cases `settings.about*`, `app.about` and `app.timing`: the About row, the page, the licence and component pages, the five taps on the Version row, the source row, VoiceOver names, light and dark, and the largest text size |
+| unit | `apps/app` (CMake) | `about.notices`: `tools/licences/notices.py --strict --check` over the real link line of `ej_app`; it fails when a linked library has no licence entry or a licence has no text. `about.build_info`: the commit is seven hex digits or `unknown`. `about.tools`: `tools/tests/test_notices.py` (made-up link lines for an iPhone, a desktop and a vcpkg port; a made-up repository). `about.qt_snapshot`: the SBOMs of a Windows or macOS Qt kit against `qt-modules.json`, when the kit has them |
 | unit | `tools/ci/check_qml_*.py` | `qml.platform`, `theme.no_literals`, `i18n.strings`, `qml.tests`, `motion.animators`, `qml.format` and `qml.lint`: the checks that keep the QML honest (`docs/ci.md`) |
 
 ## Tests of the QML

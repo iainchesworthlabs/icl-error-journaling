@@ -34,7 +34,8 @@
     "cmake/**",
     "tools/coverage-floors.json",
     "tools/preprocessor-*",
-    "docs/design/tokens.json"
+    "docs/design/tokens.json",
+    "tools/licences/**"
   ],
   "gui": [
     "apps/app/**",

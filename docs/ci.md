@@ -177,6 +177,16 @@ The theme is held to less (it is where literals live). `Main.qml` and `shell/App
 same name in the other folder, and the build takes the one for its platform (`qml_files.cmake`).
 The unit tests of the scripts are `tools/tests/test_qml_checks.py`, run by the Confidentiality job with the others.
 
+## Licence notices
+
+The build of `apps/app` runs `tools/licences/notices.py` (`cmake/EjAbout.cmake`, the target `ej_notices`) before the link. It reads the
+link line of `ej_app` from the CMake file API and fails the build when a linked library is not accounted for, so the iOS build is the
+check for the iPhone: an unknown Qt library, a vcpkg port with no copyright file, or a licence with no text stops it. The test
+`about.notices` runs the same over a desktop link line in every `ctest` run, and `tools/tests/test_notices.py` over made-up ones. The iOS
+workflow prints the result (components, licences, how each is linked and every link input) into its job summary, and `verify_app.sh` checks
+that the bundle holds no dynamic library, which is what "static" in the notices means. `ios-build.yml` also runs for a pull request that
+changes `cmake/`, `tools/licences/` or `apps/app/CMakeLists.txt`, because they change what the iPhone links. `docs/licensing.md` has the design.
+
 ## Platform layout check
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_platform_layout.py`. For a `src/platform` directory that holds both
