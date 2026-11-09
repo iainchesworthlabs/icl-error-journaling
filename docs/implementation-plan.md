@@ -159,6 +159,27 @@ The facilitator uses a TestFlight build in real sessions for one working week be
 
 **Exit gate:** a full week with no lost entries, every Must requirement passing, and the downstream ticket indexer reading the exported tickets.
 
+## Stages 7 to 12 – v1 scope added on 9 Nov 2026
+
+On 9 Nov 2026 the owner widened v1. It now ships publicly on the App Store and the Google Play Store, runs on an iPad in portrait and landscape, and has documentation online and in the app. Landscape stays off on a phone. A desktop build for Mac and Windows is a nice-to-have. The interactions board ([#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)) stays in v2.
+
+Each stage below gets its own page, `docs/plan/stage-N.md`, which sets out the task breakdown, the test list, the exit gate and the owner's decisions. The owner reviews that page before any code for the stage is written.
+
+| Stage | Scope | Depends on | Exit gate (summary) |
+|---|---|---|---|
+| 7 – Screen and flow review | Every screen and every flow reviewed end to end on the phone: first launch, setup, a day of logging, sharing, the next day, history, settings and import. Findings are fixed. This includes 4.16's dark-mode and accessibility audit. | Stage 4 and 5 merged | Every flow walked on an iPhone 17 in light, dark and large text; every finding fixed or deferred by the owner |
+| 8 – iPad, portrait and landscape | Designs first. In portrait the phone layout is scaled up. In landscape the board and the log sit side by side. The app keeps phone portrait only. | Stage 7 for the screens it changes | Approved iPad mock-ups, built and checked on an iPad, in both orientations, light and dark |
+| 9 – Android and Google Play | An Android build of the same app: the platform layer (share, haptics, file picker and open-with, file protection, lifecycle, launch screen), CI, signing and a Play internal-testing track. | Stage 5 interfaces | Installs from Play internal testing on a real Android phone; acceptance checklist passes there |
+| 10 – Documentation | A user guide online (with the setup file format, a getting-started guide and an FAQ) and short in-app help where people get stuck. | Stage 7 (final flows) | Guide published; in-app help reachable from every screen that needs it |
+| 11 – Store release | App Store and Google Play listings, screenshots for every device size, the privacy policy and support URL, App Review notes, age rating, export compliance, data-safety form, release workflow and versioning. | Stages 7 to 10 | Approved by App Review and Play review; released |
+| 12 – Desktop (nice-to-have) | Mac and Windows builds as products: window sizing, keyboard and mouse use, packaging and signing. | Stage 8 (wide layout) | Owner decides whether it ships in v1 |
+
+**Decisions the owner must make before Stage 11:**
+- **Licence.** The app is GPL-3.0-or-later. App Store distribution terms are widely seen as conflicting with the GPL, and statically linking Qt on iOS and Android brings LGPL obligations. The owner will take advice.
+- **Accounts.** A Google Play developer account is needed. Apple's App Store Connect listing for public release is also needed.
+- **Hosting.** Where the privacy policy, the support page and the documentation are hosted.
+- **Price and reach.** Free or paid, and which countries.
+
 ## Testing, risks and blocking decisions
 
 **Test layers**
