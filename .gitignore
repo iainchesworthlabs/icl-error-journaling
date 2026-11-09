@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 /build/
 /out/
+/screenshots/
 /stage/
 /dist/
 /.icl-infra/

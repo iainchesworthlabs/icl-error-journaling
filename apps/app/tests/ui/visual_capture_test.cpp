@@ -42,6 +42,7 @@
 #include <QByteArray>
 #include <QCoreApplication>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QFont>
@@ -62,6 +63,7 @@
 #include <QSize>
 #include <QString>
 #include <QStringList>
+#include <QTemporaryDir>
 #include <QVariant>
 #include <QVariantMap>
 #include <algorithm>
@@ -1238,6 +1240,74 @@ std::vector<Scene> phone_scenes()
     };
 }
 
+// ---- the states with no mock-up, for ej_screenshots (docs/plan/stage-7.md, 7.1) ----
+
+void scene_tap_hint(Phone& phone)
+{
+    // One tap on a tile logs nothing (4.17a): the screen says to tap twice.
+    log_with_day(phone);
+    phone.services.advance(6s);
+    phone.tap(QStringLiteral("tile0"));
+    phone.ui.advance(300ms);
+}
+
+void scene_hold_note(Phone& phone)
+{
+    // A hold with an empty composer logs the error and opens Edit entry on it, in the note (BRD-07).
+    log_with_day(phone);
+    phone.services.advance(6s);
+    phone.ui.hold(phone.need(QStringLiteral("tile0")), 700ms);
+    phone.play();
+}
+
+void scene_other_search(Phone& phone, const QString& text)
+{
+    scene_other(phone);
+    phone.type_into(QStringLiteral("pickerSearch"), text);
+    phone.play();
+}
+
+void scene_environment_sheet(Phone& phone)
+{
+    log_with_day(phone);
+    open_details(phone);
+    phone.tap(QStringLiteral("headerEnvironment"));
+    phone.play();
+}
+
+void scene_version_time(Phone& phone)
+{
+    scene_change_version(phone);
+    phone.tap(QStringLiteral("versionTime"));
+    phone.play();
+}
+
+/// The states that have no mock-up: sheets and pages that the design package did not draw.
+std::vector<Scene> extra_scenes()
+{
+    return {
+        {QStringLiteral("TapHint"), TODAY, scene_tap_hint, QStringLiteral("One tap on Wrong Response.")},
+        {QStringLiteral("HoldNote"), TODAY, scene_hold_note,
+         QStringLiteral("A hold on Wrong Response with an empty composer.")},
+        {QStringLiteral("OtherSearch"), TODAY,
+         [](Phone& phone) { scene_other_search(phone, QStringLiteral("Track")); },
+         QStringLiteral("Other, searching for \"Track\".")},
+        {QStringLiteral("OtherNoMatch"), TODAY,
+         [](Phone& phone) { scene_other_search(phone, QStringLiteral("Zebra")); },
+         QStringLiteral("Other, searching for a type that does not exist.")},
+        {QStringLiteral("EnvironmentSheet"), TODAY, scene_environment_sheet,
+         QStringLiteral("The Environment row of Today's details tapped.")},
+        {QStringLiteral("VersionTime"), TODAY, scene_version_time,
+         QStringLiteral("The time of the version change tapped.")},
+        {QStringLiteral("Facilitator"), TODAY,
+         [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsFacilitator")); },
+         QStringLiteral("Settings, Facilitator (with the unit prefix and the totals line).")},
+        {QStringLiteral("TimeFormat"), TODAY,
+         [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsTimeFormat")); },
+         QStringLiteral("Settings, Time format.")},
+    };
+}
+
 /// The iPad mock-ups of Stage 8 (docs/plan/stage-8.md): nine of the phone's screens, each in portrait and landscape,
 /// brought to the same state as on the phone.
 const QStringList IPAD_SCREENS{
@@ -1341,6 +1411,170 @@ TEST_CASE("capture.mockups: render each state that has a mock-up, in light and d
         REQUIRE(image.save(file));
     }
     write_manifest(dir, scene.m_Name, true, scene.m_Note);
+}
+
+// ---- ej_screenshots (docs/plan/stage-7.md, 7.1) ----
+
+namespace
+{
+
+/// tools/ej_screenshots/screens.json.
+QJsonObject screen_list()
+{
+    QFile file(QStringLiteral(EJ_SCREENS_JSON));
+    REQUIRE(file.open(QIODevice::ReadOnly));
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    REQUIRE(document.isObject());
+    return document.object();
+}
+
+/// Every scene the program can build: the mock-ups (phone and iPad) and the states with no mock-up.
+std::vector<Scene> screenshot_scenes()
+{
+    std::vector<Scene> all = scenes();
+    for (Scene& scene : extra_scenes())
+    {
+        all.push_back(std::move(scene));
+    }
+    return all;
+}
+
+/// Whether a sheet or an alert is open anywhere under the item.
+bool modal_open(const QQuickItem* item)
+{
+    if (item == nullptr)
+    {
+        return false;
+    }
+    if (item->property("modalOpen").toBool())
+    {
+        return true;
+    }
+    const QList<QQuickItem*> children = item->childItems();
+    return std::any_of(children.begin(), children.end(), [](const QQuickItem* child) { return modal_open(child); });
+}
+
+} // namespace
+
+TEST_CASE("screenshots.render: every state of screens.json renders in every mode, and every screen file has a state",
+          "[ui][screenshots]")
+{
+    const QJsonObject list = screen_list();
+    const std::vector<Scene> all = screenshot_scenes();
+
+    // The list and the program agree: each state has a scene, each scene is listed once, and each screen file is
+    // named by a state (or said not to be a screen), so a new screen cannot ship without a picture.
+    QStringList listed;
+    QStringList files;
+    for (const QJsonValue flow : list.value(QStringLiteral("flows")).toArray())
+    {
+        for (const QJsonValue state : flow.toObject().value(QStringLiteral("states")).toArray())
+        {
+            listed.append(state.toObject().value(QStringLiteral("name")).toString());
+            for (const QJsonValue file : state.toObject().value(QStringLiteral("files")).toArray())
+            {
+                files.append(file.toString());
+            }
+        }
+    }
+    QStringList built;
+    for (const Scene& scene : all)
+    {
+        if (scene.m_Build)
+        {
+            built.append(scene.m_Name);
+        }
+    }
+    for (const QString& name : listed)
+    {
+        CAPTURE(name.toStdString());
+        CHECK(listed.count(name) == 1);
+        CHECK(built.contains(name));
+    }
+    for (const QString& name : built)
+    {
+        CAPTURE(name.toStdString());
+        CHECK(listed.contains(name));
+    }
+    const QJsonObject not_screens = list.value(QStringLiteral("not_screens")).toObject();
+    const QDir root(QStringLiteral(EJ_QML_SCREENS_DIR));
+    QDirIterator it(root.path(), {QStringLiteral("*.qml")}, QDir::Files, QDirIterator::Subdirectories);
+    int screen_files = 0;
+    while (it.hasNext())
+    {
+        const QString relative = root.relativeFilePath(it.next());
+        if (relative.contains(QStringLiteral("private/")) || relative.startsWith(QStringLiteral("launch/")))
+        {
+            continue;
+        }
+        ++screen_files;
+        CAPTURE(relative.toStdString());
+        CHECK((files.contains(relative) || not_screens.contains(relative)));
+    }
+    CHECK(screen_files > 0);
+    for (const QString& file : files)
+    {
+        CAPTURE(file.toStdString());
+        CHECK(root.exists(file));
+    }
+
+    // The pictures: into EJ_SCREENSHOT_DIR when it is set, and into a folder that is thrown away when it is not, so a
+    // ctest run checks that every state renders. EJ_SCREENSHOT_ONLY narrows the run to a comma separated list of states.
+    QTemporaryDir scratch;
+    QString dir = qEnvironmentVariable("EJ_SCREENSHOT_DIR");
+    if (dir.isEmpty())
+    {
+        REQUIRE(scratch.isValid());
+        dir = scratch.path();
+    }
+    REQUIRE(QDir().mkpath(dir));
+    static const QString family = register_fonts();
+    INFO("font family: " << family.toStdString());
+    const QStringList only = qEnvironmentVariable("EJ_SCREENSHOT_ONLY").split(QLatin1Char(','), Qt::SkipEmptyParts);
+    const QJsonArray modes = list.value(QStringLiteral("modes")).toArray();
+    REQUIRE_FALSE(modes.isEmpty());
+
+    QJsonArray written;
+    for (const Scene& scene : all)
+    {
+        if (!scene.m_Build || !listed.contains(scene.m_Name) || (!only.isEmpty() && !only.contains(scene.m_Name)))
+        {
+            continue;
+        }
+        CAPTURE(scene.m_Name.toStdString());
+        Phone phone(scene.m_Start, scene.m_Device);
+        scene.m_Build(phone);
+        for (const QJsonValue value : modes)
+        {
+            const QJsonObject mode = value.toObject();
+            const QString mode_name = mode.value(QStringLiteral("name")).toString();
+            CAPTURE(mode_name.toStdString());
+            phone.ui.set_dark(mode.value(QStringLiteral("dark")).toBool());
+            phone.bridge.set_text_scale(mode.value(QStringLiteral("text_scale")).toDouble(1.0));
+            phone.ui.advance(300ms);
+            // The software renderer paints the rows of a list that lie under the tab bar over it, so the tab bar is
+            // painted again; not while a sheet or an alert is open, which the repaint would cover.
+            if (!modal_open(phone.ui.root()))
+            {
+                phone.ui.repaint_over(phone.ui.find_item(QStringLiteral("shellTabBar")));
+            }
+            const QImage image = phone.ui.grab();
+            REQUIRE_FALSE(image.isNull());
+            const QString file = scene.m_Name + QLatin1Char('.') + mode_name + QStringLiteral(".png");
+            REQUIRE(image.save(QDir(dir).filePath(file)));
+            written.append(QJsonObject{{QStringLiteral("state"), scene.m_Name},
+                                       {QStringLiteral("mode"), mode_name},
+                                       {QStringLiteral("file"), file},
+                                       {QStringLiteral("note"), scene.m_Note}});
+        }
+    }
+    QFile manifest(QDir(dir).filePath(QStringLiteral("screenshots.json")));
+    REQUIRE(manifest.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    manifest.write(QJsonDocument(written).toJson(QJsonDocument::Indented));
+    if (only.isEmpty())
+    {
+        CHECK(written.size() == listed.size() * modes.size());
+    }
 }
 
 #include "visual_capture_test.moc"
