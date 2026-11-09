@@ -31,6 +31,7 @@
 #include <QByteArray>
 #include <QColor>
 #include <QFile>
+#include <QFont>
 #include <QHash>
 #include <QMetaObject>
 #include <QObject>
@@ -1137,6 +1138,111 @@ TEST_CASE("ipad.first_launch: in a larger window the first-launch screen is a na
     CHECK(b.bottom() < 1180 - 200);
     expect_clean(check_names(app.ui));
     expect_clean(check_safe_area(app.ui, IPAD_TOP, IPAD_BOTTOM));
+}
+
+TEST_CASE("ipad.tiles: in portrait the tiles are larger, in the phone's places, with whole labels", "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    for (const QSize size : IPAD_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.ui.layout();
+        const QRectF board = app.ui.geometry(app.need(QStringLiteral("logBoard")));
+        // The rules: a 12 pt gap, and a tile 0.7 of its width high, between the phone's 104 and 152.
+        const double tile_width = (board.width() - 2 * 12.0) / 3;
+        const double expected = std::round(std::clamp(tile_width * 0.7, 104.0, 152.0));
+        for (int i = 0; i < 12; ++i)
+        {
+            CAPTURE(i);
+            const QRectF tile = app.ui.geometry(app.need(QStringLiteral("tile%1").arg(i)));
+            CHECK(tile.height() == expected);
+            CHECK(std::abs(tile.width() - tile_width) <= 0.5);
+            // The phone's place: column i % 3 and row i / 3.
+            CHECK(std::abs(tile.left() - (board.left() + (i % 3) * (tile_width + 12.0))) <= 0.5);
+            CHECK(std::abs(tile.top() - (board.top() + (i / 3) * (expected + 12.0))) <= 0.5);
+        }
+        // The label is the larger role, and no label is cut at the default size or at the 1.3 cap.
+        QQuickItem* label = app.ui.find_item(QStringLiteral("tileLabel"), app.need(QStringLiteral("tile1")));
+        REQUIRE(label != nullptr);
+        CHECK(label->property("font").value<QFont>().pixelSize() == 17);
+        for (const double scale : {1.0, 1.3})
+        {
+            CAPTURE(scale);
+            app.ui.set_text_scale(scale);
+            expect_clean(check_text_scale(app.ui));
+        }
+        app.ui.set_text_scale(1.0);
+    }
+}
+
+TEST_CASE("ipad.toast_clear: in portrait the undo toast is under the board and covers no tile", "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    for (const QSize size : IPAD_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.ui.layout();
+        REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+        app.ui.settle();
+        app.ui.advance(300ms);
+        QQuickItem* toast = app.need(QStringLiteral("logToast"));
+        REQUIRE(toast->property("present").toBool());
+        const QRectF t = app.ui.geometry(toast);
+        CHECK(t.width() <= 520.0);
+        CHECK(std::abs(t.center().x() - size.width() / 2.0) <= 1.0);
+        CHECK(t.top() >= app.ui.geometry(app.need(QStringLiteral("logBoard"))).bottom());
+        CHECK(t.bottom() <= app.ui.geometry(app.need(QStringLiteral("shellTabBar"))).top());
+        app.services.advance(6s);
+        app.ui.advance(300ms);
+    }
+}
+
+TEST_CASE(
+    "ipad.short_window: in a window shorter than the phone's frame the tiles are shorter, down to 88 pt, the Last "
+    "bar gives way when it must, and the board ends above the tab bar",
+    "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    // The phone keeps its tiles.
+    app.ui.layout();
+    CHECK(app.ui.geometry(app.need(QStringLiteral("tile0"))).height() == 104);
+
+    // The smallest window the app allows on an iPad, and a Split View window on an iPad mini in landscape.
+    for (const QSize size : {QSize(375, 720), QSize(507, 744)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.ui.layout();
+        REQUIRE(app.ui.window_layout()->property("compact").toBool());
+        const double tab_bar_top = app.ui.geometry(app.need(QStringLiteral("shellTabBar"))).top();
+        for (int i = 0; i < 12; ++i)
+        {
+            CAPTURE(i);
+            const QRectF tile = app.ui.geometry(app.need(QStringLiteral("tile%1").arg(i)));
+            CHECK(tile.height() >= 88);
+            CHECK(tile.height() < 104);
+            CHECK(tile.bottom() <= tab_bar_top);
+        }
+        // Even 88 pt tiles do not fit under the Last bar here, so it gives way and the board moves up under the
+        // composer.
+        CHECK_FALSE(app.need(QStringLiteral("logLastBar"))->isVisible());
+        expect_clean(check_text_scale(app.ui));
+        expect_clean(check_reading_order(app.ui));
+    }
+
+    // A window as tall as the phone's design frame keeps the phone's tiles and Last bar, however narrow.
+    app.ui.set_window_size(QSize(375, 874));
+    app.ui.layout();
+    CHECK(app.ui.geometry(app.need(QStringLiteral("tile0"))).height() == 104);
+    CHECK(app.need(QStringLiteral("logLastBar"))->isVisible());
 }
 
 #include "app_flow_test.moc"
