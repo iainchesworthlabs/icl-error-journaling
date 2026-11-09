@@ -143,7 +143,13 @@ in `libs/ios_bridge/include/error_journaling/document_types.hpp`, when the docum
 type (role Viewer, rank Owner) and `public.json` (rank Alternate), when `LSSupportsOpeningDocumentsInPlace` is not
 false, when `UIFileSharingEnabled` is on, or when a usage-description key appears. Its unit tests are in
 `tools/tests/test_ios_plist.py`. `verify_app.sh` repeats the type, the document type and the two flags on the built
-bundle. Later packages add the launch screen and the entitlements.
+bundle. It also checks the launch screen (Stage 5, 5.8): `UILaunchScreen` names a colour and an image that exist in the asset
+catalogue, each with a light and a dark entry; the image ignores the safe area (`UIImageRespectsSafeAreaInsets` false); the
+two PNGs are 1206 x 2622 px (402 x 874 pt at 3x) and opaque; and the colour is the `background` token in both modes.
+`verify_app.sh` then looks for the image and the colour, light and dark, in the built bundle's `Assets.car` (`assetutil --info`).
+The test `launch.image_current` (label `ui`, every `ctest` run) renders the launch skeleton again with `ej_launch_image
+--check` and fails, with the command that rewrites them, when the PNGs differ from what the QML draws now (exact inside the
+tiles, 2 levels of a channel elsewhere). Later packages add the entitlements.
 
 ## Confidentiality check
 

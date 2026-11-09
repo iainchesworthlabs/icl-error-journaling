@@ -16,6 +16,7 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 | system | `libs/storage/tests/kill` | `ej_kill_driver`: the kill harness. It starts `ej_kill_worker` as a separate process, kills it, and checks the store (see below) |
 | ui | `apps/app` | `app.smoke` starts the application off-screen and waits for a frame; `app.version` |
 | ui | `apps/app/tests/ui/*_test.cpp` | `ej_ui_tests`: Catch2 cases that load the QML offscreen and drive it from C++ (below) |
+| ui | `tools/launch_image` | `launch.image_current`: the PNGs of the launch image in the asset catalogue are what `LaunchSkeleton.qml` draws now, light and dark (`ej_launch_image --check`); `launch.image_compare`: that comparison fails on a moved tile and passes on a rounding |
 | perf | `apps/app/tests/ui/*_test.cpp`, cases tagged `[perf]` | the same program: `perf.press_path`, `perf.scene` and `perf.first_frame` (below) |
 | unit | `tools/ci/check_qml_*.py` | `qml.platform`, `theme.no_literals`, `i18n.strings`, `qml.tests`, `qml.format` and `qml.lint`: the checks that keep the QML honest (`docs/ci.md`) |
 

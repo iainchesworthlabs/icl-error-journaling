@@ -10,7 +10,8 @@
 #   * Info.plist is valid, names the identifier, the executable, the version, the
 #     icon set and a launch screen, says it is an iPhone/iPad program, and holds
 #     no usage text for a permission (the application asks for none);
-#   * the compiled asset catalogue (the icon) is in the bundle;
+#   * the compiled asset catalogue (the icon) is in the bundle, and holds the launch image and
+#     the launch colour that Info.plist names, each in a light and a dark variant;
 #   * the executable is for arm64 and links nothing outside the system: a link to
 #     a framework or to a path on the build machine means the build picked up
 #     the wrong libraries;
@@ -97,6 +98,34 @@ for required in \
   [ -e "$required" ] || fail "missing ${required#"$app"/}"
 done
 echo "    executable and asset catalogue"
+
+# The launch screen: the image and the colour that Info.plist names are in the compiled catalogue, each in a light and a dark
+# variant (assetutil lists the variant for the dark appearance as UIAppearanceDark). Without them iOS shows a blank launch screen.
+[ "$(key UILaunchScreen:UIImageRespectsSafeAreaInsets)" = "false" ] || fail "UIImageRespectsSafeAreaInsets is '$(key UILaunchScreen:UIImageRespectsSafeAreaInsets)', expected false"
+assets_json="$(mktemp)"
+assetutil --info "$app/Assets.car" > "$assets_json" 2>/dev/null || fail "assetutil cannot read Assets.car"
+for launch in "UIImageName:Image" "UIColorName:Color"; do
+  launch_key="${launch%%:*}"
+  launch_kind="${launch##*:}"
+  launch_name="$(key "UILaunchScreen:$launch_key")"
+  [ -n "$launch_name" ] || fail "UILaunchScreen has no $launch_key"
+  variants="$(python3 - "$assets_json" "$launch_name" "$launch_kind" <<'PY'
+import json
+import sys
+
+path, name, kind = sys.argv[1:4]
+with open(path, encoding="utf-8") as handle:
+    entries = json.load(handle)
+found = [e for e in entries if e.get("Name") == name and e.get("AssetType") == kind]
+dark = [e for e in found if e.get("Appearance") == "UIAppearanceDark"]
+print(len(found) - len(dark), len(dark))
+PY
+)" || fail "cannot read the asset list of Assets.car"
+  read -r light_variants dark_variants <<< "$variants"
+  { [ "$light_variants" -ge 1 ] && [ "$dark_variants" -ge 1 ]; } || fail "Assets.car has $light_variants light and $dark_variants dark variants of the launch $launch_kind '$launch_name' (it needs both)"
+done
+rm -f "$assets_json"
+echo "    launch screen: image $(key UILaunchScreen:UIImageName) and colour $(key UILaunchScreen:UIColorName) are in Assets.car, light and dark"
 
 archs="$(lipo -archs "$app/$executable" 2>/dev/null || true)"
 [ "$archs" = "arm64" ] || fail "the executable is for '$archs', expected arm64"

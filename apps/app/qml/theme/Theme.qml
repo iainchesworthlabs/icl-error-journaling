@@ -352,6 +352,10 @@ QtObject {
         readonly property bool enlarged: scale > 1
         readonly property real effectiveLetterSpacing: enlarged ? largeLetterSpacing : letterSpacing
         readonly property real linePitch: lineHeight !== 1.0 ? size * lineHeight : metrics.height
+        // The pitch of a line in the phone's own font, 1.2 times the size, for a picture that must come out the same on every
+        // machine whatever its font (the launch image, Stage 5): a placeholder that is drawn from this and not from `linePitch`
+        // does not depend on the font of the machine that draws it.
+        readonly property real nominalPitch: size * 1.2
         // The same pitch as a multiple of the font's own line, for Text.ProportionalHeight. A text that shrinks to fit
         // (fontSizeMode) uses it: the ratio shrinks with the text, and Fit allows for it, where a fixed pitch is not.
         readonly property real lineRatio: metrics.height > 0 ? linePitch / metrics.height : 1
