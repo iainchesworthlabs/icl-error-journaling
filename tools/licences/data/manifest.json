@@ -1,0 +1,64 @@
+{
+  "_comment": [
+    "What the build cannot learn from the link line, the vcpkg tree and the Qt SBOMs.",
+    "Qt modules and what Qt bundles come from qt-modules.json (tools/licences/qt_sbom_manifest.py).",
+    "vcpkg ports need no entry: their copyright files are read from the installed tree.",
+    "See docs/licensing.md for how this file, the generator (tools/licences/notices.py) and the test fit together."
+  ],
+  "schema": 1,
+  "project": {
+    "name": "CS Bingo Board",
+    "licence": "GPL-3.0-or-later",
+    "copyright": "Copyright (C) Iain Chesworth Labs contributors",
+    "source": "https://github.com/iainchesworthlabs/icl-error-journaling"
+  },
+  "qt": {
+    "_comment": "expectedQtVersion: the Qt series the snapshot was read from. A build against another series fails until qt-modules.json is regenerated and this is reviewed.",
+    "expectedQtVersion": "6.12",
+    "repoNames": {
+      "qtbase": "Qt Base",
+      "qtdeclarative": "Qt Declarative",
+      "qtsvg": "Qt SVG",
+      "qtshadertools": "Qt Shader Tools",
+      "qtdoc": "Qt Doc"
+    },
+    "fileAliases": {
+      "_comment": "Only for libraries the Qt SBOMs do not list as packaged binaries; qt-modules.json 'files' is generated and covers every plugin and module library the SBOMs name.",
+      "qt6entrypoint": "qtbase/EntryPointPrivate"
+    },
+    "filePrefixes": {}
+  },
+  "testOnlyPorts": [
+    "catch2"
+  ],
+  "portLicences": {
+    "tracy": "BSD-3-Clause"
+  },
+  "textExemptions": {
+    "_comment": "SPDX ids that need no text of their own in the app.",
+    "CC0-1.0": "A public-domain dedication: it sets no condition, so no text has to be reproduced.",
+    "LicenseRef-Qt-Commercial": "The Qt Company's commercial licence is an offer of theirs, not a licence this app is under; there is no text to reproduce."
+  },
+  "textAliases": {
+    "_comment": "An id whose text is the same file as another's: the GNU General Public License has one text for each version.",
+    "GPL-3.0-only": "GPL-3.0-or-later",
+    "GPL-2.0-or-later": "GPL-2.0-only"
+  },
+  "displayNames": {
+    "_comment": "How a component that Qt bundles is named in the list; the SBOM's own names are used for the rest (keys are lower case).",
+    "freetype": "FreeType",
+    "harfbuzz": "HarfBuzz",
+    "libjpeg": "libjpeg-turbo",
+    "libpng": "libpng",
+    "pcre2": "PCRE2",
+    "pcre2-sljit": "PCRE2 (sljit)",
+    "sqlite": "SQLite",
+    "zlib": "zlib",
+    "doubleconversion": "double-conversion",
+    "tinycbor": "TinyCBOR",
+    "unicode-cldr": "Unicode CLDR",
+    "unicode-character-database": "Unicode Character Database",
+    "psl-data": "Public Suffix List data",
+    "libpsl": "libpsl"
+  }
+}

@@ -92,6 +92,14 @@ public:
     /// Makes every `SafeFrame` that has no override of its own see a safe area, as the phone under the full-screen
     /// window has: the top and bottom insets in points (iPhone 17: 62 and 34). Offscreen there is none.
     void set_safe_area(double top, double bottom);
+    /// The same for the left and right sides, for a window in landscape. Call `set_safe_area` too: the override is on
+    /// only once that has been called.
+    void set_safe_area_sides(double left, double right);
+    /// The `WindowLayout` singleton of this engine (Stage 8): the layout class of the window and its sizes.
+    [[nodiscard]] QObject* window_layout();
+    /// Resizes the window and the loaded root item to `size` points, as a rotation or a resized Split View or Stage
+    /// Manager window does, tells `WindowLayout` the new size (a shell also binds it to its own size), and lays out.
+    void set_window_size(QSize size);
     /// The `Keyboard` singleton of this engine.
     [[nodiscard]] QObject* keyboard();
     /// Puts up the keyboard as iOS reports it under `Qt.ExpandedClientAreaHint`: `Qt.inputMethod.keyboardRectangle` in

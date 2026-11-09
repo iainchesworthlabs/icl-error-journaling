@@ -6,3 +6,11 @@ path = "**"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Iain Chesworth Labs contributors"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# The licence texts of the third-party components that the About page shows. Each is distributed under the terms it states and
+# applies to the component it belongs to (tools/licences/data/texts/README.md).
+[[annotations]]
+path = "tools/licences/data/texts/*.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "The authors of the components they cover"
+SPDX-License-Identifier = "LicenseRef-Third-Party-Notice"

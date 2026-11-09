@@ -16,7 +16,8 @@ import ErrorJournalingApp
 //                    `settings.assignBoardTile(position, typeId)`. Its "New error type…" opens the name sheet, whose Save
 //                    calls `settings.addErrorTypeAt(name, position)`: the type is made and put on the tile in one change.
 //                    Positions are 1 to 11 and Other is 12. The page does not scroll while a tile is being dragged.
-//   the pages        the facilitator, the time format and the import and export page are pushed on the screen's own
+//   the pages        the facilitator, the time format, the import and export page and the About pages (the build, the
+//                    licence, the open-source components and each licence text) are pushed on the screen's own
 //                    stack, with a Back in the title bar. The facilitator page also holds "In the shared log": the row
 //                    of the unit prefix, which opens a page of its own, and the totals switch. The Settings mock-up has
 //                    no row for either, so they are there and not on the list.
@@ -28,6 +29,7 @@ import ErrorJournalingApp
 //   errorTypesRequested, templatesRequested, locationsRequested   open the editor of that list
 //   importRequested, exportRequested                              choose a file, then `settings.loadImport(path)` or
 //                                                                 `settings.exportTo(path)`
+//   openUrlRequested                                               open an address (the source code) in the browser
 //
 // The shell may show an editor on the screen's stack with `pushPage` (the Back of the title bar then returns to the list),
 // and goes back to the list with `popToRoot` when the Settings tab is tapped again. The sheet of this screen covers the
@@ -36,8 +38,11 @@ Item {
     id: root
 
     required property var settings
-    // The footer of the list: the version and platform text, and the timing line behind five taps on it (Stage 4, 4.15).
+    // The foot of the list: the version and platform text, as a plain caption (Stage 4, 4.15).
     property string aboutText
+    // The About pages (PRF-12): the AboutModel, and the bridge's timing line that five taps on the Version row show. Without a
+    // model there is no About row.
+    property var about: null
     property string timingText
 
     signal errorTypesRequested
@@ -45,6 +50,8 @@ Item {
     signal locationsRequested
     signal importRequested
     signal exportRequested
+    // An address, such as the source code, is to be opened in the browser (the About page).
+    signal openUrlRequested(string url)
 
     // The safe-area insets, for a test: the platform's are used unless `overrideInsets` is set.
     property alias overrideInsets: frame.overrideInsets
@@ -124,7 +131,7 @@ Item {
         SettingsList {
             settings: root.settings
             aboutText: root.aboutText
-            timingText: root.timingText
+            aboutAvailable: root.about !== null
             topInset: frame.topInset
             onErrorTypesRequested: root.errorTypesRequested()
             onTemplatesRequested: root.templatesRequested()
@@ -134,6 +141,7 @@ Item {
             })
             onTimeFormatRequested: stack.push(timeFormatPage)
             onImportExportRequested: stack.push(importExportPage)
+            onAboutRequested: stack.push(aboutPage)
             onReplaceRequested: (position, typeId) => picker.openFor(position, typeId)
         }
     }
@@ -170,6 +178,31 @@ Item {
             onCloseRequested: stack.pop()
             onImportRequested: root.importRequested()
             onExportRequested: root.exportRequested()
+        }
+    }
+
+    Component {
+        id: aboutPage
+
+        SettingsAboutPage {
+            about: root.about
+            timingText: root.timingText
+            topInset: frame.topInset
+            onCloseRequested: stack.pop()
+            onOpenUrlRequested: url => root.openUrlRequested(url)
+            onLicenceRequested: licenceId => stack.push(licencePage, {
+                    "licenceId": licenceId
+                })
+        }
+    }
+
+    Component {
+        id: licencePage
+
+        SettingsLicencePage {
+            about: root.about
+            topInset: frame.topInset
+            onCloseRequested: stack.pop()
         }
     }
 }

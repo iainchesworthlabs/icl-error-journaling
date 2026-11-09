@@ -118,6 +118,7 @@ TEST_CASE("safe_frame.log: logInsets prints the four insets once, for the device
             })")) != nullptr);
     }
     qInstallMessageHandler(previous);
+    INFO(messages.join(QStringLiteral(" | ")).toStdString());
     REQUIRE(messages.size() == 1);
     CHECK(messages.front() == QStringLiteral("safe area: top 59, bottom 34, left 0, right 0"));
 }

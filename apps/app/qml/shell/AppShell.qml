@@ -26,7 +26,8 @@ import ErrorJournalingApp
 //     messages    `AppRoot.writeFailed` is one Banner at the top of the window, except on the Log screen, which shows
 //                 the failures of its own models in its own banner. The Undo toast is the Log screen's; Review's is here,
 //                 because the Review screen has none.
-//     theme       `Theme.textScale` and `Theme.reduceMotion` follow the bridge (Dynamic Type, Reduce Motion).
+//     theme       `Theme.textScale` and `Theme.reduceMotion` follow the bridge (Dynamic Type, Reduce Motion), and
+//                 `WindowLayout.windowWidth` and `WindowLayout.windowHeight` follow the shell's own size (Stage 8).
 //
 // Given as `required property`, the nine services of AppRoot by their names, AppRoot itself and the bridge (decision 3), so
 // a missing one fails when the shell is made and not on a phone.
@@ -48,12 +49,18 @@ Item {
     required property var share
     // AppRoot, for its `writeFailed(operation, message)`.
     required property var appRoot
-    // The version and platform text, at the foot of Settings (with the timing line behind five taps on it).
+    // The version and platform text, at the foot of Settings.
     property string aboutText
+    // The AboutModel, for the About pages behind the last row of Settings (PRF-12), which also show the timing line behind five
+    // taps on the Version row. Null leaves the row out.
+    property var about: null
     // The QmlBridge: the haptics, the share sheet and the accessibility settings.
     required property var bridge
     // The file chooser that import and export go through. The platform's own unless the test of the shell gives it another.
     property var fileChooser: platformChooser
+    // What opens an address in the browser (the source code row of the About page): `open(url)`. The system's unless the test of
+    // the shell gives it another, so that a test opens no browser.
+    property var urlOpener: platformUrlOpener
 
     // The tabs, in the order of the tab bar.
     readonly property int logIndex: 0
@@ -184,6 +191,22 @@ Item {
         value: root.bridge.reduceMotion
     }
 
+    // The layout class follows the shell's size (Stage 8, 8.1): the window on the phone, the window or the Split View or
+    // Stage Manager window on an iPad, the resizable window on a desktop.
+    Binding {
+        target: WindowLayout
+        property: "windowWidth"
+        value: root.width
+        when: root.width > 0
+    }
+
+    Binding {
+        target: WindowLayout
+        property: "windowHeight"
+        value: root.height
+        when: root.height > 0
+    }
+
     Connections {
         function onActiveFocusItemChanged(): void {
             Qt.callLater(root.checkKeyboard);
@@ -309,10 +332,12 @@ Item {
                     objectName: "settingsScreen"
                     settings: root.settings
                     aboutText: root.aboutText
+                    about: root.about
                     timingText: root.bridge.timingSummary
                     onErrorTypesRequested: pushPage(errorTypesPage, {})
                     onTemplatesRequested: pushPage(templatesPage, {})
                     onLocationsRequested: pushPage(locationsPage, {})
+                    onOpenUrlRequested: url => root.urlOpener.open(url)
                     onImportRequested: root.fileChooser.chooseToOpen()
                     onExportRequested: root.fileChooser.chooseToSave(SetupFile.defaultFileName)
                 }
@@ -396,6 +421,14 @@ Item {
             anchors.fill: parent
             settings: root.settings
             onImportRequested: root.fileChooser.chooseToOpen()
+        }
+
+        QtObject {
+            id: platformUrlOpener
+
+            function open(url: string): void {
+                Qt.openUrlExternally(url);
+            }
         }
 
         FileChooser {
