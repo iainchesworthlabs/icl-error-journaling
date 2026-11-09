@@ -16,6 +16,7 @@ file(GLOB bridge_sources CONFIGURE_DEPENDS
 
 add_library(ej_ios_bridge
     src/accessibility_settings.cpp
+    src/android_share_plan.cpp
     src/haptic_policy.cpp
     src/launch_tracker.cpp
     src/lifecycle.cpp
@@ -34,6 +35,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set_source_files_properties(${bridge_sources} PROPERTIES COMPILE_OPTIONS -fobjc-arc)
     target_link_libraries(ej_ios_bridge PRIVATE "$<LINK_LIBRARY:FRAMEWORK,Foundation>" "$<LINK_LIBRARY:FRAMEWORK,UIKit>"
         "$<LINK_LIBRARY:FRAMEWORK,UniformTypeIdentifiers>")
+endif()
+
+if(ANDROID)
+    # The Android implementations call Java through JNI (QJniObject), which is Qt Core.
+    find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
+    target_link_libraries(ej_ios_bridge PRIVATE Qt6::Core)
 endif()
 
 # What QML sees of the bridge: a QObject over the interface, so the interface itself needs no Qt.

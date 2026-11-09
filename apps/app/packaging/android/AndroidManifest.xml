@@ -46,6 +46,18 @@
                 android:value="-- %%INSERT_APP_ARGUMENTS%% --" />
         </activity>
 
+        <!-- What the application shares (the configuration export, a long text) is served to the receiving app through this
+             provider: a content:// URI with read permission for that share (res/xml/ej_file_paths.xml). -->
+        <provider
+            android:name="com.iainchesworthlabs.errorjournaling.EjFileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/ej_file_paths" />
+        </provider>
+
         <!-- Qt's own file provider, as in its template. -->
         <provider
             android:name="androidx.core.content.FileProvider"

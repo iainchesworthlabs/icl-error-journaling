@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Stage 9: until package 9.3 has an Android implementation of this capability it is the desktop stub (a copy of
+// ../desktop/haptics.cpp). check_platform_layout.py wants one file per capability in every platform directory.
+#include "error_journaling/haptics.hpp"
+
+namespace ej::bridge
+{
+
+namespace
+{
+
+class DesktopHaptics final : public Haptics
+{
+public:
+    void prepare() override {}
+
+    void fire(HapticKind /*kind*/) override {}
+};
+
+}  // namespace
+
+std::unique_ptr<Haptics> make_haptics()
+{
+    return std::make_unique<DesktopHaptics>();
+}
+
+}  // namespace ej::bridge

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/accessibility_settings.hpp"
+#include "error_journaling/android_share_plan.hpp"
 #include "error_journaling/config_exporter.hpp"
 #include "error_journaling/config_importer.hpp"
 #include "error_journaling/document_picker.hpp"
@@ -52,12 +53,18 @@ class FakeShare final : public bridge::Share
 public:
     bridge::ShareResult m_Next{bridge::ShareOutcome::SHARED, "com.example.activity", {}};
     bool m_Hold = false;
+    bool m_Retains = false; // an Android-style share: the receiving app may read a file after the sheet has closed
     std::vector<bridge::ShareRequest> m_Requests;
     bridge::ShareCallback m_Held;
 
     [[nodiscard]] bool available() const noexcept override
     {
         return true;
+    }
+
+    [[nodiscard]] bool retains_shared_files() const noexcept override
+    {
+        return m_Retains;
     }
 
     void present(bridge::ShareRequest request, bridge::ShareCallback done) override
@@ -545,6 +552,146 @@ TEST_CASE("share.config_file: a refused request still removes its file", "[integ
 
     CHECK(fakes.m_Share->m_Requests.size() == 1);
     CHECK_FALSE(fs::exists(file));
+}
+
+TEST_CASE("share.android_retained: a file stays for the receiving app after SHARED and CANCELLED", "[integration][share]")
+{
+    TempDirectory directory;
+    FakeShare share;
+    share.m_Retains = true;
+    bridge::SharePresenter presenter(share);
+
+    const auto outcome = GENERATE(bridge::ShareOutcome::SHARED, bridge::ShareOutcome::CANCELLED);
+    const fs::path file = directory.path() / "setup.ejconfig";
+    write_file(file, "{}");
+    share.m_Next = {outcome, {}, {}};
+    int calls = 0;
+    presenter.present_temporary_file(file, [&](const bridge::ShareResult&) { ++calls; });
+
+    CHECK(calls == 1);
+    CHECK(fs::exists(file));
+}
+
+TEST_CASE("share.android_retained: a sheet that could not be shown removes the file", "[integration][share]")
+{
+    TempDirectory directory;
+    FakeShare share;
+    share.m_Retains = true;
+    share.m_Next = {bridge::ShareOutcome::FAILED, {}, {}};
+    bridge::SharePresenter presenter(share);
+
+    const fs::path file = directory.path() / "setup.ejconfig";
+    write_file(file, "{}");
+    presenter.present_temporary_file(file, [](const bridge::ShareResult&) {});
+
+    CHECK_FALSE(fs::exists(file));
+}
+
+TEST_CASE("share.android_retained: the next export removes the older ones, and only in its directory", "[integration][share]")
+{
+    TempDirectory directory;
+    TempDirectory other;
+    FakeShare share;
+    share.m_Retains = true;
+    bridge::SharePresenter presenter(share);
+
+    const fs::path old_export = directory.path() / "old.ejconfig";
+    const fs::path old_text = directory.path() / "log.txt";
+    const fs::path elsewhere = other.path() / "keep.ejconfig";
+    const fs::path fresh = directory.path() / "new.ejconfig";
+    for (const auto& file : {old_export, old_text, elsewhere, fresh})
+    {
+        write_file(file, "x");
+    }
+    fs::create_directories(directory.path() / "subdirectory");
+
+    presenter.present_temporary_file(fresh, [](const bridge::ShareResult&) {});
+
+    CHECK_FALSE(fs::exists(old_export));
+    CHECK_FALSE(fs::exists(old_text));
+    CHECK(fs::exists(fresh));
+    CHECK(fs::exists(elsewhere));
+    CHECK(fs::is_directory(directory.path() / "subdirectory"));
+}
+
+TEST_CASE("share.android_retained: a second request while a sheet is open leaves that sheet's file alone",
+          "[integration][share]")
+{
+    TempDirectory directory;
+    FakeShare share;
+    share.m_Retains = true;
+    share.m_Hold = true;
+    bridge::SharePresenter presenter(share);
+
+    const fs::path first = directory.path() / "first.ejconfig";
+    const fs::path second = directory.path() / "second.ejconfig";
+    write_file(first, "1");
+    write_file(second, "2");
+    presenter.present_temporary_file(first, [](const bridge::ShareResult&) {});
+    presenter.present_temporary_file(second, [](const bridge::ShareResult&) {}); // refused: one sheet at a time
+
+    CHECK(share.m_Requests.size() == 1);
+    CHECK(fs::exists(first));         // on screen
+    CHECK_FALSE(fs::exists(second));  // refused, so FAILED, so removed
+}
+
+TEST_CASE("share.android_retained: the iOS and desktop shares keep removing the file", "[unit][share]")
+{
+    FakeShare share;
+    CHECK_FALSE(share.retains_shared_files());
+}
+
+TEST_CASE("share.android_plan: text goes inline up to the limit, then as a file", "[unit][share]")
+{
+    using bridge::AndroidShareKind;
+    bridge::ShareRequest at_limit;
+    at_limit.m_Text.assign(bridge::android_inline_text_limit, 'a');
+    CHECK(bridge::plan_android_share(at_limit) == AndroidShareKind::TEXT);
+
+    bridge::ShareRequest above;
+    above.m_Text.assign(bridge::android_inline_text_limit + 1, 'a');
+    CHECK(bridge::plan_android_share(above) == AndroidShareKind::TEXT_FILE);
+
+    bridge::ShareRequest small;
+    small.m_Text = "T|a - b";
+    CHECK(bridge::plan_android_share(small) == AndroidShareKind::TEXT);
+
+    bridge::ShareRequest file;
+    file.m_File = "setup.ejconfig";
+    CHECK(bridge::plan_android_share(file) == AndroidShareKind::FILE);
+}
+
+TEST_CASE("share.android_plan: the limit counts UTF-8 bytes, not characters", "[unit][share]")
+{
+    // "â" is the en dash: three bytes, one character.
+    bridge::ShareRequest request;
+    for (std::size_t bytes = 0; bytes + 3 <= bridge::android_inline_text_limit; bytes += 3)
+    {
+        request.m_Text += "â";
+    }
+    request.m_Text += "ab"; // now above the limit in bytes, far below it in characters
+    CHECK(request.m_Text.size() > bridge::android_inline_text_limit);
+    CHECK(bridge::plan_android_share(request) == bridge::AndroidShareKind::TEXT_FILE);
+}
+
+TEST_CASE("share.android_outcome: how the chooser ended maps to one ShareOutcome", "[unit][share]")
+{
+    using bridge::AndroidShareEnd;
+    CHECK(bridge::android_share_outcome(AndroidShareEnd::CHOSEN) == bridge::ShareOutcome::SHARED);
+    CHECK(bridge::android_share_outcome(AndroidShareEnd::DISMISSED) == bridge::ShareOutcome::CANCELLED);
+    CHECK(bridge::android_share_outcome(AndroidShareEnd::ERROR) == bridge::ShareOutcome::FAILED);
+}
+
+TEST_CASE("share.android_outcome: the codes EjShare.java sends", "[unit][share]")
+{
+    using bridge::AndroidShareEnd;
+    CHECK(bridge::android_share_end_from_code(0) == AndroidShareEnd::CHOSEN);
+    CHECK(bridge::android_share_end_from_code(1) == AndroidShareEnd::DISMISSED);
+    CHECK(bridge::android_share_end_from_code(2) == AndroidShareEnd::ERROR);
+    // Anything else is an error, never a success.
+    CHECK(bridge::android_share_end_from_code(-1) == AndroidShareEnd::ERROR);
+    CHECK(bridge::android_share_end_from_code(3) == AndroidShareEnd::ERROR);
+    CHECK(bridge::android_share_end_from_code(1000) == AndroidShareEnd::ERROR);
 }
 
 TEST_CASE("share.config_file: the launch purge removes stale files and nothing else", "[integration][share]")
