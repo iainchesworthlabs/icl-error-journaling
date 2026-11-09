@@ -276,10 +276,43 @@ class VcpkgTests(unittest.TestCase):
         self.assertEqual([m for m in document["unresolved"] if "libsample" in m][0][:22], "vcpkg dependency libsa")
         self.assertFalse(any("testframe" in m for m in document["unresolved"]))
 
+    def test_a_dependency_that_installs_only_share_files_is_a_helper_and_is_left_out(self) -> None:
+        write(self.m_Installed / "vcpkg" / "status",
+              "Package: libsample\nVersion: 1.2.3\nDepends: helper\nArchitecture: arm64-sample\nStatus: install ok installed\n\n"
+              "Package: helper\nVersion: 1\nArchitecture: arm64-sample\nStatus: install ok installed\n")
+        write(self.m_Installed / "vcpkg" / "info" / "helper_1_arm64-sample.list", "arm64-sample/share/helper/x.cmake\n")
+        library = str(self.m_Triplet / "lib" / "libsample.a").replace("\\", "/")
+        status, document = self.run_it([library, f"{QT}/lib/libQt6Core.a"], "--strict")
+        self.assertEqual(status, 0, document["unresolved"])
+        self.assertEqual({c["name"] for c in document["components"] if c["kind"] == "vcpkg"}, {"libsample"})
+
     def test_an_unowned_file_under_the_vcpkg_tree_is_unresolved(self) -> None:
         status, document = self.run_it([str(self.m_Triplet / "lib" / "libghost.a").replace("\\", "/")], "--strict")
         self.assertEqual(status, 1)
         self.assertTrue(any("no port owns" in m for m in document["unresolved"]))
+
+
+class ChoiceTests(unittest.TestCase):
+    def run_with_licence(self, licence: str) -> tuple[int, dict]:
+        with tempfile.TemporaryDirectory() as temp:
+            binary = Path(temp) / "build"
+            make_reply(binary, [f"{QT}/lib/libQt6Core.a"])
+            manifest = json.loads((LICENCES / "data" / "manifest.json").read_text(encoding="utf-8"))
+            manifest["project"]["licence"] = licence
+            manifest_path = Path(temp) / "manifest.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            return run(binary, Path(temp) / "out", "--strict", "--manifest", str(manifest_path))
+
+    def test_a_choice_of_licences_needs_the_text_of_one_option(self) -> None:
+        status, document = self.run_with_licence("AFL-2.1 OR GPL-2.0-or-later")
+        self.assertEqual(document["unresolved"], [])
+        self.assertEqual(status, 0)
+        self.assertTrue(any("AFL-2.1" in warning for warning in document["warnings"]))
+
+    def test_a_single_licence_without_a_text_is_still_a_failure(self) -> None:
+        status, document = self.run_with_licence("AFL-2.1")
+        self.assertEqual(status, 1)
+        self.assertTrue(any("AFL-2.1" in message for message in document["unresolved"]))
 
 
 class TextTests(unittest.TestCase):
