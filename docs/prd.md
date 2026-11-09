@@ -313,3 +313,7 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 - CSV export and simple cross-day counts.
 
 - Per-location board layouts, if site-specific errors appear.
+
+- A second board for logging interactions, with its own tab and its own interaction types, set up like the error board ([#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)). Raised by the facilitator; deferred on 9 Nov 2026.
+
+- An Android build, if colleagues on Android would use it ([#106](https://github.com/iainchesworthlabs/icl-error-journaling/issues/106)). Deferred on 9 Nov 2026.
