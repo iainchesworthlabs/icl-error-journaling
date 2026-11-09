@@ -17,7 +17,7 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 | ui | `apps/app` | `app.smoke` starts the application off-screen and waits for a frame; `app.version` |
 | ui | `apps/app/tests/ui/*_test.cpp` | `ej_ui_tests`: Catch2 cases that load the QML offscreen and drive it from C++ (below) |
 | perf | `apps/app/tests/ui/*_test.cpp`, cases tagged `[perf]` | the same program: `perf.press_path`, `perf.scene` and `perf.first_frame` (below) |
-| unit | `tools/ci/check_qml_*.py` | `qml.platform`, `theme.no_literals`, `i18n.strings`, `qml.tests`, `qml.format` and `qml.lint`: the checks that keep the QML honest (`docs/ci.md`) |
+| unit | `tools/ci/check_qml_*.py` | `qml.platform`, `theme.no_literals`, `i18n.strings`, `qml.tests`, `motion.animators`, `qml.format` and `qml.lint`: the checks that keep the QML honest (`docs/ci.md`) |
 
 ## Tests of the QML
 
@@ -75,6 +75,11 @@ breaks it (`stubs/UiStubBad*.qml`).
 | `time_each`, `percentile` (`perf.press_path`) | The time of each press, p95 under 16 ms over 200 |
 | `measure_scene` (`perf.scene`) | The number of items and delegates (asked of each Repeater and ListView, however the delegate is declared), against `tests/ui/perf-budget.json` |
 | `snapshot_geometry`, `moved_items` (`perf.first_frame`) | A rectangle that moved between two states, for the Log screen in `LOADING` and after the labels arrive |
+
+`motion.curves` (in `theme_test.cpp`, label `ui`) holds the durations and the easing curves of `Theme.motion` and of `docs/design/tokens.json` to the
+values recorded in `docs/plan/stage-4.md` ("Recorded motion values") and in the test, so that a number changes in all of them or the test fails.
+`motion.animators` (`tools/ci/check_qml_motion.py`, label `unit`) fails a `NumberAnimation`, `PropertyAnimation`, `SmoothedAnimation`,
+`SpringAnimation` or `Behavior` on `x`, `y`, `scale` or `opacity` anywhere in `apps/app/qml/`; the Animator types are the only ones allowed.
 
 `contrast_test.cpp` is `a11y.contrast`: every pair of `Theme.contrastPairs` (4.5 to 1 for text, 3 to 1 for a non-text
 indicator) in light and in dark, the 11 tile colours under the tile text, no red or green tile hue, and a floor on how far

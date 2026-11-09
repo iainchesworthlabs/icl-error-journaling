@@ -37,6 +37,7 @@ GOOD = {
         {"CFBundleTypeRole": "Viewer", "LSHandlerRank": "Alternate", "LSItemContentTypes": ["public.json"]},
     ],
     "LSSupportsOpeningDocumentsInPlace": False,
+    "CADisableMinimumFrameDurationOnPhone": True,
 }
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -81,6 +82,14 @@ class PlistCheckTest(unittest.TestCase):
     def test_file_sharing_must_not_be_on(self) -> None:
         self.assertTrue(any("FileSharing" in p for p in broken(lambda p: p.update(UIFileSharingEnabled=True))))
         self.assertEqual(broken(lambda p: p.update(UIFileSharingEnabled=False)), [])
+
+    def test_frame_rate_key_must_be_true(self) -> None:
+        for change in (
+            lambda p: p.pop("CADisableMinimumFrameDurationOnPhone"),
+            lambda p: p.update(CADisableMinimumFrameDurationOnPhone=False),
+            lambda p: p.update(CADisableMinimumFrameDurationOnPhone="YES"),
+        ):
+            self.assertTrue(any("CADisableMinimumFrameDurationOnPhone" in p for p in broken(change)))
 
     def test_usage_description_fails(self) -> None:
         self.assertTrue(any("NSCameraUsageDescription" in p for p in broken(lambda p: p.update(NSCameraUsageDescription="x"))))

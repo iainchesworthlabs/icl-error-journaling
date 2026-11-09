@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The Theme singleton against docs/design/tokens.json: theme.matches_tokens, theme.dark_resolves and the rules of the
-// text scale, the tile colours and the motion values.
+// text scale, the tile colours and the motion values (motion.curves).
 #include "rig/ui_rig.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <QColor>
+#include <QEasingCurve>
 #include <QFile>
 #include <QFont>
 #include <QFontDatabase>
@@ -552,4 +553,111 @@ TEST_CASE("theme.motion: Reduce Motion makes every presentation a fade of at mos
     // The press is feedback and keeps its scale and its 120 ms.
     CHECK_THAT(number(motion, QStringLiteral("tilePressScale")), WithinAbs(0.96, 1e-9));
     CHECK(number(motion, QStringLiteral("tilePressMs")) == 120);
+}
+
+namespace
+{
+
+/// The tuning of package 4.14 as recorded in docs/plan/stage-4.md ("Recorded motion values"): the desktop defaults, to
+/// be confirmed on the iPhone in 4.18. A change to a value is made here, in tokens.json, in Theme.qml and in that table
+/// together, which is what this test holds.
+struct RecordedMotion
+{
+    int m_SheetPresentMs;
+    int m_ToastMs;
+    int m_PageMs;
+    int m_SwipeReleaseMs;
+    int m_ReducedMotionMs;
+    int m_UndoToastVisibleMs;
+    double m_TilePressScale;
+    int m_TilePressMs;
+    const char* m_EasingPress;
+    const char* m_EasingSpring;
+    const char* m_EasingReduced;
+    double m_SpringOvershoot;
+};
+
+constexpr RecordedMotion RECORDED{320, 240, 280, 200, 100, 5000, 0.96, 120, "InOutQuad", "OutBack", "Linear", 1.70158};
+
+QEasingCurve::Type easing_type(const char* name)
+{
+    const QString text = QString::fromLatin1(name);
+    if (text == QStringLiteral("InOutQuad"))
+    {
+        return QEasingCurve::InOutQuad;
+    }
+    if (text == QStringLiteral("OutBack"))
+    {
+        return QEasingCurve::OutBack;
+    }
+    if (text == QStringLiteral("Linear"))
+    {
+        return QEasingCurve::Linear;
+    }
+    FAIL("an easing name the test does not know: " << name);
+    return QEasingCurve::Linear;
+}
+
+} // namespace
+
+TEST_CASE("motion.curves: tokens.json, the Theme and the recorded tuning hold the same durations and curves",
+          "[ui][motion]")
+{
+    const QJsonObject motion = tokens().value(QStringLiteral("motion")).toObject();
+    const QJsonObject easing = motion.value(QStringLiteral("easing")).toObject();
+
+    SECTION("tokens.json equals the record")
+    {
+        CHECK(motion.value(QStringLiteral("sheetPresentMs")).toInt() == RECORDED.m_SheetPresentMs);
+        CHECK(motion.value(QStringLiteral("toastMs")).toInt() == RECORDED.m_ToastMs);
+        CHECK(motion.value(QStringLiteral("pageMs")).toInt() == RECORDED.m_PageMs);
+        CHECK(motion.value(QStringLiteral("swipeReleaseMs")).toInt() == RECORDED.m_SwipeReleaseMs);
+        CHECK(motion.value(QStringLiteral("reducedMotionMs")).toInt() == RECORDED.m_ReducedMotionMs);
+        CHECK(motion.value(QStringLiteral("undoToastVisibleMs")).toInt() == RECORDED.m_UndoToastVisibleMs);
+        const QJsonObject press = motion.value(QStringLiteral("tilePress")).toObject();
+        CHECK_THAT(press.value(QStringLiteral("scale")).toDouble(), WithinAbs(RECORDED.m_TilePressScale, 1e-9));
+        CHECK(press.value(QStringLiteral("durationMs")).toInt() == RECORDED.m_TilePressMs);
+        CHECK(easing.value(QStringLiteral("press")).toString() == QLatin1String(RECORDED.m_EasingPress));
+        CHECK(easing.value(QStringLiteral("spring")).toString() == QLatin1String(RECORDED.m_EasingSpring));
+        CHECK(easing.value(QStringLiteral("reduced")).toString() == QLatin1String(RECORDED.m_EasingReduced));
+        CHECK_THAT(easing.value(QStringLiteral("springOvershoot")).toDouble(),
+                   WithinAbs(RECORDED.m_SpringOvershoot, 1e-9));
+        CHECK(motion.value(QStringLiteral("tuning"))
+                  .toString()
+                  .startsWith(QStringLiteral("Desktop defaults, to confirm")));
+    }
+
+    SECTION("the Theme equals the record, with Reduce Motion off and on")
+    {
+        UiRig rig;
+        QObject* values = child(rig.theme(), "motion");
+
+        rig.set_reduce_motion(false);
+        CHECK(static_cast<int>(number(values, QStringLiteral("sheetPresentMs"))) == RECORDED.m_SheetPresentMs);
+        CHECK(static_cast<int>(number(values, QStringLiteral("toastMs"))) == RECORDED.m_ToastMs);
+        CHECK(static_cast<int>(number(values, QStringLiteral("pageMs"))) == RECORDED.m_PageMs);
+        CHECK(static_cast<int>(number(values, QStringLiteral("swipeReleaseMs"))) == RECORDED.m_SwipeReleaseMs);
+        CHECK(static_cast<int>(number(values, QStringLiteral("reducedMotionMs"))) == RECORDED.m_ReducedMotionMs);
+        CHECK(static_cast<int>(number(values, QStringLiteral("undoToastVisibleMs"))) == RECORDED.m_UndoToastVisibleMs);
+        CHECK_THAT(number(values, QStringLiteral("tilePressScale")), WithinAbs(RECORDED.m_TilePressScale, 1e-9));
+        CHECK(static_cast<int>(number(values, QStringLiteral("tilePressMs"))) == RECORDED.m_TilePressMs);
+        CHECK(static_cast<int>(number(values, QStringLiteral("easingPress"))) == easing_type(RECORDED.m_EasingPress));
+        CHECK(static_cast<int>(number(values, QStringLiteral("easingSpring"))) == easing_type(RECORDED.m_EasingSpring));
+
+        rig.set_reduce_motion(true);
+        CHECK(static_cast<int>(number(values, QStringLiteral("easingSpring"))) ==
+              easing_type(RECORDED.m_EasingReduced));
+        CHECK(static_cast<int>(number(values, QStringLiteral("easingPress"))) == easing_type(RECORDED.m_EasingPress));
+        for (const char* name : {"sheetPresentMs", "toastMs", "pageMs", "swipeReleaseMs"})
+        {
+            INFO(name);
+            CHECK(static_cast<int>(number(values, QString::fromLatin1(name))) == RECORDED.m_ReducedMotionMs);
+        }
+    }
+
+    SECTION("the spring curve overshoots by the recorded amount, because no animation sets its own")
+    {
+        QEasingCurve curve(easing_type(RECORDED.m_EasingSpring));
+        CHECK_THAT(curve.overshoot(), WithinAbs(RECORDED.m_SpringOvershoot, 1e-9));
+    }
 }

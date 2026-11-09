@@ -124,5 +124,11 @@
     <array>
         <string>UIInterfaceOrientationPortrait</string>
     </array>
+
+    <!-- ProMotion phones run an application at 60 Hz unless this is true. With it the render loop follows the display,
+         up to 120 Hz, and the animations are animators so that they hold the rate (docs/plan/stage-4.md, U7 and 4.14;
+         tools/ci/check_ios_plist.py and packaging/ios/verify_app.sh fail without it). -->
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
 </dict>
 </plist>

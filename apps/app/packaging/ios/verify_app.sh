@@ -8,8 +8,9 @@
 # What it looks for:
 #
 #   * Info.plist is valid, names the identifier, the executable, the version, the
-#     icon set and a launch screen, says it is an iPhone/iPad program, and holds
-#     no usage text for a permission (the application asks for none);
+#     icon set and a launch screen, says it is an iPhone/iPad program, allows a
+#     ProMotion phone to run at 120 Hz (CADisableMinimumFrameDurationOnPhone is
+#     true), and holds no usage text for a permission (the application asks for none);
 #   * the compiled asset catalogue (the icon) is in the bundle;
 #   * the executable is for arm64 and links nothing outside the system: a link to
 #     a framework or to a path on the build machine means the build picked up
@@ -39,7 +40,7 @@ while [ $# -gt 0 ]; do
     --version) version="${2:?}"; shift 2 ;;
     --signed) signed=true; shift ;;
     --store) store=true; shift ;;
-    -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "verify_app.sh: unknown argument '$1'" >&2; exit 2 ;;
     *) target="$1"; shift ;;
   esac
@@ -80,6 +81,7 @@ done
 [ "$(key UTExportedTypeDeclarations:0:UTTypeTagSpecification:public.filename-extension:0)" = "ejconfig" ] || fail "the exported type does not have the extension ejconfig"
 [ "$(key CFBundleDocumentTypes:0:LSItemContentTypes:0)" = "$bundle_id.config" ] || fail "CFBundleDocumentTypes does not name $bundle_id.config"
 [ "$(key LSSupportsOpeningDocumentsInPlace)" = "false" ] || fail "LSSupportsOpeningDocumentsInPlace is '$(key LSSupportsOpeningDocumentsInPlace)', expected false"
+[ "$(key CADisableMinimumFrameDurationOnPhone)" = "true" ] || fail "CADisableMinimumFrameDurationOnPhone is '$(key CADisableMinimumFrameDurationOnPhone)', expected true: a ProMotion phone would run the application at 60 Hz"
 [ "$(key UIFileSharingEnabled)" != "true" ] || fail "UIFileSharingEnabled is true: the Documents folder would be listed in Files"
 [ -n "$(key UILaunchScreen)" ] || fail "Info.plist has no UILaunchScreen (iOS would run the program in a legacy window)"
 [ "$(key DTPlatformName)" = "iphoneos" ] || fail "DTPlatformName is '$(key DTPlatformName)'; this is not a device build"
@@ -89,7 +91,7 @@ if [ -n "$version" ]; then
 fi
 [ "$(key ITSAppUsesNonExemptEncryption)" = "false" ] || fail "ITSAppUsesNonExemptEncryption is '$(key ITSAppUsesNonExemptEncryption)': TestFlight would ask about encryption for every build"
 [ -n "$(key CFBundleVersion)" ] || fail "Info.plist has no CFBundleVersion (the build number)"
-echo "    Info.plist: identifier, executable, version $(key CFBundleShortVersionString) build $(key CFBundleVersion), icon, launch screen, no permission text, iOS $(key MinimumOSVersion) or later"
+echo "    Info.plist: identifier, executable, version $(key CFBundleShortVersionString) build $(key CFBundleVersion), icon, launch screen, 120 Hz allowed, no permission text, iOS $(key MinimumOSVersion) or later"
 
 for required in \
     "$app/$executable" \

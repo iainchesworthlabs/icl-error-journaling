@@ -70,16 +70,14 @@ StackView {
         }
     }
     readonly property Transition fadeIn: Transition {
-        NumberAnimation {
-            property: "opacity"
+        OpacityAnimator {
             from: 0
             to: 1
             duration: root.transitionMs
         }
     }
     readonly property Transition fadeOut: Transition {
-        NumberAnimation {
-            property: "opacity"
+        OpacityAnimator {
             from: 1
             to: 0
             duration: root.transitionMs

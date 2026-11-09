@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Tests for check_qml_platform.py, check_qml_literals.py, check_qml_strings.py and check_qml_tests.py (label: unit).
+"""Tests for check_qml_platform.py, check_qml_literals.py, check_qml_strings.py, check_qml_tests.py and
+check_qml_motion.py (label: unit).
 
 Each check is shown a file that follows the rule and a file that breaks it, because a check that cannot fail proves
 nothing. Run with: python3 -m unittest discover -s tools/tests -v
@@ -15,6 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ci"))
 
 import check_qml_literals as literals  # noqa: E402
+import check_qml_motion as motion  # noqa: E402
 import check_qml_platform as platform  # noqa: E402
 import check_qml_strings as strings  # noqa: E402
 import check_qml_tests as tests  # noqa: E402
@@ -201,6 +203,68 @@ class TestFilesTest(unittest.TestCase):
         self.assertEqual(self.check(tested), [])
 
 
+class MotionTest(unittest.TestCase):
+    def found(self, body: str) -> list[str]:
+        return motion.check_text("A.qml", component(body))
+
+    def test_property_animations_on_the_four_properties_are_found(self) -> None:
+        for body in [
+            "NumberAnimation on x { from: 0; to: 10 }",
+            "NumberAnimation on opacity { from: 0; to: 1 }",
+            "PropertyAnimation on scale { to: 2 }",
+            "SmoothedAnimation on y { to: 2 }",
+            "NumberAnimation { target: box; property: \"y\"; to: 4 }",
+            "NumberAnimation { target: box\n property: 'opacity'\n to: 1 }",
+            "NumberAnimation { targets: [a, b]; properties: \"x, scale\"; to: 1 }",
+            "SpringAnimation { property: \"x\" }",
+            "Transition { NumberAnimation { property: \"opacity\"; from: 0; to: 1 } }",
+            "ParallelAnimation { NumberAnimation { property: \"x\" } OpacityAnimator { to: 1 } }",
+            "Behavior on opacity { OpacityAnimator { duration: Theme.motion.toastMs } }",
+            "Behavior on box.x { NumberAnimation { duration: Theme.motion.toastMs } }",
+        ]:
+            with self.subTest(body=body):
+                self.assertGreaterEqual(len(self.found(body)), 1, body)
+
+    def test_the_message_names_the_animator_to_use(self) -> None:
+        self.assertIn("OpacityAnimator", self.found("NumberAnimation on opacity { to: 1 }")[0])
+        self.assertIn("XAnimator", self.found("NumberAnimation { property: \"x\" }")[0])
+        self.assertIn("A.qml:", self.found("NumberAnimation { property: \"x\" }")[0])
+
+    def test_animators_and_other_properties_pass(self) -> None:
+        for body in [
+            "XAnimator on x { to: 10 }",
+            "YAnimator { target: box; to: 4 }",
+            "ScaleAnimator { target: box; to: 0.96 }",
+            "OpacityAnimator { target: box; to: 1 }",
+            "Transition { XAnimator { from: 10; to: 0 } }",
+            "NumberAnimation { property: \"height\"; to: 4 }",
+            "NumberAnimation on width { to: 4 }",
+            "PropertyAnimation { properties: \"width, height\"; to: 4 }",
+            "ColorAnimation { property: \"color\" }",
+            "Behavior on height { NumberAnimation { duration: Theme.motion.toastMs } }",
+            "Behavior on opacityTarget { NumberAnimation { duration: Theme.motion.toastMs } }",
+            "// NumberAnimation on x { to: 1 } was the old way",
+            "property string note: \"NumberAnimation on x {\"",
+        ]:
+            with self.subTest(body=body):
+                self.assertEqual(self.found(body), [], body)
+
+    def test_only_the_animation_that_breaks_the_rule_is_reported(self) -> None:
+        body = "XAnimator on x { to: 1 }\nNumberAnimation { property: \"width\" }\nNumberAnimation on scale { to: 2 }"
+        problems = self.found(body)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("scale", problems[0])
+
+    def test_the_theme_is_checked_too(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            make(root, {"apps/app/qml/theme/Theme.qml": component("NumberAnimation on x { to: 1 }"),
+                        "apps/app/qml/components/Tile.qml": component("ScaleAnimator on scale { to: 1 }")})
+            problems = motion.check(root)
+            self.assertEqual(len(problems), 1)
+            self.assertIn("theme/Theme.qml", problems[0])
+
+
 class RepositoryTest(unittest.TestCase):
     """The checks pass on this repository, which is what CI runs them for."""
 
@@ -211,6 +275,7 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(literals.check(self.ROOT)[0], [])
         self.assertEqual(strings.check(self.ROOT), [])
         self.assertEqual(tests.check(self.ROOT), [])
+        self.assertEqual(motion.check(self.ROOT), [])
 
 
 if __name__ == "__main__":
