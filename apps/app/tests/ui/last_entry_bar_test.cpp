@@ -13,6 +13,7 @@
 #include <QVariantMap>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 
 using namespace ej::ui;
 using namespace std::chrono_literals;
@@ -91,6 +92,20 @@ TEST_CASE("last_bar.line: with no entry it says so", "[ui][last_bar]")
     }
     CHECK(named);
     expect_clean(check_names(rig));
+}
+
+TEST_CASE("last_bar.line: on one row the caption sits on the line's baseline", "[ui][last_bar]")
+{
+    for (const int count : {0, 7})
+    {
+        UiRig rig;
+        load_bar(rig, count > 0 ? QStringLiteral("10:20  T| Mute Delay") : QString(), count);
+        QQuickItem* caption = require_item(rig, QStringLiteral("lastBarCaption"));
+        QQuickItem* line = require_item(rig, QStringLiteral("lastBarLine"));
+        const double caption_baseline = rig.geometry(caption).top() + caption->baselineOffset();
+        const double line_baseline = rig.geometry(line).top() + line->baselineOffset();
+        CHECK(std::abs(caption_baseline - line_baseline) < 0.5);
+    }
 }
 
 TEST_CASE("last_bar.line: a long line is cut on the row, and the name keeps it whole", "[ui][last_bar]")
