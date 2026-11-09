@@ -88,14 +88,14 @@ std::string header_text_of(const Log& log)
     for (const HeaderField field : {HeaderField::UNIT_NUMBER, HeaderField::LOCATION, HeaderField::SOFTWARE_VERSION})
     {
         text += header_field_text(log.initial_header(), field).value_or(std::string());
-        text.push_back('');
+        text.push_back('\x1F');
     }
     for (const Entry& entry : log.entries())
     {
         if (const auto* change = std::get_if<HeaderChangeEntry>(&entry.m_Body))
         {
             text += change->m_NewValue;
-            text.push_back('');
+            text.push_back('\x1F');
         }
     }
     return text;
