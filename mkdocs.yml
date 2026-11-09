@@ -17,9 +17,11 @@ nav:
       - Stage 0: plan/stage-0.md
       - Stage 0 spikes: plan/spikes.md
       - Stage 4: plan/stage-4.md
+      - About page: plan/about-page.md
   - Design: design/README.md
   - Building: building.md
   - Architecture: architecture.md
+  - Licences and the About page: licensing.md
   - Testing: testing.md
   - Continuous integration: ci.md
   - Releasing: releasing.md

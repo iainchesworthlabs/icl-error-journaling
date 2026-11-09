@@ -48,12 +48,18 @@ Item {
     required property var share
     // AppRoot, for its `writeFailed(operation, message)`.
     required property var appRoot
-    // The version and platform text, at the foot of Settings (with the timing line behind five taps on it).
+    // The version and platform text, at the foot of Settings.
     property string aboutText
+    // The AboutModel, for the About pages behind the last row of Settings (PRF-12), which also show the timing line behind five
+    // taps on the Version row. Null leaves the row out.
+    property var about: null
     // The QmlBridge: the haptics, the share sheet and the accessibility settings.
     required property var bridge
     // The file chooser that import and export go through. The platform's own unless the test of the shell gives it another.
     property var fileChooser: platformChooser
+    // What opens an address in the browser (the source code row of the About page): `open(url)`. The system's unless the test of
+    // the shell gives it another, so that a test opens no browser.
+    property var urlOpener: platformUrlOpener
 
     // The tabs, in the order of the tab bar.
     readonly property int logIndex: 0
@@ -290,10 +296,12 @@ Item {
                     objectName: "settingsScreen"
                     settings: root.settings
                     aboutText: root.aboutText
+                    about: root.about
                     timingText: root.bridge.timingSummary
                     onErrorTypesRequested: pushPage(errorTypesPage, {})
                     onTemplatesRequested: pushPage(templatesPage, {})
                     onLocationsRequested: pushPage(locationsPage, {})
+                    onOpenUrlRequested: url => root.urlOpener.open(url)
                     onImportRequested: root.fileChooser.chooseToOpen()
                     onExportRequested: root.fileChooser.chooseToSave(SetupFile.defaultFileName)
                 }
@@ -377,6 +385,14 @@ Item {
             anchors.fill: parent
             settings: root.settings
             onImportRequested: root.fileChooser.chooseToOpen()
+        }
+
+        QtObject {
+            id: platformUrlOpener
+
+            function open(url: string): void {
+                Qt.openUrlExternally(url);
+            }
         }
 
         FileChooser {

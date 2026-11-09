@@ -67,6 +67,11 @@ else()
         NOTICE_EXCLUDE catch2)
 endif()
 
+# The About page's build-time facts (docs/prd.md PRF-12): the commit and date, and the licences of what the program links,
+# generated from the real link line. After the iOS block, which defines the build number.
+include(EjAbout)
+ej_add_about_data(ej_app)
+
 if(ERROR_JOURNALING_BUILD_TESTS)
     # The tests of the view-model layer (unit, integration, perf), in tests/viewmodel.
     add_subdirectory(tests/viewmodel)

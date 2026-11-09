@@ -24,7 +24,7 @@ The `.dc.html` files were authored for a design-canvas runtime (`support.js`, no
 | 5 | `Review.dc.html` | Today's log | Header block and timeline in export wording, black and white only. Swipe a row for Copy and Delete. Copy-all in the navigation bar, "Share log" button. |
 | 6 | `EditEntry.dc.html` | Edit entry | Sheet with Cancel and Save: error type, time, note, a preview of the shared line, and "Delete entry". The facilitator chose a separate sheet over editing in place. |
 | 7 | `NewDay.dc.html` | New day prompt | Names the new date; warns when the open log is unshared (never shared, or changed since its last share: "has changed since it was last shared"). "Start a new log", "Share [day]'s log first", "Keep [day]'s log open". |
-| 8 | `BoardSettings.dc.html` | Settings | Miniature board: hold and drag to move, tap to swap a type. Rows for error types, note templates, locations, facilitator, time format, and import or export of the setup. |
+| 8 | `BoardSettings.dc.html` | Settings | Miniature board: hold and drag to move, tap to swap a type. Rows for error types, note templates, locations, facilitator, time format, and import or export of the setup, and under them, in a group of its own, About CS Bingo Board (PRF-12; only this mock-up draws the row, below the others it is under the tab bar). |
 
 ### Screens added by package 4.2 (drafts)
 
@@ -75,6 +75,8 @@ button "Change error type" (it was "Replace type").
 | 37 | `BoardTypePicker` | Choose an error type for a tile | PRF-05 | Opened at once by an empty tile ("Add error type"), or by Change error type ("Change error type"). "New error type…" at the top, then every type with its position. |
 | 38 | `ErrorTypeNewOnBoard` | New error type, for a position | PRF-04, PRF-05 | The name, then the colour the type will get, and "It goes on the board at position 5." Save makes the type and places it in one change. The Error types list's own new-type sheet shows the same colour and line, with the first empty position. |
 | 39 | `ErrorTypesAdded` | Error types, after an add | PRF-04 | An information banner: "Added to the board at position 5" (the first empty tile), or "Added to Other" when the board is full. |
+| 40 | `About` | About | PRF-12 | The build (name, version, build number, commit, branch or tag, date of the commit, platform, Qt, storage), the licence and the row that opens its text, the source code address, and the open-source components, each with its licence. The last row of Settings (`BoardSettings`) opens it. |
+| 41 | `AboutLicence` | A licence page | PRF-12 | One component (or the app): version, licence, how it is linked, copyright and source, then the full text of each licence, as paragraphs. |
 
 ## Dark mode
 
