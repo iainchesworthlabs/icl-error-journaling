@@ -1564,13 +1564,12 @@ TEST_CASE("longpress.draft_attaches: a hold with a draft attaches it to the same
     type_draft(screen, sim, ROBOT_NOTE);
 
     // Down, 500 ms: the hold records the entry and the draft is attached to it, and the finger is still on the tile.
-    const std::size_t queued = sim.gateway.pending(); // the save of the draft, if it is waiting
     const int finger = screen.rig.press(screen.tile(MUTE_DELAY_ROW));
     screen.rig.advance(400ms);
-    CHECK(sim.gateway.pending() == queued); // a press alone has recorded nothing and has not touched the draft
+    CHECK(sim.events.count(EventKind::HAPTIC) == 0); // a press alone has recorded nothing and has not touched the draft
     CHECK(sim.session.draft() == ROBOT_NOTE);
     screen.rig.advance(200ms);
-    CHECK(sim.gateway.pending() == queued + 1);
+    CHECK(sim.events.count(EventKind::HAPTIC, "impact") == 1); // the hold asked for the entry
     CHECK(sim.entries().empty());
     CHECK(sim.session.draft() == ROBOT_NOTE); // and the draft stays until the attach has committed
     sim.gateway.run_all();
