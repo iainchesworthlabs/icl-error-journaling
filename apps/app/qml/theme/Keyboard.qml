@@ -29,8 +29,10 @@ QtObject {
     // Print every change of the rectangle, for the device build (checklist V1).
     property bool logChanges: false
 
-    readonly property bool visible: overrideKeyboard ? overrideVisible : Qt.inputMethod.visible
-    readonly property rect rectangle: overrideKeyboard ? overrideRectangle : Qt.inputMethod.keyboardRectangle
+    // Qt's input method, untyped because the QML type system sees it only as a QObject.
+    readonly property var inputMethod: Qt.inputMethod
+    readonly property bool visible: overrideKeyboard ? overrideVisible : inputMethod.visible
+    readonly property rect rectangle: overrideKeyboard ? overrideRectangle : inputMethod.keyboardRectangle
     // How many times `hide()` ran: what a test can see of the keyboard going away.
     property int hideCount: 0
 
@@ -71,7 +73,7 @@ QtObject {
             overrideVisible = false;
             overrideRectangle = Qt.rect(0, 0, 0, 0);
         } else {
-            Qt.inputMethod.hide();
+            inputMethod.hide();
         }
     }
 
