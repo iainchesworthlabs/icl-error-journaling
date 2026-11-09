@@ -12,6 +12,8 @@
        inside the application.
      - Disk space (statfs, through QStorageInfo): E174.1, the setup store checks there is room before it writes the setup
        file (apps/app/src/viewmodel/file_config_store.cpp).
+     - User defaults (NSUserDefaults or CFPreferences, read by Qt's iOS integration): CA92.1, information that only the
+       application itself reads and writes.
 
      packaging/ios/verify_app.sh reads the executable's imported symbols and fails when it calls an API of a category that
      is not declared here; tools/ci/check_ios_plist.py checks the keys and the reason codes. -->
@@ -48,6 +50,14 @@
             <key>NSPrivacyAccessedAPITypeReasons</key>
             <array>
                 <string>E174.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
             </array>
         </dict>
     </array>
