@@ -19,7 +19,7 @@ The label shown on the store is **Data Not Collected**.
 | `NSPrivacyTracking` | false |
 | `NSPrivacyTrackingDomains` | empty |
 | `NSPrivacyCollectedDataTypes` | empty |
-| `NSPrivacyAccessedAPITypes` | One entry per category that the symbol scan of the signed build finds. Expected: file timestamp (C617.1), system boot time (35F9.1), and user defaults (CA92.1) if `QSettings` is linked. 11.2 confirms each one |
+| `NSPrivacyAccessedAPITypes` | One entry per category that the symbol scan of the build finds: file timestamp (C617.1, 3B52.1), system boot time (35F9.1), disk space (E174.1, the setup store checks for room before it writes) and user defaults (CA92.1, used by Qt's iOS integration). `verify_app.sh` fails when a category it finds is not declared (PR #140) |
 
 ## Export compliance
 
