@@ -310,7 +310,7 @@ struct App
         const int row = row_with_label(locations, QStringLiteral("North Site"), "name");
         REQUIRE(row >= 0);
         REQUIRE(session.correctHeader(QStringLiteral("location"), role_of(locations, row, "locationId").toString()));
-        REQUIRE(session.correctHeader(QStringLiteral("software_version"), QStringLiteral("1.4.2")));
+        REQUIRE(session.correctVersion(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d")));
         ui.settle();
     }
 

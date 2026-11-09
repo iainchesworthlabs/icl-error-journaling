@@ -6,6 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <string_view>
 
 using ej::NoteTemplate;
 using ej::PatternError;
@@ -163,6 +164,87 @@ TEST_CASE("SoftwareVersion orders numerically per component", "[software-version
     CHECK(v("2.0.0") > v("1.99.99"));
     CHECK(v("1.4.2") == v("1.4.2"));
     CHECK(v("1.4.2") <= v("1.4.2"));
+}
+
+TEST_CASE("A commit is 7 to 12 hexadecimal characters, lower-cased, and a full hash is shortened to 7",
+          "[software-version][commit]")
+{
+    const auto commit = [](std::string_view text) { return SoftwareVersion::parse("1.4.2", text); };
+
+    // The ends of the range, and what is between.
+    CHECK(commit("a1b2c3d")->commit() == "a1b2c3d");
+    CHECK(commit("a1b2c3d4e5f6")->commit() == "a1b2c3d4e5f6");
+    CHECK(commit("0123456789")->commit() == "0123456789");
+    // Upper case is lower-cased, mixed case too.
+    CHECK(commit("A1B2C3D")->commit() == "a1b2c3d");
+    CHECK(commit("A1b2C3d4E5F6")->commit() == "a1b2c3d4e5f6");
+    // A full 40-character hash keeps its first 7 characters, whatever the case.
+    CHECK(commit("a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6a7b8c9d0")->commit() == "a1b2c3d");
+    CHECK(commit("A1B2C3D4E5F6A7B8C9D0A1B2C3D4E5F6A7B8C9D0")->commit() == "a1b2c3d");
+    // Empty is no commit.
+    CHECK(commit("")->commit().empty());
+    CHECK(SoftwareVersion::parse("1.4.2")->commit().empty());
+
+    using Error = SoftwareVersion::Error;
+    CHECK(commit("a1b2c3").error() == Error::COMMIT_LENGTH);                                    // 6
+    CHECK(commit("a1b2c3d4e5f6a").error() == Error::COMMIT_LENGTH);                             // 13
+    CHECK(commit("a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6a7b8c9").error() == Error::COMMIT_LENGTH);    // 38
+    CHECK(commit("a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6a7b8c9d0a").error() == Error::COMMIT_LENGTH); // 41
+    CHECK(commit("g1b2c3d").error() == Error::COMMIT_NOT_HEX);
+    CHECK(commit("a1b2c3 ").error() == Error::COMMIT_NOT_HEX);
+    CHECK(commit("a1b2-c3d").error() == Error::COMMIT_NOT_HEX);
+    CHECK(commit("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz").error() == Error::COMMIT_NOT_HEX); // 40, not hex
+    // The version is judged before the commit.
+    CHECK(SoftwareVersion::parse("1.4", "a1b2c3d").error() == Error::WRONG_COMPONENT_COUNT);
+    CHECK(SoftwareVersion::parse("1.4.2", "xyz").error() == Error::COMMIT_NOT_HEX);
+}
+
+TEST_CASE("A version prints with its commit in brackets, and stores it after a plus sign", "[software-version][commit]")
+{
+    const auto plain = SoftwareVersion::parse("1.4.2").value();
+    CHECK(plain.format() == "1.4.2");
+    CHECK(plain.stored() == "1.4.2");
+    CHECK(plain.display() == "1.4.2");
+
+    const auto with_commit = SoftwareVersion::parse("1.4.2", "A1B2C3D").value();
+    CHECK(with_commit.format() == "1.4.2");
+    CHECK(with_commit.stored() == "1.4.2+a1b2c3d");
+    CHECK(with_commit.display() == "1.4.2 (a1b2c3d)");
+    CHECK(with_commit != plain);
+    CHECK(SoftwareVersion::parse("1.4.2", "a1b2c3d").value() == with_commit);
+
+    // The typed version never holds a plus sign: the commit has its own field.
+    CHECK(SoftwareVersion::parse("1.4.2+a1b2c3d").error() == SoftwareVersion::Error::NOT_DIGITS);
+}
+
+TEST_CASE("The stored text of a version reads back, and text from before commits has no plus sign",
+          "[software-version][commit]")
+{
+    for (const char* text : {"1.4.2", "0.0.1", "1.4.2+a1b2c3d", "1.4.2+a1b2c3d4e5f6", "10.20.30+0123456"})
+    {
+        INFO(text);
+        const auto parsed = SoftwareVersion::parse_stored(text);
+        REQUIRE(parsed.has_value());
+        CHECK(parsed->stored() == text);
+    }
+    // Old data: three components, no commit.
+    CHECK(SoftwareVersion::parse_stored("1.4.2").value() == SoftwareVersion::parse("1.4.2").value());
+    CHECK(SoftwareVersion::parse_stored("1.4.2+a1b2c3d").value() == SoftwareVersion::parse("1.4.2", "a1b2c3d").value());
+    // The text is normalised like a typed commit: a full hash is shortened and upper case is lower-cased.
+    CHECK(SoftwareVersion::parse_stored("1.4.2+A1B2C3D").value().stored() == "1.4.2+a1b2c3d");
+    CHECK(SoftwareVersion::parse_stored("1.4.2+a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6a7b8c9d0").value().stored() ==
+          "1.4.2+a1b2c3d");
+
+    using Error = SoftwareVersion::Error;
+    CHECK(SoftwareVersion::parse_stored("").error() == Error::EMPTY);
+    CHECK(SoftwareVersion::parse_stored("+a1b2c3d").error() == Error::EMPTY);
+    CHECK(SoftwareVersion::parse_stored("1.4+a1b2c3d").error() == Error::WRONG_COMPONENT_COUNT);
+    CHECK(SoftwareVersion::parse_stored("01.4.2+a1b2c3d").error() == Error::LEADING_ZERO);
+    CHECK(SoftwareVersion::parse_stored("1.4.2+").error() == Error::COMMIT_LENGTH);
+    CHECK(SoftwareVersion::parse_stored("1.4.2+abc").error() == Error::COMMIT_LENGTH);
+    CHECK(SoftwareVersion::parse_stored("1.4.2+xyzxyzx").error() == Error::COMMIT_NOT_HEX);
+    // Only the first plus sign ends the version; a second one is not hexadecimal.
+    CHECK(SoftwareVersion::parse_stored("1.4.2+a1b2c3d+e4f5a6b").error() == Error::COMMIT_NOT_HEX);
 }
 
 namespace

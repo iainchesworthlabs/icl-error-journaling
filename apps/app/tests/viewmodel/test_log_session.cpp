@@ -215,7 +215,8 @@ TEST_CASE("A first start with a configuration creates today's log with three emp
     CHECK(rig.session->unit_text().isEmpty());
     CHECK(rig.session->location_text().isEmpty());
     CHECK(rig.session->version_text().isEmpty());
-    CHECK(rig.session->missing_fields() == QStringList{"unit_number", "location", "software_version"});
+    CHECK(rig.session->missing_fields() ==
+          QStringList{"unit_number", "location", "software_version", "software_commit"});
     CHECK(rig.session->live_entry_count() == 0);
     CHECK(rig.session->draft().isEmpty());
     CHECK(rig.storage.memory().open_log().value().has_value());
@@ -258,7 +259,8 @@ TEST_CASE("An open log is opened as it was, with its draft", "[viewmodel][sessio
     CHECK(rig.session->unit_text() == QStringLiteral("UNIT-27"));
     CHECK(rig.session->location_text() == QStringLiteral("North Site"));
     CHECK(rig.session->version_text() == QStringLiteral("1.4.2"));
-    CHECK(rig.session->missing_fields().isEmpty());
+    // The version is there and has no commit: that is the one thing still to fill (HDR-09).
+    CHECK(rig.session->missing_fields() == QStringList{"software_commit"});
     CHECK(rig.session->live_entry_count() == 2);
     CHECK(rig.entries().size() == 2);
 }
@@ -508,10 +510,10 @@ TEST_CASE("The count follows commits and undo, and a share changes nothing the h
 
 // ------------------------------------------------------------------------------------------------------ header
 
-TEST_CASE("An empty header lists its three missing fields and taps still work", "[viewmodel][session]")
+TEST_CASE("An empty header lists its missing fields and taps still work", "[viewmodel][session]")
 {
     SessionRig rig;
-    REQUIRE(rig.session->missing_fields().size() == 3);
+    REQUIRE(rig.session->missing_fields().size() == 4);
     CHECK(rig.session->recordError(WRONG_RESPONSE));
     CHECK(rig.session->addNote(QStringLiteral("anything")));
     rig.gateway.run_all();
@@ -564,13 +566,13 @@ TEST_CASE("Correct rewrites the value in force and adds no entry; a first fill i
     CHECK(rig.events.count(EventKind::HAPTIC) == 0);
 
     SessionRig empty;
-    REQUIRE(empty.session->missing_fields().size() == 3);
+    REQUIRE(empty.session->missing_fields().size() == 4);
     REQUIRE(empty.session->correctHeader(QStringLiteral("unit_number"), QStringLiteral("42")));
     REQUIRE(empty.session->correctHeader(QStringLiteral("location"), SOUTH_SITE));
     empty.gateway.run_all();
     CHECK(empty.session->unit_text() == QStringLiteral("UNIT-42"));
     CHECK(empty.session->location_text() == QStringLiteral("South Site"));
-    CHECK(empty.session->missing_fields() == QStringList{"software_version"});
+    CHECK(empty.session->missing_fields() == QStringList{"software_version", "software_commit"});
     CHECK(empty.entries().empty());
 }
 
@@ -1019,7 +1021,7 @@ TEST_CASE("A new log archives the open one with all its entries and starts one w
     // The new log: the facilitator and today's date, nothing else, and no entries.
     CHECK(rig.session->facilitator() == QStringLiteral("Sam Example"));
     CHECK(rig.session->date_text() == QStringLiteral("Sun 8 Nov"));
-    CHECK(rig.session->missing_fields().size() == 3);
+    CHECK(rig.session->missing_fields().size() == 4);
     CHECK(rig.session->live_entry_count() == 0);
     CHECK(rig.document().log().entries().empty());
 
@@ -1291,7 +1293,7 @@ TEST_CASE("A unit with an environment shows it in the text and apart from the di
     CHECK(rig.session->unit_digits() == QStringLiteral("27"));
     CHECK(rig.session->unit_environment() == QStringLiteral("prod"));
     CHECK(rig.session->property("unitText").toString() == QStringLiteral("UNIT-27-prod"));
-    CHECK(rig.session->missing_fields() == QStringList{});
+    CHECK(rig.session->missing_fields() == QStringList{"software_commit"});
 
     // Without a configuration the unit is shown as it is stored, as it was.
     SessionRig unconfigured(Options().existing().unconfigured().header(header_with_environment("27", "prod")));
@@ -1654,4 +1656,205 @@ TEST_CASE("A tap refused because too many writes wait also says which type", "[v
     CHECK(failed.at(0).at(1).toString() == QStringLiteral("Sequence Out of Order"));
     CHECK(failed.at(0).at(2).toString() == QStringLiteral("Sequence Out of Order wasn’t saved"));
     rig.gateway.run_all();
+}
+
+// ----------------------------------------------------------------------------------------------- the commit (HDR-09)
+
+TEST_CASE("The commit is checked on its own: empty, 7 to 12 hexadecimal characters, or a full hash",
+          "[viewmodel][session][commit]")
+{
+    SessionRig rig(Options().existing());
+    const auto valid = [&rig](const char* text) { return rig.session->validateCommit(QString::fromUtf8(text)); };
+
+    CHECK(valid("").isEmpty());
+    CHECK(valid("   ").isEmpty());
+    CHECK(valid("a1b2c3d").isEmpty());
+    CHECK(valid(" a1b2c3d ").isEmpty());
+    CHECK(valid("a1b2c3d4e5f6").isEmpty());
+    CHECK(valid("A1B2C3D").isEmpty());
+    CHECK(valid("a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6a7b8c9d0").isEmpty());
+    // Too short, too long (13, and 41), and not hexadecimal each have a plain message of their own.
+    CHECK_FALSE(valid("a1b2c3").isEmpty());
+    CHECK_FALSE(valid("a1b2c3d4e5f6a").isEmpty());
+    CHECK_FALSE(valid("a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6a7b8c9d0a").isEmpty());
+    CHECK_FALSE(valid("g1b2c3d").isEmpty());
+    CHECK(valid("a1b2c3").contains(QStringLiteral("7 to 12")));
+    CHECK(valid("g1b2c3d").contains(QStringLiteral("a to f")));
+    CHECK(valid("a1b2c3") != valid("g1b2c3d"));
+}
+
+TEST_CASE("A commit is normalised as it is kept, and one that is refused is left as typed",
+          "[viewmodel][session][commit]")
+{
+    SessionRig rig(Options().existing());
+    const auto kept = [&rig](const char* text) { return rig.session->normalizeCommit(QString::fromUtf8(text)); };
+
+    CHECK(kept("A1B2C3D") == QStringLiteral("a1b2c3d"));
+    CHECK(kept("  A1b2C3d4E5F6 ") == QStringLiteral("a1b2c3d4e5f6"));
+    CHECK(kept("A1B2C3D4E5F6A7B8C9D0A1B2C3D4E5F6A7B8C9D0") == QStringLiteral("a1b2c3d"));
+    CHECK(kept("").isEmpty());
+    CHECK(kept("   ").isEmpty());
+    // A refused commit is not changed into anything else; the field keeps what was typed.
+    CHECK(kept(" XYZ ") == QStringLiteral("XYZ"));
+    CHECK(kept("a1b2c3") == QStringLiteral("a1b2c3"));
+}
+
+TEST_CASE("The version and the commit are checked as a pair, and the version field never holds a commit",
+          "[viewmodel][session][commit]")
+{
+    SessionRig rig(Options().existing());
+    const auto check = [&rig](const char* version, const char* commit)
+    { return rig.session->validateVersion(QString::fromUtf8(version), QString::fromUtf8(commit)); };
+
+    CHECK(check("1.4.2", "").isEmpty());
+    CHECK(check("1.4.2", "a1b2c3d").isEmpty());
+    CHECK(check(" 1.4.2 ", " A1B2C3D ").isEmpty());
+    // The version is judged first, and its message is the version's own.
+    CHECK_FALSE(check("1.4", "a1b2c3d").isEmpty());
+    CHECK(check("1.4", "a1b2c3d") == check("1.4", ""));
+    CHECK(check("1.4.2", "xyz") == rig.session->validateCommit(QStringLiteral("xyz")));
+    // A plus sign typed in the version field is refused, so a commit cannot get in that way.
+    CHECK_FALSE(check("1.4.2+a1b2c3d", "").isEmpty());
+    CHECK_FALSE(check("1.4.2+", "").isEmpty());
+    CHECK_FALSE(check("", "a1b2c3d").isEmpty());
+
+    CHECK(rig.session->versionDisplay(QStringLiteral("1.4.2"), QStringLiteral("A1B2C3D")) ==
+          QStringLiteral("1.4.2 (a1b2c3d)"));
+    CHECK(rig.session->versionDisplay(QStringLiteral("1.4.2"),
+                                      QStringLiteral("A1B2C3D4E5F6A7B8C9D0A1B2C3D4E5F6A7B8C9D0")) ==
+          QStringLiteral("1.4.2 (a1b2c3d)"));
+    CHECK(rig.session->versionDisplay(QStringLiteral("1.4.2"), QString()) == QStringLiteral("1.4.2"));
+    CHECK(rig.session->versionDisplay(QStringLiteral("1.4.2"), QStringLiteral("xyz")).isEmpty());
+    CHECK(rig.session->versionDisplay(QStringLiteral("1.4"), QString()).isEmpty());
+}
+
+TEST_CASE("A log without a commit lists it as missing, and fills in when one is saved; nothing is stopped by it",
+          "[viewmodel][session][commit]")
+{
+    SessionRig rig(Options().existing());
+    // The sample header has a version and no commit: the one thing still to fill, and the rest of the header is whole.
+    CHECK(rig.session->commit_text().isEmpty());
+    CHECK(rig.session->version_display_text() == QStringLiteral("1.4.2"));
+    CHECK(rig.session->missing_fields() == QStringList{"software_commit"});
+    // It never blocks: taps and notes are taken, and a change of the version is taken without one.
+    CHECK(rig.session->recordError(WRONG_RESPONSE));
+    CHECK(rig.session->addNote(QStringLiteral("anything")));
+    CHECK(rig.session->changeVersion(QStringLiteral("1.4.3"), QString(), LOCAL_0855));
+    rig.gateway.run_all();
+    CHECK(rig.entries().size() == 3);
+    CHECK(rig.session->missing_fields() == QStringList{"software_commit"});
+
+    QSignalSpy header(rig.session.get(), &LogSession::headerChanged);
+    REQUIRE(rig.session->correctVersion(QStringLiteral("1.4.3"),
+                                        QStringLiteral("A1B2C3D4E5F6A7B8C9D0A1B2C3D4E5F6A7B8C9D0")));
+    rig.gateway.run_all();
+    CHECK(header.count() == 1);
+    CHECK(rig.session->version_text() == QStringLiteral("1.4.3"));
+    CHECK(rig.session->commit_text() == QStringLiteral("a1b2c3d"));
+    CHECK(rig.session->version_display_text() == QStringLiteral("1.4.3 (a1b2c3d)"));
+    CHECK(rig.session->missing_fields().isEmpty());
+
+    // An empty header lists the version and the commit, in that order, after the unit and the location.
+    SessionRig empty;
+    CHECK(empty.session->missing_fields() ==
+          QStringList{"unit_number", "location", "software_version", "software_commit"});
+    CHECK(empty.session->version_display_text().isEmpty());
+    CHECK(empty.session->commit_text().isEmpty());
+}
+
+TEST_CASE("A Correct of the version takes its commit in the same write and adds no entry",
+          "[viewmodel][session][commit]")
+{
+    SessionRig rig(Options().existing());
+    REQUIRE(rig.session->correctVersion(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d")));
+    rig.gateway.run_all();
+    CHECK(rig.calls(RepositoryOp::CORRECT_HEADER) == 1);
+    CHECK(rig.entries().empty());
+    CHECK(header_field_text(rig.document().log().initial_header(), HeaderField::SOFTWARE_VERSION) == "1.4.2+a1b2c3d");
+
+    // Taking the commit away is a Correct too.
+    REQUIRE(rig.session->correctVersion(QStringLiteral("1.4.2"), QString()));
+    rig.gateway.run_all();
+    CHECK(header_field_text(rig.document().log().initial_header(), HeaderField::SOFTWARE_VERSION) == "1.4.2");
+    CHECK(rig.session->missing_fields() == QStringList{"software_commit"});
+
+    // A pair that is refused writes nothing.
+    const auto posted = rig.gateway.posted();
+    CHECK_FALSE(rig.session->correctVersion(QStringLiteral("1.4.2"), QStringLiteral("xyz")));
+    CHECK_FALSE(rig.session->correctVersion(QStringLiteral("1.4"), QStringLiteral("a1b2c3d")));
+    CHECK_FALSE(rig.session->correctVersion(QStringLiteral("1.4.2+a1b2c3d"), QString()));
+    CHECK_FALSE(rig.session->correctVersion(QString(), QStringLiteral("a1b2c3d")));
+    CHECK(rig.gateway.posted() == posted);
+}
+
+TEST_CASE("A Change of the version carries its commit into the entry, the line and the value in force",
+          "[viewmodel][session][commit]")
+{
+    SessionRig rig(Options().existing());
+    REQUIRE(rig.session->correctVersion(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d")));
+    rig.gateway.run_all();
+    rig.world.m_Clock.advance(10min); // 09:05
+    const int when = LOCAL_0855 + 10 * 60;
+
+    // The line the log will get is made by the renderer: the commit of each side, in brackets.
+    CHECK(rig.session->previewVersionChange(QStringLiteral("1.5.0"), QStringLiteral("E4F5A6B"), when) ==
+          QStringLiteral("09:05 Software Version changed: 1.4.2 (a1b2c3d) \u2192 1.5.0 (e4f5a6b)"));
+    CHECK(rig.session->previewVersionChange(QStringLiteral("1.5.0"), QString(), when) ==
+          QStringLiteral("09:05 Software Version changed: 1.4.2 (a1b2c3d) \u2192 1.5.0"));
+    // A refused pair shows the plain refusal and not a line; a pair equal to the one in force says so.
+    CHECK(rig.session->previewVersionChange(QStringLiteral("1.5.0"), QStringLiteral("xyz"), when) ==
+          rig.session->validateCommit(QStringLiteral("xyz")));
+    CHECK(rig.session->previewVersionChange(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d"), when) ==
+          QStringLiteral("That is already the current value."));
+    // The same number with another commit is a real change.
+    CHECK(rig.session->previewVersionChange(QStringLiteral("1.4.2"), QStringLiteral("0123456"), when) ==
+          QStringLiteral("09:05 Software Version changed: 1.4.2 (a1b2c3d) \u2192 1.4.2 (0123456)"));
+
+    REQUIRE(rig.session->changeVersion(QStringLiteral("1.5.0"), QStringLiteral("E4F5A6B"), when));
+    rig.gateway.run_all();
+    const auto entries = rig.entries();
+    REQUIRE(entries.size() == 1);
+    const auto* change = std::get_if<HeaderChangeEntry>(&entries.front().m_Body);
+    REQUIRE(change != nullptr);
+    CHECK(change->m_Field == HeaderField::SOFTWARE_VERSION);
+    CHECK(change->m_NewValue == "1.5.0+e4f5a6b");
+    CHECK(rig.session->version_text() == QStringLiteral("1.5.0"));
+    CHECK(rig.session->commit_text() == QStringLiteral("e4f5a6b"));
+    CHECK(rig.session->version_display_text() == QStringLiteral("1.5.0 (e4f5a6b)"));
+    // The start of the log did not move.
+    CHECK(header_field_text(rig.document().log().initial_header(), HeaderField::SOFTWARE_VERSION) == "1.4.2+a1b2c3d");
+
+    // The pair now in force is refused, and so are the pairs that are not valid.
+    const auto posted = rig.gateway.posted();
+    CHECK_FALSE(rig.session->changeVersion(QStringLiteral("1.5.0"), QStringLiteral("e4f5a6b"), when));
+    CHECK_FALSE(rig.session->changeVersion(QStringLiteral("1.5.1"), QStringLiteral("xyz"), when));
+    CHECK_FALSE(rig.session->changeVersion(QStringLiteral("1.5.1+e4f5a6b"), QString(), when));
+    CHECK(rig.gateway.posted() == posted);
+}
+
+TEST_CASE("A new log starts with no version and so no commit, as only the facilitator carries over",
+          "[viewmodel][session][commit]")
+{
+    SessionRig rig(Options().existing());
+    REQUIRE(rig.session->correctVersion(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d")));
+    rig.gateway.run_all();
+    REQUIRE(rig.session->commit_text() == QStringLiteral("a1b2c3d"));
+
+    REQUIRE(rig.session->startNewLog());
+    rig.gateway.run_all();
+    CHECK(rig.session->version_text().isEmpty());
+    CHECK(rig.session->commit_text().isEmpty());
+    CHECK(rig.session->version_display_text().isEmpty());
+    CHECK(rig.session->facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session->missing_fields() ==
+          QStringList{"unit_number", "location", "software_version", "software_commit"});
+}
+
+TEST_CASE("A log written before commits existed opens with its version and no commit", "[viewmodel][session][commit]")
+{
+    // The sample header is the one an older build wrote: three components, nothing after them.
+    SessionRig rig(Options().existing());
+    CHECK(rig.session->version_text() == QStringLiteral("1.4.2"));
+    CHECK(rig.session->commit_text().isEmpty());
+    CHECK(rig.session->version_display_text() == QStringLiteral("1.4.2"));
 }

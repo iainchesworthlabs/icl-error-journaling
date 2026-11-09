@@ -231,8 +231,8 @@ void Day::step_1_start()
     CHECK(rig.session().date_text() == QStringLiteral("Sat 7 Nov"));
     QStringList missing = rig.session().missing_fields();
     missing.sort();
-    CHECK(missing ==
-          QStringList{QStringLiteral("location"), QStringLiteral("software_version"), QStringLiteral("unit_number")});
+    CHECK(missing == QStringList{QStringLiteral("location"), QStringLiteral("software_commit"),
+                                 QStringLiteral("software_version"), QStringLiteral("unit_number")});
     CHECK(rig.timeline().entry_count() == 0);
     CHECK(rig.timeline().rowCount() == 0);
     CHECK(rig.board().rowCount() == vm::BOARD_ROWS);
@@ -309,7 +309,8 @@ void Day::step_3_header()
     CHECK(rig.session().correctHeader(QStringLiteral("software_version"), QStringLiteral("1.4.2")));
     rig.settle();
 
-    CHECK(rig.session().missing_fields().isEmpty());
+    // The commit is optional and is the one thing still to fill.
+    CHECK(rig.session().missing_fields() == QStringList{QStringLiteral("software_commit")});
     CHECK(rig.session().unit_text() == QStringLiteral("UNIT-27"));
     CHECK(rig.session().location_text() == QStringLiteral("North Site"));
     CHECK(rig.session().version_text() == QStringLiteral("1.4.2"));
@@ -758,7 +759,7 @@ void Day::step_17_start_the_new_log()
         CHECK(count == 0);
     }
     CHECK(rig.session().facilitator() == QStringLiteral("Sam Example"));
-    CHECK(rig.session().missing_fields().size() == 3);
+    CHECK(rig.session().missing_fields().size() == 4);
 
     // Its export is the header and nothing else.
     CHECK(rig.timeline().copyAll());

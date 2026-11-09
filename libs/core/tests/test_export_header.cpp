@@ -101,3 +101,26 @@ TEST_CASE("The environment golden prints the header and the lines of the changes
     REQUIRE(text.has_value());
     test::check_golden("unit-environment", *text);
 }
+
+TEST_CASE("The header block prints the commit after the version, in brackets", "[export][header][commit]")
+{
+    auto values = sample_header();
+    values.m_SoftwareVersion = SoftwareVersion::parse("1.4.2", "a1b2c3d").value();
+    const auto header = render_header(Log(values), demo_context());
+    REQUIRE(header.has_value());
+    CHECK(*header ==
+          "Facilitator: Sam Example\nDate: 7 Nov 2026\nDEMO #:\nLocation:\nSoftware Version: 1.4.2 (a1b2c3d)");
+
+    // With no commit the text is exactly what it was.
+    values.m_SoftwareVersion = SoftwareVersion::parse("1.4.2").value();
+    CHECK(render_header(Log(values), demo_context()).value() ==
+          "Facilitator: Sam Example\nDate: 7 Nov 2026\nDEMO #:\nLocation:\nSoftware Version: 1.4.2");
+}
+
+TEST_CASE("The commit golden prints the header and the lines of the changes", "[export][golden][commit]")
+{
+    const auto scenario = test::make_scenario("version-commit");
+    const auto text = render_export(scenario.m_Log, scenario.m_Context);
+    REQUIRE(text.has_value());
+    test::check_golden("version-commit", *text);
+}

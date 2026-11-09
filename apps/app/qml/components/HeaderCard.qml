@@ -42,12 +42,13 @@ Item {
     }
 
     readonly property int missingCount: missingFields ? missingFields.length : 0
-    // The empty fields by name, "UNIT number, Location, Version".
+    // The empty fields by name, "UNIT number, Location, Version, Commit".
     readonly property string missingText: {
         const names = {
             "unit_number": qsTr("UNIT number"),
             "location": qsTr("Location"),
-            "software_version": qsTr("Version")
+            "software_version": qsTr("Version"),
+            "software_commit": qsTr("Commit")
         };
         const shown = [];
         for (let i = 0; i < missingCount; ++i)
