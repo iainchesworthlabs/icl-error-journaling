@@ -10,6 +10,10 @@ import ErrorJournalingApp
 Rectangle {
     id: root
 
+    // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
+    // form column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    readonly property real side: WindowLayout.sideMargin(width, Theme.layout.formColumn)
+
     required property string title
     // The top safe-area inset, from the SafeFrame of SettingsScreen.
     required property real topInset
@@ -93,8 +97,8 @@ Rectangle {
                 Column {
                     id: body
 
-                    x: Theme.space.screenMargin
-                    width: parent.width - 2 * Theme.space.screenMargin
+                    x: root.side
+                    width: parent.width - 2 * root.side
                     topPadding: root.bodyGap
                     spacing: root.bodySpacing
                 }

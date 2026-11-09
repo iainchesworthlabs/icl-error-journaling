@@ -45,9 +45,13 @@
 #include <QString>
 #include <QVariant>
 #include <QVariantMap>
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <memory>
+#include <utility>
+#include <vector>
 
 using namespace ej;
 using namespace ej::test;
@@ -978,6 +982,161 @@ TEST_CASE("app.accessibility: the tree of each tab is named and in order in ligh
         }
         app.choose_tab(LOG_TAB);
     }
+}
+
+// ---- the iPad (Stage 8): the screens in the columns of a larger window ----
+
+namespace
+{
+
+/// The safe-area insets of an iPad: the status bar and the home indicator.
+constexpr double IPAD_TOP = 24.0;
+constexpr double IPAD_BOTTOM = 20.0;
+/// The column limits of docs/plan/stage-8.md ("Layout rules"), as Theme.layout has them.
+constexpr double LOG_COLUMN = 680.0;
+constexpr double READING_COLUMN = 720.0;
+constexpr double REGULAR_MARGIN = 24.0;
+
+/// Every iPad in portrait (the iPad mini, the 11-inch and the 13-inch): the Regular class. Landscape is the Wide class,
+/// whose Log screen is the board and the log side by side (package 8.5); until then the iPad stays in portrait.
+const QSize IPAD_SIZES[] = {QSize(744, 1133), QSize(820, 1180), QSize(1032, 1376)};
+
+/// The width of a centred column no wider than `limit` in a window `window` wide, with the iPad's margins.
+double column(double window, double limit)
+{
+    return std::min(limit, window - 2 * REGULAR_MARGIN);
+}
+
+/// The item is `width` wide and centred in the window, to the point.
+void check_centred(UiRig& ui, QQuickItem* item, double window, double width)
+{
+    REQUIRE(item != nullptr);
+    const QRectF r = ui.geometry(item);
+    INFO(item->objectName().toStdString() << " at " << r.x() << ", " << r.width() << " wide");
+    CHECK(std::abs(r.width() - width) <= 1.0);
+    CHECK(std::abs(r.center().x() - window / 2) <= 1.0);
+}
+
+} // namespace
+
+TEST_CASE("ipad.screens_fit: on every iPad in portrait the tabs are in their columns, inside the safe area, named, in "
+          "order and "
+          "large enough",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+    app.ui.settle();
+    app.services.advance(6s);
+    app.ui.advance(300ms);
+    const auto minimum = [](const Node& node)
+    { return node.m_ObjectName.startsWith(QStringLiteral("tile")) ? 88.0 : 44.0; };
+
+    for (const QSize size : IPAD_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        const double w = size.width();
+        REQUIRE(app.ui.window_layout()->property("regular").toBool());
+
+        app.choose_tab(LOG_TAB);
+        app.ui.layout();
+        const double log = column(w, LOG_COLUMN);
+        for (const char* name : {"logHeaderCard", "logComposer", "logLastBar", "logBoard"})
+        {
+            check_centred(app.ui, app.need(QString::fromLatin1(name)), w, log);
+        }
+        // The twelve tiles are all above the tab bar.
+        const double tab_bar_top = app.ui.geometry(app.need(QStringLiteral("shellTabBar"))).top();
+        for (int i = 0; i < 12; ++i)
+        {
+            CAPTURE(i);
+            CHECK(app.ui.geometry(app.need(QStringLiteral("tile%1").arg(i))).bottom() <= tab_bar_top);
+        }
+        // The four tabs share the log column.
+        const QRectF first = app.ui.geometry(app.need(QStringLiteral("tabLog")));
+        const QRectF last = app.ui.geometry(app.need(QStringLiteral("tabSettings")));
+        CHECK(std::abs(last.right() - first.left() - log) <= 1.0);
+        CHECK(std::abs((first.left() + last.right()) / 2 - w / 2) <= 1.0);
+
+        app.choose_tab(REVIEW_TAB);
+        app.ui.layout();
+        check_centred(app.ui, app.need(QStringLiteral("reviewList")), w, column(w, READING_COLUMN));
+        check_centred(app.ui, app.need(QStringLiteral("reviewShare")), w, column(w, READING_COLUMN));
+
+        app.choose_tab(HISTORY_TAB);
+        app.ui.layout();
+        check_centred(app.ui, app.need(QStringLiteral("historyList")), w, column(w, READING_COLUMN));
+
+        for (const int tab : {LOG_TAB, REVIEW_TAB, HISTORY_TAB, SETTINGS_TAB})
+        {
+            CAPTURE(tab);
+            app.choose_tab(tab);
+            app.ui.layout();
+            expect_clean(check_names(app.ui));
+            expect_clean(check_targets(app.ui, minimum));
+            expect_clean(check_safe_area(app.ui, IPAD_TOP, IPAD_BOTTOM));
+            expect_clean(check_text_scale(app.ui));
+            // As in app.accessibility, the rows of the Settings list scrolled under the tab bar read out of order.
+            if (tab != SETTINGS_TAB)
+            {
+                expect_clean(check_reading_order(app.ui));
+            }
+        }
+    }
+}
+
+TEST_CASE("ipad.compact_is_phone: a narrow Split View window has the phone's layout", "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    // The phone, for reference: what each item's left edge and width are on the design frame.
+    app.ui.layout();
+    std::vector<std::pair<double, double>> phone;
+    const QStringList names{QStringLiteral("logHeaderCard"), QStringLiteral("logComposer"),
+                            QStringLiteral("logLastBar"),    QStringLiteral("logBoard"),
+                            QStringLiteral("tabLog"),        QStringLiteral("tabSettings")};
+    for (const QString& name : names)
+    {
+        const QRectF r = app.ui.geometry(app.need(name));
+        phone.emplace_back(r.left(), r.width());
+    }
+
+    app.ui.set_window_size(QSize(507, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    REQUIRE(app.ui.window_layout()->property("compact").toBool());
+    // The same 16 pt margins; the items are 507 - 402 = 105 pt wider, and the tabs a quarter of that each.
+    for (std::size_t i = 0; i < 4; ++i)
+    {
+        CAPTURE(names.at(static_cast<qsizetype>(i)).toStdString());
+        const QRectF r = app.ui.geometry(app.need(names.at(static_cast<qsizetype>(i))));
+        CHECK(r.left() == phone[i].first);
+        CHECK(r.width() == phone[i].second + 105);
+    }
+    CHECK(app.ui.geometry(app.need(QStringLiteral("tabLog"))).left() == 0);
+    CHECK(app.ui.geometry(app.need(QStringLiteral("tabSettings"))).right() == 507);
+}
+
+TEST_CASE("ipad.first_launch: in a larger window the first-launch screen is a narrow column in the middle",
+          "[ui][app][ipad]")
+{
+    App app(false);
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    QQuickItem* title = app.need(QStringLiteral("appTitle"));
+    QQuickItem* import = app.need(QStringLiteral("manualCard"));
+    const QRectF t = app.ui.geometry(title);
+    const QRectF b = app.ui.geometry(import);
+    CHECK(std::abs(b.width() - 480) <= 1.0);
+    CHECK(std::abs(b.center().x() - 410) <= 1.0);
+    // The group is in the middle: the gap above the title is about the gap below the last choice.
+    CHECK(t.top() > 200);
+    CHECK(b.bottom() < 1180 - 200);
+    expect_clean(check_names(app.ui));
+    expect_clean(check_safe_area(app.ui, IPAD_TOP, IPAD_BOTTOM));
 }
 
 #include "app_flow_test.moc"

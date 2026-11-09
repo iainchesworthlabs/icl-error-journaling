@@ -67,6 +67,10 @@ import ErrorJournalingApp
 Item {
     id: root
 
+    // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
+    // log column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    readonly property real side: WindowLayout.sideMargin(width, Theme.layout.logColumn)
+
     required property var session
     required property var board
     required property var undo
@@ -273,8 +277,8 @@ Item {
             id: header
 
             objectName: "logHeaderCard"
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
+            x: root.side
+            width: parent.width - 2 * root.side
             unitText: root.session.unitText
             locationText: root.session.locationText
             versionText: root.session.versionText
@@ -294,8 +298,8 @@ Item {
             id: banners
 
             objectName: "logBanners"
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
+            x: root.side
+            width: parent.width - 2 * root.side
             z: 1
             spacing: Theme.space.tileGap
 
@@ -337,8 +341,8 @@ Item {
             id: composer
 
             objectName: "logComposer"
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
+            x: root.side
+            width: parent.width - 2 * root.side
             anchors.top: header.bottom
             anchors.topMargin: Theme.space.sectionGap
             draft: root.session.draft
@@ -354,8 +358,8 @@ Item {
             id: lastBar
 
             objectName: "logLastBar"
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
+            x: root.side
+            width: parent.width - 2 * root.side
             anchors.top: composer.bottom
             anchors.topMargin: Theme.space.sectionGap
             lastLine: root.timeline.lastLine
@@ -472,8 +476,8 @@ Item {
             id: grid
 
             objectName: "logBoard"
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
+            x: root.side
+            width: parent.width - 2 * root.side
             anchors.top: lastBar.bottom
             anchors.topMargin: Theme.space.sectionGap
             model: root.board
@@ -498,8 +502,8 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.leftMargin: Theme.space.screenMargin
-        anchors.rightMargin: Theme.space.screenMargin
+        anchors.leftMargin: root.side
+        anchors.rightMargin: root.side
         anchors.bottomMargin: root.bottomClearance + Theme.space.sectionGap
         active: root.undo.active
         text: root.undo.text
