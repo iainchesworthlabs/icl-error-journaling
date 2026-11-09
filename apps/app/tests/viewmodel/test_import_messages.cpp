@@ -110,7 +110,7 @@ TEST_CASE("The three problems of the import designs are the three plain sentence
     REQUIRE(messages.size() == 3);
     CHECK(messages.at(0) == "Error type 3 has no name.");
     CHECK(messages.at(1) == "Locations 1 and 2 are both called North Site.");
-    CHECK(messages.at(2) == "Note template 1: the pattern has no {value}.");
+    CHECK(messages.at(2) == "Note template 1: the line in the log has no {value} where the answer goes.");
 }
 
 TEST_CASE("No sentence shows a path of the file or a quoted value", "[viewmodel][import][unit]")
@@ -143,11 +143,11 @@ TEST_CASE("A name that is empty, missing or too long is said in a sentence about
         set_item(root, "error_types", 0, "name", UNDEFINED);
         CHECK(messages_of(root) == QStringList{"Error type 1 has no name."});
     }
-    SECTION("a missing prompt and a missing id")
+    SECTION("a missing question and a missing id")
     {
         set_item(root, "note_templates", 0, "value_prompt", UNDEFINED);
         set_item(root, "error_types", 0, "id", UNDEFINED);
-        CHECK(messages_of(root) == QStringList{"Error type 1 has no id.", "Note template 1 has no prompt."});
+        CHECK(messages_of(root) == QStringList{"Error type 1 has no id.", "Note template 1 has no question to ask."});
     }
     SECTION("a name that is too long")
     {
@@ -197,20 +197,22 @@ TEST_CASE("A pattern is refused in a sentence for each of its three faults", "[v
     SECTION("no placeholder")
     {
         set_item(root, "note_templates", 1, "output_pattern", "Visitor");
-        CHECK(messages_of(root) == QStringList{"Note template 2: the pattern has no {value}."});
+        CHECK(messages_of(root) ==
+              QStringList{"Note template 2: the line in the log has no {value} where the answer goes."});
     }
     SECTION("a stray brace")
     {
         set_item(root, "note_templates", 0, "output_pattern", "Played {value");
-        CHECK(messages_of(root) ==
-              QStringList{"Note template 1: the pattern has a stray brace. Write {{ or }} for a literal brace."});
+        CHECK(
+            messages_of(root) ==
+            QStringList{"Note template 1: the line in the log has a stray curly bracket. Write {{ or }} to show one."});
     }
     SECTION("a placeholder the app does not know")
     {
         set_item(root, "note_templates", 0, "output_pattern", "Played {name}");
         CHECK(messages_of(root) ==
-              QStringList{"Note template 1: the pattern uses a placeholder the app does not know. Only {value} is "
-                          "allowed."});
+              QStringList{"Note template 1: the line in the log has a word in curly brackets the app does not "
+                          "know. Only {value} is allowed."});
     }
 }
 

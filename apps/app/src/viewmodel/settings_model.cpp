@@ -34,6 +34,8 @@ namespace
 constexpr int MAX_NAME = 200;
 constexpr int MAX_PREFIX = 20;
 constexpr int MAX_PATTERN = 500;
+/// How the "Line in the log" field shows the answer slot, which the file still stores as {value}.
+const QString ANSWER_TOKEN = QStringLiteral("[answer]");
 constexpr int MAX_SORT_ORDER = 1'000'000;
 
 const QString OP_FACILITATOR = QStringLiteral("facilitator");
@@ -155,18 +157,21 @@ int next_sort_order(const std::vector<Item>& items)
 
 QString pattern_message(PatternError error)
 {
+    // The words are the editor's ("Line in the log", "Insert answer", the [answer] token); the stored pattern's {value}
+    // is named only where the person has typed a bracket of their own.
     switch (error)
     {
     case PatternError::MISSING_PLACEHOLDER:
-        return SettingsModel::tr("The pattern needs {value} where the answer goes, for example "
-                                 "\xE2\x80\x9CPlayed {value}\xE2\x80\x9D.");
+        return SettingsModel::tr("The line needs the answer in it. Tap Insert answer to put it where it goes, for "
+                                 "example \xE2\x80\x9CPlayed [answer]\xE2\x80\x9D.");
     case PatternError::UNBALANCED_BRACE:
-        return SettingsModel::tr("The pattern has a stray brace. Write {{ or }} for a literal brace, and close every "
-                                 "{value}.");
+        return SettingsModel::tr("The line has a curly bracket on its own. Remove it, or type two in a row to show one "
+                                 "in the log. Tap Insert answer for the answer.");
     case PatternError::UNKNOWN_PLACEHOLDER:
-        return SettingsModel::tr("Only {value} can go between braces. Other words, such as {name}, are not known.");
+        return SettingsModel::tr("Words between curly brackets, such as {name}, are not known. Remove them, and tap "
+                                 "Insert answer for the answer.");
     }
-    return SettingsModel::tr("The pattern cannot be used.");
+    return SettingsModel::tr("The line cannot be used.");
 }
 
 std::expected<std::string, QString> checked_pattern(const QString& raw)
@@ -177,7 +182,7 @@ std::expected<std::string, QString> checked_pattern(const QString& raw)
     }
     if (raw.size() > MAX_PATTERN)
     {
-        return std::unexpected(SettingsModel::tr("Use %1 characters or fewer.").arg(MAX_PATTERN));
+        return std::unexpected(SettingsModel::tr("The line can have up to %1 characters.").arg(MAX_PATTERN));
     }
     std::string pattern = raw.toStdString();
     if (const auto valid = validate_pattern(pattern); !valid)
@@ -940,7 +945,7 @@ QString SettingsModel::previewTemplateLine(const QString& pattern, const QString
     const auto checked = checked_pattern(pattern);
     if (!checked)
     {
-        return tr("Fix the pattern to see a preview.");
+        return tr("Fix the line to see an example.");
     }
 
     // The instant: now, or today's date at the seconds the caller names, in the zone the device is in.
@@ -983,6 +988,59 @@ QString SettingsModel::previewTemplateLine(const QString& pattern, const QString
     { return id == scratch_template.m_Id ? &scratch_template : nullptr; };
     const auto line = render_entry_line(scratch, entry.m_Id, context);
     return line ? QString::fromStdString(*line) : QString();
+}
+
+QString SettingsModel::patternToField(const QString& pattern) const
+{
+    const QString slot = QStringLiteral("{value}");
+    QString shown;
+    shown.reserve(pattern.size());
+    qsizetype at = 0;
+    while (at < pattern.size())
+    {
+        // "{{" and "}}" are literal braces: copy both, so "{{value}}" stays the text {value} and not a slot.
+        if (pattern.mid(at, 2) == QStringLiteral("{{") || pattern.mid(at, 2) == QStringLiteral("}}"))
+        {
+            shown += pattern.mid(at, 2);
+            at += 2;
+        }
+        else if (pattern.mid(at, slot.size()) == slot)
+        {
+            shown += ANSWER_TOKEN;
+            at += slot.size();
+        }
+        else
+        {
+            shown += pattern.at(at);
+            ++at;
+        }
+    }
+    return shown;
+}
+
+QString SettingsModel::patternFromField(const QString& field) const
+{
+    QString pattern = field;
+    pattern.replace(ANSWER_TOKEN, QStringLiteral("{value}"));
+    return pattern;
+}
+
+QString SettingsModel::defaultTemplateQuestion(const QString& name) const
+{
+    const QString trimmed = name.trimmed();
+    return trimmed.isEmpty() ? QString() : trimmed + QLatin1Char('?');
+}
+
+QString SettingsModel::defaultTemplateLine(const QString& name) const
+{
+    QString trimmed = name.trimmed();
+    if (trimmed.isEmpty())
+    {
+        return {};
+    }
+    // A brace in the name is doubled, so that it is a literal brace and not the start of a slot.
+    trimmed.replace(QLatin1Char('{'), QStringLiteral("{{")).replace(QLatin1Char('}'), QStringLiteral("}}"));
+    return trimmed + QStringLiteral(": ") + ANSWER_TOKEN;
 }
 
 QString SettingsModel::addTemplate(const QString& name, const QString& prompt, const QString& pattern)

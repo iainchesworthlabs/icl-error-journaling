@@ -174,9 +174,22 @@ public:
     /// screen's lines: "10:30 (Free Text) Played Morning Medley". The time is `localSeconds` (seconds since local
     /// midnight, 0 to 86399) on today's date in the device zone, in the user's time format; a negative value means
     /// now. A blank `value` is shown as "Morning Medley", the designs' sample. For a pattern that is not valid it
-    /// returns "Fix the pattern to see a preview." (check `validatePattern` to style it differently), and for a
+    /// returns "Fix the line to see an example." (check `validatePattern` to style it differently), and for a
     /// `localSeconds` above 86399 an empty string. Nothing is written.
     Q_INVOKABLE QString previewTemplateLine(const QString& pattern, const QString& value, int localSeconds = -1) const;
+
+    /// What the "Line in the log" field shows for a stored pattern: each {value} is written "[answer]", so nobody has
+    /// to type curly brackets. A doubled brace ("{{", "}}", a literal brace in the log) is left as it is. The stored
+    /// pattern, and the file format, still say {value}.
+    Q_INVOKABLE QString patternToField(const QString& pattern) const;
+    /// The stored pattern for what the field shows: each "[answer]" is {value} again. Text the person typed as
+    /// {value} stays as it is.
+    Q_INVOKABLE QString patternFromField(const QString& field) const;
+    /// The question a new template starts with, made from its name: "Played song" gives "Played song?". Empty for a
+    /// blank name.
+    Q_INVOKABLE QString defaultTemplateQuestion(const QString& name) const;
+    /// The line a new template starts with, as the field shows it: "Played song: [answer]". Empty for a blank name.
+    Q_INVOKABLE QString defaultTemplateLine(const QString& name) const;
 
     /// The name of a tile colour slot: "Periwinkle" for 8. Empty for 0 and for a slot above 11. The `colourSlot` of the
     /// error type rows, the board tiles and `TimelineModel::entryForEdit` is the argument.
