@@ -157,6 +157,16 @@ class LinkLineTests(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertTrue(any("file API" in message for message in document["unresolved"]))
 
+    def test_a_linux_link_line_with_rpaths_and_versioned_libraries(self) -> None:
+        qt = "/opt/qt/6.12.0/gcc_64"
+        make_reply(self.m_Binary, ["-Wl,-rpath,/opt/qt/6.12.0/gcc_64/lib", "-Wl,--as-needed", f"{qt}/lib/libQt6Core.so.6.12.0",
+                                   f"{qt}/lib/libQt6Quick.so.6.12.0", f"{qt}/lib/libQt6Qml.so.6.12.0",
+                                   f"{qt}/lib/libQt6Gui.so.6.12.0", f"{qt}/lib/libQt6Sql.so.6.12.0", "/usr/lib/x86_64-linux-gnu/libm.so",
+                                   "-lpthread"])
+        _, document = run(self.m_Binary, self.m_Out, platform="linux", qt=qt)
+        self.assertEqual(document["unresolved"], [])
+        self.assertTrue(all(c["linking"] == "dynamic" for c in document["components"]), document["components"][0])
+
     def test_an_empty_link_line_is_a_failure(self) -> None:
         make_reply(self.m_Binary, [])
         status, _ = run(self.m_Binary, self.m_Out, "--strict")
