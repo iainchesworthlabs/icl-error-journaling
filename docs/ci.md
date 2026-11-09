@@ -184,6 +184,14 @@ exist only under `src/platform/ios`; and the library's CMake must compile that d
 private to the iOS directory (`top_view_controller`) is listed in the script and needs no stub. Its unit tests are in
 `tools/tests/test_platform_layout.py`.
 
+## Store graphics
+
+`tools/store/make_play_graphics.py` makes the Google Play icon (512 x 512, from the iOS `AppIcon-1024.png`) and the
+feature graphic (1024 x 500, the tile palette of `docs/design/tokens.json` and the icon, no text) into
+`store/play/en-GB/images/`, which is not committed (Stage 11, 11.5). The output depends only on files in the repository and
+the Pillow version in `requirements/store.txt`, so each release can make it again. The job that runs `tools/tests` installs
+that file, so `tools/tests/test_play_graphics.py` checks the sizes, the colours and that two runs give the same bytes.
+
 ## iOS property list check
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_ios_plist.py` on `apps/app/packaging/ios/Info.plist.in` (with the CMake
