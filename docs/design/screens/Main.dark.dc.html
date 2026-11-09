@@ -60,7 +60,7 @@ input::placeholder{color:#93A3B0}
 
     <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
       <sc-for list="{{tiles}}" as="tile" hint-placeholder-count="11">
-        <button class="tile" onClick="{{tile.tap}}" onMouseDown="{{tile.down}}" onMouseUp="{{tile.up}}" onMouseLeave="{{tile.up}}" aria-label="{{tile.aria}}" style="position: relative; height: 104px; border-radius: 16px; border: 0; background: {{tile.bg}}; padding: 12px; display: flex; align-items: flex-end; text-align: left; font-family: inherit; font-size: 13.5px; font-weight: 600; line-height: 1.2; color: #EEF2F6; box-shadow: 0 1px 2px rgba(20,33,43,0.08)">
+        <button class="tile" onMouseDown="{{tile.down}}" onMouseUp="{{tile.up}}" onMouseLeave="{{tile.cancel}}" aria-label="{{tile.aria}}" style="position: relative; height: 104px; border-radius: 16px; border: 0; background: {{tile.bg}}; padding: 12px; display: flex; align-items: flex-end; text-align: left; font-family: inherit; font-size: 13.5px; font-weight: 600; line-height: 1.2; color: #EEF2F6; box-shadow: 0 1px 2px rgba(20,33,43,0.08)">
           <span>{{tile.name}}</span>
           <sc-if value="{{tile.hasCount}}" hint-placeholder-val="{{ false }}">
             <span style="position: absolute; top: 8px; right: 8px; min-width: 24px; height: 24px; padding: 0 7px; box-sizing: border-box; border-radius: 12px; background: #F2F4F7; color: #14212B; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{tile.count}}</span>
@@ -80,6 +80,10 @@ input::placeholder{color:#93A3B0}
       <span style="flex-grow: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{toastText}}</span>
       <button onClick="{{undo}}" style="height: 40px; padding: 0 14px; border-radius: 10px; border: 0; background: #3C4D5C; color: #9FD3E8; font-family: inherit; font-size: 15px; font-weight: 600">Undo</button>
     </div>
+  </sc-if>
+
+  <sc-if value="{{showHint}}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position: absolute; left: 16px; right: 16px; bottom: {{hintBottom}}px; height: 42px; border-radius: 14px; background: #33444F; color: #FFFFFF; display: flex; align-items: center; justify-content: center; padding: 0 14px; font-size: 14px; box-shadow: 0 8px 24px rgba(20,33,43,0.25); pointer-events: none">Double-tap to log</div>
   </sc-if>
 
   <nav style="position: absolute; left: 0; right: 0; bottom: 0; height: 83px; box-sizing: border-box; padding-top: 8px; background: #18212A; border-top: 1px solid #27333E; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr))">
@@ -125,6 +129,7 @@ class Component extends DCLogic {
       lastLine: '10:20  T| Mute Delay',
       draft: '',
       showToast: true,
+      showHint: false,
       toastText: 'Mute Delay logged at 10:20',
       undoInfo: null,
       repeat: 1,
@@ -132,10 +137,17 @@ class Component extends DCLogic {
     };
     this.timer = null;
     this.holdTimer = null;
+    this.hintTimer = null;
+    this.hideHint = null;
+    this.gesture = null;
+    this.touch = { logged: false, held: false };
+    this.lastHint = 0;
   }
   componentWillUnmount() {
     if (this.timer) clearTimeout(this.timer);
     if (this.holdTimer) clearTimeout(this.holdTimer);
+    if (this.hintTimer) clearTimeout(this.hintTimer);
+    if (this.hideHint) clearTimeout(this.hideHint);
   }
   now() {
     const d = new Date();
@@ -146,40 +158,78 @@ class Component extends DCLogic {
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => this.setState({ showToast: false, undoInfo: null, repeat: 1 }), 5000);
   }
-  tap(type) {
+  // A tile is logged by a double-tap (two touches within 300 ms of the lift of the first) or by a hold of 500 ms (BRD-07). One tap logs
+  // nothing: after 300 ms it shows the hint "Double-tap to log" (2 s, at most once every 5 s). The haptic and the press are on the touch
+  // of the second tap, so the entry is logged on the second mouse-down. A third tap is part of the same gesture; the fourth starts a new one.
+  // A hold logs at 500 ms: with a note typed it goes on the line and the box clears, one Undo gives it back; with the box empty the
+  // Edit entry sheet opens on the new entry with the cursor in the note (EditEntry.dc.html).
+  down(type) {
+    if (this.holdTimer) clearTimeout(this.holdTimer);
+    if (this.hintTimer) clearTimeout(this.hintTimer);
+    const now = Date.now();
+    const g = this.gesture;
+    if (g && g.id === type.id && now - g.up <= 300 && g.n < 3) g.n += 1;
+    else this.gesture = { id: type.id, n: 1, up: 0 };
+    this.touch = { logged: false, held: false };
+    if (this.gesture.n === 2) {
+      this.touch.logged = true;
+      this.log(type, '');
+    }
+    this.holdTimer = setTimeout(() => { this.holdTimer = null; this.hold(type); }, 500);
+  }
+  up(type) {
+    if (this.holdTimer) clearTimeout(this.holdTimer);
+    this.holdTimer = null;
+    const g = this.gesture;
+    if (!g || this.touch.held) { this.gesture = null; return; }
+    g.up = Date.now();
+    if (g.n === 1) this.hintTimer = setTimeout(() => this.showHint(), 300);
+  }
+  cancel() {
+    if (this.holdTimer) clearTimeout(this.holdTimer);
+    this.holdTimer = null;
+    this.gesture = null;
+  }
+  showHint() {
+    const now = Date.now();
+    if (this.lastHint && now - this.lastHint < 5000) return;
+    this.lastHint = now;
+    if (this.hideHint) clearTimeout(this.hideHint);
+    this.setState({ showHint: true });
+    this.hideHint = setTimeout(() => this.setState({ showHint: false }), 2000);
+  }
+  log(type, note) {
     const time = this.now();
     const s = this.state;
     const counts = Object.assign({}, s.counts);
     counts[type.id] = (counts[type.id] || 0) + 1;
-    const repeat = (s.showToast && s.lastTypeId === type.id) ? s.repeat + 1 : 1;
-    const toastText = repeat > 1 ? type.name + ' logged ×' + repeat + ' at ' + time : type.name + ' logged at ' + time;
+    const repeat = (s.showToast && s.lastTypeId === type.id && !note) ? s.repeat + 1 : 1;
+    const withNote = note ? ' with note' : '';
+    const toastText = repeat > 1 ? type.name + ' logged ×' + repeat + ' at ' + time : type.name + ' logged at ' + time + withNote;
     this.setState({
       counts: counts,
       entryCount: s.entryCount + 1,
-      lastLine: time + '  T| ' + type.name,
+      lastLine: time + '  T| ' + type.name + (note ? ' – ' + note : ''),
+      draft: note ? '' : s.draft,
       showToast: true,
       toastText: toastText,
       repeat: repeat,
       lastTypeId: type.id,
-      undoInfo: { kind: 'error', typeId: type.id, prevLine: s.lastLine, prevRepeat: s.repeat }
+      undoInfo: { kind: 'error', typeId: type.id, prevLine: s.lastLine, prevRepeat: s.repeat, text: note || undefined }
     });
     this.armToast();
   }
-  // Hold a tile for 500 ms (BRD-07). The tap has logged the entry on the press; the hold adds a note to that one entry.
-  // With a note typed, it is attached to the line and the note box is cleared; one Undo removes the entry and gives the note back.
-  // With the box empty, the Edit entry sheet opens on the new entry with the cursor in the note (EditEntry.dc.html).
-  down(type) {
-    if (this.holdTimer) clearTimeout(this.holdTimer);
-    this.holdTimer = setTimeout(() => { this.holdTimer = null; this.hold(type); }, 500);
-  }
-  up() {
-    if (this.holdTimer) clearTimeout(this.holdTimer);
-    this.holdTimer = null;
-  }
   hold(type) {
+    this.touch.held = true;
     const s = this.state;
     const text = s.draft.trim();
-    if (!text) return; // empty: the Edit entry sheet opens instead
+    if (!this.touch.logged) {
+      this.touch.logged = true;
+      this.log(type, text); // the hold logs: with the note when one is typed, alone when the Edit entry sheet opens instead
+      return;
+    }
+    // A tap and then a hold: the second touch has logged, and the hold adds the note to that entry.
+    if (!text) return;
     const u = s.undoInfo;
     if (!u || u.kind !== 'error' || u.typeId !== type.id) return;
     this.setState({
@@ -233,9 +283,9 @@ class Component extends DCLogic {
         count: count,
         hasCount: count > 0,
         aria: t.name + (count > 0 ? ', ' + count + ' today' : ''),
-        tap: () => this.tap(t),
         down: () => this.down(t),
-        up: () => this.up()
+        up: () => this.up(t),
+        cancel: () => this.cancel()
       };
     });
     return {
@@ -248,6 +298,8 @@ class Component extends DCLogic {
       lastLine: s.lastLine,
       entryCount: s.entryCount,
       showToast: s.showToast,
+      showHint: s.showHint,
+      hintBottom: s.showToast ? 155 : 95,
       toastText: s.toastText,
       undo: () => this.undo()
     };

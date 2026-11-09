@@ -6,7 +6,7 @@
 
 CS Bingo Board is an iPhone app that lets a facilitator log a timestamped robot error in one tap, keep a running journal of the session, and post the day's log to Slack at the end of the day. It replaces ad-hoc notes typed during sessions, where timings are lost and errors go uncounted.
 
-The app is an Iain Chesworth Labs product built in C++23 with Qt/QML. v1 targets the iPhone 17 and is distributed through TestFlight. An iPad layout is a planned growth path and is out of scope for v1.
+The app is an Iain Chesworth Labs product built in C++23 with Qt/QML. v1 targets the iPhone 17 first, and also runs on iPad (portrait and landscape) and Android phones. It is released on the App Store and the Google Play Store (scope widened by the owner on 9 Nov 2026).
 
 **Goals**
 
@@ -42,11 +42,15 @@ v1 is a single-user, offline iPhone app whose only way off the device is the iOS
 
 - Preferences: facilitator name, locations, error type list, board layout, note templates, time format.
 
+- iPad in portrait and landscape, with the board and the log side by side in landscape. Android phones. Public release on the App Store and the Google Play Store. Documentation online and in the app.
+
+- Nice-to-have: Mac and Windows desktop builds.
+
 **Out of scope for v1**
 
-- iPad and landscape layouts (planned growth path).
+- Landscape on a phone.
 
-- Android, desktop or any other platform.
+- The interactions board (v2, [#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)).
 
 - Cloud sync, accounts, backend services or direct Slack integration.
 
@@ -103,12 +107,12 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 | ID     | Requirement                                                                                                                                                                                                                                                                                                                                      | Priority |
 |--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
 | BRD-01 | The main screen shows a grid of 3 columns by 4 rows in portrait. Tiles 1 to 11 are error types chosen and ordered in preferences. Tile 12 is always Other. A position with no type shows a plus; tapping it records nothing and opens the board setup in Settings for that position. A board with no types says so and offers "Add error types". | Must     |
-| BRD-02 | Tapping a tile records an error entry with the current time (UTC plus the device time zone).                                                                                                                                                                                                                                                     | Must     |
-| BRD-03 | Each tap gives immediate feedback: a haptic, a tile press animation and the new entry appearing in the recent-entries strip.                                                                                                                                                                                                                     | Must     |
-| BRD-04 | An undo toast appears for 5 seconds after each tap, naming the error and time. Undo removes the most recent tap completely. Tapping the same tile again while the toast shows updates it to “×2”, “×3” and so on, so an accidental double tap is easy to spot.                                                                                   | Must     |
+| BRD-02 | Double-tapping a tile records an error entry with the current time (UTC plus the device time zone): two taps on the same tile, the second within 300 ms of the lift of the first. One tap records nothing and shows the hint “Double-tap to log”, at most once every few seconds, so an accidental touch makes no entry. Three taps record once; a fourth starts a new double-tap. Other is a navigation and opens on one tap. With VoiceOver, one activation records one entry (the activation gesture is itself a double-tap). | Must     |
+| BRD-03 | Each logged error gives immediate feedback: a haptic, a tile press animation and the new entry appearing in the recent-entries strip. The feedback is timed from the touch of the second tap (or from the end of a hold), and the first tap has none.                                                                                            | Must     |
+| BRD-04 | An undo toast appears for 5 seconds after each logged error, naming the error and time. Undo removes the most recent entry completely. Double-tapping the same tile again while the toast shows updates it to “×2”, “×3” and so on, so a repeated entry is easy to spot.                                                                         | Must     |
 | BRD-05 | Each tile shows a count badge for the current log. The Other tile's badge counts all error types not on the board.                                                                                                                                                                                                                               | Must     |
 | BRD-06 | Other opens a searchable sheet of every error type in the master list. Picking one records it like a tile tap. A new type can be added from this sheet and is saved to the master list.                                                                                                                                                          | Must     |
-| BRD-07 | Holding a tile for half a second adds a note to the entry that the press recorded; it is one entry, never an error and a separate note. If a note is typed in the composer and not yet added, the hold logs the error with that note on the same line and clears the composer; one Undo removes the entry and puts the note back. If the composer is empty, the hold opens the Edit entry sheet on the new entry with the cursor in the note (NOTE-06): Save attaches it and Cancel leaves the entry as it was. A plain tap is unchanged: it logs the error alone and leaves the composer as it is. With VoiceOver, each tile has a second element, “Log <name> with note”, while a note is typed; the Edit sheet of the review screen is the way to a note without it. The composer’s placeholder says “Type a note, then hold a tile…”. | Should   |
+| BRD-07 | Holding a tile for half a second logs the error with a note; it is one entry, never an error and a separate note, and the hold records it (a single tap does not). If a note is typed in the composer and not yet added, the hold logs the error with that note on the same line and clears the composer; one Undo removes the entry and puts the note back. If the composer is empty, the hold logs the error and opens the Edit entry sheet on the new entry with the cursor in the note (NOTE-06): Save attaches it and Cancel leaves the entry as it was. Letting go before half a second is a tap, and counts towards a double-tap; sliding off cancels. With VoiceOver, each tile has a second element, “Log <name> with note”, while a note is typed; the Edit sheet of the review screen is the way to a note without it. The composer’s placeholder says “Type a note, then hold a tile…”. | Should   |
 | BRD-08 | Each error type has its own tile colour from a palette of 12 slightly different hues defined in the design package. The colour follows the type when the board is reordered. Other uses a neutral colour.                                                                                                                                        | Must     |
 
 ### Journal notes
@@ -157,6 +161,7 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 | PRF-09 | On first launch the app offers to import a configuration file or set up manually.                                                                                                                                                                                                                                                                                                                                                                                         | Must     |
 | PRF-10 | Optional totals line in the export, per error type, default off.                                                                                                                                                                                                                                                                                                                                                                                                          | Should   |
 | PRF-11 | Unit environments: the choices of the environment picker (HDR-08), in order. The default is prod and dev. The setup file (PRF-08) can replace the list with its optional `unit_environments` key: a list of one or more names, each of lower-case letters, digits and dashes (at most 20 characters, not starting or ending with a dash), none repeated. A file without the key keeps the default. The export writes the key only when the list differs from the default. | Must     |
+| PRF-12 | About page: the last row of Settings, About CS Bingo Board, opens a page with the name, version, build number (the iOS CFBundleVersion), commit, branch or tag, the date of the commit in UTC, the platform, the Qt version and the storage; the licence of the app (GPL-3.0-or-later) with a row that opens the full text; a row that opens the address of the source code in the browser; and the list of the open-source components that the iPhone binary links, each with its name, version and licence and a page with the full licence text. The facts come from the build, not from a typed list: the list is made from the link line, and the build fails when a linked component has no licence entry. A build without git says unknown for the commit and does not fail, and no changing time is built in. Every row is named for VoiceOver and the licence text is read by paragraph, at any text size. Five quick taps on the Version row show the timing readout (NFR-03, NFR-04). | Should   |
 
 ## Data model
 
@@ -225,9 +230,9 @@ The app must feel native, fast and polished on an iPhone 17, used one-handed in 
 
 | ID     | Area             | Requirement                                                                                                                                                                                                                                                                                             |
 |--------|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| NFR-01 | Device           | Primary target is iPhone 17 in portrait. Layout respects safe areas and the Dynamic Island, and is laid out so it adapts to other current iPhone sizes and later to iPad.                                                                                                                               |
+| NFR-01 | Device           | Primary target is iPhone 17 in portrait; also current iPhones in portrait, iPad in portrait and landscape, and Android phones in portrait. Layout respects safe areas and the Dynamic Island.                                                                                                                               |
 | NFR-02 | Ergonomics       | The board sits in the lower part of the screen within thumb reach. Tiles are at least 88 pt square with labels of up to three lines that never truncate.                                                                                                                                                |
-| NFR-03 | Responsiveness   | Tap-to-feedback under 100 ms. Animations run at the display's full ProMotion refresh rate with no dropped frames during normal use.                                                                                                                                                                     |
+| NFR-03 | Responsiveness   | Tap-to-feedback under 100 ms, counted from the touch of the second tap of a double-tap (or the end of a hold). Animations run at the display's full ProMotion refresh rate with no dropped frames during normal use.                                                                                                                                                                     |
 | NFR-04 | Start-up         | Cold start to a usable board in under 1.5 s. Returning from background shows the board immediately.                                                                                                                                                                                                     |
 | NFR-05 | Visual polish    | A dedicated design pass produces a design package (tokens, screens, motion) before implementation. The UI uses consistent spacing, type and colour tokens, smooth spring-based transitions, and considered empty, error and confirmation states. It must not look like a default Qt Quick Controls app. |
 | NFR-06 | Appearance       | Light and dark mode, following the system setting.                                                                                                                                                                                                                                                      |
@@ -253,7 +258,7 @@ Losing entries from the open log is a P1 defect, because the log feeds a critica
 
 ## Technology and delivery
 
-The app follows the Iain Chesworth Labs C++23 project standard as the new repository iainchesworthlabs/icl-error-journaling, licensed GPL-3.0-or-later, and is shipped to the facilitator through TestFlight.
+The app follows the Iain Chesworth Labs C++23 project standard as the new repository iainchesworthlabs/icl-error-journaling, licensed GPL-3.0-or-later. It was first shipped to the facilitator through TestFlight. On 9 Nov 2026 the owner widened v1: it is released publicly on the App Store and the Google Play Store, runs on iPhone (portrait only), on iPad (portrait and landscape) and on Android phones, and has documentation online and in the app. A Mac and Windows desktop build is a nice-to-have. See the implementation plan, Stages 7 to 12.
 
 **Architecture**
 
@@ -271,7 +276,7 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 - Staged CI per the standard: static checks on draft PRs, then core tests (including TSan) on desktop, then the iOS build.
 
-- A macOS desktop build of the app is kept for development and UI iteration only. It is not a product.
+- A macOS desktop build of the app is kept for development and UI iteration. Shipping Mac and Windows builds as products is a v1 nice-to-have (Stage 12).
 
 - iOS signing and TestFlight upload use the organisation keys, with App Store provisioning set up for this repository.
 
@@ -307,8 +312,6 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 **Future versions**
 
-- iPad layout, with board and review side by side as in the original concept.
-
 - Logging a chosen error from the Action Button, a Lock Screen widget or Shortcuts.
 
 - Per-error-type export phrases, such as "UNIT-27 gave a wrong response".
@@ -320,5 +323,3 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 - Per-location board layouts, if site-specific errors appear.
 
 - A second board for logging interactions, with its own tab and its own interaction types, set up like the error board ([#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)). Raised by the facilitator; deferred on 9 Nov 2026.
-
-- An Android build, if colleagues on Android would use it ([#106](https://github.com/iainchesworthlabs/icl-error-journaling/issues/106)). Deferred on 9 Nov 2026.

@@ -32,6 +32,10 @@ QtObject {
     property bool overrideSafeArea: false
     property real overrideSafeTop: 0
     property real overrideSafeBottom: 0
+    // The sides, for a window in landscape. An iPad has none; a phone in landscape would (the app keeps the phone in
+    // portrait). Used only when overrideSafeArea is true.
+    property real overrideSafeLeft: 0
+    property real overrideSafeRight: 0
 
     readonly property bool dark: colourScheme === Qt.Dark
     readonly property real clampedScale: Math.max(size.textScaleMin, Math.min(size.textScaleMax, textScale))
@@ -224,6 +228,35 @@ QtObject {
     }
 
     readonly property MiniBoard miniBoard: MiniBoard {}
+
+    // The layout rules of the larger windows (docs/plan/stage-8.md, "Layout rules"): where the classes begin, and the sizes
+    // of the Regular and Wide classes. A Compact window (every phone) uses the values above and none of these. The
+    // WindowLayout singleton (theme/WindowLayout.qml) picks the class from the window's size and derives sizes from these.
+    component LayoutRules: QtObject {
+        readonly property real regularMinWidth: 600
+        readonly property real wideMinWidth: 1100
+        readonly property real wideMinHeight: 640
+        readonly property real screenMargin: 24
+        readonly property real tileGap: 12
+        readonly property real logColumn: 680
+        readonly property real formColumn: 640
+        readonly property real readingColumn: 720
+        readonly property real firstLaunchColumn: 480
+        readonly property real paneGap: 20
+        readonly property real boardShare: 0.58
+        readonly property real tileHeightRatio: 0.7
+        readonly property real tileHeightMax: 152
+        readonly property real tileLabel: 17
+        readonly property real badge: 28
+        readonly property real badgeText: 15
+        readonly property real toastMaxWidth: 520
+        readonly property real sheetWidth: 560
+        readonly property real sheetMargin: 64
+        readonly property real minimumWindowWidth: 375
+        readonly property real minimumWindowHeight: 720
+    }
+
+    readonly property LayoutRules layout: LayoutRules {}
 
     // Line widths: the dashed border of the Other tile, and a hairline for dividers and outlines.
     component Border: QtObject {
@@ -672,6 +705,14 @@ QtObject {
         readonly property real tilePressScale: 0.96
         readonly property int tilePressMs: 120
         readonly property int undoToastVisibleMs: 5000
+        // How a tile is touched to log (docs/plan/stage-4.md, 4.17a). Time, not motion, so Reduce Motion does not change them.
+        // The longest gap between the lift of a tap and the touch of the next for the two to be a double-tap, the time a finger
+        // stays on a tile for a hold, how long the "Double-tap to log" hint stays after a single tap, and the least time between
+        // two hints (counted from the start of one).
+        readonly property int doubleTapMs: 300
+        readonly property int holdMs: 500
+        readonly property int tapHintVisibleMs: 2000
+        readonly property int tapHintIntervalMs: 5000
         readonly property int reducedMotionMs: 100
         readonly property int sheetPresentMs: reduceMotion ? reducedMotionMs : 320
         readonly property int toastMs: reduceMotion ? reducedMotionMs : 240

@@ -75,6 +75,7 @@ place, and the right column is what changes if it is wrong.
 | U8 | Dynamic Type is not followed by Qt Quick `Text` by itself, and `UIApplication.preferredContentSizeCategory` is the source | First task of 4.3; checklist T1 | If Qt does follow it, 4.3 shrinks to Reduce Motion alone |
 | U9 | Two fingers on two tiles are two independent presses | Checklist P2 | The board uses one `MultiPointTouchArea`; the tile interface does not change |
 | U10 | The touch's press timestamp is readable in QML and shares a time base with `NSProcessInfo.systemUptime` | Stage 5, A5 | Only the software interval is measured; no change here |
+| U11 | A VoiceOver activation of a tile reaches `Accessible.onPressAction` once, and a double-tap by a finger with VoiceOver off reaches the `TapHandler` as two taps 300 ms or less apart | Checklist A2, P6 | The window (`Theme.motion.doubleTapMs`) is changed; a tile that VoiceOver activates twice is two entries, as it always was |
 
 ## Gaps in Stage 3 found while writing this page
 
@@ -128,11 +129,15 @@ invokables and properties named in `stage-3.md`.
 
 Behaviour rules the screens must follow, taken from the PRD, the design README and the Stage 3 and 5 decisions:
 
-- **A tap records on press.** The tile records the entry on touch-down, together with the impact haptic and the press
-  animation (Stage 5, decision 1: a finger sliding off cannot fire a haptic without an entry). The count, the badge, the
-  "Last" bar and the toast change only after the commit, because the view models change them only then (Stage 3,
-  decision 2). The tile therefore calls `bridge.hapticImpact(...)` first and `session.recordError(typeId)` second, both from
-  the press handler, and nothing else is in the press path (the `perf` test of 4.5 guards that).
+- **A double-tap logs, on the touch of its second tap (4.17a; owner, 2026-11-09).** One tap on a tile with an error type logs
+  nothing, because it was too easy to make by accident. Two taps on the same tile no more than `Theme.motion.doubleTapMs`
+  (300 ms, from the lift of the first to the touch of the second) apart log one entry, and the tile records it on the touch of
+  the second tap, together with the impact haptic and the press animation (Stage 5, decision 1: a finger sliding off cannot
+  fire a haptic without an entry). A hold of 500 ms (`Theme.motion.holdMs`) logs too, at the hold (4.17). The count, the
+  badge, the "Last" bar and the toast change only after the commit, because the view models change them only then (Stage 3,
+  decision 2). The screen therefore calls `bridge.hapticImpact(...)` first and `session.recordErrorEntry(typeId)` second, both
+  from the handler of the touch that asks (`Tile.pressed`), and nothing else is in that path (the `perf` tests of 4.5 and 4.7
+  guard that, counted from the second tap's touch). The Other tile is a navigation and opens on one tap.
 - **No dialog on capture.** A tap opens nothing. A write failure is a banner, not an alert.
 - **Confirmation follows the commit.** The toast and the "×N" label come from `undo.text` and `undo.repeatCount`; the
   tile does not count anything itself.
@@ -201,17 +206,20 @@ Tile {
     required property bool isEmpty
     required property string accessibleName
     property bool skeleton: false
-    signal pressedDown(real timestamp)    // from the press handler, before anything else
+    signal pressedDown(real timestamp)    // the touch that asks for the entry (4.17a): the second tap of a double-tap, or a hold
     signal activated()                    // VoiceOver activation, which has no touch-down
     signal held()                         // the finger stayed on the tile for holdMs (500 ms), after pressedDown (4.17)
+    signal singleTapped()                 // one tap and no second within doubleTapMs: logs nothing, the screen shows the hint (4.17a)
 }
 ```
 
-The press handler is a `TapHandler` (or `PointHandler`) whose `pressed` change emits `pressedDown(point.pressTimestamp)`
-first; the Log screen connects it to the haptic and then to `recordError`. `activated` is the accessibility press action;
-the screen routes it through the same two calls, so VoiceOver activation also fires the impact haptic and records the entry.
-The press animation is a `ScaleAnimator` (render thread) of 0.96 over 120 ms, started by the press and reversed on
-release or cancel, and it runs even if the commit is slow. A tile of an empty position has no handler and no accessible
+(The implementation keeps the names `pressed`, `tapped`, `held` and `singleTapped`; `pressed` is the touch that asks, the
+screen connects it to the haptic and then to `recordErrorEntry`.) A `TapHandler` counts the taps of each tile and emits
+`pressed` first on the touch of the second tap, or at the end of a hold that nothing has asked for yet. `activated` is the
+accessibility press action; the screen routes it through the same two calls, so VoiceOver activation also fires the impact
+haptic and records the entry, once: a VoiceOver activation is the screen reader's own double-tap, so it asks for no second.
+The press animation is a `ScaleAnimator` (render thread) of 0.96 over 120 ms, started by `pressed` (the second tap's touch, or
+the hold; the first tap does not scale the tile) and reversed on release or cancel, and it runs even if the commit is slow. A tile of an empty position has no handler and no accessible
 role. The label allows three lines at the default text size and four at larger sizes, shrinks by `fontSizeMode` only down
 to a floor, and never elides (NFR-02); a test with the longest configured label guards it.
 
@@ -232,7 +240,7 @@ for all of it; the tests are listed under each package and the device checks in 
   alternative that VoiceOver can reach. A review row is a button that opens the Edit sheet, which holds "Delete entry" and
   "Copy line"; the swipe is a shortcut for sighted users. The board-layout screen's drag has a "Move earlier", "Move later"
   and "Replace type" set of buttons on a selected miniature tile (which the screen shows to every user when a tile is
-  selected, so the path is tested by everyone). Long-press (BRD-07) is a Should; its alternatives are the Edit sheet of Review and, while a note is typed, the tile's second element "Log <name> with note".
+  selected, so the path is tested by everyone). Long-press (BRD-07) is a Should; its alternatives are the Edit sheet of Review and, while a note is typed, the tile's second element "Log <name> with note". The double-tap that logs (4.17a) needs no alternative: VoiceOver's activation gesture is itself a double-tap, and one activation logs one entry.
 - State changes are spoken: the count after a tap is part of the announcement of the toast; the header card's name changes
   when a field is filled; the banner is announced when it appears.
 - Modal surfaces (Sheet, Alert) take accessibility focus when shown, trap it while open, and return it to the control that
@@ -350,6 +358,7 @@ pull request (as Stage 3 specified).
 | 4.15 | Shell and navigation | `qml/Main.qml`, `src/main.cpp` wiring if needed, `tests/ui/app_flow_test.cpp` | 4.7 to 4.13; Stage 3: 3.11 |
 | 4.16 | Dark mode pass, accessibility audit and screenshots | `tests/ui/` audit tests, `tools/ej_screenshots`, `docs/design/` dark notes | 4.15 |
 | 4.17 | Long-press to attach a note (BRD-07, Should) | `qml/screens/log/` additions (the only package that edits 4.7's files), tests | 4.7, 4.10 |
+| 4.17a | Double-tap to log (BRD-02, owner request 2026-11-09) | `qml/components/Tile.qml`, `BoardGrid.qml`, `qml/screens/log/` (gesture, hint), `docs/design/tokens.json`, tests | 4.5, 4.7, 4.17 |
 | 4.18 | Exit-gate pass | `tools/coverage-floors.json`, the result recorded at the end of this file, `changelog.d/` | all of the above |
 
 **Waves.**
@@ -432,10 +441,11 @@ it, default and destructive roles named); `banner.tones` (contrast passes for ea
 three columns of (402 − 2 × 16 − 2 × 8) / 3 = 118 pt, tiles 104 pt high, 8 pt gaps, so 440 pt tall, bound to a
 12-row `BoardModel`, never a `modelReset`-sensitive structure (the model never resets, Stage 3).
 
-Tests: `tile.press_scale` (scale 0.96 within 120 ms of the press, back on release and on cancel, with the manual gateway
-held, i.e. before any commit); `tile.press_emits_first` (`pressedDown` fires on the press, not the release, once, and a
-release alone emits nothing); `tile.slide_off` (press, then drag out and release: the entry was requested once at the
-press, no second request); `tile.badge` (visible only when `hasCount`, shows the number, 99 and above reads "99+" with the
+Tests: `tile.press_scale` (scale 0.96 within 120 ms of the touch that asks, back on release and on cancel, with the manual
+gateway held, i.e. before any commit; the first tap does not scale the tile); `tile.double_tap` (`pressedDown` fires on the
+touch of the second tap, not the release, once, and a first tap or a release alone emits nothing; amended by 4.17a, it was
+`tile.press_emits_first`); `tile.slide_off` (a first touch that slides off is no tap; a second that slides off has asked once at
+the touch and does not tap); `tile.badge` (visible only when `hasCount`, shows the number, 99 and above reads "99+" with the
 full count in the accessible name); `tile.label` (the longest configured label wraps to at most the allowed lines and is not
 truncated at scale 1.0 and 1.3); `tile.empty` (no handler, no role, not announced); `tile.other` (dashed border, neutral
 colour, the accessible name); `tile.colour` (each slot against `Theme.tileColour`); `grid.geometry` (118 by 104 pt, 8 pt gaps, the
@@ -484,9 +494,9 @@ from the `noteSaved` path of `session` (after the commit). The Other tile opens 
 opens Today's details, the "Last" bar opens Review.
 
 Tests (`ui`, real view models, manual gateway): `log.loading_placeholder` (state `LOADING`: 12 rectangles, no text, no
-handler; releasing shows labels without moving them); `log.tap_flow` (a press calls the fake haptic first, then
-`recordError`; the count, the toast and the "Last" bar change only after `settle()`; two taps on one tile show "×2"; the
-screen contains no counter of its own); `log.slide_off` (as `tile.slide_off` at screen level); `log.undo` (Undo removes the
+handler; releasing shows labels without moving them); `log.tap_flow` (the second tap's touch calls the fake haptic first, then
+`recordError`, and the first tap nothing; the count, the toast and the "Last" bar change only after `settle()`; two double-taps on
+one tile show "×2"; the screen contains no counter of its own); `log.slide_off` (as `tile.slide_off` at screen level); `log.undo` (Undo removes the
 latest entry, closes the toast, count falls); `log.note` (type, Add: the entry appears after the commit, the field clears,
 the success haptic follows the commit, the toast "Note added", Undo returns the text to the field); `log.template`
 (a chip opens the value prompt with the template's prompt; confirming calls `addTemplatedNote` with the id and value; an
@@ -705,6 +715,7 @@ fails if any of the four differs.
 |---|---|---|---|
 | Tile press scale and time | `tilePressScale`, `tilePressMs` | 0.96, 120 ms | The design (`tilePress`); kept under Reduce Motion |
 | Tile press curve | `easingPress` | `InOutQuad` | The design's "ease" |
+| Double-tap window, hold, hint | `doubleTapMs`, `holdMs`, `tapHintVisibleMs`, `tapHintIntervalMs` | 300 ms, 500 ms, 2000 ms, 5000 ms | The owner's request of 2026-11-09 (4.17a); to confirm on the phone (checklist P6, P7). Times, so Reduce Motion does not change them |
 | Sheet present and dismiss | `sheetPresentMs` | 320 ms | Starting value of 4.1 |
 | Toast in and out | `toastMs` | 240 ms | Starting value of 4.1 |
 | Page push and pop | `pageMs` | 280 ms | Starting value of 4.1 |
@@ -752,9 +763,10 @@ in this page so a new screen cannot be forgotten).
 
 ### 4.17 Long-press to attach a note (BRD-07, Should)
 
-A press on a tile has already recorded the entry (see the rules above). Holding the finger on it for 500 ms (`Tile.holdMs`)
-adds a note to that one entry, in one of two ways. Which one is decided at the moment the hold completes, by whether the
-composer has a typed draft (**the owner chose both, 2026-11-09**, after the facilitator said "you type the note, press and
+Holding the finger on a tile for 500 ms (`Tile.holdMs`, `Theme.motion.holdMs`) logs the error with a note, in one of two ways.
+**Since 4.17a the hold records the entry itself**, at the hold, because the touch no longer records (a single tap logs nothing);
+a hold that follows a first tap has recorded at its touch already, as the second tap of a double-tap, and the hold adds the note
+to that entry. Which way is decided at the moment the hold completes, by whether the composer has a typed draft (**the owner chose both, 2026-11-09**, after the facilitator said "you type the note, press and
 hold the error, and it will log together"):
 
 1. **A draft is typed: log with it.** `session.attachDraft(entryId)` puts the draft, trimmed, on the entry as its attached
@@ -768,16 +780,17 @@ hold the error, and it will log together"):
    by the Log screen at the first hold) opens on the entry whose id arrived in `session.entryRecorded`, with the cursor in the
    note field. Save attaches the note (NOTE-06); Cancel leaves the entry as it was.
 
-A **plain tap is unchanged**: it logs the error alone, leaves the composer as it is, and opens nothing. A press shorter than
-500 ms, a finger that slides off the tile before then, a cancelled touch, Other and an empty position are not holds.
+A **double-tap is unchanged by the hold**: it logs the error alone, leaves the composer as it is, and opens nothing (4.17a). A
+press shorter than 500 ms (a tap, which counts towards a double-tap), a finger that slides off the tile before then, a cancelled
+touch, Other and an empty position are not holds.
 
-The press records the entry and fires the impact haptic, as always; the hold never records a second one. `recordErrorEntry`
-returns the id the entry has been given at the tap (the same id `entryRecorded` later reports), and the screen keeps the latest
-id of each tile. A hold that completes before the commit waits for `entryRecorded` of that id and then does its work (a slow
-commit changes only when). The hold has no haptic of its own: the bridge's impact haptic is the touch acknowledgement and is
-counted in the tap timing (M2), so a second one would spoil it; the success haptic of path 1 is the note's.
+The touch that asks (the hold, or the second tap) records the entry and fires the impact haptic; the hold never records a second
+one. `recordErrorEntry` returns the id the entry has been given (the same id `entryRecorded` later reports), and the screen keeps
+the latest id of each tile. The hold comes straight after the record, so it always waits for `entryRecorded` of that id and then
+does its work (the slow-commit path is the ordinary one). The hold has no haptic of its own: the one impact is the record's, at
+the hold, and a second would spoil the timing figures (Stage 5, M2); the success haptic of path 1 is the note's.
 
-**VoiceOver.** Activating a tile is a tap, as before. While a draft is typed, each tile that can be held has a second
+**VoiceOver.** Activating a tile logs it once (4.17a), as before. While a draft is typed, each tile that can be held has a second
 accessible element, "Log Mute Delay with note", which sends the press and then the hold, so path 1 needs no gesture. With
 no draft there is no such element: the way to a note is the Edit sheet of Review (a row opens it), as the accessibility rules
 above have it. Qt has no custom VoiceOver actions (U4), so the action is an element of its own, which only a device can
@@ -794,20 +807,80 @@ The hold is timed on the animation clock (a `NumberAnimation` of a property noth
 long-press timer, so that the UI rig moves it with `advance`: the rig's `hold(item, duration)` presses, advances virtual time and
 releases. (Qt ticks a lone `PauseAnimation` by the wall clock, so it is not used.)
 
-Tests (`ui` unless noted): `longpress.opens_note` (a hold beyond 500 ms after the commit opens the sheet for the new entry's
-id with the cursor in the note, and a press shorter than that opens nothing; Other, an empty position and a slide off are not
+Tests (`ui` unless noted; amended by 4.17a, where the hold records the entry, so a hold's commit is always after it): `longpress.opens_note` (a hold beyond 500 ms opens the sheet for the new entry's
+id with the cursor in the note once the commit is in, and a press shorter than that logs and opens nothing; Other, an empty position and a slide off are not
 holds); `longpress.records_once` (the hold records one entry, not two, with one impact, on both paths); `longpress.save` (the
-note is on the same line in the timeline); `longpress.cancel`; `longpress.slow_commit` (the hold passes before the commit: the
-sheet waits for `entryRecorded` and then opens); `longpress.voiceover` (no gesture needed: activation records once and
+note is on the same line in the timeline); `longpress.cancel`; `longpress.slow_commit` (the hold records the entry and the sheet waits for
+`entryRecorded` and then opens); `longpress.voiceover` (no gesture needed: activation records once and
 opens nothing, and there is no "with note" element without a draft). For a typed draft: `longpress.draft_attaches` (the hold
 attaches the draft to the same line, records once and clears the draft), `longpress.draft_undo` (one Undo removes the entry
-and puts the draft back), `longpress.draft_tap` (a tap leaves the draft alone), `longpress.draft_slow_commit`,
+and puts the draft back), `longpress.draft_tap` (a double-tap leaves the draft alone), `longpress.draft_slow_commit`,
 `longpress.draft_failed` (entry and draft stay, banner shown) and `longpress.note_action` ("Log <name> with note" exists
 only with a draft, is not on Other, and logs with it). View models (`unit`): `recordErrorEntry`, `attachDraft` (trimmed text,
 cleared after the commit, one confirmation, refusals, no overwrite, failure, text typed meanwhile is kept) and
 `UndoController::note_attached` (the toast text, the undo hands the draft back, another toast is not touched). Rig: `rig.hold`.
 
 This package is optional: it can slip to 1.1 without changing the gate.
+
+### 4.17a Double-tap to log (BRD-02, BRD-03; owner request, 2026-11-09)
+
+The facilitator asked for a tile to be logged by a **double-tap** instead of one tap, so that an accidental touch does not
+make an entry, and kept **press and hold** (4.17) as the way to log with a note. The owner decided it on 9 Nov 2026 for the build
+the facilitator gets on 10 Nov 2026 (decision 18).
+
+**The gestures** (for a tile with an error type; `Tile` counts them for each tile on its own):
+
+| Gesture | What it does |
+|---|---|
+| One tap | Logs nothing. Once the double-tap window has gone by with no second tap, the screen shows the hint "Double-tap to log" |
+| Two taps, the second no more than `Theme.motion.doubleTapMs` (300 ms) after the lift of the first | Logs one entry. The impact haptic, the press scale and the record are on the **touch of the second tap**. The undo toast is unchanged ("×2" for the same tile) |
+| Three taps | Log once: the third is part of the same gesture and does nothing. The fourth tap starts a new double-tap |
+| Hold for 500 ms (`Theme.motion.holdMs`) | Logs at the hold, with a note (4.17): a typed draft goes on the entry's line and is cleared, one Undo gives it back; with no draft the Edit entry sheet opens on the new entry's note. The haptic and the press scale are at the hold |
+| A tap and then a hold | The second touch has logged (a double-tap), the hold adds the note to that entry: one entry |
+| Release before 500 ms | A tap, which counts towards a double-tap |
+| Slide off, a cancelled touch | Cancels. A first touch that slides off is no tap and no first half; a second that slides off has asked once, as a touch that slides off always has (Stage 5, decision 1) |
+| VoiceOver activation | Logs once, with no second activation: VoiceOver's activation gesture is already a double-tap. "Log <name> with note" is unchanged |
+| The Other tile | **Opens its list on a single tap.** It is a navigation, not a log: it records nothing, so an accidental tap costs a dismissed list and not a wrong entry, and a double-tap there would only slow the person down. It has no window, no hold and no hint |
+| An empty position | A single tap, as before: it records nothing and opens the board setup |
+
+**The window.** 300 ms, counted from the lift of the first tap to the touch of the second, so a slow tap does not use up the time.
+It is a token, `motion.doubleTapMs` in `docs/design/tokens.json` and `Theme.motion.doubleTapMs`, with `holdMs` (500 ms), `tapHintVisibleMs`
+(2000) and `tapHintIntervalMs` (5000); the owner can change them in one place after the facilitator has used it (checklist P6). The window is
+timed on the animation clock like the hold (a `NumberAnimation` of a number that nothing reads, then a `ScriptAction`), so that
+the rig's `advance` moves it; it needs `rig.steady_time()` for the reason given under 4.17.
+
+**What a tile sends.** `pressed` is now the touch that asks, not the first touch: the second tap of a double-tap, or the end of a
+hold that nothing has asked for. `held` follows `pressed` after the hold. `singleTapped` is new: one tap, and the window has run out.
+`tapped` still comes on every lift inside the tile (Other uses it). `BoardGrid` sends `tileSingleTapped(row, typeId)`. The press
+scale starts with `pressed` and not at the first touch, so a tile only moves when it has been logged; the first tap gives the
+hint instead.
+
+**The hint.** `TapHint` (`qml/screens/log/private/`): the toast's card in the toast's colours and text, low (the line and 12 pt
+above and below it), with no tick and no button, "Double-tap to log" in `qsTr`, made by the Log screen at the first hint (a `Loader`,
+so a board nobody taps wrongly pays one item). It fades in and out (`Theme.motion.toastMs`, which Reduce Motion shortens), stays
+2 s, and does not come again within 5 s of the start of the last (the learner is told now and then, not at every tap). It stands
+above the undo toast when that is open, and it **takes no touch**: a finger goes through it to the tile under it, because the next thing a
+person does after the hint is to double-tap that tile. It is a transient state of the Log screen, drawn in the `Main` mock-up
+(light and dark): it shows after a single click, and not after a double click. VoiceOver users do not meet it (they activate).
+
+**The latency budget (NFR-03, BRD-03).** "Tap-to-feedback under 100 ms" is counted from the **touch of the second tap** (or the end
+of the hold): the haptic, the press scale and the record are all in `pressed`, which is the first thing the second touch does, so the
+figures of 4.5 and 4.7 (`perf.press_path`, p95 under 16 ms) and Stage 5's M2 are measured there. The first tap has no feedback to
+time. The 300 ms of the window is a wait for the gesture, not latency, and a person who double-taps feels the haptic when the
+second finger lands.
+
+Package 4.17a changes `Tile`, `BoardGrid`, `LogScreen` and its `TapHint`, `Theme`, `tokens.json`, the tests that tapped a tile once
+(they double-tap), and the docs. It does not change `LogSession`, `UndoController`, the bridge or the store: `recordErrorEntry` and
+`attachDraft` already do what the hold needs.
+
+Tests (`ui`): `tile.double_tap`, `tile.double_tap_window` (250 ms logs, 400 ms is two single taps, the hint comes after the window),
+`tile.triple_tap`, `tile.hold` (the hold asks at 500 ms, once; a tap and a hold ask at the second touch only), `tile.slide_off`,
+`tile.press_scale` (not at the first tap), `tile.other` (one tap, no hint, no hold), `tile.voiceover`; `grid.signals`; for the screen
+`doubletap.logs` (the haptic and the press at the second touch, one entry), `doubletap.window`, `doubletap.triple`,
+`doubletap.slide_off`, `doubletap.hint` (the text, nothing logged, no touch taken, at most once in 5 s), `doubletap.hint` above the
+toast, `doubletap.hold`, `doubletap.hold_then_tap`, `doubletap.voiceover`, `log.other` (one tap opens, no hint); `perf.press_path` for the Tile and for the
+Log screen, from the second tap's touch; `theme.matches_tokens` for the four values. The `longpress.*` cases of 4.17
+changed with the hold (it records), and the cases that tapped a tile once now double-tap it.
 
 ### 4.13a Plain words in the note template editor (TestFlight feedback)
 
@@ -853,22 +926,24 @@ build and recorded (device, iOS version, result) under "Device results" at the e
 | D1 | Switch the system appearance while the app is open; the app follows without a restart | NFR-06; U6 |
 | T1 | Dynamic Type from the smallest to the largest accessibility size: list and note text follow, chrome stays at its cap, no clipping | NFR-07; U8 |
 | A1 | VoiceOver on: every control is read with a sensible name and role, reading order is right | NFR-07; U2 |
-| A2 | VoiceOver: activating a tile records one entry and gives the haptic; the count is in the toast announcement | BRD-02 to 04 |
+| A2 | VoiceOver: one activation of a tile (no second) records one entry and gives the haptic; the count is in the toast announcement; no hint is announced | BRD-02 to 04; U11 |
 | A3 | VoiceOver: a review row opens Edit; Delete and Copy line are reachable; board layout can be edited with the buttons | REV-02 to 04, PRF-05; U4 |
 | A4 | VoiceOver: sheets and alerts trap focus and return it | NFR-07 |
 | A5 | VoiceOver: the toast and the banner are announced when they appear | U3 |
 | A6 | VoiceOver with a note typed: each tile has a second element, "Log <name> with note"; activating it logs the error with the note, once, and clears the note; with no note typed there is none | BRD-07; U4 |
-| M1 | Instruments (animation hitches): tile presses, sheet present and dismiss, toast, page push at 120 Hz | NFR-03; U7 |
+| M1 | Instruments (animation hitches): tile presses (the second tap of a double-tap), sheet present and dismiss, toast, page push at 120 Hz | NFR-03; U7 |
 | M2 | A commit in flight (a slow store) while the sheet animates: no dropped frame | NFR-03 |
 | M3 | Reduce Motion on: transitions are fades and short | 4.3 |
 | M4 | 120 Hz: on a ProMotion phone (iPhone 17) Instruments' Display or the Core Animation frame rate shows 120 Hz during a sheet, a page push and a swipe, not 60 (`CADisableMinimumFrameDurationOnPhone`); check with Low Power Mode off, which caps the phone at 60 Hz | NFR-03; U7 |
 | M5 | Feel of the desktop defaults: the tile press (0.96, 120 ms), sheet present and dismiss (320 ms), toast in and out (240 ms), Settings page push and pop (280 ms) and row swipe release (200 ms). The `OutBack` curve overshoots by about 10 percent of the travel: the sheet must not show a gap above it nor the page stack a gap beside the page at the end of the overshoot. Note any value to change and record the final ones in "Recorded motion values" | NFR-03; U7 |
 | M6 | Reduce Motion switched on and off while the app is open: sheets, toast and page changes are 100 ms fades with no slide, the tile press still scales, and the animation is the same on the next transition after the switch | 4.3 |
-| P1 | Press a tile and lift before half a second: the haptic is at contact, the entry exists once, the count appears after the commit, nothing else opens | BRD-03; Stage 5 decision 1 |
-| P4 | Hold a tile for half a second with the note box empty: one entry, the Edit entry sheet opens on it with the keyboard on the note; Save puts the note on the entry's line, Cancel leaves the entry | BRD-07, NOTE-06 |
-| P5 | Type a note, then hold a tile: the entry is logged with the note on its line and the box clears; one Undo removes the entry and the note comes back into the box. A tap on a tile with a note typed leaves the box alone. Sliding off before half a second does neither | BRD-07 |
+| P1 | Double-tap a tile: the haptic and the press are at the touch of the second tap (timed from it, not from the first), the entry exists once, the count appears after the commit, nothing else opens. A single tap gives no haptic and no press | BRD-02, BRD-03; Stage 5 decision 1 |
+| P4 | Hold a tile for half a second with the note box empty: the haptic is at the hold, one entry, the Edit entry sheet opens on it with the keyboard on the note; Save puts the note on the entry's line, Cancel leaves the entry. Lifting before half a second logs nothing | BRD-07, NOTE-06 |
+| P5 | Type a note, then hold a tile: the entry is logged with the note on its line and the box clears; one Undo removes the entry and the note comes back into the box. A double-tap on a tile with a note typed logs the error alone and leaves the box alone. Sliding off before half a second does neither | BRD-07 |
 | P2 | Two fingers on two tiles at once record two entries | U9 |
-| P3 | Press a tile and slide off before lifting: one entry, one haptic, and the toast offers Undo | Stage 5 decision 1 |
+| P3 | Tap a tile, then press it again and slide off before lifting: one entry, one haptic, and the toast offers Undo. A first tap that slides off logs nothing and shows no hint | Stage 5 decision 1 |
+| P6 | The double-tap window: double-tap quickly and at a relaxed pace with the thumb and with the finger, a dozen times each; note how many miss and whether 300 ms (`doubleTapMs`) is right. Three quick taps log one entry, the fourth starts another. Tap two different tiles quickly: no entry | BRD-02; U11 |
+| P7 | One tap on a tile: nothing is logged and "Double-tap to log" shows after a moment, above the undo toast if it is open; a finger through it reaches the tile; it does not show again for five seconds. Other opens on one tap | BRD-02 |
 | K1 | Number pad appears for the unit number; the sheet lifts above the keyboard; dictation works in the note field | HDR-02, NOTE-05; U5 |
 | F1 | The launch image hands over to the first frame with no visible jump (with Stage 5's K1 to K3) | NFR-04 |
 | R1 | Cold start to a usable board stays under 1.5 s with the real UI (the gate figure is Stage 5's) | NFR-04 |
@@ -887,8 +962,8 @@ fakes. Not proved by any test on this page:
   delivers the changes to Qt and that Qt applies them is U6 and U8.
 - **Frame rate and animation feel.** CI proves no synchronous work is in the press path and that the right animator types
   are used. It proves nothing about 120 Hz, hitches, or the feel of a spring (U7; M1 to M6).
-- **Touch.** Synthesised touch events are not a finger: palm rejection, a slide-off, two simultaneous fingers and hold
-  timing are P1 to P3 and U9.
+- **Touch.** Synthesised touch events are not a finger: palm rejection, a slide-off, two simultaneous fingers, hold
+  timing and whether 300 ms is the right window for a double-tap are P1 to P3, P6 and U9.
 - **The keyboard and dictation.** The faked keyboard rectangle is not the real one (U5, K1).
 - **Safe areas on a real phone** (U1) and the launch handover (F1).
 - **macOS and iOS builds.** Verified in CI only; the pull requests say what has not run on a device.
@@ -973,6 +1048,15 @@ so references such as "decision 4" elsewhere on the page and in other pages reso
     the composer, holding a tile logs the error with that note as one entry and clears the composer, and one Undo removes the
     entry and gives the note back; with the composer empty, the hold opens the Edit sheet on the new entry, focused on the
     note, as first planned. A plain tap is unchanged. VoiceOver gets "Log <name> with note" while a note is typed.
+    **Amended (owner, 2026-11-09), double-tap:** the hold now records the entry itself, at the hold, because a single tap no
+    longer logs (decision 18); a draft or the Edit sheet is then as above.
 17. **Desktop build in CI.** The plan says the UI is iterated on a macOS desktop build; the Linux runner builds it too.
     **Decided:** keep the QML free of anything desktop-only except the dev file dialog in the shell, which 4.15 isolates in
     one file the iOS build does not load. (owner, 2026-11-07)
+18. **Double-tap to log (BRD-02, 4.17a).** The facilitator asked for it, to avoid accidental entries. **Decided (owner,
+    2026-11-09):** a tile with an error type is logged by two taps within 300 ms (`motion.doubleTapMs`), and a single tap logs
+    nothing and shows the hint "Double-tap to log", at most once in 5 s. Press and hold (500 ms) stays, and records at the hold.
+    The haptic, the press and the record are on the touch of the second tap, and the latency budget (NFR-03) is counted from it. The Other tile, which
+    is a navigation, opens on a single tap. A VoiceOver activation logs once, because the activation gesture is itself a double-tap.
+    Stage 5 decision 1 (record on the touch that asks, so that a finger that slides off cannot fire a haptic without an entry) and
+    decision 7 (VoiceOver takes the same two calls) hold, with "the touch that asks" being the second tap or the hold.

@@ -231,12 +231,16 @@ and the device pass; the day check and the haptic policy's active state are done
 
 ## Platform code
 
-Platform differences live in `src/platform/<os>/` with the same file names in each directory. In the bridge the pairs
-are `ios/<name>.mm` and `desktop/<name>.cpp`; `tools/ci/check_platform_layout.py` keeps them in step. An `.mm` file does
-only what UIKit or Foundation must do (call the API, translate the result to a plain struct); every decision is portable
-C++ against the interface and tested with a fake.
-`icl_platform_sources(target)` adds the directory that matches the target system; `ej_ios_bridge` picks its directory in
-its own `CMakeLists.txt` (`ios` or `desktop`). Source files
+Platform differences live in `src/platform/<os>/` with the same file names in each directory. In the bridge the files
+are `ios/<name>.mm`, `desktop/<name>.cpp` and, once Stage 9 adds them, `android/<name>.cpp`;
+`tools/ci/check_platform_layout.py` keeps every directory in step with `ios/`. An `.mm` file (or the JNI code of an
+Android file) does only what the system must do (call the API, translate the result to a plain struct); every decision is
+portable C++ against the interface and tested with a fake.
+`icl_platform_sources(target)` adds the directory that matches the target system (`ej_storage` has `linux`, `macos`,
+`windows`, `ios` and `android`); `ej_ios_bridge` uses `src/platform/<ICL_PLATFORM>/` when that directory exists and
+`desktop/` otherwise, so Android builds on the desktop stubs until Stage 9 adds `android/` (docs/plan/stage-9.md). On
+Android a small Java layer in `apps/app/packaging/android/src/` receives what Android delivers to Java and forwards it
+to C++. Source files
 contain no `#if` on the platform or compiler; the preprocessor check fails the pull request if
 one appears. Other directives are counted per file against `tools/preprocessor-baseline.json`,
 which can go down but not up.

@@ -44,6 +44,8 @@ ctest --preset linux-debug
 | `macos-debug`, `macos-release` | The desktop program on a Mac, for iterating on the user interface; built with tests |
 | `ios-release` | The iPhone and iPad application (`apps/app`), unsigned, for a device, on a Mac with Xcode; no tests |
 | `ios-simulator` | The same for the iOS simulator. Not working with the aqtinstall kit and not in CI: the link fails because the kit's `qmltooling` plugin objects are built for the device only ("building for 'iOS-simulator', but linking in object file ... built for 'iOS'") |
+| `android-release` | The Android application, `arm64-v8a`, Release: an unsigned APK (build preset `android-release`) and bundle (`android-release-bundle`), on Linux or Windows; no tests |
+| `android-emulator` | The same for an `x86_64` emulator, RelWithDebInfo, APK only; no tests |
 | `windows-msvc-release`, `windows-msvc-asan` | The developer machine only. Windows is not a v1 platform and CI has no Windows leg |
 
 Sanitizers, Tracy, coverage and fuzzing exclude each other. The configure step stops with a
@@ -64,8 +66,8 @@ sets `CFBundleVersion`. The identifier is `ERROR_JOURNALING_APPLICATION_ID` in `
 #### Reading the timings on a device
 
 The exit-gate figures (cold start to a usable board, tap to haptic) are read from the application itself, on a TestFlight
-build: there is no Mac, so no Instruments. Open the Settings tab, scroll to the end, and tap the small version text at the foot of
-the list five times quickly (five more hide it) to see `launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms`. The tap figure stops at the haptic call
+build: there is no Mac, so no Instruments. Open the Settings tab, scroll to the end, open About CS Bingo Board, and tap the Version row
+five times quickly (five more hide it) to see `launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms`. The tap figure stops at the haptic call
 returning and does not include the actuator. The same launch figure goes to the system log as a `launch:` line, and the
 marks go to Points of Interest, for anyone with a Mac and Console or Instruments.
 
@@ -81,6 +83,57 @@ no way yet to put it on a phone without a Mac; see `docs/plan/stage-5.md`, "Timi
 layout, the tab bar or the header card's shapes, and commit the two PNGs; `ctest -R launch.` fails until you do, and so does
 CI. `ej_launch_image --check` compares without writing. iOS caches launch screens: delete the app from the phone before
 judging a new image.
+
+### Android
+
+`cmake --preset android-release` needs:
+
+- a vcpkg checkout at the baseline of `vcpkg.json` (`VCPKG_ROOT`);
+- Qt's Android kit for the ABI (`QT_ANDROID_DIR`, for example `C:/Repos/common/qt/6.12.0/android_arm64_v8a`;
+  `QT_ANDROID_X86_64_DIR` for `android-emulator`);
+- a desktop Qt of the same version for the host tools (`QT_HOST_PATH`, for example `C:/Repos/common/qt/6.12.0/msvc2022_64`);
+- the Android SDK (`ANDROID_SDK_ROOT`) with `platforms;android-37.0` and `build-tools;37.0.0`;
+- the NDK Qt 6.12.0 was built with, `27.2.12479018` (r27c), as `ANDROID_NDK_ROOT` and `ANDROID_NDK_HOME` (vcpkg's
+  Android triplets read the second);
+- JDK 21 (`JAVA_HOME`).
+
+Write the paths with forward slashes, also on Windows: Qt's CMake reads `QT_HOST_PATH` into a string where a backslash
+is an escape. On the developer machine the SDK, the NDK, JDK 21, the emulator and the `x86_64` kit are under `E:/android/`
+(`E:/android/sdk`, `E:/android/jdk-21.0.13.0.2+1`, `E:/android/qt/6.12.0/android_x86_64`). The SDK in
+`C:/Repos/common/android-sdk` has NDK 28 and is not used here.
+
+`cmake --build --preset android-release` runs Qt's `androiddeployqt` and Gradle and writes the unsigned APK, and
+`cmake --build --preset android-release-bundle` then writes the bundle (one after the other: the two share one Gradle
+directory). Both are under `build/android-release/apps/app/android-build/build/outputs/`. The package is
+`com.iainchesworthlabs.errorjournaling` (`ERROR_JOURNALING_APPLICATION_ID`), API 28 to 36 (`apps/app/packaging/android.cmake`).
+`ERROR_JOURNALING_ANDROID_VERSION_CODE` sets `android:versionCode`; empty, it is `MAJOR * 10000 + MINOR * 100 + PATCH`
+of the project version. Check a package with
+`python3 tools/ci/check_android_package.py --sdk "$ANDROID_SDK_ROOT" --ndk "$ANDROID_NDK_ROOT" <apk or aab>`.
+Until Stage 9's packages 9.2 to 9.6 add `libs/ios_bridge/src/platform/android/`, the Android build uses the desktop stubs
+of the bridge: no share sheet, haptics or document picker (docs/plan/stage-9.md).
+
+### The About page: commit, date and licences
+
+`apps/app` runs two small Python programs on every build (`cmake/EjAbout.cmake`; the build needs a Python 3 on `PATH`,
+found as `python3` or `python`). Neither adds a preprocessor directive or a compile definition.
+
+- `tools/licences/build_info.py` writes `about/build_info_values.cpp` in the build directory: the short commit hash, the tag
+  or branch, the build number and the date of the commit. Outside git, or without it, the values are `unknown` and the build goes on.
+  The build number is `ERROR_JOURNALING_IOS_BUILD_NUMBER` (the `CFBundleVersion`; the project version when empty) on iOS, else
+  `$GITHUB_RUN_NUMBER`. The date is `$SOURCE_DATE_EPOCH` when it is set (a reproducible build, or CI), else the date of the commit,
+  and never the time of the build, so building one commit twice gives one program. The file changes only when a value does.
+- `tools/licences/notices.py` reads the resolved link line of `ej_app` from the CMake file API and writes
+  `about/third-party-notices.json` (embedded as the resource `:/about/third-party-notices.json`) and `THIRD-PARTY-NOTICES.txt`:
+  Qt and what Qt bundles (from the SBOMs in `tools/licences/data/qt-modules.json`), and the vcpkg ports that are linked (from the
+  installed tree). Test-only ports (`catch2`) are listed in `tools/licences/data/manifest.json` and left out. A linked library with
+  no entry fails the build. `docs/licensing.md` has the design.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `ERROR_JOURNALING_NOTICES_STRICT` | `ON` | A linked component that the notices cannot account for fails the build. Turn it `OFF` only to get past a problem while it is being fixed; the test `about.notices` still fails. |
+
+After a Qt upgrade run `python -I tools/licences/qt_sbom_manifest.py --sbom <platform>=<qt>/sbom ... --out tools/licences/data/qt-modules.json`
+and review the diff (`docs/licensing.md`, "Maintaining it").
 
 ### Windows (developer machine)
 

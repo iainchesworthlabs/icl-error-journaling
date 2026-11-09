@@ -19,6 +19,9 @@ on:
       - "libs/ios_bridge/**"
       - "**/*.mm"
       - "apps/app/packaging/**"
+      - "apps/app/CMakeLists.txt"
+      - "cmake/**"
+      - "tools/licences/**"
       - "CMakePresets.json"
       - ".github/workflows/ios-build.yml"
       - ".github/toolchain-versions.json"
@@ -117,6 +120,16 @@ jobs:
         env:
           PRESET: ${{ matrix.preset }}
         run: cmake --build --preset "$PRESET"
+
+      # The licences of what the iPhone binary links, read off the real link line by the build itself (tools/licences/notices.py,
+      # which fails the build above when a library has no licence entry). Printed so that a pull request can quote it.
+      - name: Show the third-party notices
+        if: always()
+        shell: bash
+        run: |
+          notices="$(find build/ios-release -name third-party-notices.json | head -n 1)"
+          [ -n "$notices" ] || { echo "::error::no third-party-notices.json under build/ios-release"; exit 1; }
+          python3 tools/licences/show_notices.py "$notices" --inputs | tee -a "$GITHUB_STEP_SUMMARY"
 
       # What Xcode made, from the bundle alone: the identifier, the icon, the launch screen, no permission text, arm64 and no
       # link to the build machine. (An unsigned build: no --signed.)

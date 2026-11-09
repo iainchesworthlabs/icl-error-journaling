@@ -307,6 +307,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Install the store graphics tools
+        run: python3 -m pip install --quiet -r requirements/store.txt
       - name: Test the checks
         run: python3 -m unittest discover -s tools/tests -v
       - name: Check for other configuration files
