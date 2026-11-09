@@ -10,7 +10,9 @@ Parses apps/app/packaging/ios/Info.plist.in with the CMake placeholders stubbed 
     libs/ios_bridge/include/error_journaling/document_types.hpp;
   * a document type names the exported type (role Viewer, handler rank Owner) and one names public.json (rank Alternate);
   * LSSupportsOpeningDocumentsInPlace is false, UIFileSharingEnabled is absent or false;
-  * no usage-description key (the application asks for no permission).
+  * no usage-description key (the application asks for no permission);
+  * CADisableMinimumFrameDurationOnPhone is true, so that a ProMotion phone can run the application at 120 Hz
+    (docs/plan/stage-4.md, U7 and package 4.14).
 
 Later packages add the launch screen and the entitlements. docs/plan/stage-5.md, "CI changes outside the test suites".
 """
@@ -25,6 +27,7 @@ from pathlib import Path
 
 PLIST = Path("apps/app/packaging/ios/Info.plist.in")
 CONSTANTS = Path("libs/ios_bridge/include/error_journaling/document_types.hpp")
+FRAME_RATE_KEY = "CADisableMinimumFrameDurationOnPhone"
 CONSTANT_NAMES = ("CONFIG_TYPE_IDENTIFIER", "CONFIG_TYPE_DESCRIPTION", "CONFIG_EXTENSION")
 
 
@@ -89,6 +92,8 @@ def check(plist: dict, constants: dict[str, str]) -> list[str]:
         problems.append("LSSupportsOpeningDocumentsInPlace must be false (the system copies the file into the sandbox)")
     if plist.get("UIFileSharingEnabled") not in (None, False):
         problems.append("UIFileSharingEnabled must be absent or false (it would list the Documents folder in Files)")
+    if plist.get(FRAME_RATE_KEY) is not True:
+        problems.append(f"{FRAME_RATE_KEY} must be true (without it a ProMotion phone runs the application at 60 Hz)")
     for key in sorted(plist):
         if key.endswith("UsageDescription"):
             problems.append(f"{key} is set: the application asks for no permission")

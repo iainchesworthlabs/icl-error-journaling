@@ -80,6 +80,7 @@ if(Python3_Interpreter_FOUND)
     ej_add_qml_check(theme.no_literals check_qml_literals.py)
     ej_add_qml_check(i18n.strings check_qml_strings.py)
     ej_add_qml_check(qml.tests check_qml_tests.py)
+    ej_add_qml_check(motion.animators check_qml_motion.py)
 
     # qmlformat has no verify option: the script formats each file to text and compares. Qt ships the program next to
     # the other tools of the kit; a kit without it skips the check, and says so.

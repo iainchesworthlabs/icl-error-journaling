@@ -111,7 +111,7 @@ Nothing in CI runs on a device or in the simulator: the bundle is built and insp
 
 `tools/ci/check_qml_*.py` keep the QML honest (`docs/plan/stage-4.md`, package 4.1). They read the text of `apps/app/qml/`
 and are CTest tests with the label `unit`, so they run in the unit phase of every build; a QML file that fails one fails
-the pull request. `python tools/ci/precheck.py` runs the first four after the shared checks.
+the pull request. `python tools/ci/precheck.py` runs these (all but `qml.format` and `qml.lint`) after the shared checks.
 
 | Test | Script | Fails a QML file that |
 |---|---|---|
@@ -119,6 +119,7 @@ the pull request. `python tools/ci/precheck.py` runs the first four after the sh
 | `theme.no_literals` | `check_qml_literals.py` | writes a hex colour, `Qt.rgba` and its kin, a named colour, or a number other than 0 for a size, radius, spacing, margin, font size or duration, outside `qml/theme/`. A ratio (`* 2`, `/ 2`) is allowed. A line may end in `// literal-ok: <reason>`; the reasons are printed |
 | `i18n.strings` | `check_qml_strings.py` | shows a string literal that is not `qsTr()`, or joins `qsTr()` to something with `+`, or gives it something that is not a literal |
 | `qml.tests` | `check_qml_tests.py` | has no `apps/app/tests/ui/<snake_case_name>_test.cpp` with a `TEST_CASE`; a file under a folder named `private` is tested through its neighbour |
+| `motion.animators` | `check_qml_motion.py` | has a `NumberAnimation`, `PropertyAnimation`, `SmoothedAnimation` or `SpringAnimation` on `x`, `y`, `scale` or `opacity` (as `property:`, `properties:` or `... on x`), or a `Behavior` on one of them. Those run on the GUI thread; `XAnimator`, `YAnimator`, `ScaleAnimator` and `OpacityAnimator` run on the render thread and hold 120 Hz while a commit runs (U7). An animation of another property (a height, a colour) is not looked at |
 | `qml.format` | `check_qml_format.py` | `qmlformat` would change (`apps/app/qml/.qmlformat.ini`; fix with `qmlformat -i`). Skipped, with a message at configure time, by a Qt kit without `qmlformat` |
 | `qml.lint` | the `ej_ui_tests_qmllint` target | `qmllint` warns about: `apps/app/qml/.qmllint.ini` sets the maximum to 0 |
 
@@ -141,8 +142,9 @@ The **Plan** job of `ci.yml` runs `tools/ci/check_ios_plist.py` on `apps/app/pac
 placeholders stubbed). It fails when the exported type's identifier, description or extension differ from the constants
 in `libs/ios_bridge/include/error_journaling/document_types.hpp`, when the document types do not name the exported
 type (role Viewer, rank Owner) and `public.json` (rank Alternate), when `LSSupportsOpeningDocumentsInPlace` is not
-false, when `UIFileSharingEnabled` is on, or when a usage-description key appears. Its unit tests are in
-`tools/tests/test_ios_plist.py`. `verify_app.sh` repeats the type, the document type and the two flags on the built
+false, when `UIFileSharingEnabled` is on, when `CADisableMinimumFrameDurationOnPhone` is not true (a ProMotion phone
+would run the app at 60 Hz, U7), or when a usage-description key appears. Its unit tests are in
+`tools/tests/test_ios_plist.py`. `verify_app.sh` repeats the type, the document type, the two flags and the 120 Hz key on the built
 bundle. Later packages add the launch screen and the entitlements.
 
 ## Confidentiality check

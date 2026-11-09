@@ -283,7 +283,8 @@ The design gives one number (tile press: scale 0.96, 120 ms, ease) and "spring p
 - **Animators, not property animations,** for everything that moves per frame (`ScaleAnimator`, `YAnimator`,
   `OpacityAnimator`, `XAnimator`): they run on the render thread and hold the display rate while the GUI thread is busy
   with a commit (U7). Springs are an easing curve (`Easing.BezierSpline` or an `OutBack` pair) tuned on a device, because
-  `SpringAnimation` is a GUI-thread property animation. The values are `Theme.motion.*` and are tuned in 4.14.
+  `SpringAnimation` is a GUI-thread property animation. The values are `Theme.motion.*`; 4.14 records them (below) and
+  4.18 confirms them on a device.
 - Sheet present and dismiss, toast in and out, row swipe release and the page stack's push and pop use those curves.
 - The 120 Hz key in the property list (`CADisableMinimumFrameDurationOnPhone`) is added in 4.14 (U7); it is a property
   list edit that Stage 5 packages also make, so one pull request touches it at a time.
@@ -621,6 +622,32 @@ Tests in CI: `motion.animators` (a source check: no `NumberAnimation` on `x`, `y
 moves per frame, only the animator types); `motion.curves` (the token values equal the recorded tuning); `motion.reduce`
 (again); `verify_app.sh` / the plist check: the key is present. The frame rate is checklist M1 to M3.
 
+**Status of the tuning.** There was no phone when this package was built, so no value was tuned: the numbers are the
+design's (`tokens.json`, `motion`) and this page's, and are recorded as **desktop defaults, to confirm on the iPhone in 4.18**.
+Changing one means changing `tokens.json`, `Theme.qml`, this table and `RECORDED` in `theme_test.cpp` together; `motion.curves`
+fails if any of the four differs.
+
+#### Recorded motion values
+
+| Value | `Theme.motion` | Recorded | Source |
+|---|---|---|---|
+| Tile press scale and time | `tilePressScale`, `tilePressMs` | 0.96, 120 ms | The design (`tilePress`); kept under Reduce Motion |
+| Tile press curve | `easingPress` | `InOutQuad` | The design's "ease" |
+| Sheet present and dismiss | `sheetPresentMs` | 320 ms | Starting value of 4.1 |
+| Toast in and out | `toastMs` | 240 ms | Starting value of 4.1 |
+| Page push and pop | `pageMs` | 280 ms | Starting value of 4.1 |
+| Row swipe release | `swipeReleaseMs` | 200 ms | Starting value of 4.1 |
+| Spring curve of sheets, toast, pages and swipe | `easingSpring` | `OutBack`, overshoot 1.70158 (Qt's default; no animation sets its own) | The plan: an easing curve, because `SpringAnimation` is a GUI-thread animation |
+| Reduce Motion | `reducedMotionMs`, `easingSpring` | 100 ms, `Linear`, no travel | The plan and the design |
+| Undo toast visible | `undoToastVisibleMs` | 5000 ms | The design |
+
+Every animation that moves an item every frame is an Animator (`XAnimator`, `YAnimator`, `ScaleAnimator`, `OpacityAnimator`):
+the tile press, the sheet and its scrim, the toast, the row swipe, the Settings page slides, and, from 4.14, the page fades.
+`motion.animators` fails a property animation or a `Behavior` on `x`, `y`, `scale` or `opacity`.
+
+**What the owner checks on the phone** is rows M1 to M6 of the device checklist. The values above are the starting point; if a
+row fails or feels wrong, change the number in the four places and run the row again.
+
 ### 4.15 Shell and navigation
 
 `Main.qml`: the window background from the first frame (the `background` token, so the launch screen hands over to the
@@ -690,6 +717,9 @@ build and recorded (device, iOS version, result) under "Device results" at the e
 | M1 | Instruments (animation hitches): tile presses, sheet present and dismiss, toast, page push at 120 Hz | NFR-03; U7 |
 | M2 | A commit in flight (a slow store) while the sheet animates: no dropped frame | NFR-03 |
 | M3 | Reduce Motion on: transitions are fades and short | 4.3 |
+| M4 | 120 Hz: on a ProMotion phone (iPhone 17) Instruments' Display or the Core Animation frame rate shows 120 Hz during a sheet, a page push and a swipe, not 60 (`CADisableMinimumFrameDurationOnPhone`); check with Low Power Mode off, which caps the phone at 60 Hz | NFR-03; U7 |
+| M5 | Feel of the desktop defaults: the tile press (0.96, 120 ms), sheet present and dismiss (320 ms), toast in and out (240 ms), Settings page push and pop (280 ms) and row swipe release (200 ms). The `OutBack` curve overshoots by about 10 percent of the travel: the sheet must not show a gap above it nor the page stack a gap beside the page at the end of the overshoot. Note any value to change and record the final ones in "Recorded motion values" | NFR-03; U7 |
+| M6 | Reduce Motion switched on and off while the app is open: sheets, toast and page changes are 100 ms fades with no slide, the tile press still scales, and the animation is the same on the next transition after the switch | 4.3 |
 | P1 | Press a tile and hold: the haptic is at contact, the entry exists once, the count appears after the commit | BRD-03; Stage 5 decision 1 |
 | P2 | Two fingers on two tiles at once record two entries | U9 |
 | P3 | Press a tile and slide off before lifting: one entry, one haptic, and the toast offers Undo | Stage 5 decision 1 |
@@ -710,7 +740,7 @@ fakes. Not proved by any test on this page:
 - **Dynamic Type, Reduce Motion and the appearance switch.** The tests inject scale, motion and scheme into the rig. That iOS
   delivers the changes to Qt and that Qt applies them is U6 and U8.
 - **Frame rate and animation feel.** CI proves no synchronous work is in the press path and that the right animator types
-  are used. It proves nothing about 120 Hz, hitches, or the feel of a spring (U7; M1 to M3).
+  are used. It proves nothing about 120 Hz, hitches, or the feel of a spring (U7; M1 to M6).
 - **Touch.** Synthesised touch events are not a finger: palm rejection, a slide-off, two simultaneous fingers and hold
   timing are P1 to P3 and U9.
 - **The keyboard and dictation.** The faked keyboard rectangle is not the real one (U5, K1).

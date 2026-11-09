@@ -654,8 +654,9 @@ QtObject {
 
     // The values of tokens.json, "motion". Reduce Motion replaces every slide and spring by a fade of at most
     // reducedMotionMs; the tile press keeps its scale, because it is feedback and not decoration. The sheet, toast,
-    // page and swipe values are starting points that package 4.14 tunes on a device. Animators, not property
-    // animations, move things per frame (docs/plan/stage-4.md, Motion).
+    // page and swipe values and the two curves are desktop defaults from the design and the plan, recorded in
+    // tokens.json ("easing", "tuning") and held by the test motion.curves; the owner confirms them on the iPhone
+    // in 4.18. Animators, not property animations, move things per frame (docs/plan/stage-4.md, Motion).
     component Motion: QtObject {
         required property bool reduceMotion
         readonly property real tilePressScale: 0.96

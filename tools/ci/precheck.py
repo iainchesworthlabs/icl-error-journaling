@@ -8,8 +8,8 @@ Finds a checkout of icl-common-infra in ICL_COMMON_INFRA, then ../icl-common-inf
 its scripts/precheck.py with the same arguments. These are the checks the Policy job runs.
 
 Then it runs this repository's checks of the QML that need no Qt (tools/ci/check_qml_*.py: the platform, the literals, the
-strings and the test files; docs/ci.md). CI runs them as the tests qml.platform, theme.no_literals, i18n.strings and
-qml.tests, and qml.format and qml.lint with a Qt kit.
+strings, the test files and the animators; docs/ci.md). CI runs them as the tests qml.platform, theme.no_literals,
+i18n.strings, qml.tests and motion.animators, and qml.format and qml.lint with a Qt kit.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
-QML_CHECKS = ["check_qml_platform.py", "check_qml_literals.py", "check_qml_strings.py", "check_qml_tests.py"]
+QML_CHECKS = ["check_qml_platform.py", "check_qml_literals.py", "check_qml_strings.py", "check_qml_tests.py", "check_qml_motion.py"]
 
 
 def find_infra() -> Path | None:
