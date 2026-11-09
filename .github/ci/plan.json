@@ -22,7 +22,8 @@
     "REUSE.toml",
     ".editorconfig",
     "LICENSES/**",
-    "tools/tests/**"
+    "tools/tests/**",
+    "tools/visual/**"
   ],
   "build": [
     "libs/**",
