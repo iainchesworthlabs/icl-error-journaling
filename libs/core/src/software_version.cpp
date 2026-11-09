@@ -131,7 +131,7 @@ Result<SoftwareVersion, SoftwareVersion::Error> SoftwareVersion::parse(std::stri
     {
         return fail(kept.error());
     }
-    return SoftwareVersion(values[0], values[1], values[2], std::move(*kept));
+    return SoftwareVersion(values[0], values[1], values[2], *kept);
 }
 
 std::string SoftwareVersion::format() const
@@ -142,10 +142,10 @@ std::string SoftwareVersion::format() const
 std::string SoftwareVersion::stored() const
 {
     std::string out = format();
-    if (!m_Commit.empty())
+    if (m_CommitLength != 0)
     {
         out += COMMIT_SEPARATOR;
-        out += m_Commit;
+        out += commit();
     }
     return out;
 }
@@ -153,10 +153,10 @@ std::string SoftwareVersion::stored() const
 std::string SoftwareVersion::display() const
 {
     std::string out = format();
-    if (!m_Commit.empty())
+    if (m_CommitLength != 0)
     {
         out += " (";
-        out += m_Commit;
+        out += commit();
         out += ')';
     }
     return out;
