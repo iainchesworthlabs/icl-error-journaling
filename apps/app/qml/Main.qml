@@ -30,6 +30,10 @@ Window {
     width: Theme.frame.width
     height: Theme.frame.height
     visible: true
+    // The window reaches under the status bar and the home indicator, and SafeFrame keeps the content clear of them. Without
+    // the hint, iOS gives the window only the safe area and draws black above and below it, and the tab bar ends above
+    // the home indicator instead of at the bottom of the screen.
+    flags: Qt.Window | Qt.ExpandedClientAreaHint
     title: qsTr("CS Bingo Board")
     // The colour of the launch screen's background, so that the hand-over to the first screen shows no flash.
     color: Theme.colour.background
