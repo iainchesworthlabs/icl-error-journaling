@@ -119,8 +119,7 @@ Item {
                 font: Theme.font.headerUnit.font
                 text: root.unitText.length > 0 ? root.unitText : root.unitPrompt
                 wrapMode: Text.WordWrap
-                lineHeightMode: root.skeleton && root.nominalMetrics ? Text.FixedHeight : Text.ProportionalHeight
-                lineHeight: root.skeleton && root.nominalMetrics ? Theme.font.headerUnit.nominalPitch : 1
+                height: root.skeleton && root.nominalMetrics ? Theme.font.headerUnit.nominalPitch : implicitHeight
                 Accessible.ignored: true
             }
             Text {
@@ -132,8 +131,7 @@ Item {
                 font: Theme.font.caption.font
                 text: qsTr("%1 · %2").arg(root.locationText.length > 0 ? root.locationText : root.locationPrompt).arg(root.versionText.length > 0 ? qsTr("v%1").arg(root.versionText) : root.versionPrompt)
                 wrapMode: Text.WordWrap
-                lineHeightMode: root.skeleton && root.nominalMetrics ? Text.FixedHeight : Text.ProportionalHeight
-                lineHeight: root.skeleton && root.nominalMetrics ? Theme.font.caption.nominalPitch : 1
+                height: root.skeleton && root.nominalMetrics ? Theme.font.caption.nominalPitch : implicitHeight
                 Accessible.ignored: true
             }
         }
@@ -156,8 +154,7 @@ Item {
                 font: Theme.font.captionSmall.selectedFont
                 text: root.dateText
                 wrapMode: Text.WordWrap
-                lineHeightMode: root.skeleton && root.nominalMetrics ? Text.FixedHeight : Text.ProportionalHeight
-                lineHeight: root.skeleton && root.nominalMetrics ? Theme.font.captionSmall.nominalPitch : 1
+                height: root.skeleton && root.nominalMetrics ? Theme.font.captionSmall.nominalPitch : implicitHeight
                 Accessible.ignored: true
             }
             Text {
@@ -170,8 +167,7 @@ Item {
                 font: Theme.font.captionSmall.font
                 text: root.facilitatorText.length > 0 ? root.facilitatorText : root.facilitatorPrompt
                 wrapMode: Text.WordWrap
-                lineHeightMode: root.skeleton && root.nominalMetrics ? Text.FixedHeight : Text.ProportionalHeight
-                lineHeight: root.skeleton && root.nominalMetrics ? Theme.font.captionSmall.nominalPitch : 1
+                height: root.skeleton && root.nominalMetrics ? Theme.font.captionSmall.nominalPitch : implicitHeight
                 Accessible.ignored: true
             }
         }
