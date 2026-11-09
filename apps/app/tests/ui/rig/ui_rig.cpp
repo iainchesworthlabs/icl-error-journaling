@@ -13,6 +13,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QTest>
+#include <QVariantAnimation>
 #include <QtGlobal>
 #include <algorithm>
 #include <functional>
@@ -51,6 +52,11 @@ struct UiRig::Impl
 {
     // The animation clock first: it must be installed before any animation starts and outlive them all.
     ManualAnimationDriver m_Driver;
+    // An animation that never ends, which `steady_time` starts. While it runs the driver ticks all the time, and an animation
+    // that starts is not credited with the virtual time that went by while none ran (Qt gives it all the time since the driver
+    // last ticked, so a hold started after the test had advanced the clock by a second would be at its end after one frame).
+    // A QML Timer is ticked by the driver too while it runs, so it is off unless a test asks.
+    QVariantAnimation m_KeepAlive;
     QQmlEngine m_Engine;
     std::unique_ptr<QQuickWindow> m_Window = std::make_unique<QQuickWindow>();
     QQuickItem* m_Root = nullptr;
@@ -66,6 +72,10 @@ struct UiRig::Impl
 
 UiRig::UiRig(QSize window_size) : m_Impl(std::make_unique<Impl>())
 {
+    m_Impl->m_KeepAlive.setStartValue(0);
+    m_Impl->m_KeepAlive.setEndValue(1);
+    m_Impl->m_KeepAlive.setDuration(1000);
+    m_Impl->m_KeepAlive.setLoopCount(-1);
     m_Impl->m_Window->resize(window_size);
     m_Impl->m_Window->setColor(Qt::white);
     m_Impl->m_Window->show();
@@ -269,6 +279,28 @@ void UiRig::release(int finger)
 void UiRig::tap(QQuickItem* item, std::optional<QPointF> at)
 {
     release(press(item, at));
+}
+
+void UiRig::steady_time(bool on)
+{
+    if (!on)
+    {
+        m_Impl->m_KeepAlive.stop();
+        return;
+    }
+    if (m_Impl->m_KeepAlive.state() != QAbstractAnimation::Running)
+    {
+        m_Impl->m_KeepAlive.start();
+        // Registered with the timer now, not at the next frame.
+        QCoreApplication::processEvents();
+    }
+}
+
+void UiRig::hold(QQuickItem* item, std::chrono::milliseconds duration, std::optional<QPointF> at)
+{
+    const int finger = press(item, at);
+    advance(duration);
+    release(finger);
 }
 
 void UiRig::drag(QQuickItem* item, QPointF from, QPointF to, int steps)

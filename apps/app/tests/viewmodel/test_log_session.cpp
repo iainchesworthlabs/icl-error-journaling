@@ -1858,3 +1858,202 @@ TEST_CASE("A log written before commits existed opens with its version and no co
     CHECK(rig.session->commit_text().isEmpty());
     CHECK(rig.session->version_display_text() == QStringLiteral("1.4.2"));
 }
+
+// ------------------------------------------------------------------------------ a held tile with a draft (BRD-07)
+
+namespace
+{
+
+const QString ROBOT_NOTE = QStringLiteral("The robot paused twice");
+
+/// The entry that a tap made, committed, with its id as text.
+QString committed_tap(SessionRig& rig)
+{
+    const QString id = rig.session->recordErrorEntry(WRONG_RESPONSE);
+    REQUIRE_FALSE(id.isEmpty());
+    rig.gateway.run_all();
+    REQUIRE(rig.entries().size() >= 1);
+    return id;
+}
+
+std::optional<std::string> attached_note_of(const Entry& entry)
+{
+    const auto* error = std::get_if<ErrorEntry>(&entry.m_Body);
+    return error != nullptr ? error->m_AttachedNote : std::nullopt;
+}
+
+} // namespace
+
+TEST_CASE("recordErrorEntry names the entry the tap makes, and refuses what recordError refuses", "[viewmodel][session]")
+{
+    SessionRig rig;
+    QSignalSpy recorded(rig.session.get(), &LogSession::entryRecorded);
+
+    const QString id = rig.session->recordErrorEntry(WRONG_RESPONSE);
+    REQUIRE_FALSE(id.isEmpty());
+    // Given at the tap, before the commit; the entry is the one with that id once it has been committed.
+    CHECK(rig.entries().empty());
+    rig.gateway.run_all();
+    REQUIRE(rig.entries().size() == 1);
+    CHECK(QString::fromStdString(rig.entries().front().m_Id.format()) == id);
+    REQUIRE(recorded.count() == 1);
+    CHECK(recorded.at(0).at(0).toString() == id);
+
+    const auto posted = rig.gateway.posted();
+    CHECK(rig.session->recordErrorEntry(QStringLiteral("00000000-0000-4000-8000-0000000000ff")).isEmpty());
+    CHECK(rig.session->recordErrorEntry(QStringLiteral("not an id")).isEmpty());
+    CHECK(rig.gateway.posted() == posted);
+}
+
+TEST_CASE("attachDraft puts the trimmed draft on the error entry, clears the draft after the commit and confirms once",
+          "[viewmodel][session]")
+{
+    SessionRig rig;
+    const QString id = committed_tap(rig);
+    rig.session->set_draft(QStringLiteral("  ") + ROBOT_NOTE + QStringLiteral(" \n"));
+    QSignalSpy draft_changed(rig.session.get(), &LogSession::draftChanged);
+    QSignalSpy attached(rig.session.get(), &LogSession::draftAttached);
+    draft_changed.clear();
+
+    REQUIRE(rig.session->attachDraft(id));
+    // Submitted, not committed: the note is not on the entry, the draft is still there, nothing is confirmed.
+    CHECK_FALSE(attached_note_of(rig.entries().front()).has_value());
+    CHECK(rig.session->draft().contains(ROBOT_NOTE));
+    CHECK(rig.feedback.saved_notes().empty());
+    CHECK(attached.count() == 0);
+    CHECK(rig.session->pending_writes() == 1);
+
+    rig.gateway.run_all();
+
+    // One entry, one line: the error with its note, and no entry of a note.
+    const auto entries = rig.entries();
+    REQUIRE(entries.size() == 1);
+    REQUIRE(attached_note_of(entries.front()).has_value());
+    CHECK(*attached_note_of(entries.front()) == ROBOT_NOTE.toStdString());
+    CHECK(rig.session->live_entry_count() == 1);
+    CHECK(rig.session->draft().isEmpty());
+    CHECK(draft_changed.count() >= 1);
+    CHECK(rig.session->pending_writes() == 0);
+    // The stored draft is cleared too (an edit does not clear it as a note does).
+    const auto stored = rig.storage.repository().get_draft();
+    REQUIRE(stored);
+    CHECK((!stored->has_value() || (*stored)->m_Text.empty()));
+    // The note-saved confirmation follows the commit, once, and the undo toast is told.
+    REQUIRE(rig.feedback.saved_notes().size() == 1);
+    CHECK(rig.feedback.saved_notes().front() == entries.front().m_Id);
+    REQUIRE(attached.count() == 1);
+    CHECK(attached.at(0).at(0).toString() == id);
+    CHECK(attached.at(0).at(1).toString() == ROBOT_NOTE);
+    const auto commit = index_of(rig.events, EventKind::COMMIT);
+    const auto confirmation = index_of(rig.events, EventKind::CONFIRMATION, "note_saved");
+    REQUIRE(commit);
+    REQUIRE(confirmation);
+    CHECK(*commit < *confirmation);
+}
+
+TEST_CASE("attachDraft refuses what cannot be attached and writes nothing", "[viewmodel][session]")
+{
+    SessionRig rig;
+    const QString id = committed_tap(rig);
+    // No draft, or one of spaces.
+    CHECK_FALSE(rig.session->attachDraft(id));
+    rig.session->set_draft(QStringLiteral(" \n"));
+    CHECK_FALSE(rig.session->attachDraft(id));
+
+    rig.session->set_draft(ROBOT_NOTE);
+    // An id that is not an id, an entry that is not there, an entry that has not been committed.
+    CHECK_FALSE(rig.session->attachDraft(QStringLiteral("not an id")));
+    CHECK_FALSE(rig.session->attachDraft(QStringLiteral("00000000-0000-4000-8000-0000000000ff")));
+    const QString waiting = rig.session->recordErrorEntry(WRONG_RESPONSE);
+    CHECK_FALSE(rig.session->attachDraft(waiting));
+    rig.gateway.run_all();
+    // A draft over the limit.
+    rig.session->set_draft(QString(10'001, QChar('a')));
+    CHECK_FALSE(rig.session->attachDraft(id));
+    CHECK(rig.session->draft().size() == 10'001);
+
+    // A note entry is not an error entry.
+    rig.session->set_draft(ROBOT_NOTE);
+    REQUIRE(rig.session->addNote(QStringLiteral("Sam Example visited")));
+    rig.gateway.run_all();
+    rig.session->set_draft(ROBOT_NOTE);
+    QString note_id;
+    for (const Entry& entry : rig.entries())
+    {
+        if (note_of(entry) != nullptr)
+        {
+            note_id = QString::fromStdString(entry.m_Id.format());
+        }
+    }
+    REQUIRE_FALSE(note_id.isEmpty());
+    CHECK_FALSE(rig.session->attachDraft(note_id));
+
+    // Nothing was attached to anything, and the draft is still there.
+    for (const Entry& entry : rig.entries())
+    {
+        CHECK_FALSE(attached_note_of(entry).has_value());
+    }
+    CHECK(rig.session->draft() == ROBOT_NOTE);
+    CHECK(rig.feedback.saved_notes().size() == 1); // the note entry's
+}
+
+TEST_CASE("attachDraft does not replace a note the entry has already", "[viewmodel][session]")
+{
+    SessionRig rig;
+    const QString id = committed_tap(rig);
+    rig.session->set_draft(ROBOT_NOTE);
+    REQUIRE(rig.session->attachDraft(id));
+    rig.gateway.run_all();
+    REQUIRE(rig.session->draft().isEmpty());
+
+    rig.session->set_draft(QStringLiteral("Another note"));
+    CHECK_FALSE(rig.session->attachDraft(id));
+    CHECK(*attached_note_of(rig.entries().front()) == ROBOT_NOTE.toStdString());
+    CHECK(rig.session->draft() == QStringLiteral("Another note"));
+}
+
+TEST_CASE("A failed attach leaves the entry, keeps the draft, reports the write and confirms nothing",
+          "[viewmodel][session]")
+{
+    SessionRig rig;
+    const QString id = committed_tap(rig);
+    rig.session->set_draft(ROBOT_NOTE);
+    QSignalSpy attached(rig.session.get(), &LogSession::draftAttached);
+    rig.storage.repository().fail_next(RepositoryOp::EDIT_ENTRY);
+
+    REQUIRE(rig.session->attachDraft(id));
+    rig.gateway.run_all();
+
+    CHECK_FALSE(attached_note_of(rig.entries().front()).has_value());
+    CHECK(rig.session->draft() == ROBOT_NOTE);
+    CHECK(rig.events.count(EventKind::WRITE_FAILED, "attachDraft") == 1);
+    CHECK(rig.feedback.saved_notes().empty());
+    CHECK(attached.count() == 0);
+    CHECK(rig.session->pending_writes() == 0);
+
+    // The next try works.
+    REQUIRE(rig.session->attachDraft(id));
+    rig.gateway.run_all();
+    CHECK(*attached_note_of(rig.entries().front()) == ROBOT_NOTE.toStdString());
+    CHECK(rig.session->draft().isEmpty());
+}
+
+TEST_CASE("Text typed while the attach is committing is kept, not cleared", "[viewmodel][session]")
+{
+    SessionRig rig;
+    const QString id = committed_tap(rig);
+    rig.session->set_draft(ROBOT_NOTE);
+    REQUIRE(rig.session->attachDraft(id));
+    rig.session->set_draft(ROBOT_NOTE + QStringLiteral(" and again"));
+    rig.gateway.run_all();
+
+    CHECK(*attached_note_of(rig.entries().front()) == ROBOT_NOTE.toStdString());
+    CHECK(rig.session->draft() == ROBOT_NOTE + QStringLiteral(" and again"));
+}
+
+TEST_CASE("attachDraft is refused while the session is not open", "[viewmodel][session]")
+{
+    SessionRig rig(Options().no_load());
+    CHECK_FALSE(rig.session->attachDraft(QStringLiteral("00000000-0000-4000-8000-0000000000ff")));
+    CHECK(rig.session->recordErrorEntry(WRONG_RESPONSE).isEmpty());
+}

@@ -65,6 +65,18 @@ void UndoController::set_note_undo_target(MoveOnlyFunction<void(const std::strin
     m_NoteTarget = std::move(target);
 }
 
+void UndoController::note_attached(EntryId entry, const std::string& text)
+{
+    expire_if_due();
+    if (!m_Active || m_Kind != Kind::TAP || m_Entry != entry || text.empty())
+    {
+        return;
+    }
+    m_NoteText = text;
+    m_Text += QStringLiteral(" with note");
+    emit toastChanged();
+}
+
 LogDocument* UndoController::observed(const LogDocument& document) const
 {
     const auto found = std::ranges::find(m_Documents, &document);
@@ -208,7 +220,8 @@ bool UndoController::undo()
     }
 
     const std::uint64_t serial = m_Serial;
-    const bool is_note = m_Kind == Kind::NOTE;
+    // A note, and a tap that was held with a draft, give their text back to the composer.
+    const bool is_note = m_Kind == Kind::NOTE || (m_Kind == Kind::TAP && !m_NoteText.empty());
     const bool restore = m_Kind == Kind::DELETED;
     std::string note_text = is_note ? m_NoteText : std::string();
     const std::weak_ptr<int> alive = m_Alive;

@@ -369,6 +369,16 @@ AppRoot::AppRoot(const vm::Environment& environment, const AppPlatform& platform
             m_Session.set_draft(current.isEmpty() ? restored : restored + QLatin1Char('\n') + current);
         });
 
+    // A draft that a held tile attached (BRD-07) comes back with the undo of that tile, as a note does.
+    connect(&m_Session, &vm::LogSession::draftAttached, this,
+            [this](const QString& entryId, const QString& text)
+            {
+                if (const auto uuid = Uuid::parse(entryId.toStdString()))
+                {
+                    m_Undo.note_attached(EntryId(*uuid), text.toStdString());
+                }
+            });
+
     // The log open for review is a document the undo controller must watch while it is open (REV-03) and let go of
     // before it is released.
     connect(&m_History, &vm::HistoryModel::reviewOpened, this,

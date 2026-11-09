@@ -30,7 +30,7 @@ Item {
     // With `skeleton`: the Add button's shape is the least width of the button (64 pt, which "Add" fills on the phone) and not the
     // width of its label in the font of the machine, so that the launch image comes out the same on every machine.
     property bool nominalMetrics: false
-    property string placeholderText: qsTr("Add a note to today’s log…")
+    property string placeholderText: qsTr("Type a note, then hold a tile…")
     property string fieldName: qsTr("Journal note")
     property string addText: qsTr("Add")
     // An Icon kind for each template's chip, by templateId.

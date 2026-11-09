@@ -13,10 +13,15 @@ import ErrorJournalingApp
 //   skeleton   draw the 12 shapes only, in neutral colours, with no text, count or type colour (the launch screen)
 //   coveredTiles  the first this many tiles are under a card of the screen (the Log screen's empty board): a screen
 //              reader skips them
+//   noteAction  there is a typed draft: each tile that can be held has a second VoiceOver element after the board,
+//              "Log <name> with note" (BRD-07). They are made only while it is true, so a board with no draft pays one item
+//              for them (perf.scene).
 //
 // The signals say which tile and whether it is Other; the screen decides what a press and a tap do:
 //   tilePressed(row, typeId, isOther)   the finger went down on a tile (or VoiceOver activated it): haptic, then record
 //   tileTapped(row, typeId, isOther)    the finger came up inside the tile (Other opens the list of error types)
+//   tileHeld(row, typeId)               the finger stayed down on a tile for 500 ms after its tilePressed, or VoiceOver
+//                                       chose "Log with note" (BRD-07). Other and empty positions are never held.
 //   emptyTapped(position)               an empty position (1 to 11) was tapped: the screen opens the board setup there.
 // Empty positions send neither of the first two, so a tap on one never records anything.
 Item {
@@ -25,8 +30,10 @@ Item {
     required property var model
     property bool skeleton: false
     property int coveredTiles: 0
+    property bool noteAction: false
 
     signal tilePressed(int row, string typeId, bool isOther)
+    signal tileHeld(int row, string typeId)
     signal tileTapped(int row, string typeId, bool isOther)
     signal emptyTapped(int position)
 
@@ -62,12 +69,49 @@ Item {
                 skeleton: root.skeleton
                 covered: tile.index < root.coveredTiles
                 onPressed: root.tilePressed(tile.index, tile.typeId, tile.isOther)
+                onHeld: root.tileHeld(tile.index, tile.typeId)
                 onTapped: {
                     if (tile.isEmpty)
                         root.emptyTapped(tile.index + 1);
                     else
                         root.tileTapped(tile.index, tile.typeId, tile.isOther);
                 }
+            }
+        }
+    }
+
+    // "Log <name> with note" for VoiceOver (BRD-07), one for each tile that can be held, while there is a draft. Qt has no
+    // custom VoiceOver actions (U4), so each is an element of its own: not drawn, taking no touch, over its tile, and after
+    // the board in the reading order. Activating one sends the press and then the hold, as a finger does.
+    Repeater {
+        id: noteActions
+
+        model: root.noteAction && !root.skeleton ? root.model : 0
+
+        delegate: Item {
+            id: action
+
+            required property int index
+            required property string typeId
+            required property string label
+            required property bool isOther
+            required property bool isEmpty
+
+            objectName: "boardNoteAction"
+            x: (index % Theme.size.boardColumns) * (root.tileWidth + Theme.space.tileGap)
+            y: Math.floor(index / Theme.size.boardColumns) * (Theme.size.tileHeight + Theme.space.tileGap)
+            width: root.tileWidth
+            height: Theme.size.tileHeight
+            // Not every row is offered: Other and an empty position cannot be held, and the empty-board card covers some.
+            readonly property bool offered: !isOther && !isEmpty && index >= root.coveredTiles
+            Accessible.role: Accessible.Button
+            Accessible.name: qsTr("Log %1 with note").arg(label)
+            Accessible.description: qsTr("Logs this error with the note you typed")
+            Accessible.ignored: !offered
+            Accessible.focusable: offered
+            Accessible.onPressAction: {
+                root.tilePressed(index, typeId, false);
+                root.tileHeld(index, typeId);
             }
         }
     }

@@ -16,18 +16,30 @@ import ErrorJournalingApp
 // calls. The count, the badge, the "Last" bar and the toast change only after the commit, because the models change them
 // only then.
 //
+// A hold on a tile (BRD-07, NOTE-06) is a tap that went on: the press has recorded the entry already, as it always does, and
+// the hold (500 ms, `Tile.holdMs`) adds a note to that one entry, in one of two ways that the composer decides:
+//   - a draft is typed: `session.attachDraft` puts it on the entry's line and clears the composer, and the undo toast takes the
+//     entry and the note away together and gives the draft back ("Mute Delay logged at 10:30 with note");
+//   - the composer is empty: the Edit entry sheet opens on the new entry with the cursor in the note; Save attaches what is
+//     typed and Cancel leaves the entry as it was.
+// A hold that comes before the commit waits for `entryRecorded` and then does the same. A tap, a slide off and a release before
+// 500 ms do nothing more than they did. With a draft, each tile has a second VoiceOver element, "Log <name> with note"; with none,
+// the Edit sheet of Review is the way to a note (the sheet that a hold opens is the same).
+//
 // The success haptic of a saved note is not fired here. `PlatformFeedbackSink::note_saved` fires it from C++ after the
 // commit, and a second one from this screen would be a double tap on the hand. The screen calls the bridge for the impact
 // and for telling the haptic policy that the board is on screen (`setBoardVisible`).
 //
 // What it is given (decision 3):
-//   session    LogSession: the header, `draft`, `state`, `recoveryNotice`, `recordError`, `addNote`, `addTemplatedNote`
+//   session    LogSession: the header, `draft`, `state`, `recoveryNotice`, `recordErrorEntry`, `attachDraft`, `addNote`,
+//              `addTemplatedNote`
 //   board      BoardModel: the 12 tiles
 //   undo       UndoController: the toast
-//   timeline   TimelineModel: `lastLine` and `entryCount` for the "Last" bar
+//   timeline   TimelineModel: `lastLine` and `entryCount` for the "Last" bar, `rowOf` for a held entry, and the Edit entry sheet
 //   settings   SettingsModel: `templates` for the chips, `unitPrefix` for the card's prompt and `previewTemplateLine` for the
 //              "In the log" line of the value sheet
 //   bridge     QmlBridge: `hapticImpact` and `setBoardVisible`
+//   picker     ErrorPickerModel, for the error types of the Edit entry sheet that a hold opens; null where that sheet is not used
 //
 // What it asks the shell for, by signal:
 //   todaysDetailsRequested()   the header card was tapped (Today's details, 4.9)
@@ -53,6 +65,7 @@ Item {
     required property var timeline
     required property var settings
     required property var bridge
+    property var picker: null
 
     property real bottomClearance: Theme.size.tabBarHeight
     property Item sheetLayer: root
@@ -90,12 +103,43 @@ Item {
     signal otherRequested
     signal boardSetupRequested(int position)
 
+    // A note has been typed and not added: a hold on a tile logs with it.
+    readonly property bool hasDraft: session.draft.trim().length > 0
+    // The entry that the latest press on each tile recorded, by row; empty when the press recorded nothing.
+    property var pressedEntries: ({})
+    // Holds that came before their commit: entry id to "draft" or "sheet", how the hold was decided.
+    property var waitingHolds: ({})
+    // The Edit entry sheet and the time sheet over it, made when the first hold needs them.
+    readonly property var editor: (editLoader.item as LogEditSheets)?.editor ?? null
+
     // The impact on touch-down, then the entry. Other records nothing and fires nothing: it opens the picker on its tap.
-    function pressTile(typeId: string, isOther: bool): void {
+    function pressTile(row: int, typeId: string, isOther: bool): void {
         if (isOther)
             return;
         bridge.hapticImpact();
-        session.recordError(typeId);
+        pressedEntries[row] = session.recordErrorEntry(typeId);
+    }
+
+    // The finger stayed on a tile (or VoiceOver chose "Log with note"). The press has recorded the entry; how it takes a note
+    // is decided now, by whether there is a draft, and done when the entry has been committed.
+    function holdTile(row: int): void {
+        const entryId = pressedEntries[row] ?? "";
+        if (entryId.length === 0)
+            return;
+        const how = hasDraft ? "draft" : "sheet";
+        if (timeline.rowOf(entryId) >= 0)
+            finishHold(entryId, how);
+        else
+            waitingHolds[entryId] = how;
+    }
+
+    function finishHold(entryId: string, how: string): void {
+        if (how === "draft") {
+            session.attachDraft(entryId);
+        } else {
+            editLoader.active = true;
+            editor.editNote(entryId);
+        }
     }
 
     function updateChipIcons(): void {
@@ -169,6 +213,11 @@ Item {
         // The next entry that is saved clears the old complaint.
         function onEntryRecorded(entryId: string): void {
             root.failureMessage = "";
+            const how = root.waitingHolds[entryId];
+            if (how !== undefined) {
+                delete root.waitingHolds[entryId];
+                root.finishHold(entryId, how);
+            }
         }
     }
 
@@ -414,7 +463,9 @@ Item {
             model: root.board
             skeleton: root.loading
             coveredTiles: emptyBoardLoader.active ? Theme.size.boardColumns * (Theme.size.boardRows - 1) : 0
-            onTilePressed: (row, typeId, isOther) => root.pressTile(typeId, isOther)
+            noteAction: root.hasDraft
+            onTilePressed: (row, typeId, isOther) => root.pressTile(row, typeId, isOther)
+            onTileHeld: row => root.holdTile(row)
             onTileTapped: (row, typeId, isOther) => {
                 if (isOther)
                     root.otherRequested();
@@ -439,6 +490,23 @@ Item {
         generation: root.undo.generation
         windowMs: root.undo.windowMs
         onUndoRequested: root.undo.undo()
+    }
+
+    // The Edit entry sheet of a hold on an empty composer. Made at the first hold, so that a board nobody holds does not pay for
+    // it (perf.scene), and kept after. It fills the sheet layer as the sheets do, and tells the layer's host that a sheet is up.
+    Loader {
+        id: editLoader
+
+        objectName: "logEditLoader"
+        parent: root.sheetLayer
+        anchors.fill: parent
+        active: false
+        readonly property bool isOpen: (item as LogEditSheets)?.isOpen ?? false
+        sourceComponent: LogEditSheets {
+            timeline: root.timeline
+            picker: root.picker
+            settings: root.settings
+        }
     }
 
     TemplateValueSheet {

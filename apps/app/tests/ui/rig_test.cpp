@@ -114,6 +114,61 @@ TEST_CASE("rig.press: a press is seen at touch-down and not at release, and fing
     rig.release(second); // a finger already lifted is ignored
 }
 
+TEST_CASE("rig.hold: a finger stays down for the virtual time, and a property animation ends in it", "[ui][rig]")
+{
+    UiRig rig;
+    REQUIRE(rig.load_source(QByteArrayLiteral(R"(
+        import QtQuick
+        Item {
+            id: root
+            property int downs: 0
+            property int ups: 0
+            property int fired: 0
+            property real clock: 0
+            Rectangle {
+                objectName: "pad"
+                width: 100; height: 100
+                TapHandler {
+                    onPressedChanged: {
+                        if (pressed) { root.downs++; pause.restart(); }
+                        else { root.ups++; pause.stop(); }
+                    }
+                }
+                // A lone PauseAnimation is ticked by the wall clock, so the hold is a property animation.
+                SequentialAnimation {
+                    id: pause
+                    NumberAnimation { target: root; property: "clock"; from: 0; to: 1; duration: 500 }
+                    ScriptAction { script: root.fired++ }
+                }
+            }
+        })")) != nullptr);
+    QQuickItem* root = rig.root();
+    QQuickItem* pad = rig.find(QStringLiteral("pad"));
+    REQUIRE(pad != nullptr);
+    rig.steady_time();
+
+    // A finger kept down: the animation ends in the hold, not before.
+    const int finger = rig.press(pad);
+    rig.advance(480ms);
+    CHECK(root->property("fired").toInt() == 0);
+    rig.advance(100ms); // the animation starts a frame or two after the press
+    CHECK(root->property("fired").toInt() == 1);
+    CHECK(root->property("ups").toInt() == 0); // still down
+    rig.release(finger);
+    CHECK(root->property("ups").toInt() == 1);
+
+    // Shorter than the animation: down and up, and it was stopped before it ended.
+    rig.hold(pad, 300ms);
+    CHECK(root->property("downs").toInt() == 2);
+    CHECK(root->property("ups").toInt() == 2);
+    CHECK(root->property("fired").toInt() == 1);
+
+    // Longer: it ended while the finger was down, and the time spent between holds did not count towards it.
+    rig.advance(2s);
+    rig.hold(pad, 600ms);
+    CHECK(root->property("fired").toInt() == 2);
+}
+
 TEST_CASE("rig.drag: a drag moves a draggable item along the path of the finger", "[ui][rig]")
 {
     UiRig rig;

@@ -111,6 +111,11 @@ public:
     void move(int finger, QQuickItem* item, QPointF to);
     void release(int finger);
     void tap(QQuickItem* item, std::optional<QPointF> at = std::nullopt);
+    /// A finger down on the item, kept still while `duration` of virtual time passes (`advance`: the animation clock and
+    /// the attached clock, a frame at a time), and up again: a long press. Nothing is run on the gateway in between, so a
+    /// commit that was asked for at touch-down is still waiting when the hold ends, as a slow one is. Use `press`,
+    /// `advance` and `release` when the test must look in the middle.
+    void hold(QQuickItem* item, std::chrono::milliseconds duration, std::optional<QPointF> at = std::nullopt);
     /// A finger down at `from`, over `steps` moves to `to`, and up, all in the item's coordinates. Each update is
     /// delivered before `move` returns: the test main turns off the compression of touch updates, which would deliver
     /// only the last.
@@ -129,6 +134,12 @@ public:
     /// the attached clocks, processes the events it leaves and renders a frame. An animator starts on the frame after
     /// the one that asked for it, so it too is finished after `advance` of its duration plus at most one frame.
     void advance(std::chrono::milliseconds by);
+    /// Keeps the animation driver ticking between animations, for a test that times a hold with a QML animation (a tile
+    /// held for 500 ms): Qt credits an animation that starts after an idle stretch with all the virtual time that went by
+    /// while none ran, so without this a hold that follows an `advance` of a second ends in the first frame. Call it once
+    /// after the screen is loaded. Off by default, because it also makes a QML `Timer` follow `advance` (a `Timer` otherwise
+    /// runs on the wall clock, see `wait_real`).
+    void steady_time(bool on = true);
     /// Lets real time pass for `by`, processing events, for the one thing `advance` cannot move: a QML `Timer` or a
     /// `QTimer` (wall clock). It sleeps, so use it for a component that owns such a timer and for nothing else.
     void wait_real(std::chrono::milliseconds by);
