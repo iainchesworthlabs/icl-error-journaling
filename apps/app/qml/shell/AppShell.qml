@@ -26,7 +26,8 @@ import ErrorJournalingApp
 //     messages    `AppRoot.writeFailed` is one Banner at the top of the window, except on the Log screen, which shows
 //                 the failures of its own models in its own banner. The Undo toast is the Log screen's; Review's is here,
 //                 because the Review screen has none.
-//     theme       `Theme.textScale` and `Theme.reduceMotion` follow the bridge (Dynamic Type, Reduce Motion).
+//     theme       `Theme.textScale` and `Theme.reduceMotion` follow the bridge (Dynamic Type, Reduce Motion), and
+//                 `WindowLayout.windowWidth` and `WindowLayout.windowHeight` follow the shell's own size (Stage 8).
 //
 // Given as `required property`, the nine services of AppRoot by their names, AppRoot itself and the bridge (decision 3), so
 // a missing one fails when the shell is made and not on a phone.
@@ -182,6 +183,22 @@ Item {
         target: Theme
         property: "reduceMotion"
         value: root.bridge.reduceMotion
+    }
+
+    // The layout class follows the shell's size (Stage 8, 8.1): the window on the phone, the window or the Split View or
+    // Stage Manager window on an iPad, the resizable window on a desktop.
+    Binding {
+        target: WindowLayout
+        property: "windowWidth"
+        value: root.width
+        when: root.width > 0
+    }
+
+    Binding {
+        target: WindowLayout
+        property: "windowHeight"
+        value: root.height
+        when: root.height > 0
     }
 
     Connections {

@@ -38,6 +38,8 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSignalSpy>
+#include <QSize>
+#include <QSizeF>
 #include <QString>
 #include <QVariant>
 #include <QVariantMap>
@@ -827,6 +829,32 @@ TEST_CASE("app.theme: Dynamic Type and Reduce Motion reach the theme from the br
     app.ui.advance(16ms);
     CHECK(theme->property("textScale").toDouble() == 1.0);
     CHECK_FALSE(theme->property("reduceMotion").toBool());
+}
+
+TEST_CASE("app.window_layout: the shell tells WindowLayout its size, so the class follows the window", "[ui][app]")
+{
+    App app;
+    QObject* layout = app.ui.window_layout();
+    REQUIRE(layout != nullptr);
+    CHECK(layout->property("windowWidth").toDouble() == 402);
+    CHECK(layout->property("compact").toBool());
+
+    // The window and the shell change size as a rotation does. The rig is not told, so the class can only come from the
+    // shell's binding.
+    const auto resize = [&app](QSize size)
+    {
+        app.ui.window().resize(size);
+        app.shell->setSize(QSizeF(size));
+        app.ui.advance(16ms);
+    };
+    resize(QSize(1180, 820));
+    CHECK(layout->property("windowWidth").toDouble() == 1180);
+    CHECK(layout->property("windowHeight").toDouble() == 820);
+    CHECK(layout->property("wide").toBool());
+    resize(QSize(820, 1180));
+    CHECK(layout->property("regular").toBool());
+    resize(QSize(402, 874));
+    CHECK(layout->property("compact").toBool());
 }
 
 TEST_CASE("app.hooks: the shell leaves Stage 5 the board-enabled state", "[ui][app]")
