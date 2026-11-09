@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- The Android manifest (docs/plan/stage-9.md). Qt's build fills the %%INSERT_...%% markers from apps/app/packaging/
+     android.cmake. tools/ci/check_android_package.py reads the merged manifest out of the built package and refuses any
+     permission (NFR-09: no network), a different SDK range, or a change to the activity below. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    android:installLocation="auto"
+    android:versionCode="-- %%INSERT_VERSION_CODE%% --"
+    android:versionName="-- %%INSERT_VERSION_NAME%% --">
+    <!-- No permissions (NFR-09). Qt's marker for them is left out on purpose: with it, Qt adds INTERNET and
+         ACCESS_NETWORK_STATE (QtQml links QtNetwork) and WRITE_EXTERNAL_STORAGE. -->
+    <!-- %%INSERT_FEATURES -->
+    <supports-screens
+        android:anyDensity="true"
+        android:largeScreens="true"
+        android:normalScreens="true"
+        android:smallScreens="true" />
+    <!-- allowBackup: the store stays in the device backup, as on iOS (Stage 2 decision 8; Stage 9 decision 5, package
+         9.5 adds the rules). -->
+    <application
+        android:name="org.qtproject.qt.android.bindings.QtApplication"
+        android:hardwareAccelerated="true"
+        android:label="-- %%INSERT_APP_NAME%% --"
+        android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true">
+        <!-- Phone portrait (the v1 scope). Android 16 ignores the orientation on screens at least 600 dp wide; what v1
+             does there is Stage 9 decision 2 (package 9.7). -->
+        <activity
+            android:name="com.iainchesworthlabs.errorjournaling.EjActivity"
+            android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
+            android:label="-- %%INSERT_APP_NAME%% --"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="-- %%INSERT_APP_LIB_NAME%% --" />
+
+            <meta-data
+                android:name="android.app.arguments"
+                android:value="-- %%INSERT_APP_ARGUMENTS%% --" />
+        </activity>
+
+        <!-- Qt's own file provider, as in its template. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.qtprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/qtprovider_paths"/>
+        </provider>
+    </application>
+</manifest>
