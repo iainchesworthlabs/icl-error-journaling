@@ -143,7 +143,7 @@ SheetHost {
                     objectName: "boardGroup"
                     width: parent.width
                     visible: boardRepeater.count > 0
-                    title: qsTr("On your board and in Other · %1").arg(boardRepeater.count)
+                    title: qsTr("On your board · %1").arg(boardRepeater.count)
 
                     Repeater {
                         id: boardRepeater
@@ -199,7 +199,7 @@ SheetHost {
                     objectName: "otherGroup"
                     width: parent.width
                     visible: otherRepeater.count > 0
-                    title: qsTr("Only in Other · %1").arg(otherRepeater.count)
+                    title: qsTr("Not on your board · %1").arg(otherRepeater.count)
 
                     Repeater {
                         id: otherRepeater

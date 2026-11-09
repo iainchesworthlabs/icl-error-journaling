@@ -1,0 +1,1 @@
+Plainer wording on four screens. First launch by hand asks for the "Unit prefix" and shows "For example UNIT" as an example. The note on a template's value prompt shows the line as the template editor does ("Played [answer]"). The Error types headings are "On your board" and "Not on your board". The Import or export note no longer names AirDrop, so it is true on every platform.
