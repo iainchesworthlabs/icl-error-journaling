@@ -4,8 +4,9 @@
 
     python tools/visual/render_mockups.py [--out out] [--only Main Review ...] [--scale 2] [--jobs 4]
 
-Writes `<Name>.mock.png` (light) and `<Name>.dark.mock.png` (dark), each 402 x 874 logical pixels at --scale (2 by default,
-so 804 x 1748). The app's capture (apps/app/tests/ui/visual_capture_test.cpp) writes at the same scale, so the two compare.
+Writes `<Name>.mock.png` (light) and `<Name>.dark.mock.png` (dark), each at the size the page gives in its `$preview`
+(402 x 874 logical pixels for the phone, 820 x 1180 and 1180 x 820 for the iPad pages of Stage 8) at --scale (2 by default,
+so 804 x 1748 for the phone). The app's capture (apps/app/tests/ui/visual_capture_test.cpp) writes at the same scale, so the two compare.
 
 The mock-ups were authored for a design-canvas runtime (`support.js`, not in the repository). Rendering them as they are
 shows the unexpanded templates of `Main`, so the pages are preprocessed into a temporary folder (build/visual/tmp), and the
@@ -152,7 +153,13 @@ def wait_for_picture(png: Path, seconds: float = 90.0) -> bool:
     return False
 
 
-def render_one(edge: str, page: Path, png: Path, scale: float, budget_ms: int) -> None:
+def page_size(source: str) -> tuple[int, int]:
+    """The width and height in the page's `$preview` (data-props of its script), or the phone's when it gives none."""
+    match = re.search(r'"\$preview"\s*:\s*\{\s*"width"\s*:\s*(\d+)\s*,\s*"height"\s*:\s*(\d+)', source)
+    return (int(match.group(1)), int(match.group(2))) if match else (WIDTH, HEIGHT)
+
+
+def render_one(edge: str, page: Path, png: Path, scale: float, budget_ms: int, size: tuple[int, int]) -> None:
     profile = Path(tempfile.mkdtemp(prefix="ej-edge-"))
     png.unlink(missing_ok=True)
     try:
@@ -165,7 +172,7 @@ def render_one(edge: str, page: Path, png: Path, scale: float, budget_ms: int) -
             "--allow-file-access-from-files",
             "--hide-scrollbars",
             f"--user-data-dir={profile}",
-            f"--window-size={WIDTH},{HEIGHT}",
+            f"--window-size={size[0]},{size[1]}",
             f"--force-device-scale-factor={scale:g}",
             f"--virtual-time-budget={budget_ms}",
             f"--screenshot={png}",
@@ -213,13 +220,16 @@ def main(argv: list[str] | None = None) -> int:
         for suffix in ("", ".dark"):
             source = SCREENS / f"{name}{suffix}.dc.html"
             page = tmp / f"{name}{suffix}.html"
-            page.write_text(preprocess(source.read_text(encoding="utf-8"), args.fonts), encoding="utf-8")
-            jobs.append((page, args.out / f"{name}{suffix}.mock.png"))
+            text = source.read_text(encoding="utf-8")
+            page.write_text(preprocess(text, args.fonts), encoding="utf-8")
+            jobs.append((page, args.out / f"{name}{suffix}.mock.png", page_size(text)))
 
     started = time.time()
     failures = []
     with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        futures = [(png, pool.submit(render_one, args.edge, page, png, args.scale, args.budget_ms)) for page, png in jobs]
+        futures = [
+            (png, pool.submit(render_one, args.edge, page, png, args.scale, args.budget_ms, size)) for page, png, size in jobs
+        ]
         for png, future in futures:
             try:
                 future.result()
