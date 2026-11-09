@@ -279,7 +279,7 @@ struct Phone
         }
         REQUIRE_FALSE(location.isEmpty());
         REQUIRE(session.correctHeader(QStringLiteral("location"), location));
-        REQUIRE(session.correctHeader(QStringLiteral("software_version"), QStringLiteral("1.4.2")));
+        REQUIRE(session.correctVersion(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d")));
         auto& settings = *services.root().settings();
         const auto rename = [&](const char* id, const char* name)
         {
