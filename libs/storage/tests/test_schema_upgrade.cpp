@@ -136,7 +136,10 @@ TEST_CASE("A version 1 database is migrated at launch and a log that was shared 
     std::size_t backups = 0;
     for (const auto& file : std::filesystem::directory_iterator(store.location().backup_dir()))
     {
-        backups += file.path().filename().string().starts_with("ej-v1-") ? 1 : 0;
+        if (file.path().filename().string().starts_with("ej-v1-"))
+        {
+            ++backups;
+        }
     }
     CHECK(backups == 1);
 
