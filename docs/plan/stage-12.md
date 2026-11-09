@@ -1,17 +1,23 @@
-# Stage 12: Mac and Windows desktop (nice-to-have)
+# Stage 12: Mac and Windows desktop (v2)
 
 Plan for Stage 12 of the [implementation plan](../implementation-plan.md) ("Stages 7 to 12"). Stage 12 turns the Mac and
 Windows development builds into products that a facilitator can install, keep updated, and use with a mouse and keyboard.
-The desktop is a v1 nice-to-have, so this page exists to support a decision. It covers effort, risk, and what the owner
-would need to provide, and it ends with a [recommendation](#recommendation) the owner can accept or change.
+
+**Decision (owner, 10 Nov 2026): desktop support is v2.** Nothing on this page is built for v1, including the Windows CI
+leg (12.1). The macOS desktop build stays a development tool, as the PRD says, and Windows stays on the developer
+machine only. The page is kept as the starting plan for v2. When v2 is planned, its facts are checked again (Qt, the
+stores, the signing services and their prices) and its open [decisions](#decisions-for-the-owner) are answered then.
+
+The text below is the plan as it was written for the v1 decision. It covers effort, risk, and what the owner would need
+to provide, and the [recommendation](#recommendation) it made.
 
 **Exit gate (if it ships):** on each platform that ships, an installed and signed build from the release workflow passes
 the [desktop checklist](#desktop-checklist-the-exit-gate) on a real machine. It installs without a security warning,
 updates to the next build, logs a day, shares or copies the log, imports a setup file, and survives a kill with no lost
 entry.
 
-**Status:** draft for owner review. No code is written until the owner decides and approves this page. Building starts
-only after Stage 8's wide layout has merged.
+**Status:** deferred to v2 by the owner on 10 Nov 2026. No code is written for v1. In v2, the page is reviewed again and
+approved before any code, and building starts after Stage 8's wide layout has merged.
 
 ## Recommendation
 
@@ -398,7 +404,7 @@ None of these are done by an agent (AGENTS.md: secrets, settings and releases be
 
 | # | Decision | Recommendation |
 |---|---|---|
-| 1 | Which option: A both, B Windows only, C Mac only, D defer | **B if Stages 7 to 11 are on time, otherwise D**; Route 0 for the Mac in every case; 12.1 (Windows CI leg) now in every case |
+| 1 | Which option: A both, B Windows only, C Mac only, D defer | **Decided (owner, 10 Nov 2026): desktop support is v2.** The recommendation was B if Stages 7 to 11 were on time, otherwise D, with Route 0 for the Mac and 12.1 now in every case. Route 0 (the iPad app on a Mac) is a store setting for Stage 11, not part of this stage |
 | 2 | Windows distribution: Microsoft Store (MSIX) or a signed installer | **Microsoft Store**: no certificate, updates and SmartScreen handled, and accepting that uninstall removes the data |
 | 3 | On Windows, does a copy or a save count as "shared" for the end-of-day prompt (DAY-01)? | **Yes**, as Copy already does on the phone |
 | 4 | Exclude the Mac store from Time Machine, to match the phone's backup rule | Match whatever Stage 5 chose for the phone; if the phone's store is backed up, leave Time Machine alone |

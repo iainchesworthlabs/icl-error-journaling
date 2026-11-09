@@ -17,7 +17,7 @@ nav:
       - Stage 0: plan/stage-0.md
       - Stage 0 spikes: plan/spikes.md
       - Stage 4: plan/stage-4.md
-      - Stage 12 (desktop): plan/stage-12.md
+      - Stage 12 (desktop, v2): plan/stage-12.md
   - Design: design/README.md
   - Building: building.md
   - Architecture: architecture.md
