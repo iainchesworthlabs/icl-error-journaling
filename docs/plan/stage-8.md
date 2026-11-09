@@ -8,7 +8,9 @@ Task breakdown, test list and device checklist for Stage 8 of the [implementatio
 in light and dark ([device checklist](#device-checklist-the-exit-gate)); the phone layout is unchanged, so every phone test
 and `launch.matches_screen` still pass.
 
-**Status:** draft for owner review. No code is written until the owner approves this page and the mock-ups.
+**Status:** approved by the owner on 9 Nov 2026, with the mock-ups as drawn and the recommendations of
+[Decisions for the owner](#decisions-for-the-owner): Split View and Stage Manager supported, the board on the left in
+landscape, the Review tab kept, and the background colour only as the iPad launch screen. Building starts with 8.1.
 
 There is no Mac and no iPad on the development machine. CI compiles the iOS build and runs the desktop build. Everything
 below about how iPadOS behaves comes from Apple's documentation or Qt's source as remembered. It is unproven until the
