@@ -70,6 +70,28 @@ Item {
     // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
     // log column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
     readonly property real side: WindowLayout.sideMargin(width, Theme.layout.logColumn)
+    // The height of the board's tiles (Stage 8, "Layout rules"): the phone's 104 pt, or 0.7 of a tile's width in a larger
+    // window, up to its limit. A window shorter than the phone's design frame (a Split View or Stage Manager window on an
+    // iPad, or a smaller phone) gives the tiles only the room above the tab bar, down to the 88 pt minimum; when even that
+    // does not fit, the Last bar gives way (Review is a tab away). A window as tall as the design frame keeps the phone's
+    // tiles and Last bar as they were.
+    readonly property bool shortWindow: WindowLayout.windowHeight < Theme.frame.height
+    // The room for the board under the composer, above the tab bar, and what the Last bar takes of it.
+    readonly property real roomBelowComposer: height - bottomClearance - frame.topInset - (composer.y + composer.height + Theme.space.sectionGap)
+    readonly property real lastBarRoom: lastBar.implicitHeight + Theme.space.sectionGap
+    readonly property bool lastBarHidden: shortWindow && fittingTile(roomBelowComposer - lastBarRoom) < Theme.size.tileMinimum
+    readonly property real tileHeight: {
+        const preferred = WindowLayout.tileHeightFor(grid.tileWidth);
+        if (!shortWindow)
+            return preferred;
+        const room = roomBelowComposer - (lastBarHidden ? 0 : lastBarRoom);
+        return Math.max(Theme.size.tileMinimum, Math.min(preferred, fittingTile(room)));
+    }
+
+    // The tallest tile of which four rows, with their gaps, fit in `room`.
+    function fittingTile(room: real): real {
+        return Math.floor((room - (Theme.size.boardRows - 1) * WindowLayout.tileGap) / Theme.size.boardRows);
+    }
 
     required property var session
     required property var board
@@ -362,6 +384,7 @@ Item {
             width: parent.width - 2 * root.side
             anchors.top: composer.bottom
             anchors.topMargin: Theme.space.sectionGap
+            visible: !root.lastBarHidden
             lastLine: root.timeline.lastLine
             entryCount: root.timeline.entryCount
             skeleton: root.loading
@@ -375,7 +398,7 @@ Item {
             id: emptyBoardLoader
 
             // The first three rows: the board without its last row and the gap above it.
-            readonly property real rowsHeight: grid.boardHeight - Theme.size.tileHeight - Theme.space.tileGap
+            readonly property real rowsHeight: grid.boardHeight - grid.tileHeight - grid.gap
 
             x: grid.x
             y: grid.y
@@ -478,8 +501,10 @@ Item {
             objectName: "logBoard"
             x: root.side
             width: parent.width - 2 * root.side
-            anchors.top: lastBar.bottom
+            anchors.top: root.lastBarHidden ? composer.bottom : lastBar.bottom
             anchors.topMargin: Theme.space.sectionGap
+            gap: WindowLayout.tileGap
+            tileHeight: root.tileHeight
             model: root.board
             skeleton: root.loading
             coveredTiles: emptyBoardLoader.active ? Theme.size.boardColumns * (Theme.size.boardRows - 1) : 0
@@ -499,11 +524,10 @@ Item {
         id: toast
 
         objectName: "logToast"
-        anchors.left: parent.left
-        anchors.right: parent.right
+        // As wide as the column on a phone; on a larger window no wider than the toast's limit, under the board.
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: WindowLayout.compact ? parent.width - 2 * root.side : Math.min(Theme.layout.toastMaxWidth, parent.width - 2 * root.side)
         anchors.bottom: parent.bottom
-        anchors.leftMargin: root.side
-        anchors.rightMargin: root.side
         anchors.bottomMargin: root.bottomClearance + Theme.space.sectionGap
         active: root.undo.active
         text: root.undo.text

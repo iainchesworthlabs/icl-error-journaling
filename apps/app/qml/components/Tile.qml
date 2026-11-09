@@ -96,7 +96,7 @@ Item {
     readonly property bool down: tap.pressed
     // The largest number the badge writes in full; from here on it reads "99+" (the accessible name has the full count).
     readonly property int badgeLimit: 99
-    readonly property real padding: Theme.font.tileLabel.enlarged ? Theme.space.sectionGap - Theme.border.hairline * 2 : Theme.space.sectionGap
+    readonly property real padding: WindowLayout.tileLabelRole.enlarged ? Theme.space.sectionGap - Theme.border.hairline * 2 : Theme.space.sectionGap
     // The floor of the label's fit (fontSizeMode), as a share of its size: the label wraps and shrinks to this, never elides.
     readonly property real labelFloor: 0.75
     readonly property bool dashed: isOther && !skeleton
@@ -221,11 +221,11 @@ Item {
             visible: !root.isEmpty && !root.skeleton
             text: root.label
             color: Theme.colour.tileText
-            font: Theme.font.tileLabel.font
+            font: WindowLayout.tileLabelRole.font
             // A line is 1.2 times the size, as CSS has it (16.2 pt at 13.5), not 1.2 times the font's own line. It is
             // given as a ratio of the font's line, because the label shrinks to fit (fontSizeMode) and a ratio shrinks
             // with it.
-            lineHeight: Theme.font.tileLabel.lineRatio
+            lineHeight: WindowLayout.tileLabelRole.lineRatio
             lineHeightMode: Text.ProportionalHeight
             // Wraps at words, and inside a word that is wider than the tile; never elides (NFR-02, decision 9).
             wrapMode: Text.Wrap
@@ -233,9 +233,9 @@ Item {
             verticalAlignment: Text.AlignBottom
             // The tile never grows, so a label that would not fit shrinks, down to a floor, before it is cut.
             fontSizeMode: Text.Fit
-            minimumPixelSize: Math.round(Theme.font.tileLabel.size * root.labelFloor)
+            minimumPixelSize: Math.round(WindowLayout.tileLabelRole.size * root.labelFloor)
             // A fractional size is a point size, and Fit then shrinks to the point floor.
-            minimumPointSize: Theme.font.tileLabel.size * root.labelFloor * 72 / Theme.fontDpi
+            minimumPointSize: WindowLayout.tileLabelRole.size * root.labelFloor * 72 / Theme.fontDpi
             Accessible.ignored: true
         }
 
@@ -247,8 +247,8 @@ Item {
             anchors.right: parent.right
             anchors.margins: Theme.space.tileGap
             visible: root.hasCount && !root.skeleton && !root.isEmpty
-            width: Math.max(Theme.size.badge, badgeText.implicitWidth + (Theme.space.tileGap - Theme.border.hairline) * 2)
-            height: Theme.size.badge
+            width: Math.max(WindowLayout.badge, badgeText.implicitWidth + (Theme.space.tileGap - Theme.border.hairline) * 2)
+            height: WindowLayout.badge
             radius: height / 2
             color: Theme.colour.badgeBackground
             Accessible.ignored: true
@@ -260,7 +260,7 @@ Item {
                 anchors.centerIn: parent
                 text: root.count >= root.badgeLimit ? qsTr("%1+").arg(root.badgeLimit) : root.count
                 color: Theme.colour.badgeText
-                font: Theme.font.badge.font
+                font: WindowLayout.badgeRole.font
                 Accessible.ignored: true
             }
         }

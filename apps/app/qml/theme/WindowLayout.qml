@@ -52,6 +52,10 @@ QtObject {
 
     readonly property real screenMargin: compact ? Theme.space.screenMargin : Theme.layout.screenMargin
     readonly property real tileGap: compact ? Theme.space.tileGap : Theme.layout.tileGap
+    // The board's text and count badge: the phone's in Compact, larger on the larger tiles of a larger window.
+    readonly property var tileLabelRole: compact ? Theme.font.tileLabel : Theme.font.tileLabelLarge
+    readonly property var badgeRole: compact ? Theme.font.badge : Theme.font.badgeLarge
+    readonly property real badge: compact ? Theme.size.badge : Theme.layout.badge
 
     // The width of a centred column no wider than `limit`, inside the screen margins. A Compact window has no
     // limit: its columns are the full width less the margins, as on the phone.
