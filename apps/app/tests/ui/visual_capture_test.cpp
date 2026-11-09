@@ -22,6 +22,7 @@
 // The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the
 // Windows headers behind Qt Quick define as a macro. clang-format would sort them the other way, so it is switched off.
 // clang-format off
+#include "about_support.hpp"
 #include "support/rig.hpp"
 #include "viewmodel/board_model.hpp"
 #include "viewmodel/day_watcher.hpp"
@@ -53,6 +54,7 @@
 #include <QJsonObject>
 #include <QMetaObject>
 #include <QObject>
+#include <QPointF>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -116,6 +118,7 @@ Item {
     required property var appRoot
     required property var bridge
     required property var fileChooser
+    required property var about
     required property string aboutText
 
     SafeArea.additionalMargins.top: %1
@@ -135,6 +138,7 @@ Item {
         appRoot: wrap.appRoot
         bridge: wrap.bridge
         fileChooser: wrap.fileChooser
+        about: wrap.about
         aboutText: wrap.aboutText
     }
 }
@@ -318,6 +322,7 @@ struct Phone
                            {QStringLiteral("appRoot"), object(root)},
                            {QStringLiteral("bridge"), object(bridge)},
                            {QStringLiteral("fileChooser"), object(*chooser)},
+                           {QStringLiteral("about"), object(about)},
                            {QStringLiteral("aboutText"), QStringLiteral("0.1.0")}};
     }
 
@@ -441,6 +446,10 @@ struct Phone
 
     Rig services;
     CaptureBridge bridge;
+    /// The About pages: the build of the mock-ups (57, a1b2c3d, develop) and notices that name Qt Base as the mock-up
+    /// does.
+    ej::viewmodel::AboutModel about{ej::test::about_facts(),
+                                    [] { return ej::test::about_notices(6, QStringLiteral("Qt Base")); }};
     UiRig ui;
     std::unique_ptr<QObject> chooser;
     Device m_Device;
@@ -977,6 +986,33 @@ void open_settings_page(Phone& phone, const QString& row)
     phone.play();
 }
 
+/// Scrolls the page that is in view until the item is, as the person does, and returns it.
+QQuickItem* reveal(Phone& phone, QQuickItem* item)
+{
+    QQuickItem* flickable = phone.need(QStringLiteral("settingsFlickable"));
+    auto* content = flickable->property("contentItem").value<QQuickItem*>();
+    REQUIRE(content != nullptr);
+    const double top = item->mapToItem(content, QPointF(0, 0)).y();
+    const double most = std::max(0.0, flickable->property("contentHeight").toDouble() - flickable->height());
+    flickable->setProperty("contentY", std::clamp(top - flickable->height() / 3, 0.0, most));
+    phone.ui.layout();
+    return item;
+}
+
+void scene_about(Phone& phone)
+{
+    phone.choose_tab(SETTINGS_TAB);
+    phone.tap_item(reveal(phone, phone.need(QStringLiteral("settingsAboutRow"))));
+    phone.play();
+}
+
+void scene_about_licence(Phone& phone)
+{
+    scene_about(phone);
+    phone.tap_item(reveal(phone, phone.nth(QStringLiteral("aboutComponent"), 0)));
+    phone.play();
+}
+
 void scene_error_types(Phone& phone)
 {
     open_settings_page(phone, QStringLiteral("settingsErrorTypes"));
@@ -1190,6 +1226,13 @@ std::vector<Scene> phone_scenes()
         {QStringLiteral("TileLabels"), TODAY, scene_tile_labels,
          QStringLiteral("\"Sequence Out of Order\" logged three times; the mock-up's dashed design note is not UI and "
                         "is not in the app.")},
+        {QStringLiteral("About"), TODAY, scene_about,
+         QStringLiteral(
+             "Settings, About CS Bingo Board, at the top. The mock-up's rows are the build of the mock-up (57, "
+             "a1b2c3d, develop, 2026-11-09 03:21 UTC); the app's components are made up for the capture.")},
+        {QStringLiteral("AboutLicence"), TODAY, scene_about_licence,
+         QStringLiteral("The first component of the About list (Qt Base) opened; the made-up texts are short stand-ins "
+                        "for the licences the mock-up begins.")},
         {QStringLiteral("TileLabelsLarge"), TODAY, scene_tile_labels_large,
          QStringLiteral("The same board at a text scale of 1.3 (the cap); the design note is not in the app.")},
     };

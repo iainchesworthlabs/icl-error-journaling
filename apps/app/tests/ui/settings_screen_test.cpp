@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SettingsScreen (docs/plan/stage-4.md, 4.12): settings.rows, settings.facilitator, settings.prefix,
 // settings.time_format, settings.totals, settings.board_layout, settings.board_limit, settings.export,
-// settings.import_row, settings.loading, settings.voiceover and the cross-cutting checks, against the real
-// SettingsModel and BoardModel over the fakes of Stage 3 and the sample configuration.
+// settings.import_row, settings.loading, settings.voiceover, settings.about (PRF-12) and the cross-cutting checks,
+// against the real SettingsModel and BoardModel over the fakes of Stage 3 and the sample configuration.
 //
 // The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the
 // Windows headers behind Qt Quick define as a macro. clang-format would sort the includes otherwise, so it is switched
@@ -12,6 +12,7 @@
 #include "support/fake_sources.hpp"
 #include "viewmodel/board_model.hpp"
 
+#include "about_support.hpp"
 #include "board_test_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"
@@ -49,7 +50,7 @@ constexpr int OTHER_ROW = 11;
 class Fixture
 {
 public:
-    explicit Fixture(bool loaded = true)
+    explicit Fixture(bool loaded = true, bool with_about = true) : m_WithAbout(with_about)
     {
         if (loaded)
         {
@@ -65,9 +66,14 @@ public:
 
     void load_screen()
     {
-        m_Screen =
-            m_Ui.load(QStringLiteral("SettingsScreen"),
-                      {{QStringLiteral("settings"), QVariant::fromValue(static_cast<QObject*>(&m_Models.m_Settings))}});
+        QVariantMap given{
+            {QStringLiteral("settings"), QVariant::fromValue(static_cast<QObject*>(&m_Models.m_Settings))},
+            {QStringLiteral("timingText"), QString::fromLatin1(TIMING_LINE)}};
+        if (m_WithAbout)
+        {
+            given.insert(QStringLiteral("about"), QVariant::fromValue(static_cast<QObject*>(&m_About)));
+        }
+        m_Screen = m_Ui.load(QStringLiteral("SettingsScreen"), given);
         REQUIRE(m_Screen != nullptr);
         INFO(m_Ui.errors().toStdString());
         m_Ui.layout();
@@ -116,6 +122,12 @@ public:
     /// Taps the Back of the page that is on top, and waits.
     void go_back()
     {
+        // The title bar scrolls with the page: bring it back into view, as the person does.
+        if (QQuickItem* flickable = shown(QStringLiteral("settingsFlickable")))
+        {
+            flickable->setProperty("contentY", 0.0);
+            m_Ui.layout();
+        }
         tap(QStringLiteral("navLeading"));
         m_Ui.advance(400ms);
     }
@@ -157,9 +169,57 @@ public:
         return m_Models.store().saves().size();
     }
 
+    /// Scrolls the page that is on top until the item is in view, as the person does.
+    void reveal(const QString& name)
+    {
+        QQuickItem* item = require(name);
+        QQuickItem* flickable = require(QStringLiteral("settingsFlickable"));
+        auto* content = flickable->property("contentItem").value<QQuickItem*>();
+        REQUIRE(content != nullptr);
+        const double top = item->mapToItem(content, QPointF(0, 0)).y();
+        const double most = std::max(0.0, flickable->property("contentHeight").toDouble() - flickable->height());
+        flickable->setProperty("contentY", std::clamp(top - flickable->height() / 3, 0.0, most));
+        m_Ui.layout();
+    }
+
+    /// Scrolls to the item, taps it, and waits for the page to arrive.
+    void reveal_and_open(const QString& name)
+    {
+        reveal(name);
+        open_page(name);
+    }
+
+    /// How many items with this name are shown.
+    [[nodiscard]] int count_shown(const QString& name)
+    {
+        int count = 0;
+        for (const Node& node : m_Ui.tree())
+        {
+            if (node.m_ObjectName == name && node.m_Visible)
+            {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    [[nodiscard]] QString text_of(const QString& name)
+    {
+        return require(name)->property("text").toString();
+    }
+
+    [[nodiscard]] QString value_of(const QString& name)
+    {
+        return require(name)->property("value").toString();
+    }
+
+    static constexpr const char* TIMING_LINE = "launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms";
+
     SettingsRig m_Models;
+    viewmodel::AboutModel m_About{about_facts(), [] { return about_notices(); }};
     UiRig m_Ui;
     QQuickItem* m_Screen = nullptr;
+    bool m_WithAbout = true;
 };
 
 /// Types `text` into the field of the page that is on top, in place of what is there.
@@ -965,4 +1025,325 @@ TEST_CASE("settings.motion: with Reduce Motion the pages fade in 100 ms and the 
     fixture.tap(QStringLiteral("miniReplace"));
     fixture.m_Ui.advance(200ms);
     expect_clean(check_motion_reduced(fixture.m_Ui));
+}
+
+TEST_CASE("settings.about: the last row of the list opens the About page and Back returns to the list",
+          "[ui][settings_screen][about]")
+{
+    Fixture fixture;
+    fixture.reveal(QStringLiteral("settingsAboutRow"));
+    QQuickItem* row = fixture.require(QStringLiteral("settingsAboutRow"));
+    CHECK(row->property("text").toString() == "About CS Bingo Board");
+    CHECK(row->property("showChevron").toBool());
+    CHECK(fixture.m_Ui.geometry(row).height() == 44.0);
+    // After the six rows of the setup, in a group of its own.
+    CHECK(fixture.m_Ui.geometry(row).top() >
+          fixture.m_Ui.geometry(fixture.require(QStringLiteral("settingsImportExport"))).bottom());
+
+    fixture.tap(QStringLiteral("settingsAboutRow"));
+    fixture.m_Ui.advance(400ms);
+    CHECK(fixture.depth() == 2);
+    CHECK(fixture.shown(QStringLiteral("aboutBuild")) != nullptr);
+    CHECK(fixture.shown(QStringLiteral("settingsBoardHint")) == nullptr);
+    fixture.go_back();
+    CHECK(fixture.depth() == 1);
+    CHECK(fixture.shown(QStringLiteral("settingsBoardHint")) != nullptr);
+}
+
+TEST_CASE("settings.about: without the model there is no About row", "[ui][settings_screen][about]")
+{
+    Fixture fixture(true, false);
+    CHECK(fixture.shown(QStringLiteral("settingsAboutRow")) == nullptr);
+    CHECK(fixture.shown(QStringLiteral("settingsImportExport")) != nullptr);
+}
+
+TEST_CASE("settings.about: the foot of the list is a plain caption with no timing line", "[ui][settings_screen][about]")
+{
+    Fixture fixture;
+    fixture.m_Screen->setProperty("aboutText", QStringLiteral("0.1.0 · ios, storage: sqlite"));
+    fixture.m_Ui.layout();
+    fixture.reveal(QStringLiteral("settingsAboutFooter"));
+    CHECK(fixture.text_of(QStringLiteral("settingsVersionCaption")) == "0.1.0 · ios, storage: sqlite");
+    QQuickItem* footer = fixture.require(QStringLiteral("settingsAboutFooter"));
+    for (int i = 0; i < 6; ++i)
+    {
+        fixture.m_Ui.tap(footer);
+    }
+    fixture.m_Ui.layout();
+    CHECK(fixture.shown(QStringLiteral("settingsTiming")) == nullptr);
+    CHECK(fixture.depth() == 1);
+}
+
+TEST_CASE("settings.about: the page says what this build is", "[ui][settings_screen][about]")
+{
+    Fixture fixture;
+    fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+    REQUIRE(fixture.depth() == 2);
+    CHECK(fixture.value_of(QStringLiteral("aboutName")) == "CS Bingo Board");
+    CHECK(fixture.value_of(QStringLiteral("aboutVersion")) == "0.1.0");
+    CHECK(fixture.value_of(QStringLiteral("aboutBuildNumber")) == "57");
+    CHECK(fixture.value_of(QStringLiteral("aboutCommit")) == "a1b2c3d");
+    CHECK(fixture.value_of(QStringLiteral("aboutRef")) == "develop");
+    CHECK(fixture.value_of(QStringLiteral("aboutBuildDate")) == "2026-11-09 03:21 UTC");
+    CHECK(fixture.value_of(QStringLiteral("aboutPlatform")) == "ios");
+    CHECK(fixture.value_of(QStringLiteral("aboutQt")) == "6.12.0");
+    CHECK(fixture.value_of(QStringLiteral("aboutStorage")) == "sqlite");
+    CHECK(fixture.value_of(QStringLiteral("aboutLicenceName")) == "GPL-3.0-or-later");
+    CHECK(fixture.shown(QStringLiteral("aboutProblem")) == nullptr);
+    // One row for each component of the notices.
+    CHECK(fixture.m_Ui.find_items(QStringLiteral("aboutComponent")).size() == 4);
+}
+
+TEST_CASE(
+    "settings.about: a build with no branch or tag leaves that row out and says unknown for what it does not know",
+    "[ui][settings_screen][about]")
+{
+    Fixture fixture(true, false);
+    viewmodel::AboutFacts facts = about_facts();
+    facts.m_Ref.clear();
+    facts.m_Commit = QStringLiteral("unknown");
+    facts.m_BuildDate = QStringLiteral("unknown");
+    viewmodel::AboutModel bare(facts, [] { return about_notices(); });
+    fixture.m_Screen->setProperty("about", QVariant::fromValue(static_cast<QObject*>(&bare)));
+    fixture.m_Ui.layout();
+    fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+    REQUIRE(fixture.depth() == 2);
+    CHECK(fixture.shown(QStringLiteral("aboutRef")) == nullptr);
+    CHECK(fixture.value_of(QStringLiteral("aboutCommit")) == "unknown");
+    CHECK(fixture.value_of(QStringLiteral("aboutBuildDate")) == "unknown");
+}
+
+TEST_CASE("settings.about: notices that cannot be read are said so, and the facts of the build stay",
+          "[ui][settings_screen][about]")
+{
+    Fixture fixture(true, false);
+    viewmodel::AboutModel broken(about_facts(), [] { return QByteArray("not json"); });
+    fixture.m_Screen->setProperty("about", QVariant::fromValue(static_cast<QObject*>(&broken)));
+    fixture.m_Ui.layout();
+    fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+    REQUIRE(fixture.depth() == 2);
+    CHECK(fixture.shown(QStringLiteral("aboutProblem")) != nullptr);
+    CHECK(fixture.shows(QStringLiteral("could not be read")));
+    CHECK(fixture.value_of(QStringLiteral("aboutVersion")) == "0.1.0");
+    CHECK(fixture.m_Ui.find_items(QStringLiteral("aboutComponent")).empty());
+}
+
+TEST_CASE("settings.about: five quick taps on the Version row show the timing line, and five more hide it",
+          "[ui][settings_screen][about]")
+{
+    Fixture fixture;
+    fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+    QQuickItem* version = fixture.require(QStringLiteral("aboutVersion"));
+    // It is read as text, not as a control, and says nothing of the gesture.
+    CHECK_FALSE(version->property("tappable").toBool());
+    CHECK(fixture.shown(QStringLiteral("settingsTiming")) == nullptr);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        fixture.m_Ui.tap(version);
+    }
+    CHECK(fixture.shown(QStringLiteral("settingsTiming")) == nullptr);
+    fixture.m_Ui.tap(version);
+    fixture.m_Ui.advance(16ms);
+    REQUIRE(fixture.shown(QStringLiteral("settingsTiming")) != nullptr);
+    CHECK(fixture.text_of(QStringLiteral("settingsTiming")) == QString::fromLatin1(Fixture::TIMING_LINE));
+
+    for (int i = 0; i < 5; ++i)
+    {
+        fixture.m_Ui.tap(version);
+    }
+    fixture.m_Ui.advance(16ms);
+    CHECK(fixture.shown(QStringLiteral("settingsTiming")) == nullptr);
+}
+
+TEST_CASE("settings.about: the source row asks for the address of the repository and opens no page",
+          "[ui][settings_screen][about]")
+{
+    Fixture fixture;
+    QSignalSpy opened(fixture.m_Screen, SIGNAL(openUrlRequested(QString)));
+    fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+    fixture.reveal(QStringLiteral("aboutSourceUrl"));
+    CHECK(fixture.text_of(QStringLiteral("aboutSourceUrl")) ==
+          "https://github.com/iainchesworthlabs/icl-error-journaling");
+    fixture.reveal(QStringLiteral("aboutSourceLink"));
+    fixture.tap(QStringLiteral("aboutSourceLink"));
+    REQUIRE(opened.count() == 1);
+    CHECK(opened.at(0).at(0).toString() == "https://github.com/iainchesworthlabs/icl-error-journaling");
+    CHECK(fixture.depth() == 2);
+}
+
+TEST_CASE("settings.about: Read the licence opens the full text of the licence of the app, as paragraphs",
+          "[ui][settings_screen][about]")
+{
+    Fixture fixture;
+    fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+    fixture.reveal_and_open(QStringLiteral("aboutLicenceText"));
+    REQUIRE(fixture.depth() == 3);
+    CHECK(fixture.value_of(QStringLiteral("licenceExpression")) == "GPL-3.0-or-later");
+    CHECK(fixture.value_of(QStringLiteral("licenceName")) == "CS Bingo Board");
+    // The copyright line and the source address, then the text under the name of the licence: six paragraphs of three
+    // joined lines.
+    CHECK(fixture.count_shown(QStringLiteral("licenceHeading")) == 3);
+    CHECK(fixture.shows(QStringLiteral("GPL-3.0-OR-LATER")));
+    CHECK(fixture.count_shown(QStringLiteral("licenceParagraph")) == 1 + 1 + 6);
+    CHECK(
+        fixture.shows(QStringLiteral("1. Permission is granted to use, copy and share this sample text under the terms "
+                                     "written here, as long as the notice stays with every copy")));
+    fixture.go_back();
+    CHECK(fixture.depth() == 2);
+    fixture.go_back();
+    CHECK(fixture.depth() == 1);
+}
+
+TEST_CASE("settings.about: a component row opens its page with the text of each licence it is offered under",
+          "[ui][settings_screen][about]")
+{
+    Fixture fixture;
+    fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+    const auto rows = fixture.m_Ui.find_items(QStringLiteral("aboutComponent"));
+    REQUIRE(rows.size() == 4);
+    // The row reads as one button: name and version, then the licence.
+    CHECK(rows[0]->property("title").toString() == "Sample Base 6.12.0");
+    CHECK(rows[0]->property("licence").toString() == "Qt commercial licence OR LGPL-3.0-only OR GPL-3.0-only");
+
+    fixture.reveal(QStringLiteral("aboutComponent"));
+    fixture.m_Ui.tap(rows[0]);
+    fixture.m_Ui.advance(400ms);
+    REQUIRE(fixture.depth() == 3);
+    CHECK(fixture.shows(QStringLiteral("Sample Base")));
+    CHECK(fixture.value_of(QStringLiteral("licenceVersion")) == "6.12.0");
+    CHECK(fixture.value_of(QStringLiteral("licenceExpression")) ==
+          "Qt commercial licence OR LGPL-3.0-only OR GPL-3.0-only");
+    CHECK(fixture.value_of(QStringLiteral("licenceLinking")) == "Static");
+    CHECK(fixture.shown(QStringLiteral("licenceName")) == nullptr);
+    CHECK(fixture.shows(QStringLiteral("Part of the sample set.")));
+    CHECK(fixture.shows(QStringLiteral("Copyright (c) 2020 Sam Example")));
+    CHECK(fixture.shows(QStringLiteral("Copyright (c) 2021 North Site Authors")));
+    CHECK(fixture.shows(QStringLiteral("https://example.invalid/sample base.tar.xz")));
+    // The two choices, each with its whole text.
+    CHECK(fixture.shows(QStringLiteral("LGPL-3.0-ONLY")));
+    CHECK(fixture.shows(QStringLiteral("GPL-3.0-ONLY")));
+    CHECK(fixture.shows(QStringLiteral("GNU LESSER GENERAL PUBLIC LICENSE")));
+    fixture.go_back();
+    CHECK(fixture.depth() == 2);
+}
+
+TEST_CASE("settings.about: a dedication that needs no text and a component's own file have pages too",
+          "[ui][settings_screen][about]")
+{
+    Fixture fixture;
+    fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+    const auto rows = fixture.m_Ui.find_items(QStringLiteral("aboutComponent"));
+    REQUIRE(rows.size() == 4);
+
+    fixture.reveal(QStringLiteral("aboutComponent"));
+    fixture.m_Ui.tap(rows[2]);
+    fixture.m_Ui.advance(400ms);
+    REQUIRE(fixture.depth() == 3);
+    CHECK(fixture.shows(QStringLiteral("Hash (in Sample Base)")));
+    CHECK(fixture.shows(QStringLiteral("A public-domain dedication: it sets no condition.")));
+    fixture.go_back();
+
+    fixture.reveal(QStringLiteral("aboutComponent"));
+    fixture.m_Ui.tap(rows[3]);
+    fixture.m_Ui.advance(400ms);
+    REQUIRE(fixture.depth() == 3);
+    CHECK(fixture.value_of(QStringLiteral("licenceLinking")) == "Static and dynamic");
+    CHECK(fixture.shows(QStringLiteral("LICENCE FILE")));
+    CHECK(fixture.shows(QStringLiteral("Sample Library terms.")));
+    // Nothing is made up for a component with no copyright and no source.
+    CHECK(fixture.shown(QStringLiteral("licenceMissing")) == nullptr);
+    fixture.go_back();
+}
+
+TEST_CASE("settings.about: every page passes the checks in light and dark", "[ui][settings_screen][about][a11y]")
+{
+    Fixture fixture;
+    for (const bool dark : {false, true})
+    {
+        fixture.m_Ui.set_dark(dark);
+        INFO((dark ? "dark" : "light"));
+        fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+        expect_clean(check_everything(fixture.m_Ui, min_target));
+
+        fixture.reveal(QStringLiteral("aboutLicenceText"));
+        fixture.tap(QStringLiteral("aboutLicenceText"));
+        fixture.m_Ui.advance(400ms);
+        expect_clean(check_everything(fixture.m_Ui, min_target));
+        fixture.go_back();
+
+        const auto rows = fixture.m_Ui.find_items(QStringLiteral("aboutComponent"));
+        REQUIRE(rows.size() == 4);
+        fixture.reveal(QStringLiteral("aboutComponent"));
+        fixture.m_Ui.tap(rows[0]);
+        fixture.m_Ui.advance(400ms);
+        expect_clean(check_everything(fixture.m_Ui, min_target));
+        fixture.go_back();
+        fixture.go_back();
+    }
+}
+
+TEST_CASE("settings.about: rows are named, the version reads as text and the licence text is read by paragraph",
+          "[ui][settings_screen][about][a11y]")
+{
+    Fixture fixture;
+    fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+    const auto named = [&fixture](const QString& object_name, std::size_t index = 0)
+    {
+        std::size_t seen = 0;
+        for (const Node& node : fixture.m_Ui.accessible_tree())
+        {
+            if (node.m_ObjectName == object_name && node.m_Visible && seen++ == index)
+            {
+                return node;
+            }
+        }
+        return Node{};
+    };
+    // A row of facts is read as one piece of text, "Version, 0.1.0", and is not a button.
+    const Node version = named(QStringLiteral("aboutVersion"));
+    CHECK(version.m_Name == "Version, 0.1.0");
+    CHECK(version.m_Role == QAccessible::StaticText);
+    // The rows that do something say what, and where to.
+    const Node licence = named(QStringLiteral("aboutLicenceText"));
+    CHECK(licence.m_Name == "Read the licence, GPL-3.0-or-later");
+    CHECK(licence.m_Role == QAccessible::Button);
+    const Node source = named(QStringLiteral("aboutSourceLink"));
+    CHECK(source.m_Name == "Open the source code, https://github.com/iainchesworthlabs/icl-error-journaling");
+    CHECK(source.m_Role == QAccessible::Button);
+    const Node component = named(QStringLiteral("aboutComponent"), 1);
+    CHECK(component.m_Name == "Pixel (in Sample Base) 1.2.3, MIT");
+    CHECK(component.m_Role == QAccessible::Button);
+
+    fixture.reveal_and_open(QStringLiteral("aboutLicenceText"));
+    int paragraphs = 0;
+    for (const Node& node : fixture.m_Ui.accessible_tree())
+    {
+        if (node.m_ObjectName == "licenceParagraph" && node.m_Visible)
+        {
+            ++paragraphs;
+            CHECK(node.m_Name == node.m_Item->property("text").toString());
+            CHECK(node.m_Role == QAccessible::StaticText);
+        }
+    }
+    CHECK(paragraphs == 8);
+}
+
+TEST_CASE("settings.about: the licence text is whole at the largest text size and does not run off the screen",
+          "[ui][settings_screen][about][a11y]")
+{
+    Fixture fixture;
+    fixture.m_Ui.set_text_scale(1.3);
+    fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
+    fixture.reveal_and_open(QStringLiteral("aboutLicenceText"));
+    const auto paragraphs = fixture.m_Ui.find_items(QStringLiteral("licenceParagraph"));
+    REQUIRE(paragraphs.size() == 8);
+    const double width = fixture.m_Ui.geometry(fixture.require(QStringLiteral("settingsFlickable"))).width();
+    for (QQuickItem* paragraph : paragraphs)
+    {
+        CHECK(fixture.m_Ui.geometry(paragraph).right() <= width);
+        // Wrapped to the screen, not cut: the text is as tall as it needs.
+        CHECK(paragraph->property("contentHeight").toDouble() <= paragraph->height() + 1.0);
+    }
+    expect_clean(check_everything(fixture.m_Ui, min_target));
 }
