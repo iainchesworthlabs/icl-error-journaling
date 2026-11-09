@@ -3,6 +3,9 @@ site_description: An iPhone app for logging robot session errors through the day
 repo_url: https://github.com/iainchesworthlabs/icl-error-journaling
 docs_dir: docs
 strict: true
+# Publishes config/sample-config.json as demo/demo-setup.ejconfig for App Review and new users (docs/plan/stage-11.md).
+hooks:
+  - tools/docs/demo_setup_hook.py
 theme:
   name: material
   features:

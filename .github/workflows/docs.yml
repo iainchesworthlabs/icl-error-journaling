@@ -3,7 +3,7 @@ name: Docs
 on:
   pull_request:
     branches: [develop]
-    paths: ["docs/**", "mkdocs.yml", "requirements/docs.txt", ".github/workflows/docs.yml"]
+    paths: ["docs/**", "mkdocs.yml", "requirements/docs.txt", ".github/workflows/docs.yml", "tools/docs/**", "config/sample-config.json"]
   push:
     branches: [main]
 
