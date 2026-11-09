@@ -170,5 +170,61 @@ class ElfTest(unittest.TestCase):
         self.assertEqual(len(package.elf_problems("lib/x.so", "not an ELF file")), 1)
 
 
+class DependencyTest(unittest.TestCase):
+    def test_needed_entries_are_read(self) -> None:
+        text = (
+            "Dynamic section at offset 0x1 contains 3 entries:\n"
+            "  Tag                Type     Name/Value\n"
+            "  0x0000000000000001 (NEEDED) Shared library: [libQt6Core_arm64-v8a.so]\n"
+            "  0x0000000000000001 (NEEDED) Shared library: [libc++_shared.so]\n"
+            "  0x000000000000000e (SONAME) Library soname: [libx.so]\n"
+        )
+        self.assertEqual(package.parse_needed(text), ["libQt6Core_arm64-v8a.so", "libc++_shared.so"])
+
+    def test_complete_package_passes(self) -> None:
+        needed = {
+            "lib/arm64-v8a/libapp.so": ["libQt6Core_arm64-v8a.so", "libc++_shared.so", "liblog.so"],
+            "lib/arm64-v8a/libQt6Core_arm64-v8a.so": ["libc++_shared.so", "libc.so"],
+            "lib/arm64-v8a/libc++_shared.so": ["libc.so"],
+        }
+        self.assertEqual(package.missing_dependencies(needed, {"libc.so", "liblog.so"}), [])
+
+    def test_missing_cpp_runtime_is_reported(self) -> None:
+        # The fault a half-cleaned Gradle directory produced: the app links libc++_shared.so, which was left out.
+        needed = {"lib/arm64-v8a/libapp.so": ["libc++_shared.so", "libc.so"]}
+        problems = package.missing_dependencies(needed, {"libc.so"})
+        self.assertEqual(len(problems), 1)
+        self.assertIn("libc++_shared.so", problems[0])
+
+    def test_a_library_of_another_abi_does_not_count(self) -> None:
+        needed = {
+            "lib/arm64-v8a/libapp.so": ["libc++_shared.so"],
+            "lib/x86_64/libc++_shared.so": [],
+        }
+        self.assertEqual(len(package.missing_dependencies(needed, set())), 1)
+
+    def test_required_libraries_present_pass(self) -> None:
+        libraries = [
+            "lib/arm64-v8a/liberror-journaling_arm64-v8a.so",
+            "lib/arm64-v8a/libplugins_platforms_qtforandroid_arm64-v8a.so",
+            "lib/arm64-v8a/libplugins_sqldrivers_qsqlite_arm64-v8a.so",
+        ]
+        self.assertEqual(package.missing_required(libraries), [])
+
+    def test_missing_sql_driver_is_reported(self) -> None:
+        # The fault the first emulator run showed: "can not load requested driver 'QSQLITE'".
+        libraries = [
+            "base/lib/arm64-v8a/liberror-journaling_arm64-v8a.so",
+            "base/lib/arm64-v8a/libplugins_platforms_qtforandroid_arm64-v8a.so",
+        ]
+        problems = package.missing_required(libraries)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("libplugins_sqldrivers_qsqlite_arm64-v8a.so", problems[0])
+
+    def test_bundle_paths_have_their_abi(self) -> None:
+        self.assertEqual(package.abi_of("base/lib/arm64-v8a/libx.so"), "arm64-v8a")
+        self.assertEqual(package.abi_of("lib/x86_64/libx.so"), "x86_64")
+
+
 if __name__ == "__main__":
     unittest.main()

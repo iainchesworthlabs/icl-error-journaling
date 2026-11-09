@@ -16,7 +16,9 @@ For an APK it reads the merged manifest (`aapt2 dump xmltree`) and refuses:
 For an APK and a bundle it checks that every native library is aligned for 16 KB pages (`llvm-readelf`: each LOAD
 segment aligned to at least 16 KB, and the end of GNU_RELRO on a 16 KB boundary unless nothing writable follows it in its
 segment), and for an APK that the libraries are 16 KB aligned in the zip (`zipalign -c -P 16 4`). Google Play requires
-both for targets of API 35 and up (docs/plan/stage-9.md, "Builds and toolchain").
+both for targets of API 35 and up (docs/plan/stage-9.md, "Builds and toolchain"). It also checks that every library a
+packaged library links (its NEEDED entries) is in the package or provided by Android at API 28 (the NDK's sysroot),
+so that a package that would stop at launch with "dlopen failed" fails here instead.
 
 The parsing is pure and tested in tools/tests/test_android_package.py; only main() runs the tools.
 """
@@ -221,9 +223,74 @@ def elf_problems(library: str, text: str) -> list[str]:
     return problems
 
 
+NEEDED = re.compile(r"\(NEEDED\)\s+Shared library: \[(?P<name>[^\]]+)\]")
+
+# The NDK's sysroot directory of each ABI, whose API-level folder lists the libraries Android itself provides.
+ABI_TRIPLES = {
+    "arm64-v8a": "aarch64-linux-android",
+    "x86_64": "x86_64-linux-android",
+    "armeabi-v7a": "arm-linux-androideabi",
+    "x86": "i686-linux-android",
+}
+
+
+def parse_needed(text: str) -> list[str]:
+    """The NEEDED entries of `llvm-readelf -d` output: the shared libraries a library links."""
+    return [match.group("name") for match in NEEDED.finditer(text)]
+
+
+def missing_dependencies(needed: dict[str, list[str]], system: set[str]) -> list[str]:
+    """Each library a packaged library links that is neither in the package (the same ABI directory) nor provided by
+    Android. Such a package installs and then stops at launch ("dlopen failed: library ... not found")."""
+    problems = []
+    packaged: dict[str, set[str]] = {}
+    for path in needed:
+        directory, _, name = path.rpartition("/")
+        packaged.setdefault(directory, set()).add(name)
+    for path, names in sorted(needed.items()):
+        directory = path.rpartition("/")[0]
+        for name in names:
+            if name not in packaged[directory] and name not in system:
+                problems.append(f"{path} needs {name}, which is neither in the package nor part of Android")
+    return problems
+
+
+def abi_of(path: str) -> str:
+    """The ABI directory of a library path such as lib/arm64-v8a/libx.so or base/lib/arm64-v8a/libx.so."""
+    return path.rpartition("/")[0].rpartition("/")[2]
+
+
+def system_libraries(ndk: Path, abi: str, api: int = MIN_SDK) -> set[str]:
+    """The libraries Android provides at the minimum API level, from the NDK's sysroot."""
+    triple = ABI_TRIPLES.get(abi)
+    if triple is None:
+        return set()
+    folders = sorted(ndk.glob(f"toolchains/llvm/prebuilt/*/sysroot/usr/lib/{triple}/{api}"))
+    return {p.name for p in folders[-1].glob("*.so")} if folders else set()
+
+
 def native_libraries(package: Path) -> list[str]:
     with zipfile.ZipFile(package) as archive:
         return sorted(n for n in archive.namelist() if n.endswith(".so") and "/lib/" in "/" + n)
+
+
+# What the application loads by name, which no NEEDED entry names: the program itself, the platform plugin Qt starts
+# with, and the SQL driver the store opens (Qt picks plugins from the modules the application links, so a module linked
+# only through a static library is missed; apps/app/packaging/android.cmake links Qt Sql for this reason).
+REQUIRED_STEMS = ("liberror-journaling_", "libplugins_platforms_qtforandroid_", "libplugins_sqldrivers_qsqlite_")
+
+
+def missing_required(libraries: list[str]) -> list[str]:
+    """Each library the application loads by name and the package lacks, for every ABI it has."""
+    problems = []
+    by_abi: dict[str, set[str]] = {}
+    for path in libraries:
+        by_abi.setdefault(abi_of(path), set()).add(path.rpartition("/")[2])
+    for abi, names in sorted(by_abi.items()):
+        for stem in REQUIRED_STEMS:
+            if f"{stem}{abi}.so" not in names:
+                problems.append(f"{stem}{abi}.so is not in the package for {abi}")
+    return problems
 
 
 def find_tool(base: Path, pattern: str) -> Path:
@@ -243,15 +310,23 @@ def check_package(package: Path, sdk: Path, ndk: Path, application_id: str) -> l
     libraries = native_libraries(package)
     if not libraries:
         problems.append(f"{package.name}: no native library in the package")
+    problems += [f"{package.name}: {p}" for p in missing_required(libraries)]
+    needed: dict[str, list[str]] = {}
     with tempfile.TemporaryDirectory() as tmp:
         with zipfile.ZipFile(package) as archive:
             for name in libraries:
                 path = Path(archive.extract(name, tmp))
-                result = run([str(readelf), "-Wl", str(path)])
+                result = run([str(readelf), "-Wl", "-d", str(path)])
                 if result.returncode != 0:
                     problems.append(f"{name}: llvm-readelf failed: {result.stderr.strip()}")
                     continue
                 problems += elf_problems(name, result.stdout)
+                needed[name] = parse_needed(result.stdout)
+    system = set().union(*(system_libraries(ndk, abi) for abi in {abi_of(n) for n in libraries})) if libraries else set()
+    if libraries and not system:
+        problems.append(f"{package.name}: no system library list in the NDK's sysroot for API {MIN_SDK}")
+    else:
+        problems += [f"{package.name}: {p}" for p in missing_dependencies(needed, system)]
     if package.suffix == ".apk":
         aapt2 = find_tool(sdk, "build-tools/*/aapt2*")
         result = run([str(aapt2), "dump", "xmltree", "--file", "AndroidManifest.xml", str(package)])

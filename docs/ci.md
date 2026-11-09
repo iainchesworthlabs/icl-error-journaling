@@ -200,11 +200,15 @@ It builds `android-release` and runs `tools/ci/check_android_package.py` on the 
 - the SDK range is not 28 to 36;
 - the application ID, the launcher activity (`EjActivity`, portrait) or `allowBackup` differ;
 - a component other than the activity is exported without a permission guarding it;
+- a packaged library links a library that is neither in the package nor provided by Android at API 28 (the NDK's
+  sysroot), which would stop the app at launch with "dlopen failed";
+- the program, the Android platform plugin or the SQLite driver is missing (Qt packages plugins only for the Qt modules
+  the application links itself, so `android.cmake` links Qt Sql);
 - a native library is not aligned for 16 KB pages, either in its ELF segments (`llvm-readelf`) or in the zip
   (`zipalign -c -P 16 4`).
 
 Its unit tests are in `tools/tests/test_android_package.py`. The packages are uploaded as the `android-unsigned` artifact
-for 7 days. Two caches are new: the Qt Android kit (one `setup-qt` entry per Qt version) and nothing else yet. No ccache
+for 7 days. One cache entry is new: the Qt Android kit (one `setup-qt` entry per Qt version). No ccache
 or Gradle cache is saved, and the NDK is installed each run, outside the cache budget.
 
 ## iOS property list check

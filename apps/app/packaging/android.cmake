@@ -63,6 +63,10 @@ function(ej_configure_android_app target)
         QT_ANDROID_TARGET_SDK_VERSION "${ERROR_JOURNALING_ANDROID_TARGET_SDK}"
         QT_ANDROID_VERSION_NAME "${PROJECT_VERSION}"
         QT_ANDROID_VERSION_CODE "${version_code}")
+    # Qt chooses the plugins it packages from the Qt modules the application links itself. ej_storage links Qt Sql
+    # privately, so without this the SQLite driver is left out and the store cannot open ("can not load requested driver
+    # 'QSQLITE'"); tools/ci/check_android_package.py refuses a package without it.
+    target_link_libraries(${target} PRIVATE Qt6::Sql)
     # 16 KB pages: Play requires it of targets of API 35 and up. NDK r27 links 4 KB-aligned by default (r28 does not);
     # the Qt kit is built for 16 KB, and these make the application's own library match. CI checks every library.
     target_link_options(${target} PRIVATE "-Wl,-z,max-page-size=16384" "-Wl,-z,common-page-size=16384")
