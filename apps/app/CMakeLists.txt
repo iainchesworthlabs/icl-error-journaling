@@ -58,6 +58,9 @@ icl_relax_generated_warnings(ej_app)
 if(IOS)
     include("${CMAKE_CURRENT_SOURCE_DIR}/packaging/ios.cmake")
     ej_configure_ios_app(ej_app)
+elseif(ANDROID)
+    include("${CMAKE_CURRENT_SOURCE_DIR}/packaging/android.cmake")
+    ej_configure_android_app(ej_app)
 else()
     # Installs the program and copies the Qt libraries, plugins and QML modules next to it (macOS: a bundle). Desktop
     # builds are for development and CI; nothing is released from them (docs/releasing.md).
@@ -92,6 +95,19 @@ if(ERROR_JOURNALING_BUILD_TESTS)
         COMMAND ${CMAKE_COMMAND} -DIOS_CMAKE=${CMAKE_CURRENT_SOURCE_DIR}/packaging/ios.cmake
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_signing_identity.cmake)
     set_tests_properties(ios.signing_identity PROPERTIES LABELS unit TIMEOUT 30)
+
+    # The Android version code: worked out from the project version, or the release workflow's run number, and a code
+    # Play would refuse stops the configure (script tests: nothing here configures for Android).
+    add_test(NAME android.version_code
+        COMMAND ${CMAKE_COMMAND} -DANDROID_CMAKE=${CMAKE_CURRENT_SOURCE_DIR}/packaging/android.cmake
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_android_version_code.cmake)
+    set_tests_properties(android.version_code PROPERTIES LABELS unit TIMEOUT 30)
+    foreach(bad IN ITEMS abc 0 2100000001)
+        add_test(NAME android.version_code_refused.${bad}
+            COMMAND ${CMAKE_COMMAND} -DANDROID_CMAKE=${CMAKE_CURRENT_SOURCE_DIR}/packaging/android.cmake -DGIVEN=${bad}
+                    -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_android_version_code.cmake)
+        set_tests_properties(android.version_code_refused.${bad} PROPERTIES LABELS unit TIMEOUT 30 WILL_FAIL TRUE)
+    endforeach()
 
     # The version and the help are answered without a window system: the platform plugin is one that does not exist.
     add_test(NAME app.version COMMAND ej_app --version)

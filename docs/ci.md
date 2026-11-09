@@ -13,6 +13,7 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Merge queue | Above, plus Linux debug and TSan, and the kill harness at 100 random kills on four legs (below). The macOS builds run too when the entry touches Apple paths or its pull request carries `deep` (below) |
 | Push to `develop` | Everything: the groups above, the macOS desktop builds (debug and release, with the tests), Xcode 27 as a leg that cannot fail the run, and the kill harness. Then Report red and Mark green |
 | Change to what the iOS build reads, or a manual run | iOS compile check for a device (`ios-build.yml`, not required). A pull request runs it only for Apple paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
+| Change to what the Android build reads, or a manual run | Android build (`android-build.yml`, not required): the unsigned APK and bundle of `android-release`, checked by `tools/ci/check_android_package.py`. A pull request runs it for the Android paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
 | Nightly | CodeQL; the kill harness at 1,000 random kills (`kill-nightly.yml`); the weekly CI metrics (`ci-metrics.yml`, Mondays 06:00 UTC) |
 | Hourly | The Actions cache prune (`cache-prune.yml`, below) |
 | Manual run of the Stage 2 exit gate | The kill harness at 10,000 random kills on Linux and macOS (`kill-gate.yml`) |
@@ -129,7 +130,7 @@ A merge-queue ref's entries can never be read again, and a pull request's are re
 | vcpkg binaries | `vcpkg-<OS>-<ARCH>-<pin>-<manifest hash>-<lineage>-<content hash>` | 21 MB Linux, 15 MB macOS | Built packages (Catch2; Tracy in the `profiling` lineage). vcpkg names archives by ABI hash, which covers triplet and compiler, so gcc and clang share one entry |
 | vcpkg downloads | `vcpkg-downloads-…`, same shape | 7 MB Linux, 1 MB macOS | Port sources and the tools vcpkg fetches itself. vcpkg reads this directory before going upstream, so it is the asset cache |
 | ccache | `ccache-<OS>-<ARCH>-<leg>[-kill]-<commit>` | 1.2 GB for 11 legs; ASan/UBSan, TSan and macOS debug are 240 to 400 MB each | One lineage per build leg and kill-harness leg. Coverage restores but does not save |
-| Qt kits | `install-qt-action-…` (setup-qt) | 324 MB Linux, 374 MB for each of the two macOS images | Saved once per Qt version and runner image |
+| Qt kits | `install-qt-action-…` (setup-qt) | 324 MB Linux, 374 MB for each of the two macOS images; the Android `arm64-v8a` kit is one more entry, about 200 MB (an estimate until the first `develop` run measures it) | Saved once per Qt version and runner image |
 | pip | `setup-python-…` | 25 MB | The Python packages of the static checks |
 
 Not cached: the clone of the vcpkg fork (GitHub's git service, retried), apt packages, Homebrew and the GCC install.
@@ -179,10 +180,32 @@ The unit tests of the scripts are `tools/tests/test_qml_checks.py`, run by the C
 ## Platform layout check
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_platform_layout.py`. For a `src/platform` directory that holds both
-`ios/` and `desktop/` (the bridge), every `ios/<name>.mm` needs a `desktop/<name>.cpp` and the reverse; a `.mm` file may
+`ios/` and `desktop/` (the bridge), every `ios/<name>.mm` needs a `<name>.cpp` in `desktop/` and in every other sibling directory (`android/` once Stage 9 adds it), and the reverse; a `.mm` file may
 exist only under `src/platform/ios`; and the library's CMake must compile that directory with `-fobjc-arc`. A helper
 private to the iOS directory (`top_view_controller`) is listed in the script and needs no stub. Its unit tests are in
 `tools/tests/test_platform_layout.py`.
+
+## Android build
+
+`android-build.yml` (Stage 9, package 9.1) runs on `ubuntu-24.04`. It installs:
+
+- Qt's Linux kit for the host tools, then the Android `arm64-v8a` kit (both through `setup-qt`, with the pinned
+  aqtinstall source the iOS build uses, because aqtinstall 3.3.0 cannot read Qt 6.12's `all_os` repository);
+- NDK `27.2.12479018`, `platforms;android-37.0` and `build-tools;37.0.0` with the runner's `sdkmanager`, and the runner's
+  JDK 21.
+
+It builds `android-release` and runs `tools/ci/check_android_package.py` on the APK and the bundle. The check fails when:
+
+- the merged manifest asks for any permission but the application's own (no `INTERNET`, no `AD_ID`);
+- the SDK range is not 28 to 36;
+- the application ID, the launcher activity (`EjActivity`, portrait) or `allowBackup` differ;
+- a component other than the activity is exported without a permission guarding it;
+- a native library is not aligned for 16 KB pages, either in its ELF segments (`llvm-readelf`) or in the zip
+  (`zipalign -c -P 16 4`).
+
+Its unit tests are in `tools/tests/test_android_package.py`. The packages are uploaded as the `android-unsigned` artifact
+for 7 days. Two caches are new: the Qt Android kit (one `setup-qt` entry per Qt version) and nothing else yet. No ccache
+or Gradle cache is saved, and the NDK is installed each run, outside the cache budget.
 
 ## iOS property list check
 

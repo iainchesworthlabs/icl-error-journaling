@@ -58,6 +58,9 @@
         "libs/*/src/platform/{macos,ios,android,windows,wasm}/**",
         "apps/app/packaging/ios/**",
         "apps/app/packaging/ios.cmake",
+        "apps/app/packaging/android/**",
+        "apps/app/packaging/android.cmake",
+        "libs/*/tests/**/platform/android/**",
         "**/*.mm"
       ],
       "jobs": [
@@ -71,6 +74,9 @@
         "libs/*/src/platform/{macos,ios,android,windows,wasm}/**",
         "apps/app/packaging/ios/**",
         "apps/app/packaging/ios.cmake",
+        "apps/app/packaging/android/**",
+        "apps/app/packaging/android.cmake",
+        "libs/*/tests/**/platform/android/**",
         "**/*.mm"
       ],
       "jobs": [
@@ -83,6 +89,9 @@
         "libs/*/src/platform/{macos,ios,android,windows,wasm}/**",
         "apps/app/packaging/ios/**",
         "apps/app/packaging/ios.cmake",
+        "apps/app/packaging/android/**",
+        "apps/app/packaging/android.cmake",
+        "libs/*/tests/**/platform/android/**",
         "**/*.mm"
       ],
       "jobs": [
@@ -93,7 +102,10 @@
     "build-macos": {
       "home": "post_merge",
       "skips": [
-        "libs/*/src/platform/{linux,windows,android,wasm}/**"
+        "libs/*/src/platform/{linux,windows,android,wasm}/**",
+        "apps/app/packaging/android/**",
+        "apps/app/packaging/android.cmake",
+        "libs/*/tests/**/platform/android/**"
       ],
       "promote": [
         "libs/*/src/platform/{macos,ios}/**",

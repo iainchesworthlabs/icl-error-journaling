@@ -93,6 +93,41 @@ class PlatformLayoutTest(unittest.TestCase):
         }
         self.assertEqual(self.check(files), [])
 
+    def test_android_directory_in_step_passes(self) -> None:
+        files = {
+            "libs/x/CMakeLists.txt": ARC_CMAKE,
+            "libs/x/src/platform/ios/share.mm": "",
+            "libs/x/src/platform/android/share.cpp": "",
+            "libs/x/src/platform/desktop/share.cpp": "",
+        }
+        self.assertEqual(self.check(files), [])
+
+    def test_android_directory_missing_a_capability_is_reported(self) -> None:
+        files = {
+            "libs/x/CMakeLists.txt": ARC_CMAKE,
+            "libs/x/src/platform/ios/share.mm": "",
+            "libs/x/src/platform/ios/haptics.mm": "",
+            "libs/x/src/platform/android/share.cpp": "",
+            "libs/x/src/platform/desktop/share.cpp": "",
+            "libs/x/src/platform/desktop/haptics.cpp": "",
+        }
+        problems = self.check(files)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("android", problems[0])
+        self.assertIn("haptics.cpp", problems[0])
+
+    def test_android_only_capability_is_reported(self) -> None:
+        files = {
+            "libs/x/CMakeLists.txt": ARC_CMAKE,
+            "libs/x/src/platform/ios/share.mm": "",
+            "libs/x/src/platform/android/share.cpp": "",
+            "libs/x/src/platform/android/vibrate.cpp": "",
+            "libs/x/src/platform/desktop/share.cpp": "",
+        }
+        problems = self.check(files)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("vibrate.mm", problems[0])
+
     def test_this_repository_is_in_step(self) -> None:
         self.assertEqual(layout.run(Path(__file__).resolve().parent.parent.parent), [])
 

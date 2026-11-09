@@ -4,7 +4,8 @@
 
     python3 tools/ci/check_platform_layout.py [--root .]
 
-Every `src/platform/ios/<name>.mm` needs a `<name>.cpp` in every sibling platform directory and the reverse, and a
+Every `src/platform/ios/<name>.mm` needs a `<name>.cpp` in every sibling platform directory (desktop/, android/ and any
+other) and the reverse, and a
 `.mm` file may exist only under a `src/platform/ios` directory. Only a `src/platform` directory that holds both `ios/` and
 `desktop/` is paired (the bridge); the storage library selects its per-OS files in its own CMake. A file named in INTERNAL is private to its platform
 (a helper shared by that platform's implementations) and needs no sibling. See docs/architecture.md, "Platform code".

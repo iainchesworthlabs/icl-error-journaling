@@ -44,6 +44,8 @@ ctest --preset linux-debug
 | `macos-debug`, `macos-release` | The desktop program on a Mac, for iterating on the user interface; built with tests |
 | `ios-release` | The iPhone and iPad application (`apps/app`), unsigned, for a device, on a Mac with Xcode; no tests |
 | `ios-simulator` | The same for the iOS simulator. Not working with the aqtinstall kit and not in CI: the link fails because the kit's `qmltooling` plugin objects are built for the device only ("building for 'iOS-simulator', but linking in object file ... built for 'iOS'") |
+| `android-release` | The Android application, `arm64-v8a`, Release: an unsigned APK (build preset `android-release`) and bundle (`android-release-bundle`), on Linux or Windows; no tests |
+| `android-emulator` | The same for an `x86_64` emulator, RelWithDebInfo, APK only; no tests |
 | `windows-msvc-release`, `windows-msvc-asan` | The developer machine only. Windows is not a v1 platform and CI has no Windows leg |
 
 Sanitizers, Tracy, coverage and fuzzing exclude each other. The configure step stops with a
@@ -81,6 +83,34 @@ no way yet to put it on a phone without a Mac; see `docs/plan/stage-5.md`, "Timi
 layout, the tab bar or the header card's shapes, and commit the two PNGs; `ctest -R launch.` fails until you do, and so does
 CI. `ej_launch_image --check` compares without writing. iOS caches launch screens: delete the app from the phone before
 judging a new image.
+
+### Android
+
+`cmake --preset android-release` needs:
+
+- a vcpkg checkout at the baseline of `vcpkg.json` (`VCPKG_ROOT`);
+- Qt's Android kit for the ABI (`QT_ANDROID_DIR`, for example `C:/Repos/common/qt/6.12.0/android_arm64_v8a`;
+  `QT_ANDROID_X86_64_DIR` for `android-emulator`);
+- a desktop Qt of the same version for the host tools (`QT_HOST_PATH`, for example `C:/Repos/common/qt/6.12.0/msvc2022_64`);
+- the Android SDK (`ANDROID_SDK_ROOT`) with `platforms;android-37.0` and `build-tools;37.0.0`;
+- the NDK Qt 6.12.0 was built with, `27.2.12479018` (r27c), as `ANDROID_NDK_ROOT` and `ANDROID_NDK_HOME` (vcpkg's
+  Android triplets read the second);
+- JDK 21 (`JAVA_HOME`).
+
+Write the paths with forward slashes, also on Windows: Qt's CMake reads `QT_HOST_PATH` into a string where a backslash
+is an escape. On the developer machine the SDK, the NDK, JDK 21, the emulator and the `x86_64` kit are under `E:/android/`
+(`E:/android/sdk`, `E:/android/jdk-21.0.13.0.2+1`, `E:/android/qt/6.12.0/android_x86_64`). The SDK in
+`C:/Repos/common/android-sdk` has NDK 28 and is not used here.
+
+`cmake --build --preset android-release` runs Qt's `androiddeployqt` and Gradle and writes the unsigned APK, and
+`cmake --build --preset android-release-bundle` then writes the bundle (one after the other: the two share one Gradle
+directory). Both are under `build/android-release/apps/app/android-build/build/outputs/`. The package is
+`com.iainchesworthlabs.errorjournaling` (`ERROR_JOURNALING_APPLICATION_ID`), API 28 to 36 (`apps/app/packaging/android.cmake`).
+`ERROR_JOURNALING_ANDROID_VERSION_CODE` sets `android:versionCode`; empty, it is `MAJOR * 10000 + MINOR * 100 + PATCH`
+of the project version. Check a package with
+`python3 tools/ci/check_android_package.py --sdk "$ANDROID_SDK_ROOT" --ndk "$ANDROID_NDK_ROOT" <apk or aab>`.
+Until Stage 9's packages 9.2 to 9.6 add `libs/ios_bridge/src/platform/android/`, the Android build uses the desktop stubs
+of the bridge: no share sheet, haptics or document picker (docs/plan/stage-9.md).
 
 ### Windows (developer machine)
 
