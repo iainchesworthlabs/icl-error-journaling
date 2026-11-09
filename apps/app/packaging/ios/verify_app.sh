@@ -16,6 +16,11 @@
 #   * the executable is for arm64 and links nothing outside the system: a link to
 #     a framework or to a path on the build machine means the build picked up
 #     the wrong libraries;
+#   * it has no network code: no CFNetwork or Network framework, no socket, resolver or
+#     TLS import, no Qt Network or Tracy class names (docs/plan/stage-11.md, 11.2);
+#   * PrivacyInfo.xcprivacy is at the top of the bundle, declares no tracking and no
+#     collected data, and declares each required-reason API category the executable
+#     calls (found from its imports and its Objective-C names);
 #   * Info.plist declares that the application uses no encryption beyond the system's, and a
 #     build number, as TestFlight asks;
 #   * with --signed: the code signature verifies, the profile is embedded, it is an
@@ -25,7 +30,7 @@
 #     default data protection entitlement with its exact value, and no iCloud, app
 #     group or associated domain entitlement.
 #
-# macOS only (plutil, otool, codesign, security).
+# macOS only (plutil, otool, nm, codesign, security).
 set -euo pipefail
 
 target=""
@@ -41,7 +46,7 @@ while [ $# -gt 0 ]; do
     --version) version="${2:?}"; shift 2 ;;
     --signed) signed=true; shift ;;
     --store) store=true; shift ;;
-    -h|--help) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "verify_app.sh: unknown argument '$1'" >&2; exit 2 ;;
     *) target="$1"; shift ;;
   esac
@@ -134,6 +139,56 @@ archs="$(lipo -archs "$app/$executable" 2>/dev/null || true)"
 bad="$(otool -L "$app/$executable" | tail -n +2 | awk '{print $1}' | grep -Ev '^(/usr/lib/|/System/Library/)' || true)"
 [ -z "$bad" ] || fail "the executable links outside the system: $bad"
 echo "    executable: arm64, links only the system"
+
+# No network code, no profiler (docs/plan/stage-11.md, 11.2, T11-5). The App Store's "Data Not Collected" and the claim
+# that the application has no network access rest on this. Three looks: the frameworks it links, the system functions it
+# imports, and the class names that Qt's meta-objects keep in the binary even when it is stripped.
+imports="$(mktemp)"
+nm -u "$app/$executable" 2>/dev/null | awk '{print $NF}' | sort -u > "$imports" || fail "cannot read the imported symbols of the executable"
+[ -s "$imports" ] || fail "the executable imports no symbols: nm could not read it"
+network_frameworks="$(otool -L "$app/$executable" | tail -n +2 | awk '{print $1}' | grep -E '/(CFNetwork|Network)\.framework/' || true)"
+[ -z "$network_frameworks" ] || fail "the executable links a network framework: $network_frameworks"
+network_calls="$(grep -E '^_(getaddrinfo|gethostbyname|connect|nw_connection_.*|nw_listener_.*|CFSocketCreate.*|CFStreamCreatePairWithSocket.*|SSLHandshake|sec_protocol_options_.*)$' "$imports" | tr '\n' ' ' || true)"
+[ -z "$network_calls" ] || fail "the executable imports network functions: $network_calls"
+network_classes="$(grep -a -o -E 'QNetworkAccessManager|QTcpSocket|QUdpSocket|QSslSocket|QWebSocket|QLocalSocket|TracyProfiler|___tracy_[a-z_]+' "$app/$executable" | sort -u | tr '\n' ' ' || true)"
+[ -z "$network_classes" ] || fail "the executable carries network or profiler code: $network_classes"
+echo "    no network: no network framework, no socket or resolver import, no Qt Network or Tracy code"
+
+# The privacy manifest (11.2, T11-6): no tracking, nothing collected, and a declared category for each required-reason
+# API that the executable calls. A category is found by the system functions it imports, or for Objective-C APIs by the
+# class or selector name in the binary. The manifest may declare a category the scan does not find (Apple's scan sees
+# what this one does not), and that is shown, not refused.
+manifest="$app/PrivacyInfo.xcprivacy"
+[ -f "$manifest" ] || fail "no PrivacyInfo.xcprivacy at the top of the bundle"
+plutil -lint "$manifest" > /dev/null || fail "PrivacyInfo.xcprivacy is not a valid property list"
+[ "$(plutil -extract NSPrivacyTracking raw -o - "$manifest" 2>/dev/null || true)" = "false" ] || fail "PrivacyInfo.xcprivacy: NSPrivacyTracking is not false"
+for empty_key in NSPrivacyTrackingDomains NSPrivacyCollectedDataTypes; do
+  [ "$(plutil -extract "$empty_key" raw -o - "$manifest" 2>/dev/null || true)" = "0" ] || fail "PrivacyInfo.xcprivacy: $empty_key is not an empty array"
+done
+declared="$(plutil -convert json -o - "$manifest" | python3 -c 'import json,sys; print(" ".join(e["NSPrivacyAccessedAPIType"] for e in json.load(sys.stdin).get("NSPrivacyAccessedAPITypes", [])))')" \
+  || fail "cannot read the accessed API types of PrivacyInfo.xcprivacy"
+uses_import() { grep -Eq "$1" "$imports"; }
+uses_name() { grep -a -q -E "$1" "$app/$executable"; }
+found=""
+if uses_import '^_(stat|fstat|lstat|fstatat|getattrlist|fgetattrlist|getattrlistat|getattrlistbulk)$'; then found="$found NSPrivacyAccessedAPICategoryFileTimestamp"; fi
+if uses_import '^_mach_absolute_time$' || uses_name 'systemUptime'; then found="$found NSPrivacyAccessedAPICategorySystemBootTime"; fi
+if uses_import '^_(statfs|statvfs|fstatfs|fstatvfs)$' || uses_name 'NSFileSystemFreeSize|volumeAvailableCapacity'; then found="$found NSPrivacyAccessedAPICategoryDiskSpace"; fi
+if uses_import '^_OBJC_CLASS_\$_NSUserDefaults$' || uses_import '^_CFPreferences'; then found="$found NSPrivacyAccessedAPICategoryUserDefaults"; fi
+if uses_name 'activeInputModes'; then found="$found NSPrivacyAccessedAPICategoryActiveKeyboards"; fi
+for category in $found; do
+  case " $declared " in
+    *" $category "*) ;;
+    *) fail "the executable calls a required-reason API of $category, which PrivacyInfo.xcprivacy does not declare" ;;
+  esac
+done
+for category in $declared; do
+  case " $found " in
+    *" $category "*) ;;
+    *) echo "    note: PrivacyInfo.xcprivacy declares $category, which this scan did not find in the executable" ;;
+  esac
+done
+rm -f "$imports"
+echo "    privacy manifest: no tracking, nothing collected; required-reason APIs found:${found:- none}; all declared"
 
 if $signed; then
   codesign --verify --strict --verbose=2 "$app" || fail "the code signature does not verify"
