@@ -6,13 +6,15 @@ import ErrorJournalingApp
 // entries the open log has and whether it has been shared, and offers three things:
 //
 //   Start a new log                the default action: `day.acceptNewLog()`
-//   Share <day>'s log first        `day.shareFirst()`; only while the log is `unshared`
+//   Share <day>'s log first        `day.shareFirst()`; only while the log is `unshared`: it has entries and was never shared, or
+//                                  was shared and has changed since (a share is not the end of the day)
 //   Keep <day>'s log open          `day.keepOpen()`
 //
 // It is declared in the SheetHost that the shell keeps over everything (a later sheet is over an earlier one), so it covers the
 // tab bar too, and, being an Alert, it is not dismissed by a tap outside it, by a drag or by Escape.
 //
-//   day    the DayWatcher (promptVisible, newDateText, openLogDayText, openLogEntryCount, unshared and the three invokables)
+//   day    the DayWatcher (promptVisible, newDateText, openLogDayText, openLogEntryCount, unshared, changedSinceShare and the three
+//          invokables)
 //
 // The alert follows `day.promptVisible` and nothing else decides whether it is there. A button closes an Alert, so when the model
 // still has the prompt up after a button (a new log that could not be started, or a share that has been started: the prompt
@@ -32,7 +34,7 @@ Alert {
     readonly property string entriesText: root.day.openLogEntryCount === 1 ? qsTr("1 entry") : qsTr("%1 entries").arg(root.day.openLogEntryCount)
 
     title: qsTr("It’s %1").arg(root.day.newDateText)
-    message: root.startFailed ? qsTr("A new log could not be started. Nothing was changed, and %1’s log is still open.").arg(root.day.openLogDayText) : root.day.unshared ? qsTr("%1’s log has %2 and hasn’t been shared yet. Starting a new log keeps it in History.").arg(root.day.openLogDayText).arg(root.entriesText) : qsTr("%1’s log has %2. Starting a new log keeps it in History.").arg(root.day.openLogDayText).arg(root.entriesText)
+    message: root.startFailed ? qsTr("A new log could not be started. Nothing was changed, and %1’s log is still open.").arg(root.day.openLogDayText) : root.day.changedSinceShare ? qsTr("%1’s log has %2 and has changed since it was last shared. Starting a new log keeps it in History.").arg(root.day.openLogDayText).arg(root.entriesText) : root.day.unshared ? qsTr("%1’s log has %2 and hasn’t been shared yet. Starting a new log keeps it in History.").arg(root.day.openLogDayText).arg(root.entriesText) : qsTr("%1’s log has %2. Starting a new log keeps it in History.").arg(root.day.openLogDayText).arg(root.entriesText)
     icon: Alert.Calendar
     confirmText: qsTr("Start a new log")
     alternateText: root.day.unshared ? qsTr("Share %1’s log first").arg(root.day.openLogDayText) : ""

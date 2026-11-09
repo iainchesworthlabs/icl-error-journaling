@@ -277,8 +277,11 @@ leg. The figures and the budget are in `docs/plan/stage-2.md`, section 11.
 ## Migration tests
 
 `test_migrator.cpp` (`integration`) runs `Migrator` over copies of the populated store with the test-only steps of
-`migration_steps.hpp` (version 1 to 3: a column that every log gets a value in, and a table filled from the entries); the
-product has no steps. M1 forward migration keeps every row and adds what the steps add, and the backup is the old database
+`migration_steps.hpp` (from the schema version the product writes now, two versions on: a column that every log gets a value
+in, and a table filled from the entries). The product's own step, 1 to 2 (`day_log.changed_since_share`), is tried by
+`test_schema_upgrade.cpp` on a version 1 database made from a real store: it is migrated at launch, nothing is lost, a log
+that was shared reads as shared, the schema equals a new one, and a database rebuilt from the journals knows which logs
+changed after their share. M1 forward migration keeps every row and adds what the steps add, and the backup is the old database
 byte for byte; M2 a step that fails restores the previous database byte for byte; M4 a `foreign_key_check` or caller check that
 fails restores; M5 a newer schema or another application's database is refused with no file changed; M6 the backup copy and the
 marker are durable, and the marker names the copy, before the first step runs (the `Observer` option records the order); M7 a

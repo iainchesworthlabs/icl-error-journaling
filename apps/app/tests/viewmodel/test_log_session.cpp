@@ -1302,6 +1302,102 @@ TEST_CASE("Unshared follows delete and undo, and a log with no live entry is not
     CHECK(rig.session->unshared());
 }
 
+TEST_CASE("A shared log is unshared again by an add, an edit, a delete or a restore, until the next share",
+          "[viewmodel][session][share]")
+{
+    // Sharing can happen several times a day: a share is not the end of the day.
+    SessionRig rig(Options().existing());
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.world.m_Clock.advance(1s);
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.gateway.run_all();
+    const EntryId first = rig.entries().front().m_Id;
+    QSignalSpy changed(rig.session.get(), &LogSession::unsharedChanged);
+
+    const auto share = [&]
+    {
+        rig.world.m_Clock.advance(1s);
+        REQUIRE(rig.document().mark_shared(rig.world.m_Clock.now(), {}));
+        rig.gateway.run_all();
+        REQUIRE_FALSE(rig.session->unshared());
+        REQUIRE_FALSE(rig.session->changed_since_share());
+    };
+    share();
+    CHECK(changed.count() == 1);
+
+    SECTION("a share and no change: shared")
+    {
+        rig.world.m_Clock.advance(1h);
+        CHECK_FALSE(rig.session->unshared());
+        CHECK(changed.count() == 1);
+    }
+    SECTION("share, add: unshared")
+    {
+        rig.world.m_Clock.advance(1s);
+        REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+        rig.gateway.run_all();
+        CHECK(rig.session->unshared());
+        CHECK(rig.session->changed_since_share());
+        CHECK(rig.session->property("changedSinceShare").toBool());
+        CHECK(changed.count() == 2);
+        share();
+        CHECK(changed.count() == 3);
+    }
+    SECTION("share, edit: unshared")
+    {
+        Entry edited = rig.entries().front();
+        edited.m_Body = NoteEntry{std::nullopt, "corrected"};
+        REQUIRE(rig.document().edit_entry(first, edited, {}));
+        rig.gateway.run_all();
+        CHECK(rig.session->unshared());
+        CHECK(rig.session->changed_since_share());
+        share();
+    }
+    SECTION("share, delete: unshared, and restore stays unshared")
+    {
+        REQUIRE(rig.document().set_deleted(first, true, LogChange::Origin::USER, {}));
+        rig.gateway.run_all();
+        CHECK(rig.session->unshared());
+        CHECK(rig.session->changed_since_share());
+        share();
+
+        REQUIRE(rig.document().set_deleted(first, false, LogChange::Origin::UNDO, {}));
+        rig.gateway.run_all();
+        CHECK(rig.session->unshared());
+    }
+    SECTION("share, change a header: unshared")
+    {
+        REQUIRE(rig.document().correct_header(HeaderField::UNIT_NUMBER, "31", {}));
+        rig.gateway.run_all();
+        CHECK(rig.session->unshared());
+        share();
+        REQUIRE(rig.document().correct_header(HeaderField::UNIT_NUMBER, "31", {})); // the same text: nothing new
+        rig.gateway.run_all();
+        CHECK_FALSE(rig.session->unshared());
+    }
+}
+
+TEST_CASE("A log never shared is unshared without having changed since a share", "[viewmodel][session][share]")
+{
+    SessionRig rig(Options().existing());
+    REQUIRE(rig.session->recordError(WRONG_RESPONSE));
+    rig.gateway.run_all();
+    CHECK(rig.session->unshared());
+    CHECK_FALSE(rig.session->changed_since_share());
+}
+
+TEST_CASE("A log that is loaded shared, with changes after the share, is unshared", "[viewmodel][session][share]")
+{
+    SessionRig rig(Options().existing().no_load());
+    REQUIRE(rig.storage.memory().add_entry(rig.log_id, sample_error(7, 0)));
+    REQUIRE(rig.storage.memory().mark_shared(rig.log_id, rig.world.m_Clock.now()));
+    REQUIRE(rig.storage.memory().add_entry(rig.log_id, sample_error(8, 1)));
+    rig.session->load();
+    rig.gateway.run_all();
+    CHECK(rig.session->unshared());
+    CHECK(rig.session->changed_since_share());
+}
+
 TEST_CASE("A new log starts out not unshared, and a log that is loaded already shared is not unshared",
           "[viewmodel][session]")
 {

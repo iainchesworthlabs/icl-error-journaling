@@ -2,21 +2,25 @@
 #pragma once
 
 #include "error_journaling/migrator.hpp"
+#include "error_journaling/sqlite_log_repository.hpp"
 
 #include <vector>
 
-/// Steps for testing the migration framework. They are not part of the product build: the product ships schema version
-/// 1 and an empty list of steps. They take a version 1 database to version 3 with changes that are easy to look for: a
-/// column that every log row gets a value in, and a table that is filled from the entries.
+/// Steps for testing the migration framework. They are not part of the product build. They start where the product's
+/// schema is now and take a database two versions on, with changes that are easy to look for: a column that every log
+/// row gets a value in, and a table that is filled from the entries.
 namespace ej::test
 {
 
-inline constexpr std::int32_t TEST_TARGET_VERSION = 3;
+/// The version of a store made by this build, the one after it, and the one the test steps lead to.
+inline constexpr std::int32_t TEST_FROM_VERSION = SQLITE_SCHEMA_VERSION;
+inline constexpr std::int32_t TEST_MIDDLE_VERSION = TEST_FROM_VERSION + 1;
+inline constexpr std::int32_t TEST_TARGET_VERSION = TEST_FROM_VERSION + 2;
 
-/// 1 to 2: a new column on `day_log`, filled in.
+/// From the current version: a new column on `day_log`, filled in.
 inline MigrationStep add_column_step()
 {
-    return MigrationStep{1, "add a column", [](MigrationConnection& sql) -> Result<void, StorageError>
+    return MigrationStep{TEST_FROM_VERSION, "add a column", [](MigrationConnection& sql) -> Result<void, StorageError>
                          {
                              if (auto added = sql.exec("ALTER TABLE day_log ADD COLUMN test_note TEXT"); !added)
                              {
@@ -26,10 +30,10 @@ inline MigrationStep add_column_step()
                          }};
 }
 
-/// 2 to 3: a new table, filled from the entries.
+/// The next one: a new table, filled from the entries.
 inline MigrationStep add_table_step()
 {
-    return MigrationStep{2, "add a table", [](MigrationConnection& sql) -> Result<void, StorageError>
+    return MigrationStep{TEST_MIDDLE_VERSION, "add a table", [](MigrationConnection& sql) -> Result<void, StorageError>
                          {
                              if (auto created = sql.exec("CREATE TABLE test_audit (entry_id TEXT PRIMARY KEY NOT NULL,"
                                                          " seen INTEGER NOT NULL)");
@@ -47,7 +51,7 @@ inline MigrationStep add_table_step()
 }
 
 /// A step from `from` that changes something and then fails.
-inline MigrationStep failing_step(std::int32_t from = 2)
+inline MigrationStep failing_step(std::int32_t from = TEST_MIDDLE_VERSION)
 {
     return MigrationStep{from, "a step that fails", [](MigrationConnection& sql) -> Result<void, StorageError>
                          {
@@ -59,10 +63,11 @@ inline MigrationStep failing_step(std::int32_t from = 2)
                          }};
 }
 
-/// 2 to 3 that succeeds but leaves a row without its parent, which the post-check finds.
+/// The second step, which succeeds but leaves a row without its parent, which the post-check finds.
 inline MigrationStep orphan_step()
 {
-    return MigrationStep{2, "a step that leaves an orphan", [](MigrationConnection& sql) -> Result<void, StorageError>
+    return MigrationStep{TEST_MIDDLE_VERSION, "a step that leaves an orphan",
+                         [](MigrationConnection& sql) -> Result<void, StorageError>
                          {
                              return sql.exec("INSERT INTO error_entry (entry_id, error_type_id, error_type_label)"
                                              " VALUES ('no-such-entry', 'no-such-type', 'Wrong Response')");

@@ -436,8 +436,8 @@ coordinator is plain C++ and runs against fakes.
 - **On `BECAME_ACTIVE`:** tell the `HapticPolicy` (it prepares the haptics); if storage is ready, run the day check (`DayWatcher::check()`, Stage 3); if it
   is not (a cold launch, recovery still running) remember to run it on `storage_ready()`. The day check must be
   idempotent, because Active is also delivered at launch: two events in a row raise one prompt, and a prompt already on
-  screen is not raised again. If the new-day prompt is raised, the unshared flag comes from `last_shared_utc` as in
-  Stage 3.
+  screen is not raised again. If the new-day prompt is raised, the unshared flag is Stage 3's rule (`is_unshared`: never
+  shared, or changed since the last share).
 - **On `ABOUT_TO_QUIT`:** the same flush as inactive, best effort.
 - The day check reads the device's current zone each time, not a zone cached at launch. Qt's `QTimeZone::systemTimeZone`
   is expected to re-query; L5 shows whether it does.

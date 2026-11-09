@@ -161,6 +161,7 @@ Result<std::vector<LogSummary>, StorageError> MemoryLogRepository::list_logs()
         summary.m_Header = log.m_Log.initial_header();
         summary.m_CreatedUtc = log.m_Meta.m_CreatedUtc;
         summary.m_LastSharedUtc = log.m_Meta.m_LastSharedUtc;
+        summary.m_ChangedSinceShare = log.m_Meta.m_ChangedSinceShare;
         summary.m_Archived = log.m_Meta.m_Archived;
         summary.m_TotalEntryCount = log.m_Log.entries().size();
         summary.m_LiveEntryCount = log.m_Log.sorted_entries(false).size();

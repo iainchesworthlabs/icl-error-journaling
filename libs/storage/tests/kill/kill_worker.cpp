@@ -10,7 +10,7 @@
 //   ACK <n>     after operation n returned success, and never before
 //   DONE        the workload ended by itself
 //   TYPED <n>   the note field changed for the nth time (mode `draft`)
-//   MIGRATING   a migration is about to run (mode `migrate`: the test-only steps, version 1 to 3)
+//   MIGRATING   a migration is about to run (mode `migrate`: the test-only steps, from the current version to two on)
 //   MIGRATED    it finished
 //   RECOVERING  recovery is about to run
 //   RECOVERED <outcome>

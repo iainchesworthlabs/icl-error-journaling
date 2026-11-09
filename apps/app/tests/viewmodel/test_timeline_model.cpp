@@ -1012,6 +1012,28 @@ TEST_CASE("Copy changes nothing in the store and does not mark the log as shared
     CHECK_FALSE(stored->m_Meta.m_LastSharedUtc.has_value());
 }
 
+TEST_CASE("Copying a log that was shared and has changed since does not make it shared again", "[viewmodel][timeline]")
+{
+    // Only Share counts (REV-05): "Copy all" and copying a line leave the log as unshared as it was.
+    Rig rig;
+    rig.start({error_at(1, 11, 10, "A"), error_at(2, 11, 20, "B")});
+    REQUIRE(rig.document().mark_shared(sample_time(500), {}));
+    rig.commit();
+    REQUIRE(rig.document().add_entry(error_at(3, 11, 30, "C"), Origin::USER, {}));
+    rig.commit();
+    REQUIRE(rig.document().meta().m_ChangedSinceShare);
+
+    REQUIRE(rig.model().copyLine(0));
+    REQUIRE(rig.model().copyAll());
+
+    CHECK(rig.document().meta().m_ChangedSinceShare);
+    CHECK(rig.document().last_shared() == sample_time(500));
+    const auto stored = rig.storage().memory().load_log(rig.document().id());
+    REQUIRE(stored.has_value());
+    CHECK(stored->m_Meta.m_ChangedSinceShare);
+    CHECK(stored->m_Meta.m_LastSharedUtc == sample_time(500));
+}
+
 TEST_CASE("Copy all refuses a log that cannot be rendered, and copies no part of it", "[viewmodel][timeline]")
 {
     Rig rig;

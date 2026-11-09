@@ -73,11 +73,16 @@ class LogSession : public QObject, public OpenLogSource
     // What a new log would archive: the live (not deleted) entries of the open log, every kind. It follows commits and
     // undo, so it is notified with the header: any change of the log is a `headerChanged`, except a share.
     Q_PROPERTY(int liveEntryCount READ live_entry_count NOTIFY headerChanged)
-    // True when the open log has at least one live entry and has never been shared: starting a new log would archive
-    // work that has not left the phone ("...and hasn't been shared", with "Share this log first"). The rule of
-    // `DayWatcher::unshared`. Not true for an empty log, which has nothing to share. Follows commits, undo, a share and
-    // a new log.
+    // True when the open log has at least one live entry and either has never been shared or has changed since its last
+    // share (an entry added, edited, deleted or restored, or a header corrected): starting a new log would archive work
+    // that has not left the phone ("...and hasn't been shared", with "Share this log first"). Sharing can happen
+    // several times a day, so a share is not the end of the log. Only a share clears it: copying the text does not. The
+    // rule of `DayWatcher::unshared` and History (`is_unshared`). Not true for an empty log, which has nothing to
+    // share. Follows commits, undo, a share and a new log.
     Q_PROPERTY(bool unshared READ unshared NOTIFY unsharedChanged)
+    // True when `unshared` and the log was shared earlier: it has changed since, which the texts say apart from "never
+    // shared".
+    Q_PROPERTY(bool changedSinceShare READ changed_since_share NOTIFY unsharedChanged)
     // The clock in the device zone as seconds since local midnight, for the "now" default of the version sheet.
     Q_PROPERTY(int nowLocalSeconds READ now_local_seconds)
     Q_PROPERTY(QString draft READ draft WRITE set_draft NOTIFY draftChanged) // NOTE-03
@@ -124,6 +129,10 @@ public:
     [[nodiscard]] bool unshared() const
     {
         return m_Unshared;
+    }
+    [[nodiscard]] bool changed_since_share() const
+    {
+        return m_ChangedSinceShare;
     }
     [[nodiscard]] QString location_text() const;
     [[nodiscard]] QString version_text() const;
@@ -257,6 +266,7 @@ private:
     std::unique_ptr<Listener> m_Listener;
 
     bool m_Unshared = false;
+    bool m_ChangedSinceShare = false;
     int m_OwnPending = 0; // commands this session submitted and has not heard back from
     bool m_StartingNewLog = false;
     TimerId m_NewLogTimer = NO_TIMER;

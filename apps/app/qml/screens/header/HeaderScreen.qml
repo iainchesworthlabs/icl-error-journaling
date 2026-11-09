@@ -20,7 +20,7 @@ import ErrorJournalingApp
 //
 // The last row, "Start a new log for another unit or site" (decision 8), asks first, because it archives the open log: the
 // alert says how many entries the log has (`session.liveEntryCount`), and that the log has not been shared while
-// `session.unshared`, with "Share this log first" (`share.shareOpenLog()`; the alert comes back when the share has ended,
+// `session.unshared` (never shared, or shared and changed since: `session.changedSinceShare` says which), with "Share this log first" (`share.shareOpenLog()`; the alert comes back when the share has ended,
 // without the button once the share is recorded). Then `session.startNewLog()` runs.
 //
 // The title is a large one that collapses to the compact bar once the page has scrolled (HeaderNewLogRow): the page
@@ -80,7 +80,7 @@ SheetHost {
         return qsTr("Today’s log");
     }
     readonly property bool canShareFirst: session.unshared && share !== null && share.available
-    readonly property string newLogMessage: session.unshared ? qsTr("%1 has %2 and hasn’t been shared. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator) : qsTr("%1 has %2. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator)
+    readonly property string newLogMessage: session.changedSinceShare ? qsTr("%1 has %2 and has changed since it was last shared. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator) : session.unshared ? qsTr("%1 has %2 and hasn’t been shared. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator) : qsTr("%1 has %2. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator)
     // The field being typed in, kept in view above the keyboard.
     property Item activeField: null
     // The height of the collapsed bar: its row and the divider under it.

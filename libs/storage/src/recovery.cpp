@@ -94,6 +94,7 @@ private:
 
     Result<DatabaseState, StorageError> classify_database();
     Result<void, StorageError> at_crash_point();
+    void migrate_database();
 
     Result<void, StorageError> find_journals();
     Result<void, StorageError> scan_journal_file(JournalInfo& info);
@@ -121,6 +122,30 @@ private:
     std::vector<std::string> m_MigrationQuarantined;  // what finishing an interrupted migration set aside
     std::size_t m_Lost = 0;
 };
+
+void RecoveryRun::migrate_database()
+{
+    const std::filesystem::path path = m_Location.database_path();
+    std::error_code code;
+    if (!std::filesystem::exists(path, code) || std::filesystem::file_size(path, code) == 0)
+    {
+        return; // a first start: the repository makes the database at the current version
+    }
+    // A database from an older build is brought to the current schema before anything opens it. A migration that fails
+    // has put the old file back; it is then opened as it was, which a build that does not know its version treats as
+    // damaged, and rebuilds from the journals, the log of record. So a failure here is a note and never an error.
+    const auto migrated = Migrator(m_Location, m_Clock, product_migration_steps(), SQLITE_SCHEMA_VERSION).run();
+    if (!migrated)
+    {
+        note("the database could not be migrated: " + migrated.error().m_Message.substr(0, 200));
+        return;
+    }
+    if (migrated->m_Outcome == MigrationOutcome::MIGRATED)
+    {
+        note("the database was migrated from version " + std::to_string(migrated->m_FromVersion) + " to " +
+             std::to_string(migrated->m_ToVersion));
+    }
+}
 
 Result<void, StorageError> RecoveryRun::at_crash_point()
 {
@@ -970,6 +995,7 @@ Result<RecoveryReport, StorageError> RecoveryRun::execute()
              std::string(migration_outcome_name(resumed->m_Outcome)));
         m_MigrationQuarantined = resumed->m_QuarantinedPaths;
     }
+    migrate_database();
     if (auto found = find_journals(); !found)
     {
         return Failure(found.error());
