@@ -19,6 +19,14 @@ updates:
     cooldown:
       default-days: 7
     rebase-strategy: disabled
+  - package-ecosystem: bundler
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    rebase-strategy: disabled
   - package-ecosystem: pip
     directory: /requirements
     target-branch: develop

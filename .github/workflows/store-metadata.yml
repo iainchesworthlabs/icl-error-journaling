@@ -1,0 +1,118 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Uploads the store listing in store/ to App Store Connect or to the Play Console (docs/plan/stage-11.md, task 11.7).
+#
+# Started by hand only, from develop or from a release tag. It uploads text, graphics and screenshots, never a build:
+# builds come only from release.yml. It never submits for review and never releases or starts a rollout; the owner does
+# those in the consoles. fastlane/Fastfile holds the lanes, and tools/tests/test_store_upload_guard.py fails when the
+# lanes or this file ask for a submission, a release or a binary upload.
+#
+# Secrets, by name only: APPSTORE_API_KEY_ID, APPSTORE_API_ISSUER_ID and APPSTORE_API_PRIVATE_KEY (organisation secrets
+# already shared with the repository for release.yml), and PLAY_SERVICE_ACCOUNT_JSON (a repository secret the owner adds
+# with the Play account; the Play run fails at its first step without it).
+name: Store metadata
+
+on:
+  workflow_dispatch:
+    inputs:
+      store:
+        description: "Which store to update"
+        type: choice
+        options: [appstore, play]
+        required: true
+      version:
+        description: "App Store version to update, x.y.z (App Store only)"
+        type: string
+        required: false
+      build:
+        description: "Build number to attach to the version, from TestFlight (App Store only, optional)"
+        type: string
+        required: false
+      first_release:
+        description: "The app's first version: leave out What's New, which App Store Connect refuses on it"
+        type: boolean
+        default: false
+      phased:
+        description: "Phased release for automatic updates (App Store only)"
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: store-metadata-${{ inputs.store }}
+  cancel-in-progress: false
+
+env:
+  BUNDLE_ID: com.iainchesworthlabs.errorjournaling
+  APPLICATION_ID: com.iainchesworthlabs.errorjournaling
+
+jobs:
+  upload:
+    name: Upload (${{ inputs.store }})
+    if: github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the store text
+        run: python3 tools/ci/check_store_text.py
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
+        with:
+          bundler-cache: false
+
+      - name: Install fastlane
+        run: bundle install --jobs 4
+
+      - name: Upload the App Store listing
+        if: inputs.store == 'appstore'
+        env:
+          ASC_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+          VERSION: ${{ inputs.version }}
+          BUILD: ${{ inputs.build }}
+          FIRST_RELEASE: ${{ inputs.first_release }}
+          PHASED: ${{ inputs.phased }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::version must be x.y.z"; exit 1; }
+          args=("version:$VERSION" "first_release:$FIRST_RELEASE" "phased:$PHASED")
+          if [ -n "$BUILD" ]; then
+            [[ "$BUILD" =~ ^[0-9]+$ ]] || { echo "::error::build must be a number"; exit 1; }
+            args+=("build:$BUILD")
+          fi
+          bundle exec fastlane ios metadata "${args[@]}"
+
+      - name: Make the Play graphics
+        if: inputs.store == 'play'
+        run: |
+          python3 -m pip install --quiet -r requirements/store.txt
+          python3 tools/store/make_play_graphics.py
+
+      - name: Upload the Play listing
+        if: inputs.store == 'play'
+        env:
+          PLAY_JSON_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          [ -n "$PLAY_JSON_KEY" ] || { echo "::error::the secret PLAY_SERVICE_ACCOUNT_JSON is not set (an owner action)"; exit 1; }
+          bundle exec fastlane android metadata
+
+      - name: Say what to do next
+        env:
+          STORE: ${{ inputs.store }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$STORE" = appstore ]; then
+            echo "The listing is on version $VERSION in App Store Connect. Check it there; submitting for review is the owner's action." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "The listing is in the Play Console. Check it there; sending for review and starting a rollout are the owner's actions." >> "$GITHUB_STEP_SUMMARY"
+          fi

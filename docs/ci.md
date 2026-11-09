@@ -18,6 +18,7 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Hourly | The Actions cache prune (`cache-prune.yml`, below) |
 | Manual run of the Stage 2 exit gate | The kill harness at 10,000 random kills on Linux and macOS (`kill-gate.yml`) |
 | Tag `v*` | Release: the source archive, and the signed iOS build for TestFlight |
+| Manual run of Store metadata | `store-metadata.yml` uploads the listing in `store/` to App Store Connect or the Play Console with fastlane (`fastlane/Fastfile`, pinned in `Gemfile.lock`). It never uploads a build, submits for review, releases or starts a rollout; `tools/tests/test_store_upload_guard.py` fails if it would. Only from `develop` or a tag (Stage 11, 11.7) |
 
 The Plan job reads `.github/ci/plan.json`. A change to documentation only builds nothing. A path
 the plan does not recognise builds everything.

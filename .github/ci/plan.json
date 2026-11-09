@@ -23,7 +23,11 @@
     ".editorconfig",
     "LICENSES/**",
     "tools/tests/**",
-    "store/**"
+    "store/**",
+    "fastlane/**",
+    "Gemfile",
+    "Gemfile.lock",
+    ".ruby-version"
   ],
   "build": [
     "libs/**",
