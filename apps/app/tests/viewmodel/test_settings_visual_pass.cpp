@@ -321,9 +321,9 @@ TEST_CASE("A refused file is described in the plain sentences of the design, in 
     rig.m_Gateway.run_all();
 
     REQUIRE(failed.count() == 1);
-    CHECK(failed.at(0).at(0).toStringList() == QStringList{"Error type 3 has no name.",
-                                                           "Locations 1 and 2 are both called North Site.",
-                                                           "Note template 1: the pattern has no {value}."});
+    CHECK(failed.at(0).at(0).toStringList() ==
+          QStringList{"Error type 3 has no name.", "Locations 1 and 2 are both called North Site.",
+                      "Note template 1: the line in the log has no {value} where the answer goes."});
     CHECK_FALSE(rig.m_Settings.configured());
 }
 
