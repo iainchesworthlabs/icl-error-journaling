@@ -195,8 +195,11 @@ would run the app at 60 Hz, U7), or when a usage-description key appears. It als
 `apps/app/packaging/ios/PrivacyInfo.xcprivacy`, and fails unless tracking is false, the tracking domains and collected
 data types are empty, and each accessed API category is one of Apple's with an application's reason code for it. Its unit
 tests are in `tools/tests/test_ios_plist.py`. On the built bundle `verify_app.sh` checks that the manifest is there and
-declares each required-reason category the executable calls, and that the executable has no network code (Stage 11,
-11.2). `verify_app.sh` repeats the type, the document type, the two flags and the 120 Hz key on the built
+declares each required-reason category the executable calls and carries no Tracy profiler, and reports the network code
+that Qt QML links (Qt Network) without refusing it. The **Plan** job also runs `tools/ci/check_no_network.py`, which fails
+when the application's code in `apps/` or `libs/` (tests aside) uses a network API (Qt Network, `NSURLSession`,
+`CFNetwork`, `Network.framework`, BSD sockets), links `Qt6::Network`, or names a remote URL other than the project's own
+pages, which only ever open in the browser. Its unit tests are in `tools/tests/test_no_network.py` (Stage 11, 11.2). `verify_app.sh` repeats the type, the document type, the two flags and the 120 Hz key on the built
 bundle. It also checks the launch screen (Stage 5, 5.8): `UILaunchScreen` names a colour and an image that exist in the asset
 catalogue, each with a light and a dark entry; the image ignores the safe area (`UIImageRespectsSafeAreaInsets` false); the
 two PNGs are 1206 x 2622 px (402 x 874 pt at 3x) and opaque; and the colour is the `background` token in both modes.
