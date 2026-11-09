@@ -11,20 +11,28 @@ import ErrorJournalingApp
 // WriteFailed and Recovery are the reference.
 //
 // The screen shows what the view models say and holds no count, no line and no rule of its own. The press path is its one
-// job: a tile's `pressed` fires the impact haptic and then calls `session.recordError`, from that handler and nothing
+// job: a tile's `pressed` fires the impact haptic and then calls `session.recordErrorEntry`, from that handler and nothing
 // else (Stage 5 decision 1); a VoiceOver activation of a tile sends the same pair of signals, so it takes the same two
 // calls. The count, the badge, the "Last" bar and the toast change only after the commit, because the models change them
 // only then.
 //
-// A hold on a tile (BRD-07, NOTE-06) is a tap that went on: the press has recorded the entry already, as it always does, and
-// the hold (500 ms, `Tile.holdMs`) adds a note to that one entry, in one of two ways that the composer decides:
+// A tile is logged by a double-tap, not by one tap (4.17a): `Tile` sends `pressed` at the touch of the second tap, so the haptic
+// and the press scale are at that touch and the latency budget (NFR-03) is counted from it. One tap logs nothing: the tile sends
+// `singleTapped` once the double-tap window (`Theme.motion.doubleTapMs`, 300 ms) has gone by, and the screen shows the hint
+// "Double-tap to log" (`TapHint`, at most once in `Theme.motion.tapHintIntervalMs`). The Other tile is a navigation and opens
+// its list on a single tap.
+//
+// A hold on a tile (BRD-07, NOTE-06; `Tile.holdMs`, 500 ms) logs it with a note, in one of two ways that the composer decides.
+// The hold records the entry (the tile sends `pressed` at the hold when no double-tap has already; a double-tap that goes on
+// into a hold has recorded at its second touch, and the hold adds to that entry, so the entry is recorded once) and then:
 //   - a draft is typed: `session.attachDraft` puts it on the entry's line and clears the composer, and the undo toast takes the
 //     entry and the note away together and gives the draft back ("Mute Delay logged at 10:30 with note");
 //   - the composer is empty: the Edit entry sheet opens on the new entry with the cursor in the note; Save attaches what is
 //     typed and Cancel leaves the entry as it was.
-// A hold that comes before the commit waits for `entryRecorded` and then does the same. A tap, a slide off and a release before
-// 500 ms do nothing more than they did. With a draft, each tile has a second VoiceOver element, "Log <name> with note"; with none,
-// the Edit sheet of Review is the way to a note (the sheet that a hold opens is the same).
+// A hold waits for `entryRecorded` and then does the same, which is always the case when the hold itself recorded the entry. A
+// slide off and a release before 500 ms are not holds (the release is a tap and counts towards a double-tap). With a draft, each
+// tile has a second VoiceOver element, "Log <name> with note"; with none, the Edit sheet of Review is the way to a note (the sheet
+// that a hold opens is the same).
 //
 // The success haptic of a saved note is not fired here. `PlatformFeedbackSink::note_saved` fires it from C++ after the
 // commit, and a second one from this screen would be a double tap on the hand. The screen calls the bridge for the impact
@@ -44,7 +52,7 @@ import ErrorJournalingApp
 // What it asks the shell for, by signal:
 //   todaysDetailsRequested()   the header card was tapped (Today's details, 4.9)
 //   reviewRequested()          the "Last" bar was tapped, or "Check the log in Review" on the recovery banner (4.10)
-//   otherRequested()           the Other tile was tapped (the picker, 4.8); nothing was recorded
+//   otherRequested()           the Other tile was tapped, once (the picker, 4.8); nothing was recorded
 //   boardSetupRequested(position)  an empty tile was tapped (its position, 1 to 11), or "Add error types" of the empty
 //                              board (0): the board setup in Settings, with the picker open for that position when there
 //                              is one. Nothing is recorded.
@@ -105,14 +113,15 @@ Item {
 
     // A note has been typed and not added: a hold on a tile logs with it.
     readonly property bool hasDraft: session.draft.trim().length > 0
-    // The entry that the latest press on each tile recorded, by row; empty when the press recorded nothing.
+    // The entry that the latest request of each tile recorded, by row; empty when it recorded nothing.
     property var pressedEntries: ({})
     // Holds that came before their commit: entry id to "draft" or "sheet", how the hold was decided.
     property var waitingHolds: ({})
     // The Edit entry sheet and the time sheet over it, made when the first hold needs them.
     readonly property var editor: (editLoader.item as LogEditSheets)?.editor ?? null
 
-    // The impact on touch-down, then the entry. Other records nothing and fires nothing: it opens the picker on its tap.
+    // The impact, then the entry, when a tile asks for it: the second tap of a double-tap, or a hold. Other records nothing and
+    // fires nothing: it opens the picker on its tap.
     function pressTile(row: int, typeId: string, isOther: bool): void {
         if (isOther)
             return;
@@ -120,8 +129,9 @@ Item {
         pressedEntries[row] = session.recordErrorEntry(typeId);
     }
 
-    // The finger stayed on a tile (or VoiceOver chose "Log with note"). The press has recorded the entry; how it takes a note
-    // is decided now, by whether there is a draft, and done when the entry has been committed.
+    // The finger stayed on a tile (or VoiceOver chose "Log with note"). The tile has asked for the entry already (`pressTile`,
+    // in the same call for a hold); how it takes a note is decided now, by whether there is a draft, and done when the entry has
+    // been committed.
     function holdTile(row: int): void {
         const entryId = pressedEntries[row] ?? "";
         if (entryId.length === 0)
@@ -140,6 +150,12 @@ Item {
             editLoader.active = true;
             editor.editNote(entryId);
         }
+    }
+
+    // One tap on a tile logged nothing: say what logs it. The card is made at the first hint.
+    function showTapHint(): void {
+        hintLoader.active = true;
+        (hintLoader.item as TapHint)?.show();
     }
 
     function updateChipIcons(): void {
@@ -466,6 +482,7 @@ Item {
             noteAction: root.hasDraft
             onTilePressed: (row, typeId, isOther) => root.pressTile(row, typeId, isOther)
             onTileHeld: row => root.holdTile(row)
+            onTileSingleTapped: root.showTapHint()
             onTileTapped: (row, typeId, isOther) => {
                 if (isOther)
                     root.otherRequested();
@@ -490,6 +507,20 @@ Item {
         generation: root.undo.generation
         windowMs: root.undo.windowMs
         onUndoRequested: root.undo.undo()
+    }
+
+    // The hint of a single tap, above the undo toast when that is open. It takes no touch. Made at the first hint.
+    Loader {
+        id: hintLoader
+
+        objectName: "logTapHintLoader"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: toast.bottom
+        anchors.bottomMargin: toast.present ? toast.height + Theme.space.tileGap : 0
+        active: false
+        sourceComponent: TapHint {
+            objectName: "logTapHint"
+        }
     }
 
     // The Edit entry sheet of a hold on an empty composer. Made at the first hold, so that a board nobody holds does not pay for

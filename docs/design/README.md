@@ -17,14 +17,14 @@ The `.dc.html` files were authored for a design-canvas runtime (`support.js`, no
 
 | # | File | Screen | Key behaviour |
 | --- | --- | --- | --- |
-| 1 | `Main.dc.html` | Log (main board) | Header card (unit, site, version, date, facilitator) opens Today's details. Note composer with template chips. "Last" bar shows the latest entry and today's count, and opens Review. 3 × 4 board: 11 error tiles with count badges plus Other. Undo toast for 5 s, "×N" on repeat taps. Holding a tile for half a second adds a note to the entry: with a note typed it is logged on the same line (toast "… with note", one Undo gives the note back), with the box empty the Edit entry sheet opens on the new entry (BRD-07; the prototype shows the first). The note box says "Type a note, then hold a tile…". Tab bar: Log, Review, History, Settings. |
+| 1 | `Main.dc.html` | Log (main board) | Header card (unit, site, version, date, facilitator) opens Today's details. Note composer with template chips. "Last" bar shows the latest entry and today's count, and opens Review. 3 × 4 board: 11 error tiles with count badges plus Other. A tile is logged by a double-tap (two taps within 0.3 s; the haptic and the press are on the second tap). One tap logs nothing and shows a low dark card above the toast, "Double-tap to log" (2 s, at most once every 5 s; it takes no touch; the prototype shows it after a single click). The Other tile opens on one tap. Undo toast for 5 s, "×N" on repeat double-taps. Holding a tile for half a second logs it with a note: with a note typed it is logged on the same line (toast "… with note", one Undo gives the note back), with the box empty the Edit entry sheet opens on the new entry (BRD-07; the prototype shows the first). The note box says "Type a note, then hold a tile…". Tab bar: Log, Review, History, Settings. |
 | 2 | `Other.dc.html` | Other error picker | Sheet with search, "Not on your board" types, board types with today's counts, and "Add a new error type". |
 | 3 | `Header.dc.html` | Today's details | Facilitator and date (read only), unit number with fixed prefix and numeric keypad, an optional Environment row (None, prod, dev) that opens a short list, location list with Other, software version with inline validation and an optional Commit field under it, "Start logging". Errors can be logged before every field is filled. |
 | 4 | `ChangeVersion.dc.html` | Software version | Two plain choices: "It changed during the day" (adds a timed entry) or "I typed it wrong" (corrects, no entry). From and To, an optional Commit, time defaulting to now, and a preview of the exact log line. |
 | 5 | `Review.dc.html` | Today's log | Header block and timeline in export wording, black and white only. Swipe a row for Copy and Delete. Copy-all in the navigation bar, "Share log" button. |
 | 6 | `EditEntry.dc.html` | Edit entry | Sheet with Cancel and Save: error type, time, note, a preview of the shared line, and "Delete entry". The facilitator chose a separate sheet over editing in place. |
 | 7 | `NewDay.dc.html` | New day prompt | Names the new date; warns when the open log is unshared (never shared, or changed since its last share: "has changed since it was last shared"). "Start a new log", "Share [day]'s log first", "Keep [day]'s log open". |
-| 8 | `BoardSettings.dc.html` | Settings | Miniature board: hold and drag to move, tap to swap a type. Rows for error types, note templates, locations, facilitator, time format, and import or export of the setup. |
+| 8 | `BoardSettings.dc.html` | Settings | Miniature board: hold and drag to move, tap to swap a type. Rows for error types, note templates, locations, facilitator, time format, and import or export of the setup, and under them, in a group of its own, About CS Bingo Board (PRF-12; only this mock-up draws the row, below the others it is under the tab bar). |
 
 ### Screens added by package 4.2 (drafts)
 
@@ -75,6 +75,8 @@ button "Change error type" (it was "Replace type").
 | 37 | `BoardTypePicker` | Choose an error type for a tile | PRF-05 | Opened at once by an empty tile ("Add error type"), or by Change error type ("Change error type"). "New error type…" at the top, then every type with its position. |
 | 38 | `ErrorTypeNewOnBoard` | New error type, for a position | PRF-04, PRF-05 | The name, then the colour the type will get, and "It goes on the board at position 5." Save makes the type and places it in one change. The Error types list's own new-type sheet shows the same colour and line, with the first empty position. |
 | 39 | `ErrorTypesAdded` | Error types, after an add | PRF-04 | An information banner: "Added to the board at position 5" (the first empty tile), or "Added to Other" when the board is full. |
+| 40 | `About` | About | PRF-12 | The build (name, version, build number, commit, branch or tag, date of the commit, platform, Qt, storage), the licence and the row that opens its text, the source code address, and the open-source components, each with its licence. The last row of Settings (`BoardSettings`) opens it. |
+| 41 | `AboutLicence` | A licence page | PRF-12 | One component (or the app): version, licence, how it is linked, copyright and source, then the full text of each licence, as paragraphs. |
 
 ## Dark mode
 
@@ -104,8 +106,8 @@ How the dark variants of the original eight screens were made: each light colour
 
 - **Thumb zone.** The board fills the lower part of the screen for one-handed use; the rarely changed header sits at the top.
 - **Spatial memory.** Fixed positions and a colour per error type let the facilitator find a tile without reading. Colours follow the type when the board is reordered.
-- **No interruptions on capture.** A tap never opens a dialog. Feedback is immediate (haptic, press animation, "Last" bar) and the undo toast confirms what was logged and when.
-- **Slip detection.** A second tap on the same tile while its toast is visible shows "×2", making accidental double taps obvious.
+- **No interruptions on capture.** A tap never opens a dialog. Feedback is immediate from the second tap of a double-tap (haptic, press animation, "Last" bar) and the undo toast confirms what was logged and when. One tap logs nothing, which is the point: it only says "Double-tap to log".
+- **Slip detection.** A double-tap on the same tile while its toast is visible shows "×2", making a repeated entry obvious. (A single accidental tap no longer logs: the double-tap of 4.17a, `motion.doubleTapMs`.)
 - **Recognition over recall.** Template chips start common notes; Other lists every type with search.
 - **Correct later, not now.** Edits and deletes live on the review screen; destructive actions are behind a swipe or a separate button.
 - **Plain-language branching.** The version-change sheet asks what happened in the facilitator's words and previews the line it will write.

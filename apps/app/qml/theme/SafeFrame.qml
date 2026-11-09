@@ -32,8 +32,8 @@ Item {
 
     readonly property real topInset: overrideInsets ? overrideTop : Theme.overrideSafeArea ? simulatedInset(true) : SafeArea.margins.top
     readonly property real bottomInset: overrideInsets ? overrideBottom : Theme.overrideSafeArea ? simulatedInset(false) : SafeArea.margins.bottom
-    readonly property real leftInset: overrideInsets ? overrideLeft : SafeArea.margins.left
-    readonly property real rightInset: overrideInsets ? overrideRight : SafeArea.margins.right
+    readonly property real leftInset: overrideInsets ? overrideLeft : Theme.overrideSafeArea ? simulatedSide(true) : SafeArea.margins.left
+    readonly property real rightInset: overrideInsets ? overrideRight : Theme.overrideSafeArea ? simulatedSide(false) : SafeArea.margins.right
 
     // How far the keyboard reaches up into this item, in its points; 0 without `avoidKeyboard` or a keyboard.
     readonly property real keyboardInset: avoidKeyboard ? Keyboard.coverage(root) : 0
@@ -63,6 +63,16 @@ Item {
         if (atTop)
             return Math.max(0, Theme.overrideSafeTop - root.mapToItem(null, 0, 0).y);
         return Math.max(0, Theme.overrideSafeBottom - (window.height - root.mapToItem(null, 0, root.height).y));
+    }
+
+    // The same at its left or its right side.
+    function simulatedSide(atLeft: bool): real {
+        const window = root.Window.window;
+        if (window === null)
+            return 0;
+        if (atLeft)
+            return Math.max(0, Theme.overrideSafeLeft - root.mapToItem(null, 0, 0).x);
+        return Math.max(0, Theme.overrideSafeRight - (window.width - root.mapToItem(null, root.width, 0).x));
     }
 
     // Scrolls the Flickable that holds the focused text field, if the frame has one, so that the field is clear of the top and

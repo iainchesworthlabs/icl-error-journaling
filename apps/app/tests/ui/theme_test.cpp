@@ -204,6 +204,7 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
         check_numbers(json.value(QStringLiteral("spacing")).toObject(), child(theme, "space"));
         check_numbers(json.value(QStringLiteral("frame")).toObject(), child(theme, "frame"));
         check_numbers(json.value(QStringLiteral("miniBoard")).toObject(), child(theme, "miniBoard"));
+        check_numbers(json.value(QStringLiteral("layout")).toObject(), child(theme, "layout"));
         const QJsonObject scale =
             json.value(QStringLiteral("typography")).toObject().value(QStringLiteral("textScale")).toObject();
         CHECK_THAT(number(child(theme, "size"), QStringLiteral("textScaleMin")),
@@ -214,8 +215,9 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
                    WithinAbs(scale.value(QStringLiteral("default")).toDouble(), 1e-9));
 
         // Nothing in the singleton that the contract does not have.
-        for (const auto& [group, key] : {std::pair{"size", "size"}, std::pair{"radius", "radius"},
-                                         std::pair{"space", "spacing"}, std::pair{"miniBoard", "miniBoard"}})
+        for (const auto& [group, key] :
+             {std::pair{"size", "size"}, std::pair{"radius", "radius"}, std::pair{"space", "spacing"},
+              std::pair{"miniBoard", "miniBoard"}, std::pair{"layout", "layout"}})
         {
             QSet<QString> have;
             for (const QString& name : json.value(QString::fromLatin1(key)).toObject().keys())
@@ -322,8 +324,8 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
                    WithinAbs(press.value(QStringLiteral("scale")).toDouble(), 1e-9));
         CHECK(static_cast<int>(number(values, QStringLiteral("tilePressMs"))) ==
               press.value(QStringLiteral("durationMs")).toInt());
-        for (const char* key :
-             {"undoToastVisibleMs", "reducedMotionMs", "sheetPresentMs", "toastMs", "pageMs", "swipeReleaseMs"})
+        for (const char* key : {"undoToastVisibleMs", "doubleTapMs", "holdMs", "tapHintVisibleMs", "tapHintIntervalMs",
+                                "reducedMotionMs", "sheetPresentMs", "toastMs", "pageMs", "swipeReleaseMs"})
         {
             INFO(key);
             CHECK(static_cast<int>(number(values, QString::fromLatin1(key))) ==
