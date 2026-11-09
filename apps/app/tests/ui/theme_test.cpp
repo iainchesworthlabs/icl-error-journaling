@@ -322,8 +322,8 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
                    WithinAbs(press.value(QStringLiteral("scale")).toDouble(), 1e-9));
         CHECK(static_cast<int>(number(values, QStringLiteral("tilePressMs"))) ==
               press.value(QStringLiteral("durationMs")).toInt());
-        for (const char* key :
-             {"undoToastVisibleMs", "reducedMotionMs", "sheetPresentMs", "toastMs", "pageMs", "swipeReleaseMs"})
+        for (const char* key : {"undoToastVisibleMs", "doubleTapMs", "holdMs", "tapHintVisibleMs", "tapHintIntervalMs",
+                                "reducedMotionMs", "sheetPresentMs", "toastMs", "pageMs", "swipeReleaseMs"})
         {
             INFO(key);
             CHECK(static_cast<int>(number(values, QString::fromLatin1(key))) ==

@@ -38,12 +38,13 @@ as the application, plus the stubs in `tests/ui/stubs/` that only the rig's own 
 #include <catch2/catch_test_macros.hpp>
 #include <QQuickItem>
 
-TEST_CASE("tile: a press records on touch-down", "[ui][tile]")
+TEST_CASE("tile: the second tap of a double-tap asks on its touch-down", "[ui][tile]")
 {
     ej::ui::UiRig rig;
     QQuickItem* tile = rig.load("Tile", {{"typeId", "mute-delay"}, {"label", "Mute Delay"} /* required properties */});
     REQUIRE(tile != nullptr);                     // rig.errors() says why not
-    const int finger = rig.press(tile);           // touch-down: the handler has run
+    rig.tap(tile);                                // the first tap asks for nothing
+    const int finger = rig.press(tile);           // touch-down of the second tap: the handler has run
     rig.advance(120ms);                           // animations and the attached TestClock
     rig.release(finger);
     ej::ui::expect_clean(ej::ui::check_everything(rig, [](const ej::ui::Node&) { return 88.0; }));

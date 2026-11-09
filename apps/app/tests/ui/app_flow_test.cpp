@@ -554,10 +554,13 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     app.play();
     CHECK(session.missing_fields().isEmpty());
 
-    // A tap: the impact haptic fires at touch-down, before the entry is committed; the count and the toast follow it.
+    // A double-tap: the impact haptic fires at the touch of the second tap, before the entry is committed; the count
+    // and the toast follow it. The first tap logs nothing.
     events.clear();
     app.services.go_to(7, 10, 5);
     const QString mute = app.tile(QStringLiteral("Mute Delay"));
+    app.ui.tap(app.need(mute));
+    CHECK(events.count(EventKind::HAPTIC, "impact") == 0);
     const int finger = app.ui.press(app.need(mute));
     // The haptic has fired and the entry has been asked for, and nothing has been committed.
     CHECK(events.count(EventKind::HAPTIC, "impact") == 1);
@@ -572,12 +575,13 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     CHECK(events.count(EventKind::HAPTIC, "impact") == 1);
     CHECK(app.count_of(QStringLiteral("Mute Delay")) == 1);
     CHECK(undo.active());
-    app.ui.advance(300ms);
+    app.ui.advance(400ms); // the toast, and the window of the double-tap runs out
     CHECK(app.shown(QStringLiteral("logToast")));
     CHECK(app.need(QStringLiteral("logLastBar"))->isVisible());
 
-    // A second tap on the tile is "x2" on the same toast, with one more haptic first.
+    // A second double-tap on the tile is "x2" on the same toast, with one more haptic first.
     app.services.go_to(7, 10, 5, 1);
+    app.ui.tap(app.need(mute));
     app.ui.tap(app.need(mute));
     app.ui.settle();
     CHECK(app.count_of(QStringLiteral("Mute Delay")) == 2);

@@ -53,6 +53,8 @@ constexpr double BOARD_HEIGHT = 440;
 // An animator of 120 ms has written its end value back a few frames after its time is up (it starts at the first frame
 // after the call, on the render thread).
 constexpr std::chrono::milliseconds ANIMATOR_SETTLE = 192ms;
+/// Long enough for the window of a double-tap (300 ms) to run out.
+constexpr std::chrono::milliseconds WINDOW_RUN_OUT = 400ms;
 
 /// An open log, the sample configuration and the board over them.
 struct BoardRig
@@ -219,39 +221,62 @@ TEST_CASE("grid.binding: each tile shows its row of the model", "[ui][grid]")
     (void)colour;
 }
 
-TEST_CASE("grid.signals: a touch on a tile says which one, at the press, and Other says so", "[ui][grid]")
+TEST_CASE("grid.signals: a double-tap on a tile says which one, at the second touch, and Other says so", "[ui][grid]")
 {
     BoardRig board;
     UiRig rig;
+    rig.steady_time();
     QQuickItem* grid = load_grid(rig, board);
     QSignalSpy pressed(grid, SIGNAL(tilePressed(int, QString, bool)));
     QSignalSpy tapped(grid, SIGNAL(tileTapped(int, QString, bool)));
+    QSignalSpy single(grid, SIGNAL(tileSingleTapped(int, QString)));
     REQUIRE(pressed.isValid());
     REQUIRE(tapped.isValid());
+    REQUIRE(single.isValid());
 
+    // One tap on a tile with a type asks for nothing; the second touch does.
+    rig.tap(tile_at(rig, 7));
+    CHECK(pressed.count() == 0);
+    CHECK(tapped.count() == 1);
     const int finger = rig.press(tile_at(rig, 7));
     REQUIRE(pressed.count() == 1);
-    CHECK(tapped.count() == 0);
+    CHECK(tapped.count() == 1);
     CHECK(pressed.at(0).at(0).toInt() == 7);
     CHECK(pressed.at(0).at(1).toString() == board.value(7, "typeId").toString());
     CHECK(pressed.at(0).at(2).toBool() == false);
     rig.release(finger);
-    REQUIRE(tapped.count() == 1);
+    REQUIRE(tapped.count() == 2);
     CHECK(tapped.at(0).at(0).toInt() == 7);
+    rig.advance(WINDOW_RUN_OUT);
+    CHECK(single.count() == 0);
 
+    // A lone tap says so after the window, with the tile it was on.
+    rig.tap(tile_at(rig, 4));
+    CHECK(single.count() == 0);
+    rig.advance(WINDOW_RUN_OUT);
+    REQUIRE(single.count() == 1);
+    CHECK(single.at(0).at(0).toInt() == 4);
+    CHECK(single.at(0).at(1).toString() == board.value(4, "typeId").toString());
+    CHECK(pressed.count() == 1);
+
+    // Other is a navigation: one tap, with the touch as its pressed and the lift as its tap, and no hint.
     rig.tap(tile_at(rig, OTHER_ROW));
     REQUIRE(pressed.count() == 2);
-    REQUIRE(tapped.count() == 2);
+    REQUIRE(tapped.count() == 4);
     CHECK(pressed.at(1).at(0).toInt() == OTHER_ROW);
     CHECK(pressed.at(1).at(1).toString().isEmpty());
     CHECK(pressed.at(1).at(2).toBool() == true);
-    CHECK(tapped.at(1).at(2).toBool() == true);
+    CHECK(tapped.at(3).at(2).toBool() == true);
+    rig.advance(WINDOW_RUN_OUT);
+    CHECK(single.count() == 1);
 
-    // VoiceOver reaches the tile and sends the same pair.
+    // VoiceOver reaches the tile and sends the same pair, once: its activation is already a double-tap.
     REQUIRE(accessible_press(tile_at(rig, 2)));
     CHECK(pressed.count() == 3);
-    CHECK(tapped.count() == 3);
+    CHECK(tapped.count() == 5);
     CHECK(pressed.at(2).at(0).toInt() == 2);
+    rig.advance(WINDOW_RUN_OUT);
+    CHECK(single.count() == 1);
 }
 
 TEST_CASE("grid.signals: an empty position never presses, and its tap asks for the board setup", "[ui][grid]")
@@ -287,6 +312,7 @@ TEST_CASE("grid.signals: an empty position never presses, and its tap asks for t
 
     // The other tiles are not affected, and the check passes with a hole in the board.
     rig.tap(tile_at(rig, 5));
+    rig.tap(tile_at(rig, 5));
     CHECK(pressed.count() == 1);
     expect_clean(check_everything(rig, tile_minimum));
 }
@@ -300,10 +326,11 @@ TEST_CASE("grid.model_updates: a change in one row updates one tile, and a press
     QSignalSpy changed(&board.m_Board, &QAbstractItemModel::dataChanged);
     QSignalSpy reset(&board.m_Board, &QAbstractItemModel::modelReset);
 
-    // A finger is down on row 0 and its press animation is running.
+    // A finger is down on row 0 for the second tap of a double-tap and its press animation is running.
     QQuickItem* held = tile_at(rig, 0);
     auto* pressIn = held->findChild<QObject*>(QStringLiteral("tilePressIn"));
     REQUIRE(pressIn != nullptr);
+    rig.tap(held);
     const int finger = rig.press(held);
     rig.advance(48ms);
     REQUIRE(pressIn->property("running").toBool());

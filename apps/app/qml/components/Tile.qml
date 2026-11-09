@@ -9,17 +9,34 @@ import ErrorJournalingApp
 //
 // The roles of a BoardModel row arrive as required properties, so a Repeater over the model fills them by name.
 //
-//   pressed()  the finger went down. The screen fires the impact haptic and then records the entry, from this handler
-//              and nothing else (a finger that slides off cannot fire a haptic without an entry, Stage 5 decision 1).
-//   tapped()   the finger came up inside the tile. A release alone, or a release after sliding off, emits neither.
-//   held()     the finger stayed down on the tile for `holdMs` (500 ms) without leaving it (BRD-07). It comes after pressed(),
-//              which has already recorded the entry: a hold is a tap that went on, so the entry is recorded once. Sliding
-//              off, letting go earlier and a cancelled touch send nothing. An Other tile and an empty position cannot be held.
+// A tile with an error type is logged by a double-tap or by a hold (4.17a; BRD-02, BRD-07), never by one tap, which is too easy to
+// make by accident. The tile tells the screen when its touch has asked for an entry, and the screen fires the haptic and records
+// it from that handler and nothing else:
 //
-// A VoiceOver activation has no touch-down, so it sends the same pair, pressed() and then tapped() (decision 7), and the
-// screen's two calls are the same however the tile was reached. The board has a second VoiceOver element for each tile that
-// can be held, "Log <name> with note", while a note is typed (BoardGrid): it sends pressed() and then held() for a person
-// who cannot make the hold.
+//   pressed()  this touch asks for the entry: the finger went down for the second tap of a double-tap (two taps, the lift of the
+//              first and the touch of the second no more than `doubleTapMs` apart), or it has stayed down for `holdMs` and
+//              nothing has been asked yet. The screen fires the impact haptic and then records the entry, from this handler and
+//              nothing else (a finger that slides off cannot fire a haptic without an entry, Stage 5 decision 1). The haptic and the
+//              press scale come with this signal, so they are at the second tap and not at the first.
+//   held()     the finger stayed down on the tile for `holdMs` (500 ms) without leaving it (BRD-07). It comes after pressed(): the
+//              hold asked for the entry itself, or the second tap of a double-tap that went on has asked already, and either way
+//              the entry is recorded once. Sliding off, letting go earlier and a cancelled touch send nothing.
+//   singleTapped()  one tap went by and no second came within `doubleTapMs`: it logged nothing, and the screen shows the hint
+//              "Double-tap to log". A tap that is part of a double-tap, a triple-tap and so on sends no hint.
+//   tapped()   the finger came up inside the tile. The Other tile uses it to open the list of error types.
+//
+// Taps are counted for each tile on their own, so a tap on another tile in between is not the first half of anything. The count
+// cycles: the second tap logs, the third is part of the same gesture and logs nothing, and the fourth starts a new double-tap.
+// A hold, a slide off and a cancelled touch end the count. The window and the hold run on the animation clock (a NumberAnimation
+// of a property that nothing reads, then a ScriptAction), not a Timer, so that a test moves them with the rig's `advance`.
+//
+// The Other tile is a navigation, not a log: it opens the list on a single tap, sends pressed() at the touch (the screen records
+// nothing for it) and tapped() at the lift, and has no double-tap, no hold and no hint.
+//
+// A VoiceOver activation is already a double-tap of the screen reader, so it needs no second: it has no touch-down and sends
+// pressed() and then tapped() (decision 7), and the screen's two calls are the same however the tile was reached. The board has a
+// second VoiceOver element for each tile that can be held, "Log <name> with note", while a note is typed (BoardGrid): it sends
+// pressed() and then held() for a person who cannot make the hold.
 //
 // An empty position is a button too, with a plus in it, so that a new board shows where its types go: it sends tapped()
 // alone, never pressed(), because there is nothing to record. The screen takes the person to the board setup.
@@ -46,20 +63,34 @@ Item {
     property bool skeleton: false
     // Under the empty-board card of the Log screen: drawn, but out of the screen reader's way (the card is read instead).
     property bool covered: false
-    // How long the finger has to stay down for held() (BRD-07, docs/plan/stage-4.md, 4.17). It is timed on the animation clock,
-    // like the press scale, so that a test moves it with the rig's `advance`.
-    property int holdMs: 500
-    // Runs from 0 to 1 while a hold is timed (see `holdTimer`); nothing reads it.
+    // How long the finger has to stay down for held() (BRD-07, docs/plan/stage-4.md, 4.17), and the longest gap between the lift of
+    // a tap and the touch of the next for a double-tap (4.17a). Both are Theme.motion values and both are timed on the animation
+    // clock, like the press scale, so that a test moves them with the rig's `advance`.
+    property int holdMs: Theme.motion.holdMs
+    property int doubleTapMs: Theme.motion.doubleTapMs
+    // Runs from 0 to 1 while a hold or the window of a double-tap is timed (see `holdTimer` and `tapWindow`); nothing reads them.
     property real holdClock: 0
+    property real windowClock: 0
+    // The taps counted so far in the gesture that is open (1 to 3), 0 when none is. The window is open between the lift of a tap
+    // and the end of `doubleTapMs`.
+    property int tapCount: 0
+    // The entry has been asked for by this touch (pressed() was sent), so the hold does not ask a second time.
+    property bool askedByTouch: false
+    // The touch has gone on into a hold (held() was sent): its lift is not a tap.
+    property bool holdFired: false
+    // The touch was cancelled (a slide off, or the system took it): its lift is not a tap either.
+    property bool touchLost: false
     signal pressed
     signal tapped
     signal held
+    signal singleTapped
 
     // The tile takes touch and is announced as a button. Empty positions and the skeleton are neither.
     readonly property bool interactive: !isEmpty && !skeleton
     // An empty position: a button that only taps (it records nothing).
     readonly property bool addable: isEmpty && !skeleton
-    // A press on this tile can go on into a hold. Other opens a list on its tap and has nothing to hold.
+    // A touch on this tile counts towards a double-tap and can go on into a hold. Other opens a list on its single tap and has
+    // neither.
     readonly property bool holdable: interactive && !isOther
     // A finger is down on the tile.
     readonly property bool down: tap.pressed
@@ -255,7 +286,7 @@ Item {
         easing.type: Theme.motion.easingPress
     }
 
-    // The hold of BRD-07: runs from the press and is stopped by the release, a slide off and a cancel. It is timed on the animation
+    // The hold of BRD-07: runs from the touch and is stopped by the lift, a slide off and a cancel. It is timed on the animation
     // clock and not by a Timer, so that the rig's virtual time moves it (a Timer runs on the wall clock). The clock is a number
     // that runs from 0 to 1 and nothing reads: Qt ticks a lone PauseAnimation by the wall clock, and only a property animation
     // by the animation clock that the rig replaces.
@@ -273,8 +304,85 @@ Item {
         }
 
         ScriptAction {
-            script: root.held()
+            script: root.completeHold()
         }
+    }
+
+    // The window of a double-tap: opens at the lift of a tap, and the next touch inside it is the next tap of the gesture. When it
+    // ends with one tap counted, that tap was alone.
+    SequentialAnimation {
+        id: tapWindow
+
+        objectName: "tileTapWindow"
+
+        NumberAnimation {
+            target: root
+            property: "windowClock"
+            from: 0
+            to: 1
+            duration: root.doubleTapMs
+        }
+
+        ScriptAction {
+            script: root.closeWindow()
+        }
+    }
+
+    // The touch asks for the entry: the screen's haptic and record are in `pressed`, then the press scale. First, before anything
+    // that draws.
+    function ask(): void {
+        askedByTouch = true;
+        root.pressed();
+        pressOut.stop();
+        pressIn.restart();
+    }
+
+    function completeHold(): void {
+        // A hold that no tap has asked for asks now (it logs at the hold, not at the touch), and the hold comes after it.
+        if (!askedByTouch)
+            ask();
+        holdFired = true;
+        tapCount = 0;
+        root.held();
+    }
+
+    function closeWindow(): void {
+        const alone = tapCount === 1;
+        tapCount = 0;
+        if (alone)
+            root.singleTapped();
+    }
+
+    // The finger went down on a tile that logs. The touch is the next tap of the open gesture, or the first of a new one; the
+    // second tap of a gesture logs, the third does nothing more, and the fourth starts again.
+    function touchDown(): void {
+        askedByTouch = false;
+        holdFired = false;
+        touchLost = false;
+        const counting = tapWindow.running;
+        tapWindow.stop();
+        tapCount = counting && tapCount < 3 ? tapCount + 1 : 1;
+        if (tapCount === 2)
+            ask();
+        holdTimer.restart();
+    }
+
+    function touchUp(): void {
+        holdTimer.stop();
+        pressIn.stop();
+        pressOut.restart();
+        // A hold is not a tap and neither is a touch that was lost: they have ended the gesture. Anything else opens the window
+        // for the next tap.
+        if (!holdFired && !touchLost)
+            tapWindow.restart();
+    }
+
+    // A slide off or a cancelled touch ends the gesture.
+    function touchCancelled(): void {
+        touchLost = true;
+        holdTimer.stop();
+        tapWindow.stop();
+        tapCount = 0;
     }
 
     TapHandler {
@@ -288,19 +396,22 @@ Item {
         onPressedChanged: {
             if (root.addable)
                 return;
-            if (pressed) {
-                // First, before anything that draws: the screen's haptic and record are in this signal.
+            if (root.holdable) {
+                if (pressed)
+                    root.touchDown();
+                else
+                    root.touchUp();
+            } else if (pressed) {
+                // Other: the touch is the press, and the screen records nothing for it.
                 root.pressed();
                 pressOut.stop();
                 pressIn.restart();
-                if (root.holdable)
-                    holdTimer.restart();
             } else {
-                holdTimer.stop();
                 pressIn.stop();
                 pressOut.restart();
             }
         }
+        onCanceled: root.touchCancelled()
         onTapped: root.tapped()
     }
 }
