@@ -1,13 +1,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# What Qt does not cover on an iPhone (the share sheet, haptics), one small interface per capability. CMake chooses the
-# implementation, not the source: src/platform/ios/ (Objective-C++) for iOS, src/platform/desktop/ (a stub) for everything
-# else. The portable code (the factory and the decisions around each capability) is in src/.
+# What Qt does not cover on a phone (the share sheet, haptics), one small interface per capability. CMake chooses the
+# implementation, not the source: src/platform/<ICL_PLATFORM>/ when that directory exists (ios/, Objective-C++), and
+# src/platform/desktop/ (a stub) for every other platform. Android uses the stubs until Stage 9 adds android/
+# (docs/plan/stage-9.md). tools/ci/check_platform_layout.py keeps every directory implementing the same capabilities. The
+# portable code (the factory and the decisions around each capability) is in src/.
 
-if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-    file(GLOB bridge_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/ios/*.mm")
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/${ICL_PLATFORM}")
+    set(bridge_platform "${ICL_PLATFORM}")
 else()
-    file(GLOB bridge_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/desktop/*.cpp")
+    set(bridge_platform "desktop")
 endif()
+file(GLOB bridge_sources CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/${bridge_platform}/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/${bridge_platform}/*.mm")
 
 add_library(ej_ios_bridge
     src/accessibility_settings.cpp
