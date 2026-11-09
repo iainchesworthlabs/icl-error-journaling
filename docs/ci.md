@@ -229,6 +229,17 @@ feature graphic (1024 x 500, the tile palette of `docs/design/tokens.json` and t
 the Pillow version in `requirements/store.txt`, so each release can make it again. The job that runs `tools/tests` installs
 that file, so `tools/tests/test_play_graphics.py` checks the sizes, the colours and that two runs give the same bytes.
 
+## Store listing text check
+
+The **Plan** job of `ci.yml` runs `tools/ci/check_store_text.py` on `store/` (Stage 11, task 11.1). The upload sends each
+text file whole, so the check fails when a file is not UTF-8 with LF line ends and one final newline, has a blank first
+or last line or trailing spaces, is over its store's limit (the tables in `docs/plan/stage-11.md`; the App Store keywords
+in bytes, the rest in characters), or is missing when the store requires it. It also fails when a keyword is empty,
+repeated, next to a space, or a word of the app's name; when a URL file is not https under the documentation site; when a
+category is not an App Store identifier; when the Play title differs from the App Store name; and when there are more than
+ten screenshot captions or one is over 60 characters. The confidentiality guard already reads `store/` with every other
+tracked file. The unit tests are in `tools/tests/test_store_text.py`.
+
 ## iOS property list check
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_ios_plist.py` on `apps/app/packaging/ios/Info.plist.in` (with the CMake
