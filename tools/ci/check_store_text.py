@@ -9,8 +9,8 @@ UTF-8 with one final newline, no blank first or last line, and within the store'
 plan's tables. Characters are counted as the stores count them (code points), except the App Store keywords, whose
 limit is in bytes.
 
-The keywords are a list separated by commas, with no space after a comma, no empty or repeated keyword, and no word of
-the app's name (the store already indexes the name). Every URL file holds one https URL on the documentation site's
+The keywords are a list separated by commas, with no space after a comma, no empty or repeated keyword, none of 2
+characters or fewer, and no word of the app's name (the store already indexes the name). Every URL file holds one https URL on the documentation site's
 host. The categories are store category identifiers.
 
 The confidentiality guard (check_confidential_terms.py) reads every tracked file, store/ included, so the names are not
@@ -108,6 +108,9 @@ def check_keywords(value: str, name: str, rel: str) -> list[str]:
     if any(k != k.strip() for k in keywords):
         problems.append(f"{rel}: a space next to a comma wastes a byte of the limit")
     lowered = [k.strip().lower() for k in keywords if k.strip()]
+    short = sorted({k for k in lowered if len(k) <= 2})
+    if short:
+        problems.append(f"{rel}: keyword(s) of 2 characters or fewer, which Apple does not accept: {', '.join(short)}")
     repeats = sorted({k for k in lowered if lowered.count(k) > 1})
     if repeats:
         problems.append(f"{rel}: repeated keyword(s): {', '.join(repeats)}")

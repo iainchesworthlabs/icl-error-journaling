@@ -129,6 +129,10 @@ class StoreTextTest(unittest.TestCase):
         self.write("appstore/en-GB/keywords.txt", "robot,Robot\n")
         self.assert_problem("repeated keyword(s): robot")
 
+    def test_keyword_too_short(self) -> None:
+        self.write("appstore/en-GB/keywords.txt", "facilitator,qa\n")
+        self.assert_problem("2 characters or fewer, which Apple does not accept: qa")
+
     def test_keyword_from_name(self) -> None:
         self.write("appstore/en-GB/keywords.txt", "facilitator,board log\n")
         self.assert_problem("app's name, which the store indexes already: board")
