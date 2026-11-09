@@ -8,7 +8,10 @@ import ErrorJournalingApp
 // fields of the day's header, then the way to start a new log, and "Start logging" at the foot.
 //
 //   unit number       a fixed prefix the person does not type, and the number pad. The number is checked as it is typed
-//                     with `session.validateHeaderValue`, and a valid one is saved with `session.correctHeader`
+//                     with `session.validateUnit`, and a valid one is saved with `session.correctUnit`
+//   environment       optional (PRF-11), picked from a short list and never typed: the "Environment" row under the unit field
+//                     shows None, prod, dev or whatever the setup lists, and opens the Environment sheet. It is saved with
+//                     the number, as "UNIT-27-prod"; chosen before a valid number is typed, it waits for the number
 //   location          the configured locations as a list of choices, and Other with a text field
 //   software version  a field checked the same way. A first fill, and a typo, are a Correct (HDR-07); a version that
 //                     changed during the day is a Change, which the Software version sheet records. The design draws no row
@@ -56,6 +59,9 @@ SheetHost {
     property string unitDraft: ""
     property string unitSaved: ""
     property bool unitTouched: false
+    // The environment as picked ("" for None) and as the model was last given it.
+    property string environmentDraft: ""
+    property string environmentSaved: ""
     property bool otherOpen: false
     property string otherDraft: ""
     property string otherSaved: ""
@@ -65,7 +71,10 @@ SheetHost {
     property bool versionTouched: false
 
     readonly property string unitLead: qsTr("%1-").arg(settings.unitPrefix)
-    readonly property string unitError: unitTouched ? session.validateHeaderValue("unit_number", unitDraft) : ""
+    readonly property string unitError: unitTouched ? session.validateUnit(unitDraft, environmentDraft) : ""
+    readonly property string environmentLabel: environmentDraft.length > 0 ? environmentDraft : qsTr("None")
+    // What is under the Environment row: nothing, unless an environment was picked before there is a number to save it with.
+    readonly property string environmentNote: environmentDraft.length > 0 && unitSaved.length === 0 ? qsTr("Saved with the number, once you have typed it.") : ""
     readonly property string otherError: otherTouched ? session.validateHeaderValue("location", otherDraft) : ""
     readonly property string versionError: versionTouched ? session.validateHeaderValue("software_version", versionDraft) : ""
     readonly property string entriesText: session.liveEntryCount === 1 ? qsTr("1 entry") : qsTr("%1 entries").arg(session.liveEntryCount)
@@ -106,8 +115,21 @@ SheetHost {
     // app going to the background. Saving as they type would write "1.4.2" on the way to "1.4.20". A value the model
     // refuses is never sent.
     function commitUnit(): void {
-        if (correct("unit_number", unitDraft, unitSaved))
-            unitSaved = unitDraft.trim();
+        const digits = unitDraft.trim();
+        if (digits === unitSaved && environmentDraft === environmentSaved)
+            return;
+        if (session.validateUnit(digits, environmentDraft).length > 0)
+            return;
+        if (session.correctUnit(digits, environmentDraft)) {
+            unitSaved = digits;
+            environmentSaved = environmentDraft;
+        }
+    }
+
+    // The environment was picked on the sheet: "" is None. It is saved with the number when there is a valid one.
+    function chooseEnvironment(environment: string): void {
+        environmentDraft = environment;
+        commitUnit();
     }
 
     function commitOther(): void {
@@ -144,6 +166,11 @@ SheetHost {
                 unitTouched = false;
             unitDraft = unitDigits();
             unitSaved = unitDraft;
+        }
+        // The environment belongs to the saved unit. Until there is one, what was picked stays picked.
+        if (all || session.unitDigits.length > 0) {
+            environmentDraft = session.unitEnvironment;
+            environmentSaved = environmentDraft;
         }
         if (all || !versionField.hasFocus) {
             if (versionDraft !== session.versionText)
@@ -360,6 +387,20 @@ SheetHost {
                 }
 
                 GroupedList {
+                    objectName: "headerEnvironmentGroup"
+                    width: parent.width
+                    footer: root.environmentNote
+
+                    ListRow {
+                        objectName: "headerEnvironment"
+                        text: qsTr("Environment")
+                        value: root.environmentLabel
+                        showChevron: true
+                        onActivated: environmentSheet.show(root.environmentDraft)
+                    }
+                }
+
+                GroupedList {
                     objectName: "headerLocations"
                     width: parent.width
                     title: qsTr("Location")
@@ -516,6 +557,13 @@ SheetHost {
     }
 
     sheets: [
+        EnvironmentSheet {
+            id: environmentSheet
+
+            objectName: "environmentSheet"
+            settings: root.settings
+            onChosen: environment => root.chooseEnvironment(environment)
+        },
         VersionSheet {
             id: versionSheet
 

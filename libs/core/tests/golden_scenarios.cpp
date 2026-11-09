@@ -429,6 +429,20 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              b.error(on_day(11, 30), ERROR_MUTE_DELAY);
              return b.finish();
          }},
+        {"unit-environment",
+         []
+         {
+             HeaderValues header = standard_header();
+             header.m_UnitNumber = UnitNumber::parse("27", "prod").value();
+             Builder b(header);
+             b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
+             // The environment changes, the number stays; then the unit leaves the environment and takes a new number.
+             b.change(HeaderField::UNIT_NUMBER, "27-dev", on_day(11, 0));
+             b.error(on_day(11, 30), ERROR_MUTE_DELAY);
+             b.change(HeaderField::UNIT_NUMBER, "31", on_day(12, 0));
+             b.error(on_day(12, 30), ERROR_SPEECH_DELAY);
+             return b.finish();
+         }},
         {"same-minute-order",
          []
          {

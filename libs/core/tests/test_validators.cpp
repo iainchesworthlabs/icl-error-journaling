@@ -48,6 +48,85 @@ TEST_CASE("UnitNumber formats with the prefix verbatim", "[unit-number]")
     CHECK_FALSE(n == UnitNumber::parse("28").value());
 }
 
+TEST_CASE("A unit number may carry an environment; it is optional", "[unit-number][environment]")
+{
+    const auto plain = UnitNumber::parse("27").value();
+    CHECK(plain.environment().empty());
+    CHECK(plain.stored() == "27");
+    CHECK(plain.format("UNIT") == "UNIT-27");
+
+    const auto prod = UnitNumber::parse("27", "prod").value();
+    CHECK(prod.digits() == "27");
+    CHECK(prod.environment() == "prod");
+    CHECK(prod.stored() == "27-prod");
+    CHECK(prod.format("UNIT") == "UNIT-27-prod");
+    CHECK(ej::unit_label("UNIT") == "UNIT #");
+
+    // An empty environment is no environment, and the same unit.
+    CHECK(UnitNumber::parse("27", "").value() == plain);
+    CHECK_FALSE(prod == plain);
+    CHECK_FALSE(prod == UnitNumber::parse("27", "dev").value());
+    CHECK(prod == UnitNumber::parse("27", "prod").value());
+}
+
+TEST_CASE("An environment is lower-case letters, digits and dashes", "[unit-number][environment]")
+{
+    for (const char* name : {"prod", "dev", "uat2", "pre-prod", "2", "a-b-c", "x"})
+    {
+        INFO(name);
+        CHECK(UnitNumber::is_valid_environment(name));
+        CHECK(UnitNumber::parse("27", name)->environment() == name);
+    }
+    for (const char* name : {"Prod", "PROD", "pre prod", "pre_prod", "-prod", "prod-", "-", "pr.od", "prod\n",
+                             "pr\xC3\xB6"
+                             "d"})
+    {
+        INFO(name);
+        CHECK_FALSE(UnitNumber::is_valid_environment(name));
+        CHECK(UnitNumber::parse("27", name).error() == UnitNumber::Error::BAD_ENVIRONMENT);
+    }
+    CHECK_FALSE(UnitNumber::is_valid_environment(""));
+    CHECK(UnitNumber::is_valid_environment(std::string(UnitNumber::MAX_ENVIRONMENT_LENGTH, 'a')));
+    CHECK_FALSE(UnitNumber::is_valid_environment(std::string(UnitNumber::MAX_ENVIRONMENT_LENGTH + 1, 'a')));
+}
+
+TEST_CASE("The digits are judged before the environment, and a typed number never holds a dash",
+          "[unit-number][environment]")
+{
+    CHECK(UnitNumber::parse("027", "prod").error() == UnitNumber::Error::LEADING_ZERO);
+    CHECK(UnitNumber::parse("", "prod").error() == UnitNumber::Error::EMPTY);
+    CHECK(UnitNumber::parse("2a", "Prod").error() == UnitNumber::Error::NOT_DIGITS);
+    // `parse(digits)` is the digits alone: the stored form is not accepted where a person types digits.
+    CHECK(UnitNumber::parse("27-prod").error() == UnitNumber::Error::NOT_DIGITS);
+}
+
+TEST_CASE("The stored text of a unit reads back, and text from before environments is all digits",
+          "[unit-number][environment]")
+{
+    for (const char* text : {"27", "1", "123456789", "27-prod", "27-dev", "9-pre-prod", "5-2"})
+    {
+        INFO(text);
+        const auto parsed = UnitNumber::parse_stored(text);
+        REQUIRE(parsed.has_value());
+        CHECK(parsed->stored() == text);
+    }
+    // Old data: digits only, no environment.
+    CHECK(UnitNumber::parse_stored("27").value() == UnitNumber::parse("27").value());
+    CHECK(UnitNumber::parse_stored("27-prod").value() == UnitNumber::parse("27", "prod").value());
+    // A dash ends the digits at the first one; the rest is the environment, dashes and all.
+    CHECK(UnitNumber::parse_stored("9-pre-prod")->environment() == "pre-prod");
+
+    CHECK(UnitNumber::parse_stored("").error() == UnitNumber::Error::EMPTY);
+    CHECK(UnitNumber::parse_stored("-prod").error() == UnitNumber::Error::EMPTY);
+    CHECK(UnitNumber::parse_stored("x-prod").error() == UnitNumber::Error::NOT_DIGITS);
+    CHECK(UnitNumber::parse_stored("027-prod").error() == UnitNumber::Error::LEADING_ZERO);
+    CHECK(UnitNumber::parse_stored("27-").error() == UnitNumber::Error::BAD_ENVIRONMENT);
+    CHECK(UnitNumber::parse_stored("27--").error() == UnitNumber::Error::BAD_ENVIRONMENT);
+    CHECK(UnitNumber::parse_stored("27-Prod").error() == UnitNumber::Error::BAD_ENVIRONMENT);
+    CHECK(UnitNumber::parse_stored("27-pro d").error() == UnitNumber::Error::BAD_ENVIRONMENT);
+    CHECK(UnitNumber::parse_stored("27-prod-").error() == UnitNumber::Error::BAD_ENVIRONMENT);
+}
+
 TEST_CASE("SoftwareVersion accepts major.minor.patch", "[software-version]")
 {
     for (const char* text : {"1.4.2", "0.0.1", "10.20.30", "1.5.0", "123456789.0.0"})

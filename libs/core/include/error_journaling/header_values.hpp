@@ -53,8 +53,9 @@ struct HeaderError
     friend bool operator==(const HeaderError&, const HeaderError&) = default;
 };
 
-/// The stored text of a field: the unit number's digits, the software version as major.minor.patch, and for a location
-/// the id formatted as a UUID or else the free text. Empty optional when the field is empty.
+/// The stored text of a field: the unit number's digits and, when it has an environment, a dash and the environment
+/// ("27" or "27-prod"), the software version as major.minor.patch, and for a location the id formatted as a UUID or
+/// else the free text. Empty optional when the field is empty.
 [[nodiscard]] std::optional<std::string> header_field_text(const HeaderValues& header, HeaderField field);
 
 /// Sets a field from its stored text, validating it. A location is an id when the text is a UUID, otherwise free text.

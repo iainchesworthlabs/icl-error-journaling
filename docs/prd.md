@@ -89,12 +89,13 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 | ID     | Requirement                                                                                                                                                                                                                                             | Priority |
 |--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
 | HDR-01 | A new day's log is created with the facilitator name from preferences and today's local date already filled in.                                                                                                                                         | Must     |
-| HDR-02 | The unit number is entered on a numeric keypad as digits only and shown as \<prefix\>-\<n\> (for example UNIT-27). No leading zeros and no fixed length. The prefix is a preference.                                                                    | Must     |
+| HDR-02 | The unit number is entered on a numeric keypad as digits only and shown as \<prefix\>-\<n\> (for example UNIT-27). No leading zeros and no fixed length. The prefix is a preference. A unit may also carry an environment, picked from a list and shown as \<prefix\>-\<n\>-\<env\> (for example UNIT-27-prod); see HDR-08. | Must     |
 | HDR-03 | Location is picked from the preference list of locations, or Other with free text.                                                                                                                                                                      | Must     |
 | HDR-04 | Software version must match major.minor.patch (digits only, no suffix). Invalid input is flagged inline and cannot be saved.                                                                                                                            | Must     |
 | HDR-05 | Header values persist for the day across app restarts and are cleared, except the facilitator, when a new log starts.                                                                                                                                   | Must     |
 | HDR-06 | Error taps and notes are allowed before the header is complete. A banner shows which header fields are still empty.                                                                                                                                     | Must     |
 | HDR-07 | Each header field has two edit actions. **Correct** fixes a typo and rewrites the value with no log entry. **Change** records that the value changed at a point in time and adds a timestamped entry such as "Software Version changed: 1.4.2 → 1.5.0". | Must     |
+| HDR-08 | The environment of a unit is optional and is never typed. Today’s details has an Environment row under the unit field. It shows None, prod or dev (or the choices of PRF-11) and opens a short list of those choices. None is the first choice and the default for a new log. The environment is saved with the unit number, so changing it is a Correct or a Change of the unit (HDR-07), and the header and the change lines print it (\<prefix\>-\<n\>-\<env\>). A new log starts with None, because the unit number does not carry over (HDR-05). | Must     |
 
 ### Bingo board
 
@@ -154,6 +155,7 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 | PRF-08 | The whole configuration can be exported to and imported from a JSON file through Files or AirDrop. This lets the work-specific setup be prepared and delivered outside the codebase. | Must     |
 | PRF-09 | On first launch the app offers to import a configuration file or set up manually.                                                                                                    | Must     |
 | PRF-10 | Optional totals line in the export, per error type, default off.                                                                                                                     | Should   |
+| PRF-11 | Unit environments: the choices of the environment picker (HDR-08), in order. The default is prod and dev. The setup file (PRF-08) can replace the list with its optional `unit_environments` key: a list of one or more names, each of lower-case letters, digits and dashes (at most 20 characters, not starting or ending with a dash), none repeated. A file without the key keeps the default. The export writes the key only when the list differs from the default. | Must     |
 
 ## Data model
 
@@ -163,15 +165,15 @@ Header values are held as an initial value plus timestamped change entries. The 
 
 | Entity            | Key fields                                                                                                                       | Notes                                                                                                                                                         |
 |-------------------|----------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| DayLog            | id, local_date, facilitator, unit_number, location_id or location_text, software_version, created_utc, last_shared_utc, archived | One per log. Usually one per day; a second log on the same date covers a move to another unit or site. Header fields hold the values at the start of the log. |
+| DayLog            | id, local_date, facilitator, unit_number, location_id or location_text, software_version, created_utc, last_shared_utc, archived | One per log. Usually one per day; a second log on the same date covers a move to another unit or site. Header fields hold the values at the start of the log. `unit_number` is the digits, or the digits, a dash and the environment (`27-prod`). |
 | Entry             | id, day_log_id, kind (error, note, header_change), captured_utc, captured_tz, edited_utc, deleted                                | Common to all entries. Time is editable on the review screen.                                                                                                 |
 | ErrorEntry        | entry_id, error_type_id, attached_note                                                                                           | kind = error.                                                                                                                                                 |
 | NoteEntry         | entry_id, template_id (nullable), value_text                                                                                     | kind = note. Free text has no template.                                                                                                                       |
-| HeaderChangeEntry | entry_id, field (unit_number, location, software_version), old_value, new_value                                                  | kind = header_change. Created by the Change action (HDR-07).                                                                                                  |
+| HeaderChangeEntry | entry_id, field (unit_number, location, software_version), old_value, new_value                                                  | kind = header_change. Created by the Change action (HDR-07). Values of `unit_number` are stored as above.                                                                                                  |
 | ErrorType         | id, name, retired, board_position (1–11 or null)                                                                                 | Master list. Retired types keep their history.                                                                                                                |
 | Location          | id, name, sort_order, retired                                                                                                    |                                                                                                                                                               |
 | NoteTemplate      | id, name, value_prompt, output_pattern, sort_order                                                                               | Output pattern uses {value}.                                                                                                                                  |
-| Preferences       | facilitator, unit_prefix, time_format, include_totals                                                                            | Single row.                                                                                                                                                   |
+| Preferences       | facilitator, unit_prefix, unit_environments, time_format, include_totals                                                         | Single row.                                                                                                                                                   |
 
 IDs are UUIDs. The schema carries a version number with forward migrations from the first TestFlight build. The configuration export (PRF-08) covers Preferences, ErrorType, Location and NoteTemplate. Day logs are not included.
 
@@ -210,7 +212,7 @@ Rendering rules:
 
 7.  Deleted entries are excluded. If PRF-10 is on, a blank line and a totals line follow the timeline.
 
-8.  The label UNIT \# comes from the unit prefix preference (\<prefix\> \#).
+8.  The label UNIT \# comes from the unit prefix preference (\<prefix\> \#). The value is \<prefix\>-\<n\>, or \<prefix\>-\<n\>-\<env\> when the unit has an environment, in the header block and in change lines.
 
 9.  Output is plain text with no colour or formatting.
 

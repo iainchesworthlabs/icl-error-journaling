@@ -463,3 +463,145 @@ TEST_CASE("An error says what it is about as data, as well as in words", "[confi
         CHECK(errors[0].m_Field == "a/b~c");
     }
 }
+
+// ---------------------------------------------------------------------------------------------------------------- unit
+// environments (PRF-11): the optional `unit_environments` key of the preferences.
+
+namespace
+{
+
+const std::string PREFIX_LINE = "\"unit_prefix\": \"UNIT\",";
+
+/// The sample with a `unit_environments` value written after the prefix, as the export writes it.
+std::string with_environments(const std::string& value)
+{
+    return edited(sample(), PREFIX_LINE, PREFIX_LINE + "\n    \"unit_environments\": " + value + ",");
+}
+
+} // namespace
+
+TEST_CASE("Without the unit_environments key the defaults stay and the file round-trips byte for byte",
+          "[config][environment]")
+{
+    const auto text = sample();
+    REQUIRE(text.find("unit_environments") == std::string::npos);
+    const auto configuration = imported(text);
+    CHECK(configuration.m_UnitEnvironments == std::vector<std::string>{"prod", "dev"});
+    CHECK(configuration.m_UnitEnvironments == ej::default_unit_environments());
+    CHECK(ej::export_configuration(configuration) == text);
+    // A configuration made in code has the defaults too.
+    CHECK(Configuration{}.m_UnitEnvironments == ej::default_unit_environments());
+}
+
+TEST_CASE("A file may replace the list of environments; the export writes the key only then", "[config][environment]")
+{
+    const auto text = with_environments("[\n      \"staging\",\n      \"prod\",\n      \"pre-prod\"\n    ]");
+    const auto configuration = imported(text);
+    CHECK(configuration.m_UnitEnvironments == std::vector<std::string>{"staging", "prod", "pre-prod"});
+    // The order of the file is the order of the picker, and the file comes back as it went in.
+    CHECK(ej::export_configuration(configuration) == text);
+
+    // One value is enough.
+    const auto one = imported(with_environments("[\n      \"live\"\n    ]"));
+    CHECK(one.m_UnitEnvironments == std::vector<std::string>{"live"});
+    CHECK(ej::export_configuration(one).find("\"unit_environments\": [\n      \"live\"\n    ],") != std::string::npos);
+
+    // The same list as the default is not written, so the export of such a file is the file without the key.
+    const auto same = imported(with_environments("[\"prod\", \"dev\"]"));
+    CHECK(same.m_UnitEnvironments == ej::default_unit_environments());
+    CHECK(ej::export_configuration(same) == sample());
+    // The same names in another order are a different list.
+    const auto reversed = imported(with_environments("[\"dev\", \"prod\"]"));
+    CHECK(reversed.m_UnitEnvironments == std::vector<std::string>{"dev", "prod"});
+    CHECK(ej::export_configuration(reversed).find("\"unit_environments\"") != std::string::npos);
+
+    // A null value is the same as no key.
+    CHECK(imported(with_environments("null")).m_UnitEnvironments == ej::default_unit_environments());
+}
+
+TEST_CASE("The list of environments survives an export and an import", "[config][environment]")
+{
+    Configuration configuration = imported(sample());
+    configuration.m_UnitEnvironments = {"qa", "uat", "prod-eu"};
+    const auto text = ej::export_configuration(configuration);
+    CHECK(imported(text).m_UnitEnvironments == configuration.m_UnitEnvironments);
+    CHECK(ej::export_configuration(imported(text)) == text);
+}
+
+TEST_CASE("The list of environments needs at least one name, written as lower-case letters, digits and dashes",
+          "[config][environment]")
+{
+    const std::string path = "/preferences/unit_environments";
+
+    // Empty list.
+    {
+        const auto errors = errors_of(with_environments("[]"));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Code == Code::OUT_OF_RANGE);
+        CHECK(errors[0].m_Path == path);
+        CHECK(errors[0].m_Problem == ConfigError::Problem::EMPTY);
+        CHECK(errors[0].m_Section == "preferences");
+        CHECK(errors[0].m_Field == "unit_environments");
+        CHECK(errors[0].m_Item == 0);
+        CHECK(errors[0].m_Message.find("at least one environment") != std::string::npos);
+    }
+    // Not a list, or not text.
+    CHECK(has(errors_of(with_environments("\"prod\"")), Code::WRONG_TYPE, path));
+    CHECK(has(errors_of(with_environments("{}")), Code::WRONG_TYPE, path));
+    CHECK(has(errors_of(with_environments("[\"prod\", 5]")), Code::WRONG_TYPE, path + "/1"));
+    CHECK(has(errors_of(with_environments("[null]")), Code::WRONG_TYPE, path + "/0"));
+    // Names.
+    for (const char* bad :
+         {"\"Prod\"", "\"pre prod\"", "\"pre_prod\"", "\"-prod\"", "\"prod-\"", "\"-\"", "\"pr\\u00f6d\""})
+    {
+        INFO(bad);
+        const auto errors = errors_of(with_environments(std::string("[\"dev\", ") + bad + "]"));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Code == Code::OUT_OF_RANGE);
+        CHECK(errors[0].m_Path == path + "/1");
+        CHECK(errors[0].m_Item == 2);
+        CHECK(errors[0].m_Field == "unit_environments");
+        CHECK(errors[0].m_Problem == ConfigError::Problem::OTHER);
+    }
+    {
+        const auto errors = errors_of(with_environments("[\"prod\", \"\"]"));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Path == path + "/1");
+        CHECK(errors[0].m_Problem == ConfigError::Problem::EMPTY);
+    }
+    {
+        const auto longest = imported(with_environments("[\"" + std::string(20, 'a') + "\"]"));
+        CHECK(longest.m_UnitEnvironments.front().size() == 20);
+        const auto errors = errors_of(with_environments("[\"" + std::string(21, 'a') + "\"]"));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Problem == ConfigError::Problem::TOO_LONG);
+        CHECK(errors[0].m_Limit == 20);
+        CHECK(errors[0].m_Item == 1);
+    }
+}
+
+TEST_CASE("An environment may be listed once only", "[config][environment]")
+{
+    const auto errors = errors_of(with_environments("[\"prod\", \"dev\", \"prod\"]"));
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0].m_Code == Code::DUPLICATE);
+    CHECK(errors[0].m_Path == "/preferences/unit_environments/2");
+    CHECK(errors[0].m_Problem == ConfigError::Problem::NAME_TAKEN);
+    CHECK(errors[0].m_Item == 3);
+    CHECK(errors[0].m_Other == 1);
+    CHECK(errors[0].m_Value == "prod");
+    CHECK(errors[0].m_Field == "unit_environments");
+}
+
+TEST_CASE("Every problem of the environments is reported, and the rest of the file is still read",
+          "[config][environment]")
+{
+    const auto errors = errors_of(
+        edited(with_environments("[\"Prod\", \"dev\", \"dev\"]"), "\"name\": \"Wrong Response\"", "\"name\": \"\""));
+    CHECK(has(errors, Code::OUT_OF_RANGE, "/preferences/unit_environments/0"));
+    CHECK(has(errors, Code::DUPLICATE, "/preferences/unit_environments/2"));
+    CHECK(has(errors, Code::OUT_OF_RANGE, "/error_types/0/name"));
+    // An unknown key next to it is still refused.
+    CHECK(has(errors_of(edited(sample(), PREFIX_LINE, PREFIX_LINE + "\n    \"unit_environment\": [\"prod\"],")),
+              Code::UNKNOWN_FIELD, "/preferences/unit_environment"));
+}

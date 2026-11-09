@@ -122,7 +122,7 @@ Result<std::string, RenderError> display_value(const ExportContext& context, Hea
     {
     case HeaderField::UNIT_NUMBER:
     {
-        const auto unit = UnitNumber::parse(stored);
+        const auto unit = UnitNumber::parse_stored(stored);
         return unit ? unit->format(context.m_UnitPrefix) : collapse(stored);
     }
     case HeaderField::LOCATION:

@@ -80,3 +80,24 @@ TEST_CASE("The header block of the PRD example is the first five lines of the go
     REQUIRE(header.has_value());
     CHECK(golden->starts_with(*header + "\n\n"));
 }
+
+TEST_CASE("The header block and a change line show the environment of the unit", "[export][header][environment]")
+{
+    auto values = sample_header();
+    values.m_UnitNumber = UnitNumber::parse("27", "prod").value();
+    const auto header = render_header(Log(values), demo_context());
+    REQUIRE(header.has_value());
+    CHECK(*header == "Facilitator: Sam Example\nDate: 7 Nov 2026\nDEMO #: DEMO-27-prod\nLocation:\nSoftware Version:");
+
+    // A unit without one prints as it always did.
+    values.m_UnitNumber = UnitNumber::parse("27").value();
+    CHECK(render_header(Log(values), demo_context()).value().find("DEMO #: DEMO-27\n") != std::string::npos);
+}
+
+TEST_CASE("The environment golden prints the header and the lines of the changes", "[export][golden][environment]")
+{
+    const auto scenario = test::make_scenario("unit-environment");
+    const auto text = render_export(scenario.m_Log, scenario.m_Context);
+    REQUIRE(text.has_value());
+    test::check_golden("unit-environment", *text);
+}
