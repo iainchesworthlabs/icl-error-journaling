@@ -17,11 +17,16 @@ import ErrorJournalingApp
 //              "Log <name> with note" (BRD-07). They are made only while it is true, so a board with no draft pays one item
 //              for them (perf.scene).
 //
-// The signals say which tile and whether it is Other; the screen decides what a press and a tap do:
-//   tilePressed(row, typeId, isOther)   the finger went down on a tile (or VoiceOver activated it): haptic, then record
+// The signals say which tile and whether it is Other; the screen decides what each does (a tile with a type is logged by a
+// double-tap or a hold, never by one tap: see Tile):
+//   tilePressed(row, typeId, isOther)   the tile asks for its entry: the second tap of a double-tap, a hold that nothing has
+//                                       asked for yet, or VoiceOver activated it. The haptic, then the record. For Other the
+//                                       finger went down on it, and the screen records nothing.
 //   tileTapped(row, typeId, isOther)    the finger came up inside the tile (Other opens the list of error types)
 //   tileHeld(row, typeId)               the finger stayed down on a tile for 500 ms after its tilePressed, or VoiceOver
 //                                       chose "Log with note" (BRD-07). Other and empty positions are never held.
+//   tileSingleTapped(row, typeId)       one tap, and no second within the double-tap window: nothing is logged, and the
+//                                       screen shows the hint "Double-tap to log". Other and empty positions never send it.
 //   emptyTapped(position)               an empty position (1 to 11) was tapped: the screen opens the board setup there.
 // Empty positions send neither of the first two, so a tap on one never records anything.
 Item {
@@ -35,6 +40,7 @@ Item {
     signal tilePressed(int row, string typeId, bool isOther)
     signal tileHeld(int row, string typeId)
     signal tileTapped(int row, string typeId, bool isOther)
+    signal tileSingleTapped(int row, string typeId)
     signal emptyTapped(int position)
 
     readonly property real tileWidth: (width + Theme.space.tileGap) / Theme.size.boardColumns - Theme.space.tileGap
@@ -70,6 +76,7 @@ Item {
                 covered: tile.index < root.coveredTiles
                 onPressed: root.tilePressed(tile.index, tile.typeId, tile.isOther)
                 onHeld: root.tileHeld(tile.index, tile.typeId)
+                onSingleTapped: root.tileSingleTapped(tile.index, tile.typeId)
                 onTapped: {
                     if (tile.isEmpty)
                         root.emptyTapped(tile.index + 1);

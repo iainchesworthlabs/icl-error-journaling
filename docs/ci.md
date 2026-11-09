@@ -176,6 +176,16 @@ The theme is held to less (it is where literals live). `Main.qml` and `shell/App
 same name in the other folder, and the build takes the one for its platform (`qml_files.cmake`).
 The unit tests of the scripts are `tools/tests/test_qml_checks.py`, run by the Confidentiality job with the others.
 
+## Licence notices
+
+The build of `apps/app` runs `tools/licences/notices.py` (`cmake/EjAbout.cmake`, the target `ej_notices`) before the link. It reads the
+link line of `ej_app` from the CMake file API and fails the build when a linked library is not accounted for, so the iOS build is the
+check for the iPhone: an unknown Qt library, a vcpkg port with no copyright file, or a licence with no text stops it. The test
+`about.notices` runs the same over a desktop link line in every `ctest` run, and `tools/tests/test_notices.py` over made-up ones. The iOS
+workflow prints the result (components, licences, how each is linked and every link input) into its job summary, and `verify_app.sh` checks
+that the bundle holds no dynamic library, which is what "static" in the notices means. `ios-build.yml` also runs for a pull request that
+changes `cmake/`, `tools/licences/` or `apps/app/CMakeLists.txt`, because they change what the iPhone links. `docs/licensing.md` has the design.
+
 ## Platform layout check
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_platform_layout.py`. For a `src/platform` directory that holds both
@@ -183,6 +193,14 @@ The **Plan** job of `ci.yml` runs `tools/ci/check_platform_layout.py`. For a `sr
 exist only under `src/platform/ios`; and the library's CMake must compile that directory with `-fobjc-arc`. A helper
 private to the iOS directory (`top_view_controller`) is listed in the script and needs no stub. Its unit tests are in
 `tools/tests/test_platform_layout.py`.
+
+## Store graphics
+
+`tools/store/make_play_graphics.py` makes the Google Play icon (512 x 512, from the iOS `AppIcon-1024.png`) and the
+feature graphic (1024 x 500, the tile palette of `docs/design/tokens.json` and the icon, no text) into
+`store/play/en-GB/images/`, which is not committed (Stage 11, 11.5). The output depends only on files in the repository and
+the Pillow version in `requirements/store.txt`, so each release can make it again. The job that runs `tools/tests` installs
+that file, so `tools/tests/test_play_graphics.py` checks the sizes, the colours and that two runs give the same bytes.
 
 ## iOS property list check
 
