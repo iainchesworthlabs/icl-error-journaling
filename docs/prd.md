@@ -6,7 +6,7 @@
 
 CS Bingo Board is an iPhone app that lets a facilitator log a timestamped robot error in one tap, keep a running journal of the session, and post the day's log to Slack at the end of the day. It replaces ad-hoc notes typed during sessions, where timings are lost and errors go uncounted.
 
-The app is an Iain Chesworth Labs product built in C++23 with Qt/QML. v1 targets the iPhone 17 and is distributed through TestFlight. An iPad layout is a planned growth path and is out of scope for v1.
+The app is an Iain Chesworth Labs product built in C++23 with Qt/QML. v1 targets the iPhone 17 first, and also runs on iPad (portrait and landscape) and Android phones. It is released on the App Store and the Google Play Store (scope widened by the owner on 9 Nov 2026).
 
 **Goals**
 
@@ -42,11 +42,15 @@ v1 is a single-user, offline iPhone app whose only way off the device is the iOS
 
 - Preferences: facilitator name, locations, error type list, board layout, note templates, time format.
 
+- iPad in portrait and landscape, with the board and the log side by side in landscape. Android phones. Public release on the App Store and the Google Play Store. Documentation online and in the app.
+
+- Nice-to-have: Mac and Windows desktop builds.
+
 **Out of scope for v1**
 
-- iPad and landscape layouts (planned growth path).
+- Landscape on a phone.
 
-- Android, desktop or any other platform.
+- The interactions board (v2, [#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)).
 
 - Cloud sync, accounts, backend services or direct Slack integration.
 
@@ -225,7 +229,7 @@ The app must feel native, fast and polished on an iPhone 17, used one-handed in 
 
 | ID     | Area             | Requirement                                                                                                                                                                                                                                                                                             |
 |--------|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| NFR-01 | Device           | Primary target is iPhone 17 in portrait. Layout respects safe areas and the Dynamic Island, and is laid out so it adapts to other current iPhone sizes and later to iPad.                                                                                                                               |
+| NFR-01 | Device           | Primary target is iPhone 17 in portrait; also current iPhones in portrait, iPad in portrait and landscape, and Android phones in portrait. Layout respects safe areas and the Dynamic Island.                                                                                                                               |
 | NFR-02 | Ergonomics       | The board sits in the lower part of the screen within thumb reach. Tiles are at least 88 pt square with labels of up to three lines that never truncate.                                                                                                                                                |
 | NFR-03 | Responsiveness   | Tap-to-feedback under 100 ms. Animations run at the display's full ProMotion refresh rate with no dropped frames during normal use.                                                                                                                                                                     |
 | NFR-04 | Start-up         | Cold start to a usable board in under 1.5 s. Returning from background shows the board immediately.                                                                                                                                                                                                     |
@@ -253,7 +257,7 @@ Losing entries from the open log is a P1 defect, because the log feeds a critica
 
 ## Technology and delivery
 
-The app follows the Iain Chesworth Labs C++23 project standard as the new repository iainchesworthlabs/icl-error-journaling, licensed GPL-3.0-or-later, and is shipped to the facilitator through TestFlight.
+The app follows the Iain Chesworth Labs C++23 project standard as the new repository iainchesworthlabs/icl-error-journaling, licensed GPL-3.0-or-later. It was first shipped to the facilitator through TestFlight. On 9 Nov 2026 the owner widened v1: it is released publicly on the App Store and the Google Play Store, runs on iPhone (portrait only), on iPad (portrait and landscape) and on Android phones, and has documentation online and in the app. A Mac and Windows desktop build is a nice-to-have. See the implementation plan, Stages 7 to 12.
 
 **Architecture**
 
@@ -271,7 +275,7 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 - Staged CI per the standard: static checks on draft PRs, then core tests (including TSan) on desktop, then the iOS build.
 
-- A macOS desktop build of the app is kept for development and UI iteration only. It is not a product.
+- A macOS desktop build of the app is kept for development and UI iteration. Shipping Mac and Windows builds as products is a v1 nice-to-have (Stage 12).
 
 - iOS signing and TestFlight upload use the organisation keys, with App Store provisioning set up for this repository.
 
@@ -307,8 +311,6 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 **Future versions**
 
-- iPad layout, with board and review side by side as in the original concept.
-
 - Logging a chosen error from the Action Button, a Lock Screen widget or Shortcuts.
 
 - Per-error-type export phrases, such as "UNIT-27 gave a wrong response".
@@ -320,5 +322,3 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 - Per-location board layouts, if site-specific errors appear.
 
 - A second board for logging interactions, with its own tab and its own interaction types, set up like the error board ([#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)). Raised by the facilitator; deferred on 9 Nov 2026.
-
-- An Android build, if colleagues on Android would use it ([#106](https://github.com/iainchesworthlabs/icl-error-journaling/issues/106)). Deferred on 9 Nov 2026.
