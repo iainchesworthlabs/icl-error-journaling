@@ -34,6 +34,10 @@ import ErrorJournalingApp
 Item {
     id: root
 
+    // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
+    // reading column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    readonly property real side: WindowLayout.sideMargin(width, Theme.layout.readingColumn)
+
     required property var history
     required property var share
     required property var picker
@@ -303,8 +307,8 @@ Item {
                 id: list
 
                 objectName: "historyList"
-                x: Theme.space.screenMargin
-                width: parent.width - 2 * Theme.space.screenMargin
+                x: root.side
+                width: parent.width - 2 * root.side
                 height: bottomEdge.y - y
                 clip: true
                 reuseItems: true
@@ -576,7 +580,7 @@ Item {
                 objectName: "historyPlaceholder"
                 visible: root.empty || (root.history.loading && list.count === 0)
                 // 24 pt of padding inside the margin, and 150 pt under the title (HistoryEmpty).
-                x: 2 * Theme.space.screenMargin + Theme.space.tileGap
+                x: root.side + Theme.space.screenMargin + Theme.space.tileGap
                 y: list.y + root.titleHeight + Theme.space.tileGap + 150 // literal-ok: the offset of HistoryEmpty.dc.html, which has no token
                 width: parent.width - 2 * x
                 spacing: Theme.space.sectionGap
@@ -644,8 +648,8 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: bottomEdge.top
-                anchors.leftMargin: Theme.space.screenMargin
-                anchors.rightMargin: Theme.space.screenMargin
+                anchors.leftMargin: root.side
+                anchors.rightMargin: root.side
                 anchors.bottomMargin: Theme.space.tileGap
                 title: root.noticeTitle
                 message: root.noticeMessage

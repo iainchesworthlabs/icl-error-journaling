@@ -24,6 +24,10 @@ import ErrorJournalingApp
 Item {
     id: root
 
+    // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
+    // reading column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    readonly property real side: WindowLayout.sideMargin(width, Theme.layout.readingColumn)
+
     required property var timeline
     required property var share
     required property var picker
@@ -83,7 +87,7 @@ Item {
     // The widest time of the log's format, so the lines start at one place.
     readonly property real timeColumnWidth: Math.max(Theme.size.minTouchTarget, widestA.advanceWidth, widestB.advanceWidth)
     // At the largest text sizes the time would leave the line a sliver, so it goes on a line of its own above it.
-    readonly property bool stackTimes: timeColumnWidth > (width - 2 * (Theme.space.screenMargin + Theme.space.rowPadding)) * 0.3
+    readonly property bool stackTimes: timeColumnWidth > (width - 2 * (root.side + Theme.space.rowPadding)) * 0.3
 
     // What the banner says, if anything: a share or an edit that failed.
     property string noticeTitle
@@ -205,8 +209,8 @@ Item {
             Item {
                 id: bar
 
-                x: Theme.space.screenMargin
-                width: parent.width - 2 * Theme.space.screenMargin
+                x: root.side
+                width: parent.width - 2 * root.side
                 height: Math.max(Theme.size.minTouchTarget, summary.implicitHeight, backButton.height)
 
                 Item {
@@ -318,9 +322,9 @@ Item {
                 id: list
 
                 objectName: "reviewList"
-                x: Theme.space.screenMargin
+                x: root.side
                 y: bar.height
-                width: parent.width - 2 * Theme.space.screenMargin
+                width: parent.width - 2 * root.side
                 // The last rows stay clear of the banner and "Copied" that float over the bottom of the page: the list ends above
                 // them, so a row is never under something a screen reader reads after it.
                 height: bottomEdge.y - Theme.space.tileGap - y - (floating.height > 0 ? floating.height + Theme.space.tileGap : 0)
@@ -612,8 +616,8 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: bottomEdge.top
-                anchors.leftMargin: Theme.space.screenMargin
-                anchors.rightMargin: Theme.space.screenMargin
+                anchors.leftMargin: root.side
+                anchors.rightMargin: root.side
                 anchors.bottomMargin: Theme.space.tileGap
                 spacing: Theme.space.tileGap
 
@@ -666,9 +670,9 @@ Item {
                 objectName: "reviewShare"
                 visible: root.shareShown
                 enabled: !root.share.sharing && !root.empty
-                x: Theme.space.screenMargin
+                x: root.side
                 y: parent.height - height - Math.max(0, root.bottomClearance - frame.bottomInset) - Theme.space.sectionGap
-                width: parent.width - 2 * Theme.space.screenMargin
+                width: parent.width - 2 * root.side
                 iconKind: "share"
                 text: root.pastLog ? qsTr("Share log again") : qsTr("Share log")
                 onClicked: root.startShare()
