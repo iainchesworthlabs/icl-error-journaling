@@ -85,7 +85,9 @@ Item {
 
             objectName: "lastBarCaption"
             x: 0
-            y: (root.firstRowHeight - implicitHeight) / 2
+            // On one row it shares the line's baseline, so the small capitals sit level with the text beside them; stacked,
+            // it is centred in its own row above the line.
+            y: root.stacked ? (root.firstRowHeight - implicitHeight) / 2 : line.y + line.baselineOffset - baselineOffset
             text: Theme.font.sectionLabel.upperCase ? qsTr("Last").toLocaleUpperCase() : qsTr("Last")
             color: Theme.colour.textSecondary
             font: Theme.font.sectionLabel.font
