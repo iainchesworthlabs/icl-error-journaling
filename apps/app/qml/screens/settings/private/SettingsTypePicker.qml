@@ -3,8 +3,11 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import ErrorJournalingApp
 
-// The sheet that chooses the error type for a tile of the board (Stage 4, package 4.12; PRF-05): "Replace type". It lists
-// every error type that is not retired, with the board position it has now, and the type of the tile is ticked. A choice
+// The sheet that chooses the error type for a tile of the board (Stage 4, package 4.12; PRF-05; BoardTypePicker): "Add
+// error type" for an empty tile and "Change error type" for one with a type. At the top, "New error type…" asks for a new
+// type for this position (`newTypeRequested`): the screen opens the name sheet, and the type is made and put on the tile in
+// one change, so nobody has to visit the Error types list first. Under it the sheet lists every error type that is not
+// retired, with the board position it has now, and the type of the tile is ticked. A choice
 // calls `settings.assignBoardTile(position, typeId)`; if the model refuses, its words show at the top of the sheet and the
 // sheet stays open, and if it accepts the sheet closes. The type that was on the board elsewhere swaps places with the
 // tile's, and one that was not takes the tile and sends the tile's type off the board: the model does that, and the board
@@ -20,6 +23,9 @@ Sheet {
     property string currentTypeId: ""
     // The model's refusal of the last choice. Empty for none.
     property string message: ""
+
+    // "New error type…" was chosen for the tile at `position`; the sheet has closed.
+    signal newTypeRequested(int position)
 
     // Opens the sheet for the tile at `forPosition`.
     function openFor(forPosition: int, typeId: string): void {
@@ -37,7 +43,7 @@ Sheet {
 
         objectName: "settingsPickerBar"
         width: parent.width
-        title: qsTr("Replace type")
+        title: root.currentTypeId.length > 0 ? qsTr("Change error type") : qsTr("Add error type")
         leadingText: qsTr("Cancel")
         onLeadingTriggered: root.close()
     }
@@ -61,6 +67,38 @@ Sheet {
             width: flick.width - 2 * x
             spacing: Theme.space.sectionGap
 
+            Text {
+                objectName: "settingsPickerCaption"
+                x: Theme.space.tileGap / 2
+                width: parent.width - 2 * x
+                color: Theme.colour.textSecondary
+                font: Theme.font.footnote.font
+                lineHeightMode: Text.FixedHeight
+                lineHeight: Theme.font.footnote.linePitch
+                text: qsTr("For position %1 of %2. A type already on the board swaps places with it.").arg(root.position).arg(Theme.size.boardColumns * Theme.size.boardRows - 1)
+                wrapMode: Text.WordWrap
+            }
+
+            GroupedList {
+                width: parent.width
+                surface: Theme.colour.surfaceRaised
+
+                ListRow {
+                    objectName: "settingsPickerNewType"
+                    text: qsTr("New error type…")
+                    accessibleName: qsTr("New error type for position %1").arg(root.position)
+                    leadingIcon: "plus"
+                    leadingIconStroke: Theme.border.hairline * 2.2
+                    labelColour: Theme.colour.primaryText
+                    showChevron: true
+                    onActivated: {
+                        const position = root.position;
+                        root.close();
+                        root.newTypeRequested(position);
+                    }
+                }
+            }
+
             Banner {
                 objectName: "settingsPickerMessage"
                 width: parent.width
@@ -72,9 +110,13 @@ Sheet {
 
             GroupedList {
                 width: parent.width
+                visible: typeRows.count > 0
+                title: qsTr("Error types")
                 surface: Theme.colour.surfaceRaised
 
                 Repeater {
+                    id: typeRows
+
                     model: root.settings.errorTypes
 
                     delegate: ListRow {

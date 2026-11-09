@@ -13,16 +13,19 @@ import ErrorJournalingApp
 //   dragging           a tile is being dragged (a screen turns scrolling off while it is, so the page does not move)
 //
 //   moveRequested(fromPosition, toPosition)   settings.moveBoardTile(from, to): a drop, or Move earlier and Move later
-//   replaceRequested(position)                the screen lets the facilitator choose a type, then calls
-//                                             settings.assignBoardTile(position, typeId)
+//   replaceRequested(position)                Change error type: the screen lets the facilitator choose a type, then
+//                                             calls settings.assignBoardTile(position, typeId)
+//   addRequested(position)                    an empty position was tapped: the screen opens the same choice at once,
+//                                             with "New error type" at the top (no panel first)
 //
 // Hold a tile and drag it to move it. The held tile lifts and follows the finger, and on release the board asks for the
 // move: nothing moves until the model says so, and when it does not (a refusal) the held tile is back in its place. That is
 // a shortcut for sighted users. Tap a tile and a panel under the board names it and has Move earlier, Move later and
-// Replace type, which do the same without a gesture and are the VoiceOver path (docs/plan/stage-4.md, "No gesture is the
-// only way in"). The selected tile has an outline, a lift and a tick, so it is not shown by colour alone, and the selection
-// follows the tile when the model moves it. Other is fixed: it is shown and named, and neither selected nor moved. An empty
-// position can be selected, to put a type in it.
+// Change error type, which do the same without a gesture and are the VoiceOver path (docs/plan/stage-4.md, "No gesture is
+// the only way in"). The selected tile has an outline, a lift and a tick, so it is not shown by colour alone, and the
+// selection follows the tile when the model moves it. Other is fixed: it is shown and named, and neither selected nor
+// moved. An empty position is drawn as a button, a plus and "Add error type" in the colours of a secondary button
+// (BoardSettingsEmpty), and a tap on it asks for a type at once (`addRequested`) instead of selecting it.
 //
 // The sizes are those of the design (BoardLayoutSelected) from Theme.miniBoard: 64 pt tiles, 6 pt gaps, 11.5/600 labels
 // 8 pt in on the font's own line, 1.2 times the size (Other's in textSecondary), and a selected tile that rises 4 pt, grows by 1.04, casts
@@ -38,6 +41,7 @@ Item {
 
     signal moveRequested(int fromPosition, int toPosition)
     signal replaceRequested(int position)
+    signal addRequested(int position)
 
     readonly property real gap: Theme.miniBoard.gap
     readonly property real tileWidth: (width + gap) / Theme.size.boardColumns - gap
@@ -61,6 +65,18 @@ Item {
 
     function select(position: int): void {
         selectedPosition = position;
+    }
+
+    // A tap, or the press action of a screen reader: a tile with a type is selected, an empty one asks for a type.
+    function activate(tile: var): void {
+        if (tile.isOther)
+            return;
+        if (tile.isEmpty) {
+            selectedPosition = 0;
+            addRequested(tile.position);
+        } else {
+            select(tile.position);
+        }
     }
 
     // Asks for a move and makes the selection follow the tile if the model has moved it by the time this returns.
@@ -232,13 +248,10 @@ Item {
                     height: root.tileHeight
                     Accessible.role: tile.isOther ? Accessible.StaticText : Accessible.Button
                     Accessible.name: tile.accessibleName
-                    Accessible.checkable: !tile.isOther
+                    Accessible.checkable: tile.movable
                     Accessible.checked: tile.selected
                     Accessible.focusable: true
-                    Accessible.onPressAction: {
-                        if (!tile.isOther)
-                            root.select(tile.position);
-                    }
+                    Accessible.onPressAction: root.activate(tile)
 
                     // The model put the type that was asked to move where it was asked to go: the selection goes with it.
                     onTypeIdChanged: {
@@ -293,15 +306,26 @@ Item {
                             Accessible.ignored: true
                         }
 
+                        // An empty position: the tint of a secondary button, a hairline, a plus and "Add error type".
                         Rectangle {
                             objectName: "miniEmptySlot"
                             anchors.fill: parent
                             visible: tile.isEmpty
                             radius: Theme.radius.field
-                            color: "transparent"
+                            color: Theme.colour.primaryTint
                             border.width: Theme.border.hairline
                             border.color: Theme.colour.border
                             Accessible.ignored: true
+
+                            Icon {
+                                objectName: "miniAddIcon"
+                                x: Theme.miniBoard.labelInset
+                                y: Theme.miniBoard.labelInset
+                                size: Theme.size.badge * 3 / 4
+                                kind: "plus"
+                                strokeWidth: Theme.border.hairline * 2.2
+                                colour: Theme.colour.primaryText
+                            }
                         }
 
                         Shape {
@@ -331,9 +355,8 @@ Item {
                             objectName: "miniLabel"
                             anchors.fill: parent
                             anchors.margins: Theme.miniBoard.labelInset
-                            visible: !tile.isEmpty
-                            text: tile.label
-                            color: tile.isOther ? Theme.colour.textSecondary : Theme.colour.tileText
+                            text: tile.isEmpty ? qsTr("Add error type") : tile.label
+                            color: tile.isOther ? Theme.colour.textSecondary : tile.isEmpty ? Theme.colour.primaryText : Theme.colour.tileText
                             font.pointSize: root.labelPoints
                             font.hintingPreference: Font.PreferNoHinting
                             font.weight: Theme.font.tileLabel.weight
@@ -377,7 +400,7 @@ Item {
                                 dragState.swallowTap = false;
                                 return;
                             }
-                            root.select(tile.position);
+                            root.activate(tile);
                         }
                     }
                 }
@@ -537,7 +560,7 @@ Item {
                     PanelButton {
                         objectName: "miniReplace"
                         width: actions.buttonWidth
-                        label: qsTr("Replace type")
+                        label: qsTr("Change error type")
                         glyph: "swap"
                         onActivated: root.replaceRequested(root.selectedPosition)
                     }

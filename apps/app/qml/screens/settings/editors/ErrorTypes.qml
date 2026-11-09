@@ -17,6 +17,10 @@ import ErrorJournalingApp
 // The colour of a type does not change when it moves (it follows from the type's place in the master list). A refusal
 // of the view model, or a save that failed, is shown in a banner at the top of the list. Every edit is one save.
 //
+// A new type goes onto the first empty tile of the board in the same save (`addErrorType`); when it is in force an
+// information banner at the top says where (ErrorTypesAdded): "Added to the board at position 5", or that the board was
+// full and the type is in Other.
+//
 // Required: `settings`, the SettingsModel. `closeRequested` is "Settings" at the top left and "Done" at the top right.
 SheetHost {
     id: root
@@ -28,6 +32,9 @@ SheetHost {
 
     // The last refusal of a move, or the last failed save; empty for none.
     property string problem: ""
+    // The banner of the type that was added last: its title and line. Empty for none.
+    property string noticeTitle: ""
+    property string noticeText: ""
 
     signal closeRequested
 
@@ -41,6 +48,18 @@ SheetHost {
     Connections {
         function onWriteFailed(operation: string, message: string): void {
             root.problem = message;
+            root.noticeTitle = "";
+        }
+
+        function onErrorTypeAdded(name: string, position: int): void {
+            if (position > 0) {
+                root.noticeTitle = qsTr("Added to the board at position %1").arg(position);
+                root.noticeText = qsTr("%1 is on the first empty tile.").arg(name);
+            } else {
+                root.noticeTitle = qsTr("Added to Other");
+                root.noticeText = qsTr("The board is full, so %1 is in Other. Tap a tile in Settings to put it on the board.").arg(name);
+            }
+            Accessible.announce(qsTr("%1. %2").arg(root.noticeTitle).arg(root.noticeText));
         }
 
         target: root.settings
@@ -72,6 +91,21 @@ SheetHost {
                 x: Theme.space.screenMargin
                 width: flick.width - 2 * Theme.space.screenMargin
                 spacing: 0
+
+                Banner {
+                    objectName: "addedBanner"
+                    width: parent.width
+                    visible: root.noticeTitle.length > 0
+                    tone: Banner.Information
+                    title: root.noticeTitle
+                    message: root.noticeText
+                    onCloseRequested: root.noticeTitle = ""
+                }
+
+                Item {
+                    width: parent.width
+                    height: root.noticeTitle.length > 0 ? Theme.space.tileGap : 0
+                }
 
                 Banner {
                     objectName: "problemBanner"

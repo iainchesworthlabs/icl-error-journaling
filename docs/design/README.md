@@ -55,11 +55,26 @@ Each row has a light file and a dark file (`Name.dc.html`, `Name.dark.dc.html`).
 | 29 | `ImportExport` | Import or export | PRF-08 | The two rows, what a setup file does and does not contain, and the "Exported to Files" confirmation. |
 | 30 | `ImportConfirm` | Import confirmation | PRF-08 | The counts from `importPrepared`, the warning that the setup is replaced and past logs are not, "Replace my setup" and Cancel. |
 | 31 | `ImportErrors` | Import refused | PRF-08 | The core's messages in file order, "Nothing was changed", "Choose another file". Binds to `importFailed`. |
-| 32 | `BoardLayoutSelected` | Board layout, a tile selected | PRF-02 | The selected miniature tile (outline, lift and a tick, not colour alone) and the Move earlier, Move later and Replace type buttons that are the VoiceOver path. |
+| 32 | `BoardLayoutSelected` | Board layout, a tile selected | PRF-02 | The selected miniature tile (outline, lift and a tick, not colour alone) and the Move earlier, Move later and Change error type (formerly Replace type) buttons that are the VoiceOver path. |
 | 33 | `TileLabels` | Longest label, default size | NFR-02 | "Sequence Out of Order" on the board at 13.5 pt: three lines, never cut (decision 9). The dashed note is an annotation, not UI. |
 | 34 | `TileLabelsLarge` | Longest label, largest size | NFR-02, NFR-07 | The same board at the 1.3 cap (17.5 pt). A tile holds four lines at that size. |
 
 Screen 7 (`NewDay`) was already drawn, and the original eight are unchanged in light mode.
+
+### Screens added for the board setup (drafts, November 2026)
+
+A TestFlight user could not find how to put error types on the board: a setup made by hand left inert empty tiles, and
+Replace type and the Error types list were out of sight. The owner approved four changes; these screens draw them, in
+light and dark like the rest. `BoardSettings` has the new hint under the board, and `BoardLayoutSelected` names the third
+button "Change error type" (it was "Replace type").
+
+| # | File | Screen | PRD | What it shows |
+| --- | --- | --- | --- | --- |
+| 35 | `LogEmptyBoard` | Log, no error types on the board | BRD-01 | A card over the first three rows, "Your board is empty" and "Add error types" (to the board setup in Settings). The empty tiles show a plus; a tap on one opens the board setup at that position and records nothing. |
+| 36 | `BoardSettingsEmpty` | Settings, a board with empty tiles | PRF-05 | Four types on the board. An empty position is a button in the secondary style (primaryTint fill, hairline, a plus and "Add error type" in primaryText), named "Position 5, empty. Add error type". |
+| 37 | `BoardTypePicker` | Choose an error type for a tile | PRF-05 | Opened at once by an empty tile ("Add error type"), or by Change error type ("Change error type"). "New error type…" at the top, then every type with its position. |
+| 38 | `ErrorTypeNewOnBoard` | New error type, for a position | PRF-04, PRF-05 | The name, then the colour the type will get, and "It goes on the board at position 5." Save makes the type and places it in one change. The Error types list's own new-type sheet shows the same colour and line, with the first empty position. |
+| 39 | `ErrorTypesAdded` | Error types, after an add | PRF-04 | An information banner: "Added to the board at position 5" (the first empty tile), or "Added to Other" when the board is full. |
 
 ## Dark mode
 

@@ -106,6 +106,57 @@ TEST_CASE("editor.error_types: adding a type asks for a name, refuses a duplicat
     CHECK(names(world).back() == QStringLiteral("Echo Delay"));
 }
 
+TEST_CASE("editor.error_types: a new type fills the first empty tile, and a banner says where", "[ui][editor]")
+{
+    Configuration configuration = test::sample_configuration();
+    configuration.m_ErrorTypes.resize(4);
+    World world(configuration);
+    world.load("ErrorTypes");
+    world.m_Ui.layout();
+    CHECK_FALSE(item(world, QStringLiteral("addedBanner"))->isVisible());
+
+    world.m_Ui.tap(label_of(item(world, QStringLiteral("addRow"))));
+    world.play(400);
+    world.m_Ui.layout();
+    // The sheet says, before the save, where the type goes.
+    CHECK(in_sheet(world, QStringLiteral("colourGroup"))->property("footer").toString() ==
+          QStringLiteral("It goes on the board at position 5."));
+    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Audio Drop Out"));
+    tap_in_sheet(world, QStringLiteral("navTrailing"));
+    world.settle();
+    world.m_Ui.layout();
+
+    CHECK(world.model().configuration().m_ErrorTypes.back().m_BoardPosition == 5);
+    QQuickItem* banner = item(world, QStringLiteral("addedBanner"));
+    CHECK(banner->isVisible());
+    CHECK(banner->property("title").toString() == QStringLiteral("Added to the board at position 5"));
+    CHECK(banner->property("message").toString() == QStringLiteral("Audio Drop Out is on the first empty tile."));
+    // It is listed with the board's types, at its place.
+    CHECK(names(world).back() == QStringLiteral("Audio Drop Out"));
+    CHECK_FALSE(item(world, QStringLiteral("otherGroup"))->isVisible());
+}
+
+TEST_CASE("editor.error_types: on a full board a new type is in Other, and the banner says so", "[ui][editor]")
+{
+    World world;
+    world.load("ErrorTypes");
+    world.m_Ui.layout();
+    world.m_Ui.tap(label_of(item(world, QStringLiteral("addRow"))));
+    world.play(400);
+    world.m_Ui.layout();
+    CHECK(in_sheet(world, QStringLiteral("colourGroup"))
+              ->property("footer")
+              .toString()
+              .startsWith(QStringLiteral("The board is full")));
+    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Echo Delay"));
+    tap_in_sheet(world, QStringLiteral("navTrailing"));
+    world.settle();
+    world.m_Ui.layout();
+    QQuickItem* banner = item(world, QStringLiteral("addedBanner"));
+    CHECK(banner->isVisible());
+    CHECK(banner->property("title").toString() == QStringLiteral("Added to Other"));
+}
+
 TEST_CASE("editor.error_types: a name of 200 characters is saved and one of 201 is refused", "[ui][editor]")
 {
     World world;

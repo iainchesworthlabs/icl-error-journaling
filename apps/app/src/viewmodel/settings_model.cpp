@@ -374,6 +374,18 @@ QString SettingsModel::unit_prefix_hint() const
     return tr("Added in front of the number you type each day.");
 }
 
+int SettingsModel::first_empty_position() const
+{
+    const BoardLayout layout = viewmodel::board_layout(view());
+    const auto empty = std::ranges::find(layout, std::optional<std::size_t>{});
+    return empty == layout.end() ? 0 : static_cast<int>(empty - layout.begin()) + 1;
+}
+
+int SettingsModel::next_colour_slot() const
+{
+    return tile_colour_slot(view().m_ErrorTypes.size());
+}
+
 QString SettingsModel::colourName(int slot) const
 {
     return tile_colour_name(slot);
@@ -504,6 +516,7 @@ std::expected<void, ConfigEditError> SettingsModel::commit(Configuration candida
 void SettingsModel::finish_save(Configuration saved, const QString& operation, const Result<void, StorageError>& result)
 {
     set_saving(false);
+    const auto added = std::exchange(m_PendingAdded, std::nullopt);
     if (!result)
     {
         emit writeFailed(operation, plain_message(result.error()));
@@ -517,6 +530,10 @@ void SettingsModel::finish_save(Configuration saved, const QString& operation, c
         m_PreparedImport.reset();
     }
     publish(true);
+    if (added)
+    {
+        emit errorTypeAdded(added->first, added->second);
+    }
 }
 
 void SettingsModel::set_saving(bool saving)
@@ -762,17 +779,24 @@ QString SettingsModel::removeLocation(const QString& id)
 
 // ----------------------------------------------------------------------------------------------------- error types
 
-std::expected<ErrorTypeId, ConfigEditError> SettingsModel::add_type(const QString& name, bool needs_configured)
+std::expected<SettingsModel::Added, ConfigEditError> SettingsModel::add_type(const QString& name, bool needs_configured,
+                                                                             Placement placement, int position)
 {
     const auto text = checked_name(name);
     if (!text)
     {
         return fail(refused(text.error()));
     }
+    if (placement == Placement::AT_POSITION && !valid_position(position))
+    {
+        return fail(refused(tr("That position is not on the board.")));
+    }
     const auto id = m_Ids.next_as<ErrorTypeId>();
+    // Where the edit put the type, read after `change` has run it (it runs before `change` returns).
+    int placed = 0;
     const auto result = change(
         OP_ERROR_TYPE,
-        [value = *text, id](Configuration& configuration) -> EditResult
+        [value = *text, id, placement, position, &placed](Configuration& configuration) -> EditResult
         {
             if (configuration.m_ErrorTypes.size() >= CONFIG_MAX_ENTRIES_PER_LIST)
             {
@@ -782,10 +806,29 @@ std::expected<ErrorTypeId, ConfigEditError> SettingsModel::add_type(const QStrin
             {
                 return std::unexpected(name_taken(value, NameKind::ERROR_TYPE));
             }
+            BoardLayout layout = viewmodel::board_layout(configuration);
             ErrorType type;
             type.m_Id = id;
             type.m_Name = value;
             configuration.m_ErrorTypes.push_back(std::move(type));
+            int target = 0;
+            if (placement == Placement::AT_POSITION)
+            {
+                target = position;
+            }
+            else if (placement == Placement::FIRST_EMPTY)
+            {
+                const auto empty = std::ranges::find(layout, std::optional<std::size_t>{});
+                target = empty == layout.end() ? 0 : static_cast<int>(empty - layout.begin()) + 1;
+            }
+            if (target > 0)
+            {
+                // The type that held the position, if any, is left out of the layout and goes off the board. One
+                // change: the type and its place are saved together, or neither is.
+                layout[static_cast<std::size_t>(target - 1)] = configuration.m_ErrorTypes.size() - 1;
+                write_layout(configuration, layout);
+            }
+            placed = target;
             return true;
         },
         needs_configured);
@@ -793,18 +836,49 @@ std::expected<ErrorTypeId, ConfigEditError> SettingsModel::add_type(const QStrin
     {
         return fail(result.error());
     }
-    return id;
+    return Added{id, placed};
+}
+
+QString SettingsModel::add_and_announce(const QString& name, Placement placement, int position)
+{
+    const auto added = add_type(name, false, placement, position);
+    if (!added)
+    {
+        return QString::fromStdString(added.error().m_Message);
+    }
+    const auto found = std::ranges::find(view().m_ErrorTypes, added->m_Id, &ErrorType::m_Id);
+    const QString shown = found != view().m_ErrorTypes.end() ? QString::fromStdString(found->m_Name) : name.trimmed();
+    if (m_Saving)
+    {
+        // In force when the save has finished; `finish_save` tells.
+        m_PendingAdded = std::pair{shown, added->m_Position};
+    }
+    else
+    {
+        // The set-up in progress, which is in force at once.
+        emit errorTypeAdded(shown, added->m_Position);
+    }
+    return {};
 }
 
 Result<ErrorTypeId, ConfigEditError> SettingsModel::add_error_type(std::string name)
 {
-    return add_type(QString::fromStdString(name), true);
+    const auto added = add_type(QString::fromStdString(name), true, Placement::OFF_BOARD);
+    if (!added)
+    {
+        return fail(added.error());
+    }
+    return added->m_Id;
 }
 
 QString SettingsModel::addErrorType(const QString& name)
 {
-    const auto added = add_type(name, false);
-    return added ? QString() : QString::fromStdString(added.error().m_Message);
+    return add_and_announce(name, Placement::FIRST_EMPTY, 0);
+}
+
+QString SettingsModel::addErrorTypeAt(const QString& name, int position)
+{
+    return add_and_announce(name, Placement::AT_POSITION, position);
 }
 
 QString SettingsModel::renameErrorType(const QString& id, const QString& name)

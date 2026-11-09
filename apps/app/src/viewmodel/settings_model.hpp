@@ -21,6 +21,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace ej::viewmodel
 {
@@ -79,6 +80,11 @@ class SettingsModel : public QObject, public ConfigurationSource, public Configu
     Q_PROPERTY(QAbstractItemModel* boardLayout READ board_layout CONSTANT)         // PRF-05
     // The line under the unit prefix field: "Added in front of the number you type each day." (FirstLaunchManual.)
     Q_PROPERTY(QString unitPrefixHint READ unit_prefix_hint CONSTANT)
+    // The first board position (1 to 11) with no type on it, or 0 when the board is full: where `addErrorType` puts a
+    // new type.
+    Q_PROPERTY(int firstEmptyPosition READ first_empty_position NOTIFY configurationChanged)
+    // The colour slot (1 to 11) the next new error type gets: its colour follows from its place in the master list.
+    Q_PROPERTY(int nextColourSlot READ next_colour_slot NOTIFY configurationChanged)
 
 public:
     /// `gateway` and what `environment` refers to (the ids and the zones) must outlive the model. Nothing is read until
@@ -115,6 +121,8 @@ public:
     [[nodiscard]] QAbstractItemModel* templates() const;
     [[nodiscard]] QAbstractItemModel* board_layout() const;
     [[nodiscard]] QString unit_prefix_hint() const;
+    [[nodiscard]] int first_empty_position() const;
+    [[nodiscard]] int next_colour_slot() const;
 
     // ConfigurationSource
     [[nodiscard]] bool configured() const override
@@ -150,8 +158,12 @@ public:
     /// Retires the location: it leaves the list and the pickers, and past logs still name it.
     Q_INVOKABLE QString removeLocation(const QString& id);
 
-    /// A new type goes to the end of the master list and is not on the board.
+    /// A new type goes to the end of the master list and onto the first empty board position, in the same change (one
+    /// save); when the board is full it is not on the board. `errorTypeAdded` says where it went once it is in force.
     Q_INVOKABLE QString addErrorType(const QString& name);
+    /// A new type that goes onto the board at `position` (1 to 11), in one change: the board setup's "New error type".
+    /// A type that was on that position goes off the board, as `assignBoardTile` does with a type that was not on it.
+    Q_INVOKABLE QString addErrorTypeAt(const QString& name, int position);
     Q_INVOKABLE QString renameErrorType(const QString& id, const QString& name);
     Q_INVOKABLE QString retireErrorType(const QString& id);
 
@@ -225,12 +237,28 @@ signals:
     /// `exportFinished`, whose `message` is the same text.
     void exportResult(bool ok, const QString& title, const QString& fileName, const QString& message);
     void writeFailed(const QString& operation, const QString& message);
+    /// A type added by `addErrorType` or `addErrorTypeAt` is in force (saved, or in the set-up in progress): its name
+    /// and the board position it is on, or 0 when the board was full. Not emitted for a type the Other sheet adds.
+    void errorTypeAdded(const QString& name, int position);
 
 private:
     using EditResult = std::expected<bool, QString>; // true: changed; false: nothing to do; error: the message
     using Edit = std::function<EditResult(Configuration&)>;
 
     struct ImportOutcome;
+
+    /// Where `add_type` puts the new type on the board.
+    enum class Placement
+    {
+        OFF_BOARD,   // the Other sheet: the type is for the entry being logged, and the board does not change
+        FIRST_EMPTY, // Settings, Error types
+        AT_POSITION  // the board setup's picker
+    };
+    struct Added
+    {
+        ErrorTypeId m_Id;
+        int m_Position = 0; // 0: not on the board
+    };
 
     [[nodiscard]] const Configuration& view() const
     {
@@ -242,7 +270,10 @@ private:
                                                               bool needs_configured);
     [[nodiscard]] QString change_message(const QString& operation, const Edit& edit);
     [[nodiscard]] std::expected<void, ConfigEditError> commit(Configuration candidate, const QString& operation);
-    [[nodiscard]] std::expected<ErrorTypeId, ConfigEditError> add_type(const QString& name, bool needs_configured);
+    [[nodiscard]] std::expected<Added, ConfigEditError> add_type(const QString& name, bool needs_configured,
+                                                                 Placement placement, int position = 0);
+    /// `addErrorType` and `addErrorTypeAt`: adds, and tells `errorTypeAdded` when the change is in force.
+    [[nodiscard]] QString add_and_announce(const QString& name, Placement placement, int position);
 
     void finish_load(Result<std::optional<std::string>, StorageError> result);
     void finish_save(Configuration saved, const QString& operation, const Result<void, StorageError>& result);
@@ -266,6 +297,8 @@ private:
     QString m_LoadProblem;
     std::optional<Configuration> m_PreparedImport;
     std::uint64_t m_ImportToken = 0;
+    // The added type `errorTypeAdded` tells about when the save in flight has finished: its name and position.
+    std::optional<std::pair<QString, int>> m_PendingAdded;
 
     ObserverList<ConfigurationObserver> m_Observers;
 

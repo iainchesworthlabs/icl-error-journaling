@@ -278,6 +278,154 @@ TEST_CASE("A new error type goes to the end of the master list, off the board", 
     CHECK_FALSE(labels_in(*rig.m_Settings.board_layout()).contains("Late Greeting"));
 }
 
+TEST_CASE("A new error type fills the first empty board position in the same save", "[viewmodel][settings][errors]")
+{
+    SettingsRig rig;
+    Configuration configuration = with_error_types(6);
+    // Positions 1, 2, 4, 5, 6 and 7 are taken: 3 is the first empty one.
+    configuration.m_ErrorTypes[2].m_BoardPosition = 7;
+    rig.load_configuration(configuration);
+    QSignalSpy added(&rig.m_Settings, &SettingsModel::errorTypeAdded);
+    REQUIRE(rig.m_Settings.first_empty_position() == 3);
+
+    CHECK(rig.m_Settings.addErrorType("  Late Greeting ").isEmpty());
+    // Nothing is in force, or told, until the save has finished.
+    CHECK(added.count() == 0);
+    CHECK(rig.m_Settings.configuration().m_ErrorTypes.size() == 6);
+    rig.commit();
+
+    QAbstractItemModel& board = *rig.m_Settings.board_layout();
+    CHECK(text_at(board, 2, role_named(board, "label")) == "Late Greeting");
+    CHECK(rig.m_Settings.configuration().m_ErrorTypes.back().m_BoardPosition == 3);
+    // One save holds both the type and its place.
+    REQUIRE(rig.store().saves().size() == 1);
+    const auto read_back = import_configuration(rig.store().saves().front());
+    REQUIRE(read_back.has_value());
+    CHECK(read_back->m_ErrorTypes.back().m_Name == "Late Greeting");
+    CHECK(read_back->m_ErrorTypes.back().m_BoardPosition == 3);
+    REQUIRE(added.count() == 1);
+    CHECK(added.at(0).at(0).toString() == "Late Greeting");
+    CHECK(added.at(0).at(1).toInt() == 3);
+    CHECK(rig.m_Settings.first_empty_position() == 8);
+}
+
+TEST_CASE("On a full board a new error type stays off the board and says so", "[viewmodel][settings][errors]")
+{
+    SettingsRig rig;
+    rig.load_sample();
+    QSignalSpy added(&rig.m_Settings, &SettingsModel::errorTypeAdded);
+    CHECK(rig.m_Settings.first_empty_position() == 0);
+
+    CHECK(rig.m_Settings.addErrorType("Late Greeting").isEmpty());
+    rig.commit();
+
+    CHECK_FALSE(rig.m_Settings.configuration().m_ErrorTypes.back().m_BoardPosition.has_value());
+    REQUIRE(added.count() == 1);
+    CHECK(added.at(0).at(1).toInt() == 0);
+}
+
+TEST_CASE("A new error type can be put on a chosen position in one change", "[viewmodel][settings][errors]")
+{
+    SettingsRig rig;
+    rig.load_configuration(with_error_types(3));
+    QSignalSpy added(&rig.m_Settings, &SettingsModel::errorTypeAdded);
+    QAbstractItemModel& board = *rig.m_Settings.board_layout();
+
+    SECTION("an empty position")
+    {
+        CHECK(rig.m_Settings.addErrorTypeAt("Late Greeting", 9).isEmpty());
+        rig.commit();
+        CHECK(text_at(board, 8, role_named(board, "label")) == "Late Greeting");
+        CHECK(board.data(board.index(3, 0), role_named(board, "isEmpty")).toBool());
+        REQUIRE(added.count() == 1);
+        CHECK(added.at(0).at(1).toInt() == 9);
+    }
+
+    SECTION("a position that has a type sends that type off the board")
+    {
+        CHECK(rig.m_Settings.addErrorTypeAt("Late Greeting", 2).isEmpty());
+        rig.commit();
+        CHECK(text_at(board, 1, role_named(board, "label")) == "Late Greeting");
+        CHECK_FALSE(rig.m_Settings.configuration().m_ErrorTypes[1].m_BoardPosition.has_value());
+        CHECK(rig.m_Settings.configuration().m_ErrorTypes[0].m_BoardPosition == 1);
+        CHECK(rig.m_Settings.configuration().m_ErrorTypes[2].m_BoardPosition == 3);
+    }
+
+    CHECK(rig.store().saves().size() == 1);
+}
+
+TEST_CASE("A new error type on a position is refused off the board, and for a taken name",
+          "[viewmodel][settings][errors]")
+{
+    SettingsRig rig;
+    rig.load_configuration(with_error_types(3));
+    QSignalSpy added(&rig.m_Settings, &SettingsModel::errorTypeAdded);
+
+    CHECK_FALSE(rig.m_Settings.addErrorTypeAt("Late Greeting", 0).isEmpty());
+    CHECK_FALSE(rig.m_Settings.addErrorTypeAt("Late Greeting", 12).isEmpty());
+    // The names are compared ignoring case.
+    CHECK(rig.m_Settings.addErrorTypeAt("type 1", 5).startsWith("There is already an error type called"));
+    CHECK(rig.m_Settings.addErrorTypeAt("  ", 5) == "Enter a name.");
+    CHECK(rig.m_Gateway.pending() == 0);
+    CHECK(added.count() == 0);
+}
+
+TEST_CASE("A new error type whose save fails is not placed and not announced", "[viewmodel][settings][errors]")
+{
+    SettingsRig rig;
+    rig.load_configuration(with_error_types(3));
+    QSignalSpy added(&rig.m_Settings, &SettingsModel::errorTypeAdded);
+    QSignalSpy failed(&rig.m_Settings, &SettingsModel::writeFailed);
+    rig.store().fail_next_save(make_error(StorageErrorKind::DISK_FULL, "full"));
+
+    CHECK(rig.m_Settings.addErrorType("Late Greeting").isEmpty());
+    rig.commit();
+
+    CHECK(failed.count() == 1);
+    CHECK(added.count() == 0);
+    CHECK(rig.m_Settings.configuration().m_ErrorTypes.size() == 3);
+    CHECK(rig.m_Settings.first_empty_position() == 4);
+}
+
+TEST_CASE("The Other sheet's new type stays off the board", "[viewmodel][settings][errors]")
+{
+    SettingsRig rig;
+    rig.load_configuration(with_error_types(3));
+    QSignalSpy added(&rig.m_Settings, &SettingsModel::errorTypeAdded);
+
+    REQUIRE(rig.m_Settings.add_error_type("Late Greeting").has_value());
+    rig.commit();
+
+    CHECK_FALSE(rig.m_Settings.configuration().m_ErrorTypes.back().m_BoardPosition.has_value());
+    CHECK(added.count() == 0);
+}
+
+TEST_CASE("In a setup in progress a new type is placed and announced at once", "[viewmodel][settings][errors]")
+{
+    SettingsRig rig;
+    rig.load();
+    QSignalSpy added(&rig.m_Settings, &SettingsModel::errorTypeAdded);
+
+    CHECK(rig.m_Settings.addErrorType("Wrong Response").isEmpty());
+    CHECK(rig.m_Gateway.pending() == 0);
+    REQUIRE(added.count() == 1);
+    CHECK(added.at(0).at(1).toInt() == 1);
+    QAbstractItemModel& board = *rig.m_Settings.board_layout();
+    CHECK(text_at(board, 0, role_named(board, "label")) == "Wrong Response");
+}
+
+TEST_CASE("The next colour slot follows the master list, retired types included", "[viewmodel][settings][errors]")
+{
+    SettingsRig rig;
+    rig.load_configuration(with_error_types(5));
+    CHECK(rig.m_Settings.next_colour_slot() == 6);
+    REQUIRE(rig.m_Settings.retireErrorType(id_of(rig.m_Settings.configuration().m_ErrorTypes[4])).isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.next_colour_slot() == 6);
+    // The retired type left its position, which is the first empty one now.
+    CHECK(rig.m_Settings.first_empty_position() == 5);
+}
+
 TEST_CASE("The twelfth and thirteenth types reuse colour slots 1 and 2", "[viewmodel][settings][errors]")
 {
     SettingsRig rig;

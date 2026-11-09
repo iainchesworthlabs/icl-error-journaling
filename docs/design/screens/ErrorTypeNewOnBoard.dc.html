@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New error type – on the board</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1E5B7A}a:hover{color:#1E5B7A}
+input::placeholder{color:#6B7A86}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #3A4650; font-family: Inter, -apple-system, system-ui, sans-serif; color: #14212B">
+  <div style="position: absolute; left: 0; right: 0; top: 120px; bottom: 0px; background: #F2F4F7; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; padding: 0 16px; box-shadow: 0 -4px 24px rgba(0,0,0,0.25)">
+    <div style="display: flex; justify-content: center; padding-top: 8px">
+      <div style="width: 36px; height: 5px; border-radius: 3px; background: #C9D3DC"></div>
+    </div>
+    <div style="display: flex; align-items: center; padding: 8px 0 16px">
+      <a href="BoardTypePicker.dc.html" style="font-size: 17px; text-decoration: none; color: #1E5B7A; min-width: 64px; height: 44px; display: flex; align-items: center">Cancel</a>
+      <h1 style="flex-grow: 1; margin: 0; text-align: center; font-size: 17px; font-weight: 600">New error type</h1>
+      <a href="BoardSettingsEmpty.dc.html" style="font-size: 17px; font-weight: 600; text-decoration: none; color: #1E5B7A; min-width: 64px; height: 44px; display: flex; align-items: center; justify-content: flex-end">Save</a>
+    </div>
+    <div style="margin-top: 0px; font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px 0">Name</div>
+    <div style="background: #FFFFFF; border: 2px solid #1E5B7A; border-radius: 12px; box-sizing: border-box; min-height: 48px; display: flex; align-items: center; padding: 0 14px; font-size: 17px; color: #14212B">Audio Drop Out</div>
+    <div style="margin-top: 20px; font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px 0">Colour</div>
+    <div style="background: #FFFFFF; border-radius: 14px; overflow: hidden">
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; box-sizing: border-box; font-size: 16px; color: #14212B"><span style="width: 18px; height: 18px; border-radius: 4px; background: #FFF0C2; border: 1px solid #C9D3DC; flex-shrink: 0"></span><span style="flex-grow: 1; padding: 6px 0; ">Butter<span style="display:block; font-size: 13px; color: #5A6B78; margin-top: 2px">Stays with the type when the board is reordered</span></span></div>
+    </div>
+    <p style="margin: 10px 4px 0; font-size: 13px; color: #5A6B78; line-height: 1.4">It goes on the board at position 5.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

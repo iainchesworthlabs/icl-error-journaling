@@ -103,9 +103,9 @@ private:
 /// is running on a tile is not interrupted.
 ///
 /// Row `p - 1` shows the live error type whose board position is `p`. A position with no type is an empty tile
-/// (`isEmpty`, no label, count 0) and the screen never taps it. Row 11 is Other (`isOther`, no `typeId`, colour slot
-/// 0): its count is every live error entry of a type that is not on the board, which includes retired types, types
-/// moved off the board and types the configuration does not know (BRD-05).
+/// (`isEmpty`, no label, count 0); a tap on it records nothing and takes the person to the board setup. Row 11 is Other
+/// (`isOther`, no `typeId`, colour slot 0): its count is every live error entry of a type that is not on the board,
+/// which includes retired types, types moved off the board and types the configuration does not know (BRD-05).
 ///
 /// The tile colour is derived from the type's place in the master list, not from its board position, so reordering the
 /// board does not recolour a type (BRD-08).
@@ -124,6 +124,8 @@ class BoardModel final : public QAbstractListModel, private ConfigurationObserve
 {
     Q_OBJECT
     Q_PROPERTY(int totalCount READ total_count NOTIFY countsChanged)
+    // No error type is on any of the positions 1 to 11: the Log screen shows its empty-board prompt (Other is there).
+    Q_PROPERTY(bool boardEmpty READ board_empty NOTIFY boardEmptyChanged)
 
 public:
     enum Role
@@ -152,9 +154,13 @@ public:
         return m_Total;
     }
 
+    [[nodiscard]] bool board_empty() const;
+
 signals:
     /// The counts changed after a commit, a new log or a configuration change. `totalCount` is read again.
     void countsChanged();
+    /// `boardEmpty` is different after a configuration change or a new log.
+    void boardEmptyChanged();
 
 private:
     struct Tile

@@ -11,8 +11,10 @@ import ErrorJournalingApp
 //              miniature board)
 //
 // What it does itself:
-//   the board        a hold and drag, or Move earlier and Move later, calls `settings.moveBoardTile(from, to)`; Replace type
-//                    opens a sheet of the error types and a choice calls `settings.assignBoardTile(position, typeId)`.
+//   the board        a hold and drag, or Move earlier and Move later, calls `settings.moveBoardTile(from, to)`; Change
+//                    error type, and a tap on an empty tile, open a sheet of the error types and a choice calls
+//                    `settings.assignBoardTile(position, typeId)`. Its "New error type…" opens the name sheet, whose Save
+//                    calls `settings.addErrorTypeAt(name, position)`: the type is made and put on the tile in one change.
 //                    Positions are 1 to 11 and Other is 12. The page does not scroll while a tile is being dragged.
 //   the pages        the facilitator, the time format and the import and export page are pushed on the screen's own
 //                    stack, with a Back in the title bar. The facilitator page also holds "In the shared log": the row
@@ -67,6 +69,12 @@ Item {
         stack.pop(null);
     }
 
+    // The choice of a type for the empty tile at `position` (1 to 11): the shell's way in from an empty tile of the Log
+    // screen.
+    function addTypeAt(position: int): void {
+        picker.openFor(position, "");
+    }
+
     SafeFrame {
         id: frame
 
@@ -88,6 +96,18 @@ Item {
             SettingsTypePicker {
                 id: picker
 
+                settings: root.settings
+                overrideInsets: root.overrideInsets
+                overrideTop: root.overrideTop
+                overrideBottom: root.overrideBottom
+                overrideLeft: root.overrideLeft
+                overrideRight: root.overrideRight
+                onNewTypeRequested: position => newType.openForPosition(position)
+            },
+            ErrorTypeEdit {
+                id: newType
+
+                objectName: "settingsNewType"
                 settings: root.settings
                 overrideInsets: root.overrideInsets
                 overrideTop: root.overrideTop

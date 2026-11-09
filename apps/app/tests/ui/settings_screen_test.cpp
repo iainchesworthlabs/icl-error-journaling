@@ -21,6 +21,7 @@
 
 #include <QAccessible>
 #include <QGuiApplication>
+#include <QMetaObject>
 #include <QObject>
 #include <QQuickItem>
 #include <QSignalSpy>
@@ -486,8 +487,9 @@ TEST_CASE("settings.board_layout: a hold and a drag moves a tile, and the page d
     CHECK(fixture.tile_label(6) == dragged);
 }
 
-TEST_CASE("settings.board_layout: Replace type opens the picker, a choice calls assignBoardTile and the picker closes",
-          "[ui][settings_screen]")
+TEST_CASE(
+    "settings.board_layout: Change error type opens the picker, a choice calls assignBoardTile and the picker closes",
+    "[ui][settings_screen]")
 {
     Fixture fixture;
     // A type that is not on the board.
@@ -534,6 +536,117 @@ TEST_CASE("settings.board_layout: Replace type opens the picker, a choice calls 
     CHECK(fixture.saves() == before + 2);
     CHECK(fixture.tile_label(0) == "Echo Delay");
     CHECK(fixture.shown(QStringLiteral("sheetPanel")) == nullptr);
+}
+
+/// The sample with Track Skipped retired, so that position 5 is empty.
+void empty_position_five(Fixture& fixture)
+{
+    REQUIRE(fixture.settings().retireErrorType(QStringLiteral("00000000-0000-4000-8000-0000000000a5")).isEmpty());
+    fixture.m_Ui.settle();
+    REQUIRE(fixture.model_label(4).isEmpty());
+    REQUIRE(fixture.tile_label(4) == QStringLiteral("Add error type"));
+}
+
+TEST_CASE("settings.board_empty: an empty tile opens the picker at once, with New error type at the top",
+          "[ui][settings_screen]")
+{
+    Fixture fixture;
+    empty_position_five(fixture);
+    const std::size_t before = fixture.saves();
+
+    fixture.tap(QStringLiteral("miniTile4"));
+    fixture.m_Ui.advance(500ms);
+    // No panel first: the picker is up, for the empty position.
+    CHECK(fixture.shown(QStringLiteral("miniPanel")) == nullptr);
+    REQUIRE(fixture.shown(QStringLiteral("sheetPanel")) != nullptr);
+    CHECK(fixture.require(QStringLiteral("settingsPickerBar"))->property("title").toString() == "Add error type");
+    CHECK(fixture.shows(QStringLiteral("For position 5 of 11.")));
+    QQuickItem* new_row = fixture.require(QStringLiteral("settingsPickerNewType"));
+    CHECK(new_row->property("text").toString() == QStringLiteral("New error type…"));
+    // The new row is above the list of types.
+    QQuickItem* first_type = fixture.require(QStringLiteral("settingsPickerType_%1").arg(WRONG_RESPONSE));
+    CHECK(new_row->mapToScene(QPointF(0, 0)).y() < first_type->mapToScene(QPointF(0, 0)).y());
+
+    // A type from the list fills the tile.
+    fixture.m_Ui.tap(first_type);
+    fixture.m_Ui.settle();
+    fixture.m_Ui.advance(500ms);
+    CHECK(fixture.saves() == before + 1);
+    CHECK(fixture.tile_label(4) == "Wrong Response");
+    CHECK(fixture.model_label(0).isEmpty());
+}
+
+TEST_CASE("settings.new_type: New error type names a type and puts it on the tile in one save", "[ui][settings_screen]")
+{
+    Fixture fixture;
+    empty_position_five(fixture);
+    QSignalSpy added(&fixture.settings(), &viewmodel::SettingsModel::errorTypeAdded);
+    const std::size_t before = fixture.saves();
+
+    fixture.tap(QStringLiteral("miniTile4"));
+    fixture.m_Ui.advance(500ms);
+    fixture.tap(QStringLiteral("settingsPickerNewType"));
+    fixture.m_Ui.advance(500ms);
+
+    // The name sheet, with the colour the type will get and where it goes.
+    QQuickItem* sheet = fixture.require(QStringLiteral("settingsNewType"));
+    CHECK(sheet->property("boardPosition").toInt() == 5);
+    CHECK(fixture.shown(QStringLiteral("settingsPickerNewType")) == nullptr);
+    CHECK(fixture.require(QStringLiteral("colourGroup"))->property("footer").toString() ==
+          QStringLiteral("It goes on the board at position 5."));
+    // The twelfth type in the master list (the retired one counts) takes slot 1, Sky.
+    CHECK(fixture.require(QStringLiteral("colourName"))->property("text").toString() == QStringLiteral("Sky"));
+    CHECK(fixture.shown(QStringLiteral("retireRow")) == nullptr);
+
+    replace_text(fixture, QStringLiteral("Echo Delay"));
+    fixture.tap(QStringLiteral("navTrailing"));
+    fixture.m_Ui.settle();
+    fixture.m_Ui.advance(500ms);
+
+    CHECK(fixture.saves() == before + 1);
+    CHECK(fixture.tile_label(4) == "Echo Delay");
+    CHECK(fixture.shown(QStringLiteral("sheetPanel")) == nullptr);
+    REQUIRE(added.count() == 1);
+    CHECK(added.at(0).at(1).toInt() == 5);
+}
+
+TEST_CASE("settings.new_type: a taken name is refused in the sheet and nothing is placed", "[ui][settings_screen]")
+{
+    Fixture fixture;
+    empty_position_five(fixture);
+    const std::size_t before = fixture.saves();
+
+    fixture.tap(QStringLiteral("miniTile4"));
+    fixture.m_Ui.advance(500ms);
+    fixture.tap(QStringLiteral("settingsPickerNewType"));
+    fixture.m_Ui.advance(500ms);
+    replace_text(fixture, QStringLiteral("mute delay"));
+    fixture.tap(QStringLiteral("navTrailing"));
+    fixture.m_Ui.settle();
+
+    CHECK(fixture.saves() == before);
+    CHECK(fixture.shown(QStringLiteral("settingsNewType")) != nullptr);
+    CHECK(fixture.shows(QStringLiteral("There is already an error type called")));
+    CHECK(fixture.model_label(4).isEmpty());
+}
+
+TEST_CASE("settings.board_empty: the shell's way in opens the picker for a position", "[ui][settings_screen]")
+{
+    Fixture fixture;
+    empty_position_five(fixture);
+    QMetaObject::invokeMethod(fixture.m_Screen, "addTypeAt", Q_ARG(int, 5));
+    fixture.m_Ui.advance(500ms);
+    REQUIRE(fixture.shown(QStringLiteral("sheetPanel")) != nullptr);
+    CHECK(fixture.shows(QStringLiteral("For position 5 of 11.")));
+    // VoiceOver reaches the new row, as a named button.
+    QQuickItem* new_row = fixture.require(QStringLiteral("settingsPickerNewType"));
+    CHECK(new_row->property("accessibleName").toString() == QStringLiteral("New error type for position 5"));
+    QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(new_row);
+    REQUIRE(iface != nullptr);
+    CHECK(iface->role() == QAccessible::Button);
+    CHECK(accessible_press(new_row));
+    fixture.m_Ui.advance(500ms);
+    CHECK(fixture.shown(QStringLiteral("settingsNewType")) != nullptr);
 }
 
 TEST_CASE("settings.board_layout: Cancel closes the picker and changes nothing", "[ui][settings_screen]")
