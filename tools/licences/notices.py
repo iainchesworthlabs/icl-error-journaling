@@ -94,6 +94,13 @@ def display_licence(expression: str) -> str:
     return expression.replace(COMMERCIAL, "Qt commercial licence")
 
 
+def looks_like_library(lowered: str) -> bool:
+    """Whether a path on the link line names a library or an object file, as opposed to a directory or a flag's argument."""
+    name = lowered.rsplit("/", 1)[-1]
+    return (lowered.endswith(STATIC_SUFFIXES + DYNAMIC_SUFFIXES + (".lib",)) or ".so." in name or ".framework/" in lowered
+            or ".dylib." in name)
+
+
 def linking_of(token: str) -> str:
     lowered = token.lower()
     if lowered.endswith(STATIC_SUFFIXES):
@@ -395,6 +402,8 @@ class Notices:
         if "/../" in token:
             token = slash(Path(token).resolve())
         lowered = lower_path(token)
+        if not looks_like_library(lowered):
+            return  # a directory (-Wl,-rpath,<dir>) or another argument of a flag
         linking = linking_of(token)
 
         in_vcpkg = bool(triplet) and lowered.startswith(triplet + "/")
@@ -638,8 +647,14 @@ class Notices:
                 continue
             text = self.text_for(identifier)
             if not text:
-                self.unresolved(f"No licence text for {identifier} (needed by {needed_by}): add "
-                                f"tools/licences/data/texts/{identifier}.txt and say where it came from in the README there")
+                message = (f"No licence text for {identifier} (needed by {needed_by}): add "
+                           f"tools/licences/data/texts/{identifier}.txt and say where it came from in the README there")
+                if self.m_Platform in self.m_Qt.get("verifiedPlatforms", []):
+                    self.unresolved(message)
+                else:
+                    # A platform whose Qt SBOMs were not read lists every component seen on any other (conservative), some
+                    # of which are for another system (D-Bus on Linux). Nothing ships from such a build, so it only warns.
+                    self.warning(message)
                 continue
             self.m_Texts[identifier] = text
 
