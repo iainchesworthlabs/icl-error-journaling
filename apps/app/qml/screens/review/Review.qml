@@ -39,6 +39,9 @@ Item {
     // When the past log was last shared. Both empty = never shared, and nothing is said.
     property string sharedDateText
     property string sharedTimeText
+    // The past log has changed since that share (an edit, a delete or a restore made here, in History's own list): it is no
+    // longer the log that was sent.
+    property bool changedSinceShare: false
     // "12 entries": the first words of the line under a past log's title (HistoryModel's `entriesText`).
     property string entriesText: timeline.entryCount === 1 ? qsTr("1 entry") : qsTr("%1 entries").arg(timeline.entryCount)
     // What the shell's tab bar covers at the bottom of the window.
@@ -69,8 +72,9 @@ Item {
     readonly property bool shareShown: share.available
     readonly property bool hasShared: sharedDateText.length > 0 && sharedTimeText.length > 0
     // The line under a past log's title, as PastLogReview has it: "12 entries · Shared 5 Nov at 16:58", or the entries alone
-    // when the log was never shared.
-    readonly property string pastSubtitle: hasShared ? qsTr("%1 · Shared %2 at %3").arg(entriesText).arg(sharedDateText).arg(sharedTimeText) : entriesText
+    // when the log was never shared. A log that has changed since its share does not read as fully shared: "12 entries ·
+    // Changed since sharing on 5 Nov at 16:58".
+    readonly property string pastSubtitle: !hasShared ? entriesText : changedSinceShare ? qsTr("%1 · Changed since sharing on %2 at %3").arg(entriesText).arg(sharedDateText).arg(sharedTimeText) : qsTr("%1 · Shared %2 at %3").arg(entriesText).arg(sharedDateText).arg(sharedTimeText)
     // The cards of the header block and the rows have a hairline in dark mode and on a past log (PastLogReview), and none on
     // the open log in light mode (Review).
     readonly property bool outlined: Theme.dark || pastLog

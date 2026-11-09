@@ -216,10 +216,11 @@ Result<FileIdentity, StorageError> probe_file(const std::filesystem::path& path,
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Schema version 1 (section 2.3)
+// The schema (section 2.3): version 1, and version 2 which adds `day_log.changed_since_share`. A new database is made
+// at the current version in one go; a version 1 database gets the one column from the migration step in `migrator.cpp`.
 // ---------------------------------------------------------------------------------------------------------------------
 
-constexpr const char* SCHEMA_V1[] = {
+constexpr const char* SCHEMA[] = {
     "CREATE TABLE day_log ("
     " id TEXT PRIMARY KEY NOT NULL,"
     " local_date TEXT NOT NULL,"
@@ -232,7 +233,10 @@ constexpr const char* SCHEMA_V1[] = {
     " last_shared_utc INTEGER,"
     " archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1)),"
     " previous_log_id TEXT,"
-    " applied_seq INTEGER NOT NULL DEFAULT 0)",
+    " applied_seq INTEGER NOT NULL DEFAULT 0,"
+    // Shared, and changed since (`LogMeta::m_ChangedSinceShare`). Last, as the migration adds it. A row from before the
+    // column existed holds 0: a log that was shared reads as shared.
+    " changed_since_share INTEGER NOT NULL DEFAULT 0 CHECK (changed_since_share IN (0, 1)))",
     "CREATE INDEX day_log_archived ON day_log(archived)",
     // At most one log is open, enforced by the database and not only by the code (DS-05).
     "CREATE UNIQUE INDEX day_log_one_open ON day_log(archived) WHERE archived = 0",
@@ -524,7 +528,7 @@ Result<void, StorageError> SqliteLogRepository::Impl::initialise_schema() const
         return begun;
     }
     Result<void, StorageError> done;
-    for (const char* statement : SCHEMA_V1)
+    for (const char* statement : SCHEMA)
     {
         done = exec(QString::fromLatin1(statement));
         if (!done)
@@ -631,8 +635,8 @@ std::string_view kind_name(const EntryBody& body)
 Result<SqliteLogRepository::Impl::Loaded, StorageError> SqliteLogRepository::Impl::load(LogId id) const
 {
     const QString key = to_qt(id.format());
-    auto row = run(QStringLiteral("SELECT created_utc, last_shared_utc, archived, previous_log_id, applied_seq, %1 "
-                                  "FROM day_log WHERE id = ?")
+    auto row = run(QStringLiteral("SELECT created_utc, last_shared_utc, archived, previous_log_id, applied_seq, %1,"
+                                  " changed_since_share FROM day_log WHERE id = ?")
                        .arg(QLatin1String(HEADER_COLUMNS)),
                    {key});
     if (!row)
@@ -656,6 +660,7 @@ Result<SqliteLogRepository::Impl::Loaded, StorageError> SqliteLogRepository::Imp
         meta.m_LastSharedUtc = millis_of(row->value(1));
     }
     meta.m_Archived = row->value(2).toInt() != 0;
+    meta.m_ChangedSinceShare = row->value(11).toInt() != 0;
     if (const auto previous = optional_text(row->value(3)))
     {
         const auto parsed = Uuid::parse(*previous);
@@ -955,9 +960,9 @@ Result<void, StorageError> SqliteLogRepository::Impl::insert_log(const StoredLog
     values << millis_value(meta.m_CreatedUtc)
            << (meta.m_LastSharedUtc ? millis_value(*meta.m_LastSharedUtc) : null_integer()) << (meta.m_Archived ? 1 : 0)
            << (meta.m_Previous ? QVariant(to_qt(meta.m_Previous->format())) : null_text())
-           << static_cast<qulonglong>(applied_seq);
+           << static_cast<qulonglong>(applied_seq) << (meta.m_ChangedSinceShare ? 1 : 0);
     return exec(QStringLiteral("INSERT INTO day_log (id, %1, created_utc, last_shared_utc, archived, previous_log_id,"
-                               " applied_seq) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                               " applied_seq, changed_since_share) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                     .arg(QLatin1String(HEADER_COLUMNS)),
                 values);
 }
@@ -1052,6 +1057,17 @@ Result<void, StorageError> SqliteLogRepository::Impl::persist(const JournalRecor
     if (auto done = std::visit(Visitor{*this, record, before, after, history}, record.m_Body); !done)
     {
         return done;
+    }
+    // A change after a share, or the share that ends it, moves the flag. Written whatever the record was, so that every
+    // way a record reaches the database (a write, a replay) keeps it the same.
+    if (after.m_Meta.m_ChangedSinceShare != before.m_Stored.m_Meta.m_ChangedSinceShare)
+    {
+        if (auto flagged = exec(QStringLiteral("UPDATE day_log SET changed_since_share = ? WHERE id = ?"),
+                                {after.m_Meta.m_ChangedSinceShare ? 1 : 0, to_qt(id.format())});
+            !flagged)
+        {
+            return flagged;
+        }
     }
 
     const bool is_archive = std::holds_alternative<ArchiveBody>(record.m_Body);
@@ -1305,7 +1321,8 @@ Result<std::vector<LogSummary>, StorageError> SqliteLogRepository::list_logs()
     auto rows = m_Impl->run(
         QStringLiteral("SELECT d.id, d.created_utc, d.last_shared_utc, d.archived,"
                        " (SELECT count(*) FROM entry e WHERE e.day_log_id = d.id),"
-                       " (SELECT count(*) FROM entry e WHERE e.day_log_id = d.id AND e.deleted = 0), %1 "
+                       " (SELECT count(*) FROM entry e WHERE e.day_log_id = d.id AND e.deleted = 0), %1,"
+                       " d.changed_since_share "
                        "FROM day_log d ORDER BY d.local_date DESC, d.created_utc DESC, d.id ASC")
             .arg(QStringLiteral("d.local_date, d.facilitator, d.unit_number, d.location_id, d.location_text, "
                                 "d.software_version")));
@@ -1331,6 +1348,7 @@ Result<std::vector<LogSummary>, StorageError> SqliteLogRepository::list_logs()
             summary.m_LastSharedUtc = millis_of(rows->value(2));
         }
         summary.m_Archived = rows->value(3).toInt() != 0;
+        summary.m_ChangedSinceShare = rows->value(12).toInt() != 0;
         summary.m_TotalEntryCount = rows->value(4).toULongLong();
         summary.m_LiveEntryCount = rows->value(5).toULongLong();
         result.push_back(std::move(summary));

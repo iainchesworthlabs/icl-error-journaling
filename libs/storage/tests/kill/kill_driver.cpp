@@ -1129,7 +1129,7 @@ std::int64_t check_not_half_migrated(const StoreCopy& store, const std::map<std:
             .toLongLong();
     const std::int64_t has_table =
         db.scalar(QStringLiteral("SELECT COUNT(*) FROM sqlite_master WHERE name = 'test_audit'")).toLongLong();
-    if (version == 1)
+    if (version == TEST_FROM_VERSION)
     {
         CHECK(has_column == 0);
         CHECK(has_table == 0);
@@ -1154,7 +1154,7 @@ void relaunch_and_finish(const StoreCopy& store, const std::map<std::string, std
     REQUIRE(resumed.has_value());
     const std::int64_t version = check_not_half_migrated(store, rows);
     CHECK(table_counts(store.database()) == rows);
-    if (version == 1)
+    if (version == TEST_FROM_VERSION)
     {
         // The old version recovers to the logs it held, like any other store of this build.
         CHECK((resumed->m_Outcome == MigrationOutcome::NOT_COMMITTED ||

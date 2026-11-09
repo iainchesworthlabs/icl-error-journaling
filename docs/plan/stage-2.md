@@ -60,13 +60,15 @@ by the caller (UUID v4) before the call, which is what makes replay idempotent.
 `MemoryLogRepository` implements the same interface with a map. A single typed contract test suite runs every case
 against both implementations, so the memory version cannot drift from the real one.
 
-### 2.3 Schema version 1
+### 2.3 Schema version 1 (and 2)
 
-`PRAGMA application_id` is set to a fixed constant and `PRAGMA user_version` to 1. Tables follow the PRD data model:
+`PRAGMA application_id` is set to a fixed constant and `PRAGMA user_version` to the schema version: 1 in Stage 2, 2 since
+the share rule changed (a log is unshared when it changed after its last share), which added
+`day_log.changed_since_share`. Tables follow the PRD data model:
 
 | Table | Columns |
 |---|---|
-| `day_log` | id, local_date, facilitator, unit_number, location_id, location_text, software_version, created_utc, last_shared_utc, archived |
+| `day_log` | id, local_date, facilitator, unit_number, location_id, location_text, software_version, created_utc, last_shared_utc, archived (and, from version 2, `changed_since_share`: 0 or 1, not null, default 0) |
 | `entry` | id, day_log_id, seq, kind, captured_utc, captured_tz, edited_utc, deleted |
 | `error_entry` | entry_id, error_type_id, error_type_label, attached_note |
 | `note_entry` | entry_id, template_id, value_text |
@@ -204,8 +206,12 @@ archived journal in one operation. The confirmation type can only be built by th
 A kill between steps 2 and 4 is covered by the marker: the next launch sees it and either finds the old version (the
 transaction never committed; remove the marker) or a failed check (restore the copy). SQLite schema changes are
 transactional, so the copy mainly protects against a step that commits something wrong and a post-check that fails.
-Only version 1 ships in Stage 2; the framework is exercised by test-only steps 1 → 2 → 3 that are not part of the
-product build.
+Only version 1 shipped in Stage 2; the framework is exercised by test-only steps from the current version that are not
+part of the product build. The product's first step is 1 → 2 (`ALTER TABLE day_log ADD COLUMN changed_since_share
+INTEGER NOT NULL DEFAULT 0`): every log that exists gets 0, so a log that was shared reads as shared. `Recovery::run`
+runs it before it opens the database; a migration that fails puts the version 1 file back, and the open then rebuilds the
+database from the journals. The flag is not part of `digest_of`: it is derived from the order of the journal records, and
+a database from before it existed holds none, so the launch check does not call that a difference.
 
 ### 2.10 iOS file protection (NFR-09), for Stage 5
 

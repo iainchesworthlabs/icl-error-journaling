@@ -441,7 +441,7 @@ TEST_CASE("C16: a database from a newer version is refused and left as it was", 
     StoreCopy store;
     {
         RawDb raw(store.database());
-        REQUIRE(raw.exec(QStringLiteral("PRAGMA user_version = 2")));
+        REQUIRE(raw.exec(QStringLiteral("PRAGMA user_version = %1").arg(SQLITE_SCHEMA_VERSION + 1)));
     }
     const auto before = tree_of(store.root());
     const auto report = recover(store.location());

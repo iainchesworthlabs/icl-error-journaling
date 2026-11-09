@@ -23,7 +23,7 @@ The `.dc.html` files were authored for a design-canvas runtime (`support.js`, no
 | 4 | `ChangeVersion.dc.html` | Software version | Two plain choices: "It changed during the day" (adds a timed entry) or "I typed it wrong" (corrects, no entry). From and To, time defaulting to now, and a preview of the exact log line. |
 | 5 | `Review.dc.html` | Today's log | Header block and timeline in export wording, black and white only. Swipe a row for Copy and Delete. Copy-all in the navigation bar, "Share log" button. |
 | 6 | `EditEntry.dc.html` | Edit entry | Sheet with Cancel and Save: error type, time, note, a preview of the shared line, and "Delete entry". The facilitator chose a separate sheet over editing in place. |
-| 7 | `NewDay.dc.html` | New day prompt | Names the new date; warns when the open log has not been shared. "Start a new log", "Share [day]'s log first", "Keep [day]'s log open". |
+| 7 | `NewDay.dc.html` | New day prompt | Names the new date; warns when the open log is unshared (never shared, or changed since its last share: "has changed since it was last shared"). "Start a new log", "Share [day]'s log first", "Keep [day]'s log open". |
 | 8 | `BoardSettings.dc.html` | Settings | Miniature board: hold and drag to move, tap to swap a type. Rows for error types, note templates, locations, facilitator, time format, and import or export of the setup. |
 
 ### Screens added by package 4.2 (drafts)
@@ -32,7 +32,7 @@ Each row has a light file and a dark file (`Name.dc.html`, `Name.dark.dc.html`).
 
 | # | File | Screen | PRD | What it shows |
 | --- | --- | --- | --- | --- |
-| 9 | `History` | History | DAY-04 | Past logs newest first, grouped under the local date (two logs of one date under one heading), unit and place, entry count, version, and the shared state as a tick plus time or an empty circle plus "Not shared" (not colour alone). A swipe reveals Share and Delete. The open log is not listed. |
+| 9 | `History` | History | DAY-04 | Past logs newest first, grouped under the local date (two logs of one date under one heading), unit and place, entry count, version, and the shared state as a tick plus time or an empty circle plus "Not shared" (not colour alone). A log that was shared and changed since shows the empty circle and "Changed since sharing", and its Review line reads "Changed since sharing on 5 Nov at 16:58". A swipe reveals Share and Delete. The open log is not listed. |
 | 10 | `HistoryEmpty` | History, empty | DAY-04 | The empty state with a one-line explanation. |
 | 11 | `PastLogReview` | A past log's review | DAY-04 | The Review screen bound to `history.reviewModel`: back to History, copy-all, header block, rows, "Shared 5 Nov at 16:58" and "Share log again". Same black-and-white rule as Review; rows open Edit entry. |
 | 12 | `DeleteLog` | Delete-log confirmation | DAY-05 | An alert naming the date, unit, place and entry count, with "Delete log" and "Cancel". Not dismissed by a tap outside it. |

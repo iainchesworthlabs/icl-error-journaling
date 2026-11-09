@@ -44,8 +44,12 @@ namespace ej::viewmodel
 /// Rows. One row per archived log, from `list_logs()` summaries only: History never loads the entries of a year. The
 /// open log is not listed (it is the Log and Review tabs). `section` is the local date, "7 Nov 2026", so two logs of
 /// one date sit under one heading, newest first. `unitText` and `locationText` are the values the log started with,
-/// `shared` is whether it has a shared time, and `sharedAtText` is that time in the user's time format, in the device's
-/// zone, formatted by `SettingsModel::formatTime`, the one function the screens use for a time of day. The strings
+/// `shared` is whether it has been shared and not changed since, and `sharedAtText` is the time of its last share in
+/// the user's time format, in the device's zone, formatted by `SettingsModel::formatTime`, the one function the screens
+/// use for a time of day. A log that was shared and then had an entry added, edited, deleted or restored, or a header
+/// corrected (in Review, which can still change an archived log) is not `shared`: its row shows the ring, as a log that
+/// was never shared does, and `changedSinceShare` is true so that the text can say why. The rule is `is_unshared`, the
+/// one the open log and the new-day prompt use. Copying a log's text does not share it. The strings
 /// follow the configuration: a change of the time format, the unit prefix or a location name re-renders every row,
 /// including logs written before the change (PRF-07).
 ///
@@ -80,14 +84,15 @@ class HistoryModel : public QAbstractListModel,
 
 public:
     /// QML role names: logId, dateText, section, unitText, locationText, entryCount, shared, sharedAtText, entriesText,
-    /// versionText, detailText, sharedDateText, longDateText. `Qt::DisplayRole` is `dateText`.
+    /// versionText, detailText, sharedDateText, longDateText, changedSinceShare. `Qt::DisplayRole` is `dateText`.
     ///
     /// Beyond the first eight, for the designs: `entriesText` is "12 entries" ("1 entry"), `versionText` is the
     /// software version the log started with, "v1.4.2" (empty when it had none), `detailText` is the two joined as the
     /// row reads, "4 entries, middle dot, v1.4.2" (just the entries when there is no version), `sharedDateText` is the
     /// day of the last share, in the device zone, "5 Nov" (empty when the log has not been shared), and `longDateText`
     /// is the date of the log with its year, "Thu 5 Nov 2026", for the delete alert. `sharedAtText` is the time of that
-    /// share, and "Shared 5 Nov at 16:58" is made of the two.
+    /// share, and "Shared 5 Nov at 16:58" is made of the two. Both stay when the log has changed since: they say when
+    /// it was last shared, `changedSinceShare` says that it has changed.
     enum Role
     {
         LOG_ID = Qt::UserRole + 1,
@@ -102,7 +107,8 @@ public:
         VERSION_TEXT,
         DETAIL_TEXT,
         SHARED_DATE_TEXT,
-        LONG_DATE_TEXT
+        LONG_DATE_TEXT,
+        CHANGED_SINCE_SHARE
     };
     Q_ENUM(Role)
 
@@ -190,7 +196,8 @@ private:
         HeaderValues m_Header; // the values the log started with
         UtcMillis m_Created;
         std::optional<UtcMillis> m_Shared;
-        int m_Count = 0; // live entries
+        bool m_ChangedSinceShare = false; // `LogMeta::m_ChangedSinceShare`
+        int m_Count = 0;                  // live entries
 
         // Rendered, so that data() formats nothing.
         QString m_Date;
@@ -217,6 +224,8 @@ private:
     void on_open_log_changed(LogDocument* document) override;
 
     void render(Row& row) const;
+    /// Shared, and changed since, with something left to share: the rule of `is_unshared` for a log that was shared.
+    [[nodiscard]] static bool changed_after_share(const Row& row);
     [[nodiscard]] static QList<int> changed_roles(const Row& before, const Row& after);
     [[nodiscard]] std::optional<std::size_t> find_row(LogId id) const;
     void show_document(const LogDocument& document);

@@ -370,3 +370,160 @@ TEST_CASE("A location that names an id is stored by id", "[stored-log]")
     require_ok(apply(log, AddEntryBody{sample_change(1, 5, HeaderField::LOCATION, id)}));
     CHECK(std::get<HeaderChangeEntry>(log.m_Log.find(sample_id<EntryId>(1))->m_Body).m_NewValue == id);
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The share rule (DAY-01, REV-05): a log is unshared when it has work that has not been shared.
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+
+/// A log with two entries that has been shared.
+StoredLog shared_log()
+{
+    StoredLog log = new_log();
+    require_ok(apply(log, AddEntryBody{sample_error(1, 10)}));
+    require_ok(apply(log, AddEntryBody{sample_note(2, 11, "kept")}));
+    require_ok(apply(log, MarkSharedBody{sample_time(50)}));
+    return log;
+}
+
+std::size_t live(const StoredLog& log)
+{
+    return log.m_Log.sorted_entries(false).size();
+}
+
+} // namespace
+
+TEST_CASE("A log that was shared and not changed since reads as shared", "[stored-log][share]")
+{
+    const StoredLog log = shared_log();
+    CHECK_FALSE(log.m_Meta.m_ChangedSinceShare);
+    CHECK_FALSE(is_unshared(log.m_Meta, live(log)));
+}
+
+TEST_CASE("A log with entries that was never shared is unshared, and an empty one is not", "[stored-log][share]")
+{
+    StoredLog log = new_log();
+    CHECK_FALSE(is_unshared(log.m_Meta, live(log)));
+    require_ok(apply(log, AddEntryBody{sample_error(1, 10)}));
+    CHECK(is_unshared(log.m_Meta, live(log)));
+    CHECK_FALSE(log.m_Meta.m_ChangedSinceShare); // before the first share the missing share time says it all
+    require_ok(apply(log, SetDeletedBody{sample_id<EntryId>(1), true}));
+    CHECK_FALSE(is_unshared(log.m_Meta, live(log))); // nothing is left to share
+}
+
+TEST_CASE("An entry added after a share makes the log unshared until the next share", "[stored-log][share]")
+{
+    StoredLog log = shared_log();
+    require_ok(apply(log, AddEntryBody{sample_error(3, 20)}));
+    CHECK(log.m_Meta.m_ChangedSinceShare);
+    CHECK(is_unshared(log.m_Meta, live(log)));
+
+    require_ok(apply(log, MarkSharedBody{sample_time(80)}));
+    CHECK_FALSE(log.m_Meta.m_ChangedSinceShare);
+    CHECK_FALSE(is_unshared(log.m_Meta, live(log)));
+    CHECK(log.m_Meta.m_LastSharedUtc == sample_time(80));
+}
+
+TEST_CASE("An entry edited after a share makes the log unshared", "[stored-log][share]")
+{
+    StoredLog log = shared_log();
+    require_ok(apply(log, EditEntryBody{sample_note(2, 11, "edited"), sample_time(60)}));
+    CHECK(is_unshared(log.m_Meta, live(log)));
+}
+
+TEST_CASE("An entry deleted or restored after a share makes the log unshared", "[stored-log][share]")
+{
+    StoredLog log = shared_log();
+    require_ok(apply(log, SetDeletedBody{sample_id<EntryId>(1), true}));
+    CHECK(is_unshared(log.m_Meta, live(log)));
+    CHECK(live(log) == 1);
+
+    require_ok(apply(log, MarkSharedBody{sample_time(80)}));
+    CHECK_FALSE(is_unshared(log.m_Meta, live(log)));
+    require_ok(apply(log, SetDeletedBody{sample_id<EntryId>(1), false}));
+    CHECK(is_unshared(log.m_Meta, live(log)));
+}
+
+TEST_CASE("Deleting what is deleted already, or restoring what is there, changes nothing to share",
+          "[stored-log][share]")
+{
+    StoredLog log = shared_log();
+    require_ok(apply(log, SetDeletedBody{sample_id<EntryId>(1), false}));
+    CHECK_FALSE(log.m_Meta.m_ChangedSinceShare);
+
+    require_ok(apply(log, SetDeletedBody{sample_id<EntryId>(1), true}));
+    require_ok(apply(log, MarkSharedBody{sample_time(80)}));
+    require_ok(apply(log, SetDeletedBody{sample_id<EntryId>(1), true}));
+    CHECK_FALSE(log.m_Meta.m_ChangedSinceShare);
+}
+
+TEST_CASE("A header change or a header correction that changes the text makes a shared log unshared",
+          "[stored-log][share]")
+{
+    StoredLog changed = shared_log();
+    require_ok(apply(changed, AddEntryBody{sample_change(3, 20, HeaderField::UNIT_NUMBER, "28")}));
+    CHECK(is_unshared(changed.m_Meta, live(changed)));
+
+    StoredLog corrected = shared_log();
+    require_ok(apply(corrected, CorrectHeaderBody{HeaderField::UNIT_NUMBER, "31"}));
+    CHECK(is_unshared(corrected.m_Meta, live(corrected)));
+
+    StoredLog corrected_change = shared_log();
+    require_ok(apply(corrected_change, AddEntryBody{sample_change(3, 20, HeaderField::UNIT_NUMBER, "28")}));
+    require_ok(apply(corrected_change, MarkSharedBody{sample_time(80)}));
+    require_ok(apply(corrected_change, CorrectHeaderBody{HeaderField::UNIT_NUMBER, "29"}));
+    CHECK(is_unshared(corrected_change.m_Meta, live(corrected_change)));
+}
+
+TEST_CASE("A header correction to the value already there changes nothing to share", "[stored-log][share]")
+{
+    StoredLog log = shared_log();
+    require_ok(apply(log, CorrectHeaderBody{HeaderField::UNIT_NUMBER, "27"}));
+    CHECK_FALSE(log.m_Meta.m_ChangedSinceShare);
+    CHECK_FALSE(is_unshared(log.m_Meta, live(log)));
+}
+
+TEST_CASE("A refused record, a void and an archive leave a shared log shared", "[stored-log][share]")
+{
+    StoredLog log = shared_log();
+    CHECK_FALSE(apply(log, AddEntryBody{sample_error(1, 10)}).has_value()); // an id that exists
+    CHECK_FALSE(apply(log, CorrectHeaderBody{HeaderField::UNIT_NUMBER, "x"}).has_value());
+    CHECK_FALSE(apply(log, SetDeletedBody{sample_id<EntryId>(99), true}).has_value());
+    require_ok(apply(log, VoidBody{2}));
+    require_ok(apply(log, ArchiveBody{}));
+    CHECK_FALSE(log.m_Meta.m_ChangedSinceShare);
+    CHECK_FALSE(is_unshared(log.m_Meta, live(log)));
+}
+
+TEST_CASE("An archived log that is edited after its share is unshared again", "[stored-log][share]")
+{
+    StoredLog log = shared_log();
+    require_ok(apply(log, ArchiveBody{}));
+    require_ok(apply(log, EditEntryBody{sample_note(2, 11, "fixed in review"), sample_time(90)}));
+    CHECK(is_unshared(log.m_Meta, live(log)));
+}
+
+TEST_CASE("Order decides, not time: a share is later than a change whatever the clocks say", "[stored-log][share]")
+{
+    // The second share is stamped earlier than the entry that came before it (a clock set back), and the entry that
+    // came after it is stamped earlier than the share. The records are in order, and the order is what counts.
+    StoredLog log = new_log();
+    require_ok(apply(log, AddEntryBody{sample_error(1, 500)}));
+    require_ok(apply(log, MarkSharedBody{sample_time(100)}));
+    CHECK_FALSE(is_unshared(log.m_Meta, live(log)));
+    require_ok(apply(log, AddEntryBody{sample_error(2, 5)}));
+    CHECK(is_unshared(log.m_Meta, live(log)));
+    require_ok(apply(log, MarkSharedBody{sample_time(50)}));
+    CHECK_FALSE(is_unshared(log.m_Meta, live(log)));
+}
+
+TEST_CASE("The digest of a log does not depend on the changed-since-share flag", "[stored-log][share]")
+{
+    StoredLog changed = shared_log();
+    require_ok(apply(changed, AddEntryBody{sample_error(3, 20)}));
+    StoredLog same = changed;
+    same.m_Meta.m_ChangedSinceShare = false;
+    CHECK(digest_of(changed) == digest_of(same));
+}

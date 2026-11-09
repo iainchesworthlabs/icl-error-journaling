@@ -291,10 +291,13 @@ QString LogSession::unit_digits() const
 
 void LogSession::update_unshared()
 {
-    const bool unshared = m_Document && m_Document->ready() && !m_Document->last_shared() && live_entry_count() > 0;
-    if (unshared != m_Unshared)
+    const bool ready = m_Document && m_Document->ready();
+    const bool unshared = ready && is_unshared(m_Document->meta(), static_cast<std::size_t>(live_entry_count()));
+    const bool changed = unshared && m_Document->last_shared().has_value();
+    if (unshared != m_Unshared || changed != m_ChangedSinceShare)
     {
         m_Unshared = unshared;
+        m_ChangedSinceShare = changed;
         emit unsharedChanged();
     }
 }

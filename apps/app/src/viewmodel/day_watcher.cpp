@@ -125,7 +125,8 @@ void DayWatcher::run_check()
     prompt.m_NewDateText = format_date(*today, QStringLiteral("dddd d MMMM"));
     prompt.m_OpenLogDayText = format_date(log_date, QStringLiteral("dddd"));
     prompt.m_EntryCount = live_entry_count(*document);
-    prompt.m_Unshared = !document->last_shared() && prompt.m_EntryCount > 0;
+    prompt.m_Unshared = is_unshared(document->meta(), static_cast<std::size_t>(prompt.m_EntryCount));
+    prompt.m_ChangedSinceShare = prompt.m_Unshared && document->last_shared().has_value();
     show(std::move(prompt));
 }
 
@@ -196,7 +197,8 @@ void DayWatcher::refresh_content()
     }
     Prompt prompt = m_Prompt;
     prompt.m_EntryCount = live_entry_count(*document);
-    prompt.m_Unshared = !document->last_shared() && prompt.m_EntryCount > 0;
+    prompt.m_Unshared = is_unshared(document->meta(), static_cast<std::size_t>(prompt.m_EntryCount));
+    prompt.m_ChangedSinceShare = prompt.m_Unshared && document->last_shared().has_value();
     show(std::move(prompt));
 }
 

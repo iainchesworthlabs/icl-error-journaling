@@ -501,6 +501,107 @@ TEMPLATE_LIST_TEST_CASE("Mark shared records the time", "[contract][repository]"
     CHECK(f.repo().list_logs().value()[0].m_LastSharedUtc == sample_time(77));
 }
 
+namespace
+{
+
+/// Whether the repository says the log has work that has not been shared, from the log and from the list of logs.
+template <typename Fixture>
+void require_unshared(Fixture& f, bool expected, std::uint64_t n = FIRST_LOG)
+{
+    const StoredLog log = f.repo().load_log(log_id(n)).value();
+    CHECK(is_unshared(log.m_Meta, log.m_Log.sorted_entries(false).size()) == expected);
+    for (const LogSummary& summary : f.repo().list_logs().value())
+    {
+        if (summary.m_Id == log_id(n))
+        {
+            CHECK(is_unshared(summary) == expected);
+        }
+    }
+}
+
+} // namespace
+
+TEMPLATE_LIST_TEST_CASE("A log is unshared until it is shared and again after every change (DAY-01, REV-05)",
+                        "[contract][repository][share]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_unshared(f, false); // nothing to share yet
+
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(2, 11)));
+    require_unshared(f, true); // never shared
+
+    require_ok(f.repo().mark_shared(log_id(FIRST_LOG), sample_time(50)));
+    require_unshared(f, false); // share, no change: shared
+
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(3, 12)));
+    require_unshared(f, true); // share, add: unshared
+    require_ok(f.repo().mark_shared(log_id(FIRST_LOG), sample_time(60)));
+    require_unshared(f, false);
+
+    require_ok(f.repo().edit_entry(log_id(FIRST_LOG), sample_error(1, 13), sample_time(65)));
+    require_unshared(f, true); // share, edit: unshared
+    require_ok(f.repo().mark_shared(log_id(FIRST_LOG), sample_time(70)));
+    require_unshared(f, false);
+
+    require_ok(f.repo().set_entry_deleted(log_id(FIRST_LOG), entry_id(2), true));
+    require_unshared(f, true); // share, delete: unshared
+    require_ok(f.repo().mark_shared(log_id(FIRST_LOG), sample_time(80)));
+    require_unshared(f, false);
+
+    require_ok(f.repo().set_entry_deleted(log_id(FIRST_LOG), entry_id(2), false));
+    require_unshared(f, true); // restore: unshared
+    require_ok(f.repo().mark_shared(log_id(FIRST_LOG), sample_time(85)));
+
+    require_ok(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::UNIT_NUMBER, "31"));
+    require_unshared(f, true); // a header that reads differently
+    require_ok(f.repo().mark_shared(log_id(FIRST_LOG), sample_time(90)));
+    require_ok(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::UNIT_NUMBER, "31"));
+    require_unshared(f, false); // the same text again: nothing new to send
+}
+
+TEMPLATE_LIST_TEST_CASE("A refused write, an archive and a log with nothing left do not make a shared log unshared",
+                        "[contract][repository][share]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+    require_ok(f.repo().mark_shared(log_id(FIRST_LOG), sample_time(50)));
+
+    CHECK_FALSE(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)).has_value()); // an id that exists
+    CHECK_FALSE(f.repo().set_entry_deleted(log_id(FIRST_LOG), entry_id(9), true).has_value());
+    require_unshared(f, false);
+
+    require_ok(f.repo().archive_log(log_id(FIRST_LOG)));
+    require_unshared(f, false);
+
+    // Past logs stay editable (DAY-04): a change in Review brings the log back to unshared.
+    require_ok(f.repo().edit_entry(log_id(FIRST_LOG), sample_error(1, 12), sample_time(70)));
+    require_unshared(f, true);
+
+    // Deleting everything leaves nothing to share, so there is nothing to warn about.
+    require_ok(f.repo().set_entry_deleted(log_id(FIRST_LOG), entry_id(1), true));
+    require_unshared(f, false);
+}
+
+TEMPLATE_LIST_TEST_CASE("Each log is unshared or shared on its own account", "[contract][repository][share]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10)));
+    require_ok(f.repo().mark_shared(log_id(FIRST_LOG), sample_time(50)));
+    require_ok(f.repo().start_new_log(log_id(FIRST_LOG), log_id(2), sample_header()));
+    require_ok(f.repo().add_entry(log_id(2), sample_error(2, 20)));
+
+    require_unshared(f, false, FIRST_LOG); // archived, shared, and unchanged since
+    require_unshared(f, true, 2);          // never shared
+    require_ok(f.repo().mark_shared(log_id(2), sample_time(60)));
+    require_ok(f.repo().add_entry(log_id(2), sample_error(3, 21)));
+    require_unshared(f, false, FIRST_LOG);
+    require_unshared(f, true, 2);
+}
+
 TEMPLATE_LIST_TEST_CASE("Only an archived log can be deleted, and only with its own confirmation",
                         "[contract][repository]", Fixtures)
 {
