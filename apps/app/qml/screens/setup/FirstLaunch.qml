@@ -19,6 +19,10 @@ import ErrorJournalingApp
 Item {
     id: root
 
+    // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
+    // firstLaunch column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    readonly property real side: WindowLayout.sideMargin(width, Theme.layout.firstLaunchColumn)
+
     required property var settings
 
     // The banner for a problem with the saved settings was closed.
@@ -59,6 +63,11 @@ Item {
                         // The hero is 70 pt under the safe area, as drawn, or 12 pt under the banner of a saved file that
                         // could not be used.
                         readonly property real heroOffset: Theme.size.primaryButtonHeight + Theme.space.screenMargin
+                        // In a larger window the intro and the choices are one group in the middle of the page, with
+                        // the gap of two sections between them, and no offset above the hero (Stage 8, FirstLaunch.ipad).
+                        readonly property bool centred: !WindowLayout.compact
+                        readonly property real groupGap: 2 * Theme.space.sectionGap
+                        readonly property real groupTop: Math.max(0, Math.round((height - intro.height - groupGap - choices.height) / 2))
 
                         width: flick.width
                         height: Math.max(flick.height, intro.height + choices.height + Theme.space.screenMargin)
@@ -66,8 +75,9 @@ Item {
                         Column {
                             id: intro
 
-                            x: Theme.space.screenMargin
-                            width: parent.width - 2 * Theme.space.screenMargin
+                            x: root.side
+                            y: content.centred ? content.groupTop : 0
+                            width: parent.width - 2 * root.side
                             spacing: Theme.space.sectionGap
 
                             Banner {
@@ -84,7 +94,7 @@ Item {
 
                             Item {
                                 width: parent.width
-                                height: problemBanner.visible ? 0 : content.heroOffset - Theme.space.sectionGap
+                                height: problemBanner.visible || content.centred ? 0 : content.heroOffset - Theme.space.sectionGap
                             }
 
                             // The icon, the name and the line under it: 14 pt apart, with 12 pt either side of the text.
@@ -143,9 +153,9 @@ Item {
                         Column {
                             id: choices
 
-                            x: Theme.space.screenMargin
-                            y: parent.height - height
-                            width: parent.width - 2 * Theme.space.screenMargin
+                            x: root.side
+                            y: content.centred ? intro.y + intro.height + content.groupGap : parent.height - height
+                            width: parent.width - 2 * root.side
                             spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
                             Text {

@@ -60,6 +60,16 @@ QtObject {
         return compact ? full : Math.min(limit, full);
     }
 
+    // The margin on each side of a centred column no wider than `limit`, in a space `available` wide (a screen's own
+    // width, which is the window's less any side insets). In a Compact window it is the phone's screen margin, so
+    // `x: sideMargin(w, limit)` and `width: w - 2 * sideMargin(w, limit)` are the phone's layout to the point; else it
+    // is at least the larger margin and as much more as keeps the column within its limit. Rounded to a whole point.
+    function sideMargin(available: real, limit: real): real {
+        if (compact)
+            return Theme.space.screenMargin;
+        return Math.max(screenMargin, Math.round((available - limit) / 2));
+    }
+
     readonly property real logColumnWidth: columnWidth(Theme.layout.logColumn)
     readonly property real formColumnWidth: columnWidth(Theme.layout.formColumn)
     readonly property real readingColumnWidth: columnWidth(Theme.layout.readingColumn)

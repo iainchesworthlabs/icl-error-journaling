@@ -67,6 +67,11 @@ Item {
         root.tabSelected(index);
     }
 
+    // How far in from each side of the bar the tabs start. On a phone they share the whole width; in a larger window they
+    // share the log column, so that four tabs are not 200 pt apart (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    readonly property real tabsInset: WindowLayout.compact ? 0 : WindowLayout.sideMargin(width, Theme.layout.logColumn)
+    readonly property real tabWidth: (width - 2 * tabsInset) / tabs.length
+
     implicitWidth: Theme.frame.width
     implicitHeight: contentHeight + bottomInset
 
@@ -113,9 +118,9 @@ Item {
                 readonly property real labelGap: Theme.border.otherWidth * 2
 
                 objectName: "tab" + tab.modelData.key
-                x: tab.index * bar.width / root.tabs.length
+                x: root.tabsInset + tab.index * root.tabWidth
                 y: 0
-                width: bar.width / root.tabs.length
+                width: root.tabWidth
                 height: root.contentHeight
                 Accessible.ignored: root.skeleton
                 Accessible.role: Accessible.PageTab
