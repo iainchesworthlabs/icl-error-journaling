@@ -125,7 +125,7 @@ The mock-up script uses these numbers, and so will `WindowLayout.qml`. `Compact`
 | Reading column (Review, History, past log) | full width | ≤ 720, centred | ≤ 720, centred |
 | First launch column | full width | ≤ 480, centred vertically | ≤ 480, centred vertically |
 | Tile gap | 8 | 12 | 12 |
-| Tile height | 104, or less in a window too short for it, not below 88 | 0.7 × tile width, from 104 to 152 | fills the board pane's height, at least 88 |
+| Tile height | 104; in a window shorter than 874 pt, only the room above the tab bar, not below 88 (the Last bar gives way first when 88 does not fit) | 0.7 × tile width, from 104 to 152 | fills the board pane's height, at least 88 |
 | Tile label | 13.5 pt, cap 1.3 | 17 pt, cap 1.3 | 17 pt, cap 1.3 |
 | Count badge | 24 pt, 13 pt text | 28 pt, 15 pt text | 28 pt, 15 pt text |
 | Last bar | shown | shown | hidden (the log pane shows the last entry) |
@@ -190,10 +190,12 @@ What stays off:
 - **Picture in Picture and external displays.** They are not relevant.
 
 What is needed:
-- **Short windows in `Compact`.** The phone layout has fixed tile heights and does not scroll. On the iPhone 17 it fits
-  with room to spare, but a Split View window on an iPad mini in landscape is only 744 pt tall. With the iPad's insets
-  (24 and 20) the phone layout needs about 787 pt. So in `Compact` the tiles get shorter when the window is too short for
-  104 pt tiles, down to the 88 pt minimum. On every iPhone the tiles stay 104 pt, so the phone does not change.
+- **Short windows in `Compact`.** The phone layout has fixed tile heights and does not scroll. The composer is 150 pt
+  tall since 4.17 added its hint, so the column needs about 840 pt with the iPad's insets. A Split View window on an
+  iPad mini in landscape is only 744 pt tall. So in a window shorter than the phone's 874 pt design frame, the tiles get
+  only the room above the tab bar, down to the 88 pt minimum. When even 88 pt does not fit, the Last bar gives way, since
+  Review is one tab away. A window as tall as the design frame keeps the phone's tiles and Last bar, so the iPhone 17 does
+  not change. A smaller phone (the iPhone 16e or SE) gets shorter tiles that end above the tab bar instead of under it.
 - **A minimum window size.** iPadOS lets a Stage Manager window be smaller than any phone. The bridge sets the window
   scene's `sizeRestrictions.minimumSize` to 375 × 720 pt, the smallest size at which the board fits with 88 pt tiles.
   It is one call in `libs/ios_bridge/src/platform/ios/` and an empty desktop version.
