@@ -127,6 +127,34 @@ TEST_CASE("header_card.fields: a missing field reads as a prompt and not as a ga
     CHECK(rig.geometry(card).height() > full_height);
 }
 
+TEST_CASE(
+    "header_card.fields: the commit is named in the strip when it is the one thing missing, and in the spoken name",
+    "[ui][header_card][commit]")
+{
+    UiRig rig;
+    QQuickItem* card = card_of(rig, FULL);
+    CHECK(card->property("missingCount").toInt() == 0);
+
+    card->setProperty("missingFields", QStringList{QStringLiteral("software_commit")});
+    rig.layout();
+    CHECK(card->property("missingText").toString() == QStringLiteral("Commit"));
+    CHECK(shown_texts(rig, card).contains(QStringLiteral("Not filled in yet: Commit")));
+    QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(card);
+    REQUIRE(iface != nullptr);
+    CHECK(iface->text(QAccessible::Name).contains(QStringLiteral("Not filled in yet: Commit")));
+    // The strip is a reminder with a mark and a count's worth of words, not colour alone.
+    QQuickItem* strip = rig.find(QStringLiteral("headerStrip"), card);
+    REQUIRE(strip != nullptr);
+    CHECK(strip->isVisible());
+
+    // All four, in the order the session gives them.
+    card->setProperty("missingFields",
+                      QStringList{QStringLiteral("unit_number"), QStringLiteral("location"),
+                                  QStringLiteral("software_version"), QStringLiteral("software_commit")});
+    rig.layout();
+    CHECK(card->property("missingText").toString() == QStringLiteral("UNIT number, Location, Version, Commit"));
+}
+
 TEST_CASE("header_card.fields: filling a field changes the prompt, the strip and the name", "[ui][header_card]")
 {
     UiRig rig;

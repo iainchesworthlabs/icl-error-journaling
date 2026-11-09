@@ -384,3 +384,227 @@ TEST_CASE("version.a11y: names, targets, order and text scale, in light and dark
         expect_clean(check_motion_reduced(rig));
     }
 }
+
+// ---------------------------------------------------------------------------------------------------------- commit
+
+TEST_CASE("version.commit: the same optional field as Today's details, a row of the card, under To",
+          "[ui][version_sheet][commit]")
+{
+    HeaderWorld world(true);
+    REQUIRE(world.session().correctVersion(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d")));
+    world.gateway().run_all();
+    UiRig rig;
+    QQuickItem* sheet = open_sheet(rig, world);
+
+    // The version in force is shown with its commit, and both new fields start empty.
+    CHECK(sheet->property("fromText").toString() == QStringLiteral("1.4.2 (a1b2c3d)"));
+    CHECK(need(rig, QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("1.4.2 (a1b2c3d)"));
+    QQuickItem* to = need(rig, QStringLiteral("versionTo"));
+    QQuickItem* commit = need(rig, QStringLiteral("versionCommit"));
+    CHECK(input_of(rig, to)->property("text").toString().isEmpty());
+    CHECK(input_of(rig, commit)->property("text").toString().isEmpty());
+    CHECK(commit->property("label").toString() == QStringLiteral("Commit"));
+    CHECK(commit->property("placeholderText").toString() == QStringLiteral("Optional"));
+
+    // The row is in the same card, between To and Time, in the same face and as tall as To.
+    QQuickItem* group = need(rig, QStringLiteral("versionGroup"));
+    bool inside = false;
+    for (QQuickItem* up = commit->parentItem(); up != nullptr; up = up->parentItem())
+    {
+        inside = inside || up == group;
+    }
+    CHECK(inside);
+    CHECK(rig.geometry(commit).top() >= rig.geometry(to).bottom() - 0.5);
+    CHECK(rig.geometry(commit).bottom() <= rig.geometry(need(rig, QStringLiteral("versionTime"))).top() + 0.5);
+    CHECK(rig.geometry(commit).height() >= 52.0);
+    CHECK(input_of(rig, commit)->property("font").value<QFont>().pixelSize() == 18);
+
+    // The hint is under the card, in the same words as Today's details; it gives way to a message.
+    QQuickItem* hint = need(rig, QStringLiteral("versionCommitHint"));
+    CHECK(hint->isVisible());
+    CHECK(hint->property("text").toString() ==
+          QString::fromUtf8("The short code (7 to 12 letters and numbers) that identifies the exact build. Leave it "
+                            "empty if you can\xE2\x80\x99t get it."));
+    retype(rig, commit, QStringLiteral("xyz"));
+    CHECK_FALSE(hint->isVisible());
+    CHECK(need(rig, QStringLiteral("versionRefusal"))->isVisible());
+    retype(rig, commit, QString());
+    CHECK(hint->isVisible());
+}
+
+TEST_CASE("version.commit: a change takes the commit, and the line and the entry carry it",
+          "[ui][version_sheet][commit]")
+{
+    HeaderWorld world(true);
+    REQUIRE(world.session().correctVersion(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d")));
+    world.gateway().run_all();
+    UiRig rig;
+    QQuickItem* sheet = open_sheet(rig, world);
+    const int now = world.session().now_local_seconds();
+
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+    CHECK(preview_of(rig) == QString::fromUtf8("08:55 Software Version changed: 1.4.2 (a1b2c3d) \xE2\x86\x92 1.5.0"));
+    retype(rig, need(rig, QStringLiteral("versionCommit")), QStringLiteral("E4F5A6B"));
+    const QString shown = preview_of(rig);
+    CHECK(shown == QString::fromUtf8("08:55 Software Version changed: 1.4.2 (a1b2c3d) \xE2\x86\x92 1.5.0 (e4f5a6b)"));
+    CHECK(shown == world.session().previewVersionChange(QStringLiteral("1.5.0"), QStringLiteral("E4F5A6B"), now));
+    CHECK(need(rig, QStringLiteral("versionExplainer"))->property("text").toString() ==
+          QStringLiteral("Entries before 08:55 keep 1.4.2 (a1b2c3d). Entries after it use 1.5.0 (e4f5a6b)."));
+    REQUIRE(save_enabled(rig));
+
+    rig.tap(need(rig, QStringLiteral("versionSave")));
+    rig.settle();
+    play(rig, 500);
+    CHECK_FALSE(sheet->property("isOpen").toBool());
+    CHECK(world.storage().repository().call_count(RepositoryOp::ADD_ENTRY) == 1);
+    REQUIRE(world.timeline().entry_count() == 1);
+    // What is saved is the line that was shown.
+    CHECK(world.timeline().last_line() == shown);
+    CHECK(world.session().version_text() == QStringLiteral("1.5.0"));
+    CHECK(world.session().commit_text() == QStringLiteral("e4f5a6b"));
+}
+
+TEST_CASE("version.commit: a full hash is shortened to 7 characters", "[ui][version_sheet][commit]")
+{
+    HeaderWorld world(true);
+    REQUIRE(world.session().correctVersion(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d")));
+    world.gateway().run_all();
+    UiRig rig;
+    open_sheet(rig, world);
+
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+    retype(rig, need(rig, QStringLiteral("versionCommit")), QStringLiteral("0123456789ABCDEF0123456789ABCDEF01234567"));
+    CHECK(preview_of(rig).endsWith(QString::fromUtf8("1.5.0 (0123456)")));
+    rig.tap(need(rig, QStringLiteral("versionSave")));
+    rig.settle();
+    play(rig, 500);
+    CHECK(world.session().commit_text() == QStringLiteral("0123456"));
+}
+
+TEST_CASE("version.commit: a change of the commit alone is a change; the same pair is not",
+          "[ui][version_sheet][commit]")
+{
+    HeaderWorld world(true);
+    REQUIRE(world.session().correctVersion(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d")));
+    world.gateway().run_all();
+    UiRig rig;
+    open_sheet(rig, world);
+
+    // The same version and the same commit: refused, and cannot be saved.
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.4.2"));
+    retype(rig, need(rig, QStringLiteral("versionCommit")), QStringLiteral("A1B2C3D"));
+    CHECK(preview_of(rig) == QStringLiteral("That is already the current value."));
+    CHECK_FALSE(save_enabled(rig));
+
+    // The same version with no commit is a change, and so is the same version with another one.
+    retype(rig, need(rig, QStringLiteral("versionCommit")), QString());
+    CHECK(preview_of(rig) == QString::fromUtf8("08:55 Software Version changed: 1.4.2 (a1b2c3d) \xE2\x86\x92 1.4.2"));
+    CHECK(save_enabled(rig));
+    retype(rig, need(rig, QStringLiteral("versionCommit")), QStringLiteral("0123456"));
+    CHECK(preview_of(rig) ==
+          QString::fromUtf8("08:55 Software Version changed: 1.4.2 (a1b2c3d) \xE2\x86\x92 1.4.2 (0123456)"));
+    CHECK(save_enabled(rig));
+}
+
+TEST_CASE("version.commit: \"I typed it wrong\" corrects the version and the commit together and adds no entry",
+          "[ui][version_sheet][commit]")
+{
+    HeaderWorld world(true);
+    UiRig rig;
+    QQuickItem* sheet = open_sheet(rig, world);
+    rig.tap(need(rig, QStringLiteral("versionTypo")));
+
+    // The row is there in both choices; a Correct shows no line.
+    CHECK(need(rig, QStringLiteral("versionCommit"))->isVisible());
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.4.3"));
+    retype(rig, need(rig, QStringLiteral("versionCommit")), QStringLiteral("a1b2c3d"));
+    REQUIRE(save_enabled(rig));
+    CHECK(preview_of(rig).isEmpty());
+    rig.tap(need(rig, QStringLiteral("versionSave")));
+    rig.settle();
+    play(rig, 500);
+
+    CHECK_FALSE(sheet->property("isOpen").toBool());
+    CHECK(world.session().version_text() == QStringLiteral("1.4.3"));
+    CHECK(world.session().commit_text() == QStringLiteral("a1b2c3d"));
+    CHECK(world.timeline().entry_count() == 0);
+    CHECK(world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER) == 1);
+}
+
+TEST_CASE("version.commit: a refused commit is flagged inline, with a plain message, and Save stays disabled",
+          "[ui][version_sheet][commit]")
+{
+    HeaderWorld world(true);
+    UiRig rig;
+    open_sheet(rig, world);
+    QQuickItem* commit = need(rig, QStringLiteral("versionCommit"));
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+    REQUIRE(save_enabled(rig));
+
+    for (const char* refused : {"a1b2c3", "a1b2c3d4e5f6a", "g1b2c3d"})
+    {
+        CAPTURE(refused);
+        retype(rig, commit, QString::fromLatin1(refused));
+        const QString message = world.session().validateCommit(QString::fromLatin1(refused));
+        REQUIRE_FALSE(message.isEmpty());
+        CHECK(commit->property("errorText").toString() == message);
+        CHECK(need(rig, QStringLiteral("versionRefusal"))->property("message").toString() == message);
+        CHECK_FALSE(save_enabled(rig));
+        CHECK(preview_of(rig).isEmpty());
+        rig.tap(need(rig, QStringLiteral("versionSave")));
+        CHECK(world.timeline().entry_count() == 0);
+    }
+    retype(rig, commit, QStringLiteral("a1b2c3d"));
+    CHECK(commit->property("errorText").toString().isEmpty());
+    CHECK(save_enabled(rig));
+}
+
+TEST_CASE("version.commit: a plus sign in the version field is refused, so the commit has one way in",
+          "[ui][version_sheet][commit]")
+{
+    HeaderWorld world(true);
+    UiRig rig;
+    open_sheet(rig, world);
+    QQuickItem* to = need(rig, QStringLiteral("versionTo"));
+
+    retype(rig, to, QStringLiteral("1.5.0+e4f5a6b"));
+    CHECK_FALSE(to->property("errorText").toString().isEmpty());
+    CHECK_FALSE(save_enabled(rig));
+}
+
+TEST_CASE("version.commit: names, targets, order and text scale, in light and dark", "[ui][version_sheet][commit]")
+{
+    // The window is tall enough to hold the sheet: the checks compare positions in the window and know nothing of a
+    // scroller (as in version.a11y).
+    HeaderWorld world(true);
+    UiRig rig(QSize(402, 1600));
+    open_sheet(rig, world);
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+    retype(rig, need(rig, QStringLiteral("versionCommit")), QStringLiteral("e4f5a6b"));
+
+    // A screen reader hears the row as "Commit", an editable text.
+    bool found = false;
+    for (const Node& node : rig.tree(need(rig, QStringLiteral("versionCommit"))))
+    {
+        if (node.m_ObjectName == QStringLiteral("formInput"))
+        {
+            found = true;
+            CHECK(node.m_Name == QStringLiteral("Commit"));
+            CHECK(node.m_InAccessibleTree);
+            CHECK(node.m_Rect.height() >= 44.0);
+        }
+    }
+    CHECK(found);
+
+    SECTION("light")
+    {
+        expect_clean(check_everything(rig));
+    }
+
+    SECTION("dark")
+    {
+        rig.set_dark(true);
+        rig.settle();
+        expect_clean(check_everything(rig));
+    }
+}

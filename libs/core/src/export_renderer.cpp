@@ -133,7 +133,11 @@ Result<std::string, RenderError> display_value(const ExportContext& context, Hea
         }
         return collapse(stored);
     }
-    case HeaderField::SOFTWARE_VERSION: return collapse(stored);
+    case HeaderField::SOFTWARE_VERSION:
+    {
+        const auto version = SoftwareVersion::parse_stored(stored);
+        return version ? version->display() : collapse(stored);
+    }
     }
     return collapse(stored);  // GCOVR_EXCL_LINE unreachable: every HeaderField is handled above
 }
@@ -350,7 +354,7 @@ Result<std::string, RenderError> render_header(const Log& log, const ExportConte
     append_labelled(out, export_format::LABEL_LOCATION, location);
     out += export_format::LINE_END;
     append_labelled(out, export_format::LABEL_SOFTWARE_VERSION,
-                    header.m_SoftwareVersion ? header.m_SoftwareVersion->format() : std::string{});
+                    header.m_SoftwareVersion ? header.m_SoftwareVersion->display() : std::string{});
     return out;
 }
 

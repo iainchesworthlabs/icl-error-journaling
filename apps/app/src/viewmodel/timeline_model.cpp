@@ -781,7 +781,7 @@ QString TimelineModel::footnote_for(const Entry& entry, const QString& time_text
                    ? text_of(header.m_UnitNumber->format(m_Configuration.configuration().m_UnitPrefix))
                    : text_of(header.m_UnitNumber->stored());
     }
-    const QString version = header.m_SoftwareVersion ? text_of(header.m_SoftwareVersion->format()) : QString();
+    const QString version = header.m_SoftwareVersion ? text_of(header.m_SoftwareVersion->display()) : QString();
 
     if (!unit.isEmpty() && !version.isEmpty())
     {

@@ -11,12 +11,17 @@ import ErrorJournalingApp
 //                                 them into an instant, so QML does no time arithmetic)
 //   "I typed it wrong"            a Correct: `session.correctHeader` fixes the value and writes no entry
 //
-// The sheet shows the exact line the log will get: it is `session.previewHeaderChange`, made by the renderer from the
-// same arguments `changeHeader` takes, and nothing here builds or edits it. The new value is checked as it is typed with
-// `session.validateHeaderValue`, and the button stays disabled until the value is valid and different.
+// The sheet shows the exact line the log will get: it is `session.previewVersionChange`, made by the renderer from the
+// same arguments `changeVersion` takes, and nothing here builds or edits it. The new value is checked as it is typed with
+// `session.validateVersion`, and the button stays disabled until the value is valid and different.
+//
+// The commit of the build (HDR-09) is typed beside the version, in its own row and optional. The sheet takes the version and
+// the commit as a pair, and neither is carried over from the version in force: the To row starts empty, so does the Commit
+// row, and the version in force is shown with its commit in the From row ("1.4.2 (a1b2c3d)"). A change of the commit alone
+// is a Change of the version, with the same number.
 //
 // Layout (ChangeVersion): the question in 15 pt, the two choices, then one card with From, To (the new value typed at the
-// right of its row) and Time (the time as a chip), then the line the log will get in a monospace face. The time is chosen
+// right of its row), Commit (the same) and Time (the time as a chip), then the line the log will get in a monospace face. The time is chosen
 // on a second, shorter sheet (VersionTimeSheet) that the screen declares after this one: the Time row sets `timeOpen`.
 //
 // Open it with `show()`, which reads the version in force and the time now. The sheet closes itself when the change is
@@ -29,14 +34,13 @@ Sheet {
     required property var timeline
     required property var settings
 
-    readonly property string fieldKey: "software_version"
-
     // The two choices: true for "It changed during the day".
     property bool changing: true
-    // The version in force when the sheet was opened.
+    // The version in force when the sheet was opened, with its commit: "1.4.2 (a1b2c3d)".
     property string fromText: ""
-    // The new version as typed.
+    // The new version as typed, and its commit.
     property string toText: ""
+    property string toCommit: ""
     // The time of the change in seconds since local midnight, and the time that "now" was when the sheet opened.
     property int timeSeconds: 0
     property int nowSeconds: 0
@@ -45,11 +49,14 @@ Sheet {
     property string refusal: ""
 
     readonly property string trimmedTo: toText.trim()
-    readonly property string toError: trimmedTo.length > 0 ? session.validateHeaderValue(fieldKey, toText) : ""
-    readonly property bool unchanged: trimmedTo === fromText
-    readonly property bool canSave: trimmedTo.length > 0 && toError.length === 0 && !unchanged
+    readonly property string toError: trimmedTo.length > 0 ? session.validateVersion(toText, "") : ""
+    readonly property string commitError: toCommit.trim().length > 0 ? session.validateCommit(toCommit) : ""
+    // The new version as the log prints it, or empty while either part is refused.
+    readonly property string toDisplay: trimmedTo.length > 0 && toError.length === 0 && commitError.length === 0 ? session.versionDisplay(toText, toCommit) : ""
+    readonly property bool unchanged: toDisplay.length > 0 && toDisplay === fromText
+    readonly property bool canSave: toDisplay.length > 0 && !unchanged
     // The line the log will get, or the model's plain refusal of this change; empty while there is nothing to preview.
-    readonly property string previewText: changing && trimmedTo.length > 0 && toError.length === 0 ? session.previewHeaderChange(fieldKey, toText, timeSeconds) : ""
+    readonly property string previewText: changing && toDisplay.length > 0 ? session.previewVersionChange(toText, toCommit, timeSeconds) : ""
     // The time as the log prints it. The format key is an argument only so that the label is made again when the format
     // changes.
     readonly property string timeLabel: formatTime(timeSeconds, settings.timeFormatKey)
@@ -61,8 +68,9 @@ Sheet {
 
     // Reads the version in force and the clock, and presents the sheet.
     function show(): void {
-        fromText = session.versionText;
+        fromText = session.versionDisplayText;
         toText = "";
+        toCommit = "";
         changing = true;
         nowSeconds = session.nowLocalSeconds;
         timeSeconds = nowSeconds;
@@ -73,7 +81,7 @@ Sheet {
 
     // Records the change or the correction. The model answers at once whether it accepted the command.
     function save(): void {
-        const accepted = changing ? session.changeHeader(fieldKey, toText, timeSeconds) : session.correctHeader(fieldKey, toText);
+        const accepted = changing ? session.changeVersion(toText, toCommit, timeSeconds) : session.correctVersion(toText, toCommit);
         if (accepted)
             close();
         else
@@ -93,6 +101,7 @@ Sheet {
         property string text: ""
         property string placeholderText: ""
         property string errorText: ""
+        property int inputMethodHints: Qt.ImhFormattedNumbersOnly
         readonly property bool hasFocus: input.activeFocus
         readonly property bool isLast: Positioner.isLastItem
 
@@ -137,7 +146,7 @@ Sheet {
             placeholderTextColor: Theme.colour.textPlaceholder
             selectionColor: Theme.colour.primaryTint
             selectedTextColor: Theme.colour.textPrimary
-            inputMethodHints: Qt.ImhFormattedNumbersOnly
+            inputMethodHints: toRow.inputMethodHints
             background: null
 
             Accessible.role: Accessible.EditableText
@@ -285,6 +294,26 @@ Sheet {
                         }
                     }
 
+                    // The commit of the build, optional (HDR-09): a row of its own under the version, in both choices.
+                    ToRow {
+                        id: commitRow
+
+                        objectName: "versionCommit"
+                        label: qsTr("Commit")
+                        text: root.toCommit
+                        placeholderText: qsTr("Optional")
+                        errorText: root.commitError
+                        inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase | Qt.ImhPreferLowercase
+                        onTextEdited: text => {
+                            root.toCommit = text;
+                            root.refusal = "";
+                        }
+                        onHasFocusChanged: {
+                            if (hasFocus)
+                                scroller.reveal(commitRow);
+                        }
+                    }
+
                     ListRow {
                         objectName: "versionTime"
                         visible: root.changing
@@ -299,7 +328,7 @@ Sheet {
                 // The refusal of the value, or of the change, under the card: a warning sign and the model's words.
                 Item {
                     objectName: "versionRefusal"
-                    readonly property string message: root.toError.length > 0 ? root.toError : root.refusal
+                    readonly property string message: root.toError.length > 0 ? root.toError : root.commitError.length > 0 ? root.commitError : root.refusal
 
                     visible: message.length > 0
                     width: parent.width
@@ -328,6 +357,25 @@ Sheet {
                         Accessible.role: Accessible.StaticText
                         Accessible.name: text
                     }
+                }
+
+                // What the commit is, under the card while nothing is refused (the hint of Today’s details, in the same words).
+                Text {
+                    objectName: "versionCommitHint"
+                    visible: root.toError.length === 0 && root.commitError.length === 0 && root.refusal.length === 0
+                    width: parent.width
+                    height: visible ? implicitHeight : 0
+                    topPadding: root.gapSmall
+                    leftPadding: Theme.space.tileGap / 2
+                    rightPadding: Theme.space.tileGap / 2
+                    color: Theme.colour.textSecondary
+                    font: Theme.font.footnote.font
+                    lineHeightMode: Text.FixedHeight
+                    lineHeight: Theme.font.footnote.linePitch
+                    text: qsTr("The short code (7 to 12 letters and numbers) that identifies the exact build. Leave it empty if you can’t get it.")
+                    wrapMode: Text.WordWrap
+                    Accessible.role: Accessible.StaticText
+                    Accessible.name: text
                 }
 
                 Item {
@@ -386,7 +434,7 @@ Sheet {
                     font: Theme.font.footnote.font
                     lineHeightMode: Text.FixedHeight
                     lineHeight: Theme.font.footnote.linePitch
-                    text: qsTr("Entries before %1 keep %2. Entries after it use %3.").arg(root.timeLabel).arg(root.fromText).arg(root.trimmedTo)
+                    text: qsTr("Entries before %1 keep %2. Entries after it use %3.").arg(root.timeLabel).arg(root.fromText).arg(root.toDisplay)
                     wrapMode: Text.WordWrap
                     Accessible.role: Accessible.StaticText
                     Accessible.name: text

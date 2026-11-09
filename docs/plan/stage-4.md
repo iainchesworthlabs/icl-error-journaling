@@ -566,6 +566,42 @@ models (`validateUnit`, `correctUnit`, the choices, a new log, the import senten
 screen: `details.environment` (the row, the sheet's choices, choose prod, choose None, the number and the environment saved
 together, the setup file's list, VoiceOver names, large text, dark mode, a long list).
 
+### 4.9b Commit of the build (HDR-09)
+
+A change request after the visual pass, decided by the owner: the software version may carry the commit of the build,
+`1.4.2 (a1b2c3d)`. The commit is optional, 7 to 12 hexadecimal characters, lower-cased, with a pasted 40-character hash
+shortened to 7; an empty one is valid and is listed as still to fill on the Log card, as a reminder that never blocks.
+
+Task breakdown:
+
+1. **Core.** `SoftwareVersion` gains an optional commit and the stored text `1.4.2+a1b2c3d` (`parse(text, commit)`,
+   `parse_stored`, `normalize_commit`, `stored`, `display`). `parse(text)` is unchanged, so what a person types in the version
+   field can never hold a plus sign. Header values, the journal record, the renderer and the SQLite repository read and write
+   the stored text, and the renderer prints `display()` in the header block and in the version change lines. Nothing in the
+   schema or the journal version changes, and text from older builds (three components) reads as a version without a commit.
+2. **View models.** `LogSession`: `commitText`, `versionDisplayText`, `validateCommit`, `validateVersion(version, commit)`,
+   `versionDisplay`, `correctVersion`, `changeVersion` and `previewVersionChange` (the sheet's way to take the pair), and
+   `software_commit` in `missingFields` while the commit is empty. `TimelineModel`: the footnote reads `version 1.4.2
+   (a1b2c3d)`.
+3. **QML.** A Commit field under the version on Today's details, with the owner's hint, saved together with the version
+   (typed first, it waits for the version, as the environment waits for the number); a Commit row in the Software version
+   sheet's card with the same hint under the card; "Commit" in the Log card's strip.
+4. **Design.** `Header`, `HeaderNewLogRow`, `ChangeVersion` (light and dark) and `LogBanner` show the field, the row and the
+   strip.
+5. **Carry-forward.** Checked: only the facilitator carries into a new log (HDR-05, DAY-02), so the version does not carry
+   and neither does its commit. Within a log the commit is a part of the version value, so it is kept for the day, and a
+   Change takes a version and a commit as a pair: the sheet's To and Commit rows start empty, as To always did, so a new
+   build never inherits the commit of the old one by accident.
+
+Tests: `SoftwareVersion` commit (7, 12, 40 to 7, upper case, not hexadecimal, 6, 13 and 41 characters, stored text,
+text from before commits); header history and corrections with a commit; the export header, the change lines and a golden
+file; the journal record with and without a commit and a damaged one; the storage contract on both repositories, the SQLite
+column, a rebuild from the journal, rows and journals written by an older build, damaged values; the view models
+(`validateCommit`, `validateVersion`, `correctVersion`, `changeVersion`, the preview line, the missing list, a new log, the
+footnote); and the screens: `details.commit_field` (the field, the hint, the message, lower-casing and shortening, waiting
+for the version, Start logging, a new log, VoiceOver names), `version.commit` (the row, the hint, a change, a correction,
+the same pair, a refusal, a plus sign, VoiceOver names), and the Log card's strip.
+
 ### 4.10 Review and Edit entry
 
 Review: the header block (monospaced-feeling, black and white), the timeline in export wording using `timeText` and

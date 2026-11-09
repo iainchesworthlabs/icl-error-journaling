@@ -443,6 +443,22 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              b.error(on_day(12, 30), ERROR_SPEECH_DELAY);
              return b.finish();
          }},
+        {"version-commit",
+         []
+         {
+             HeaderValues header = standard_header();
+             header.m_SoftwareVersion =
+                 SoftwareVersion::parse("1.4.2", "A1B2C3D4E5F6A7B8C9D0A1B2C3D4E5F6A7B8C9D0").value();
+             Builder b(header);
+             b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
+             // A new version with its own commit, the same version without one, then the commit alone.
+             b.change(HeaderField::SOFTWARE_VERSION, "1.5.0+e4f5a6b", on_day(11, 0));
+             b.error(on_day(11, 30), ERROR_MUTE_DELAY);
+             b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(12, 0));
+             b.change(HeaderField::SOFTWARE_VERSION, "1.5.0+0123456789ab", on_day(12, 15));
+             b.error(on_day(12, 30), ERROR_SPEECH_DELAY);
+             return b.finish();
+         }},
         {"same-minute-order",
          []
          {

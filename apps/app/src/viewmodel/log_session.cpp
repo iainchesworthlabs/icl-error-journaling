@@ -336,6 +336,18 @@ QString LogSession::version_text() const
     return header.m_SoftwareVersion ? to_qstring(header.m_SoftwareVersion->format()) : QString{};
 }
 
+QString LogSession::commit_text() const
+{
+    const HeaderValues header = header_in_force();
+    return header.m_SoftwareVersion ? to_qstring(std::string(header.m_SoftwareVersion->commit())) : QString{};
+}
+
+QString LogSession::version_display_text() const
+{
+    const HeaderValues header = header_in_force();
+    return header.m_SoftwareVersion ? to_qstring(header.m_SoftwareVersion->display()) : QString{};
+}
+
 QString LogSession::date_text() const
 {
     if (!m_Document)
@@ -379,6 +391,11 @@ QStringList LogSession::missing_fields() const
     if (!header.m_SoftwareVersion)
     {
         add(HeaderField::SOFTWARE_VERSION);
+    }
+    // The commit is optional (HDR-09): the banner reminds, and nothing else looks at this key.
+    if (!header.m_SoftwareVersion || header.m_SoftwareVersion->commit().empty())
+    {
+        missing.push_back(QStringLiteral("software_commit"));
     }
     return missing;
 }
@@ -682,6 +699,10 @@ QString LogSession::header_message(const HeaderError& error) const
             return tr("A number in a version does not start with 0.");
         case SoftwareVersion::Error::TOO_LONG:
             return tr("A number in a version has at most 9 digits.");
+        case SoftwareVersion::Error::COMMIT_NOT_HEX:
+            return tr("A commit uses the numbers 0 to 9 and the letters a to f only.");
+        case SoftwareVersion::Error::COMMIT_LENGTH:
+            return tr("A commit has 7 to 12 characters.");
         }
         break;
     case Kind::EMPTY_LOCATION:
@@ -752,6 +773,89 @@ bool LogSession::correctUnit(const QString& digits, const QString& environment)
     const QString env = environment.trimmed();
     return correctHeader(QStringLiteral("unit_number"),
                          env.isEmpty() ? digits.trimmed() : digits.trimmed() + QLatin1Char('-') + env);
+}
+
+namespace
+{
+
+/// The stored text of a version from its two parts, which `validateVersion` has accepted.
+QString stored_version(const QString& version, const QString& commit)
+{
+    const QString kept = commit.trimmed();
+    return kept.isEmpty() ? version.trimmed() : version.trimmed() + QLatin1Char('+') + kept;
+}
+
+} // namespace
+
+QString LogSession::validateCommit(const QString& commit) const
+{
+    if (const auto kept = SoftwareVersion::normalize_commit(to_utf8(commit.trimmed())); !kept)
+    {
+        HeaderError error;
+        error.m_Kind = HeaderError::Kind::INVALID_SOFTWARE_VERSION;
+        error.m_SoftwareVersion = kept.error();
+        return header_message(error);
+    }
+    return {};
+}
+
+QString LogSession::normalizeCommit(const QString& commit) const
+{
+    const QString trimmed = commit.trimmed();
+    const auto kept = SoftwareVersion::normalize_commit(to_utf8(trimmed));
+    return kept ? to_qstring(*kept) : trimmed;
+}
+
+QString LogSession::validateVersion(const QString& version, const QString& commit) const
+{
+    // The components are judged on their own, so that a plus sign in the version field is refused.
+    const QString trimmed = version.trimmed();
+    if (trimmed.contains(QLatin1Char('+')))
+    {
+        return tr("Use digits and dots only, like 1.4.2.");
+    }
+    if (const QString refusal = validateHeaderValue(QStringLiteral("software_version"), trimmed); !refusal.isEmpty())
+    {
+        return refusal;
+    }
+    return validateCommit(commit);
+}
+
+QString LogSession::versionDisplay(const QString& version, const QString& commit) const
+{
+    if (!validateVersion(version, commit).isEmpty())
+    {
+        return {};
+    }
+    const auto parsed = SoftwareVersion::parse(to_utf8(version.trimmed()), to_utf8(commit.trimmed()));
+    return parsed ? to_qstring(parsed->display()) : QString{};
+}
+
+bool LogSession::correctVersion(const QString& version, const QString& commit)
+{
+    if (!validateVersion(version, commit).isEmpty())
+    {
+        return false;
+    }
+    return correctHeader(QStringLiteral("software_version"), stored_version(version, commit));
+}
+
+bool LogSession::changeVersion(const QString& version, const QString& commit, int localSeconds)
+{
+    if (!validateVersion(version, commit).isEmpty())
+    {
+        return false;
+    }
+    return changeHeader(QStringLiteral("software_version"), stored_version(version, commit), localSeconds);
+}
+
+QString LogSession::previewVersionChange(const QString& version, const QString& commit, int localSeconds) const
+{
+    if (const QString refusal = validateVersion(version, commit); !refusal.isEmpty())
+    {
+        return refusal;
+    }
+    return previewHeaderChange(QStringLiteral("software_version"), stored_version(version, commit), localSeconds);
 }
 
 bool LogSession::correctHeader(const QString& fieldKey, const QString& text)

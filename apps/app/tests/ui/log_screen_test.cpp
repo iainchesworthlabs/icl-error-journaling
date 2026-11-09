@@ -135,10 +135,19 @@ struct ConfiguredSource
     FakeConfigurationSource config;
 };
 
+/// The sample header with the commit of the build, so that every field is filled in and the card has no strip under it
+/// (HDR-09: an empty commit is listed there as still to fill).
+HeaderValues complete_header()
+{
+    HeaderValues header = sample_header();
+    header.m_SoftwareVersion = SoftwareVersion::parse("1.4.2", "a1b2c3d").value();
+    return header;
+}
+
 struct Options
 {
-    bool m_Existing = false;  ///< a log with the sample header (all five fields filled) is in the store
-    HeaderValues m_Header = sample_header();
+    bool m_Existing = false; ///< a log with a complete header (every field filled, the commit too) is in the store
+    HeaderValues m_Header = complete_header();
     RecoveryReport m_Recovery;
     Configuration m_Configuration = sample_configuration();
 
@@ -777,13 +786,13 @@ TEST_CASE("log.banner: an empty header lists the missing fields in the card, tap
           "its name",
           "[ui][log]")
 {
-    LogRig sim;  // a first start: today's log with three empty fields
+    LogRig sim; // a first start: today's log with three empty fields, and no commit
     sim.load();
     Screen screen(sim);
     QQuickItem* card = screen.named(QStringLiteral("logHeaderCard"));
 
-    CHECK(card->property("missingCount").toInt() == 3);
-    CHECK(card->property("missingText").toString() == QStringLiteral("UNIT number, Location, Version"));
+    CHECK(card->property("missingCount").toInt() == 4);
+    CHECK(card->property("missingText").toString() == QStringLiteral("UNIT number, Location, Version, Commit"));
     CHECK(screen.text_of(QStringLiteral("lastBarLine")) == QStringLiteral("No entries yet"));
 
     // The card shows the prompts, in the design's words.
@@ -796,15 +805,29 @@ TEST_CASE("log.banner: an empty header lists the missing fields in the card, tap
     REQUIRE(sim.session.correctHeader(QStringLiteral("unit_number"), QStringLiteral("27")));
     sim.gateway.run_all();
     screen.rig.settle();
-    CHECK(card->property("missingCount").toInt() == 2);
-    CHECK(card->property("missingText").toString() == QStringLiteral("Location, Version"));
+    CHECK(card->property("missingCount").toInt() == 3);
+    CHECK(card->property("missingText").toString() == QStringLiteral("Location, Version, Commit"));
 
     REQUIRE(sim.session.correctHeader(QStringLiteral("location"), NORTH_SITE));
     REQUIRE(sim.session.correctHeader(QStringLiteral("software_version"), QStringLiteral("1.4.2")));
     sim.gateway.run_all();
     screen.rig.settle();
-    CHECK(card->property("missingCount").toInt() == 0);
+    // The commit is the one thing still to fill, and it is only a reminder: the card says so and the log goes on.
+    CHECK(card->property("missingCount").toInt() == 1);
+    CHECK(card->property("missingText").toString() == QStringLiteral("Commit"));
     CHECK(card->property("unitText").toString() == QStringLiteral("UNIT-27"));
+    QQuickItem* strip = screen.named(QStringLiteral("headerStrip"));
+    CHECK(strip->isVisible());
+    screen.tap_tile(sim, MUTE_DELAY_ROW);
+    CHECK(sim.entries().size() == 2);
+
+    REQUIRE(sim.session.correctVersion(QStringLiteral("1.4.2"), QStringLiteral("A1B2C3D")));
+    sim.gateway.run_all();
+    screen.rig.settle();
+    CHECK(card->property("missingCount").toInt() == 0);
+    CHECK_FALSE(strip->isVisible());
+    // The card shows the version alone, as before: the commit is for the log and the details.
+    CHECK(card->property("versionText").toString() == QStringLiteral("1.4.2"));
 }
 
 TEST_CASE("log.write_failed: a failing commit shows the banner, no count, no toast and no confirmation, and the next "

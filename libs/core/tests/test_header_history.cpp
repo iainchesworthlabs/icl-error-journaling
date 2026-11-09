@@ -324,3 +324,53 @@ TEST_CASE("Correct fixes the environment of the unit the log started with", "[he
     CHECK(log.initial_header().m_UnitNumber->environment().empty());
     CHECK(header_field_text(log.initial_header(), HeaderField::UNIT_NUMBER) == "27");
 }
+
+TEST_CASE("A version carries its commit through a change, a correction and the history", "[header-history][commit]")
+{
+    Log log = make_log();
+    // A change stores the normalised text: a full hash is shortened, upper case is lower-cased.
+    REQUIRE(change_header(log, HeaderField::SOFTWARE_VERSION, "1.5.0+E4F5A6B8C9D0E4F5A6B8C9D0E4F5A6B8C9D0E4F5", at(60),
+                          id(1))
+                .has_value());
+    CHECK(std::get<HeaderChangeEntry>(log.find(id(1))->m_Body).m_NewValue == "1.5.0+e4f5a6b");
+
+    const HeaderValues later = HeaderHistory(log).at(minute(70));
+    REQUIRE(later.m_SoftwareVersion.has_value());
+    CHECK(later.m_SoftwareVersion->format() == "1.5.0");
+    CHECK(later.m_SoftwareVersion->commit() == "e4f5a6b");
+    // Before the change the header is what it was started with: no commit.
+    CHECK(HeaderHistory(log).at(minute(30)).m_SoftwareVersion->commit().empty());
+    CHECK(line_of(log, id(1)) == "1.4.2 -> 1.5.0+e4f5a6b");
+
+    // The same number with another commit, and with none, are real changes; the same pair is not.
+    CHECK(change_header(log, HeaderField::SOFTWARE_VERSION, "1.5.0+e4f5a6b", at(80), id(2)).error().m_Kind ==
+          HeaderError::Kind::UNCHANGED);
+    CHECK(change_header(log, HeaderField::SOFTWARE_VERSION, "1.5.0+E4F5A6B", at(80), id(2)).error().m_Kind ==
+          HeaderError::Kind::UNCHANGED);
+    REQUIRE(change_header(log, HeaderField::SOFTWARE_VERSION, "1.5.0+0123456", at(80), id(3)).has_value());
+    REQUIRE(change_header(log, HeaderField::SOFTWARE_VERSION, "1.5.0", at(90), id(4)).has_value());
+    CHECK(HeaderHistory(log).at(minute(95)).m_SoftwareVersion->stored() == "1.5.0");
+
+    // A correction of the latest change takes a commit too, and refuses a damaged one.
+    REQUIRE(correct_header(log, HeaderField::SOFTWARE_VERSION, "1.5.1+abcdef0").has_value());
+    CHECK(HeaderHistory(log).at(minute(95)).m_SoftwareVersion->stored() == "1.5.1+abcdef0");
+    const auto bad = correct_header(log, HeaderField::SOFTWARE_VERSION, "1.5.1+xyz");
+    REQUIRE_FALSE(bad.has_value());
+    CHECK(bad.error().m_Kind == HeaderError::Kind::INVALID_SOFTWARE_VERSION);
+    CHECK(bad.error().m_SoftwareVersion == SoftwareVersion::Error::COMMIT_NOT_HEX);
+    CHECK(correct_header(log, HeaderField::SOFTWARE_VERSION, "1.5.1+abc").error().m_SoftwareVersion ==
+          SoftwareVersion::Error::COMMIT_LENGTH);
+    CHECK(HeaderHistory(log).at(minute(95)).m_SoftwareVersion->stored() == "1.5.1+abcdef0");
+}
+
+TEST_CASE("A first fill of the version takes a commit, and an empty field has none", "[header-history][commit]")
+{
+    Log log = make_empty_header_log();
+    CHECK_FALSE(header_field_text(log.initial_header(), HeaderField::SOFTWARE_VERSION).has_value());
+    REQUIRE(correct_header(log, HeaderField::SOFTWARE_VERSION, "1.4.2+a1b2c3d").has_value());
+    CHECK(header_field_text(log.initial_header(), HeaderField::SOFTWARE_VERSION) == "1.4.2+a1b2c3d");
+    CHECK(log.initial_header().m_SoftwareVersion->display() == "1.4.2 (a1b2c3d)");
+    // Clearing the field clears the commit with it.
+    REQUIRE(correct_header(log, HeaderField::SOFTWARE_VERSION, "").has_value());
+    CHECK_FALSE(log.initial_header().m_SoftwareVersion.has_value());
+}

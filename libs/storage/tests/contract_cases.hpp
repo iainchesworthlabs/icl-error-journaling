@@ -290,6 +290,39 @@ TEMPLATE_LIST_TEST_CASE("The environment of a unit is kept, changed by a correct
     CHECK(log.m_Log.initial_header().m_UnitNumber->stored() == "32-dev"); // the start did not move
 }
 
+TEMPLATE_LIST_TEST_CASE("The commit of a version is kept, changed by a correction and read back",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    HeaderValues header = sample_header();
+    header.m_SoftwareVersion = SoftwareVersion::parse("1.4.2", "A1B2C3D").value();
+    require_ok(f.repo().create_log(log_id(FIRST_LOG), header));
+    CHECK(f.repo().open_log().value()->m_Log.initial_header().m_SoftwareVersion->stored() == "1.4.2+a1b2c3d");
+    CHECK(f.repo().list_logs().value().at(0).m_Header.m_SoftwareVersion->commit() == "a1b2c3d");
+
+    // A correction with no change entry fixes the version the log started with: the number, the commit, or both.
+    require_ok(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::SOFTWARE_VERSION, "1.4.3"));
+    StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(log.m_Log.initial_header().m_SoftwareVersion->format() == "1.4.3");
+    CHECK(log.m_Log.initial_header().m_SoftwareVersion->commit().empty());
+    require_ok(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::SOFTWARE_VERSION, "1.4.3+0123456"));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(log.m_Log.initial_header().m_SoftwareVersion->stored() == "1.4.3+0123456");
+
+    // A value that is not a version with a commit is refused, and the version stays as it was.
+    CHECK(failure_of(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::SOFTWARE_VERSION, "1.4.3+xyz")) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Log.initial_header().m_SoftwareVersion->stored() ==
+          "1.4.3+0123456");
+
+    // A change entry carries the new version in its stored form.
+    require_ok(
+        f.repo().add_entry(log_id(FIRST_LOG), sample_change(1, 10, HeaderField::SOFTWARE_VERSION, "1.5.0+e4f5a6b")));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(std::get<HeaderChangeEntry>(log.m_Log.find(entry_id(1))->m_Body).m_NewValue == "1.5.0+e4f5a6b");
+    CHECK(log.m_Log.initial_header().m_SoftwareVersion->stored() == "1.4.3+0123456"); // the start did not move
+}
+
 TEMPLATE_LIST_TEST_CASE("Edit changes the content and records the edit time", "[contract][repository]", Fixtures)
 {
     TestType f;

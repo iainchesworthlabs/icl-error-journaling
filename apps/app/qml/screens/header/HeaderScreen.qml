@@ -17,6 +17,10 @@ import ErrorJournalingApp
 //                     changed during the day is a Change, which the Software version sheet records. The design draws no row
 //                     for it, so the sheet opens from the check mark of the version field (its `accessory`), which is a
 //                     button, named "The version changed during the day", while the field shows the version in force
+//   commit            optional (HDR-09), under the version: 7 to 12 hexadecimal characters, lower-cased and shortened from a
+//                     full hash by the model. It is saved with the version, as "1.4.2 (a1b2c3d)", so it follows the version
+//                     in every way; typed before a valid version, it waits for it. An empty commit is listed on the Log card
+//                     as still to fill, and nothing here or there stops anything
 //
 // Nothing here blocks logging (HDR-06): "Start logging" only closes the screen, and an empty or refused field is left as
 // it was. The screen holds what is typed, and the model holds what is saved; a value the model refuses is never sent.
@@ -69,6 +73,9 @@ SheetHost {
     property string versionDraft: ""
     property string versionSaved: ""
     property bool versionTouched: false
+    property string commitDraft: ""
+    property string commitSaved: ""
+    property bool commitTouched: false
 
     readonly property string unitLead: qsTr("%1-").arg(settings.unitPrefix)
     readonly property string unitError: unitTouched ? session.validateUnit(unitDraft, environmentDraft) : ""
@@ -76,7 +83,11 @@ SheetHost {
     // What is under the Environment row: nothing, unless an environment was picked before there is a number to save it with.
     readonly property string environmentNote: environmentDraft.length > 0 && unitSaved.length === 0 ? qsTr("Saved with the number, once you have typed it.") : ""
     readonly property string otherError: otherTouched ? session.validateHeaderValue("location", otherDraft) : ""
-    readonly property string versionError: versionTouched ? session.validateHeaderValue("software_version", versionDraft) : ""
+    // The version field is the three numbers; the commit has its own field and its own message.
+    readonly property string versionError: versionTouched ? session.validateVersion(versionDraft, "") : ""
+    readonly property string commitError: commitTouched ? session.validateCommit(commitDraft) : ""
+    // A commit typed before there is a version to save it with waits for it.
+    readonly property bool commitWaits: commitDraft.trim().length > 0 && commitError.length === 0 && versionSaved.length === 0
     readonly property string entriesText: session.liveEntryCount === 1 ? qsTr("1 entry") : qsTr("%1 entries").arg(session.liveEntryCount)
     // Which log the alert is about: "UNIT-27 at North Site", or what is known of it.
     readonly property string logLabel: {
@@ -137,9 +148,21 @@ SheetHost {
             otherSaved = otherDraft.trim();
     }
 
+    // The version and the commit are saved together, as one value (a Correct of "1.4.2 (a1b2c3d)"). Neither is sent while the
+    // other is refused; a commit with no version yet waits.
     function commitVersion(): void {
-        if (correct("software_version", versionDraft, versionSaved))
-            versionSaved = versionDraft.trim();
+        const version = versionDraft.trim();
+        const commit = commitDraft.trim();
+        if (version === versionSaved && commit === commitSaved)
+            return;
+        if (session.validateVersion(version, commit).length > 0)
+            return;
+        if (session.correctVersion(version, commit)) {
+            versionSaved = version;
+            // The field shows what was kept: lower case, and a full hash as its first 7 characters.
+            commitDraft = session.normalizeCommit(commit);
+            commitSaved = commitDraft;
+        }
     }
 
     // Saves every field that is valid and not saved yet. The shell calls it too when it leaves the screen another way.
@@ -177,6 +200,13 @@ SheetHost {
                 versionTouched = false;
             versionDraft = session.versionText;
             versionSaved = versionDraft;
+        }
+        // A commit that waits for a version keeps what is typed, as the environment does until there is a number.
+        if (all || (!commitField.hasFocus && !commitWaits)) {
+            if (commitDraft !== session.commitText)
+                commitTouched = false;
+            commitDraft = session.commitText;
+            commitSaved = commitDraft;
         }
         const place = session.locationText;
         if (all)
@@ -226,7 +256,7 @@ SheetHost {
             commitUnit();
         } else if (field === otherField) {
             commitOther();
-        } else if (field === versionField) {
+        } else if (field === versionField || field === commitField) {
             commitVersion();
         }
     }
@@ -476,6 +506,26 @@ SheetHost {
                     }
                     onAccepted: root.commitVersion()
                     onHasFocusChanged: root.fieldFocusChanged(versionField, hasFocus)
+                }
+
+                FormField {
+                    id: commitField
+
+                    objectName: "headerCommit"
+                    label: qsTr("Commit")
+                    text: root.commitDraft
+                    valueFont: Theme.font.fieldValueLarge.font
+                    placeholderText: qsTr("For example a1b2c3d")
+                    hint: root.commitWaits ? qsTr("Saved with the version, once you have typed it.") : qsTr("The short code (7 to 12 letters and numbers) that identifies the exact build. Leave it empty if you can’t get it.")
+                    errorText: root.commitError
+                    valid: root.commitDraft.trim().length > 0 && root.commitError.length === 0
+                    inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase | Qt.ImhPreferLowercase
+                    onTextEdited: text => {
+                        root.commitDraft = text;
+                        root.commitTouched = true;
+                    }
+                    onAccepted: root.commitVersion()
+                    onHasFocusChanged: root.fieldFocusChanged(commitField, hasFocus)
                 }
 
                 // The new-log group sits 8 pt further from the version field than the other groups (HeaderNewLogRow).

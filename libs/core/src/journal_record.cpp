@@ -293,7 +293,7 @@ void write_header(Writer& w, const HeaderValues& header)
     w.key("version");
     if (header.m_SoftwareVersion)
     {
-        w.string(header.m_SoftwareVersion->format());
+        w.string(header.m_SoftwareVersion->stored());
     }
     else
     {
@@ -687,7 +687,7 @@ HeaderValues read_header(const Fields& fields)
     }
     if (const auto version = fields.optional_string("version"))
     {
-        const auto parsed = SoftwareVersion::parse(*version);
+        const auto parsed = SoftwareVersion::parse_stored(*version);
         if (parsed)
         {
             header.m_SoftwareVersion = *parsed;
