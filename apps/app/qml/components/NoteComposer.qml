@@ -27,6 +27,9 @@ Item {
     required property string draft
     required property var chips
     property bool skeleton: false
+    // With `skeleton`: the Add button's shape is the least width of the button (64 pt, which "Add" fills on the phone) and not the
+    // width of its label in the font of the machine, so that the launch image comes out the same on every machine.
+    property bool nominalMetrics: false
     property string placeholderText: qsTr("Add a note to today’s log…")
     property string fieldName: qsTr("Journal note")
     property string addText: qsTr("Add")
@@ -34,6 +37,8 @@ Item {
     property var chipIcons: ({})
 
     readonly property bool canSubmit: field.text.trim().length > 0
+    // The width of the Add button, or of the shape in its place.
+    readonly property real buttonWidth: skeleton && nominalMetrics ? Theme.size.tileMinimum * 8 / 11 : addButton.implicitWidth
 
     // The user changed the text.
     signal textEdited(string text)
@@ -128,7 +133,7 @@ Item {
                 id: field
 
                 objectName: "noteInput"
-                width: parent.width - addButton.width - parent.spacing
+                width: parent.width - root.buttonWidth - parent.spacing
                 leftPadding: Theme.space.sectionGap
                 rightPadding: Theme.space.sectionGap
                 topPadding: Theme.space.tileGap
@@ -179,7 +184,7 @@ Item {
             // The launch screen's button shape.
             Rectangle {
                 visible: root.skeleton
-                width: addButton.implicitWidth
+                width: root.buttonWidth
                 height: field.height
                 radius: Theme.radius.field
                 color: Theme.colour.border
