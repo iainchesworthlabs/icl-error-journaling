@@ -38,12 +38,13 @@ as the application, plus the stubs in `tests/ui/stubs/` that only the rig's own 
 #include <catch2/catch_test_macros.hpp>
 #include <QQuickItem>
 
-TEST_CASE("tile: a press records on touch-down", "[ui][tile]")
+TEST_CASE("tile: the second tap of a double-tap asks on its touch-down", "[ui][tile]")
 {
     ej::ui::UiRig rig;
     QQuickItem* tile = rig.load("Tile", {{"typeId", "mute-delay"}, {"label", "Mute Delay"} /* required properties */});
     REQUIRE(tile != nullptr);                     // rig.errors() says why not
-    const int finger = rig.press(tile);           // touch-down: the handler has run
+    rig.tap(tile);                                // the first tap asks for nothing
+    const int finger = rig.press(tile);           // touch-down of the second tap: the handler has run
     rig.advance(120ms);                           // animations and the attached TestClock
     rig.release(finger);
     ej::ui::expect_clean(ej::ui::check_everything(rig, [](const ej::ui::Node&) { return 88.0; }));
@@ -119,6 +120,14 @@ usable system font on the developer machine, so the case registers the `.ttf` fi
 `tools/visual/fetch_inter.py` into `build/visual/fonts`, never committed). The phone uses the system font, so the font is not a finding.
 `render_mockups.py` renders the mock-ups in headless Edge with the same font files, and `make_pairs.py` puts the two side by side
 and writes `index.html`. `Rig::set_startup_recovery` hands the next `restart()` a recovery report, for the Recovery mock-up.
+Each scene has a device: the phone (402 by 874, insets 59 and 34) or, for the iPad mock-ups of Stage 8
+(`Name.ipad-portrait` and `Name.ipad-landscape`), an iPad Air 11-inch (820 by 1180 or 1180 by 820, insets 24 and 20). The
+iPad scenes bring the app to the phone scene's state in the iPad window.
+
+The layout class of a window (Stage 8: Compact, Regular or Wide) comes from the `WindowLayout` singleton, which the shell
+binds to its size. A test picks a class by giving the rig a size: `UiRig(QSize)`, or `UiRig::set_window_size` to resize
+the window and the loaded item as a rotation does. `UiRig::set_safe_area_sides` adds left and right insets to those of
+`set_safe_area`. The cases `layout.*` (`window_layout_test.cpp`) check the classes and their sizes.
 
 ## Golden tests and fixtures
 

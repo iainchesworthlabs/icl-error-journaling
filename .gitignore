@@ -22,3 +22,6 @@ compile_commands.json
 !config/sample-config.json
 # The setup file the app exports and imports (renamed from the same JSON); it holds the same confidential values.
 *.ejconfig
+
+# The store graphics, made by tools/store/ for each release.
+/store/play/*/images/

@@ -684,18 +684,20 @@ home-screen icon animation and the time from the finger to the process starting 
 
 ### M2: tap to haptic (NFR-03, BRD-03), the app's timing line
 
-The figure is the time from the touch being received to the haptic call returning: `TOUCH_AGE` (the touch's event
+The figure is the time from the touch being received to the haptic call returning: for a tile that is the touch of the
+second tap of a double-tap (Stage 4, 4.17a), where the haptic fires, and for a hold the end of the hold. `TOUCH_AGE` (the touch's event
 timestamp to the press handler: A5) plus the call itself, on the monotonic clock. **It stops at the call returning and does
 not include the Taptic Engine's own delay**, which is Apple's and is not documented; the feel test below is how that
 part is judged.
 
 1. Build B on D1. Show the timing readout.
-2. On the first tile, tap with one finger, lift, wait one second; 50 taps. The readout shows the last, the median and the
-   worst of the last 50.
+2. On the first tile, double-tap with one finger (two taps within 0.3 s), lift, wait one second; 50 double-taps. The time is
+   counted from the touch of the second tap (Stage 4, 4.17a), and the first tap has no haptic to time. The readout shows the
+   last, the median and the worst of the last 50.
 3. Repeat for four conditions: (a) the first tap after a cold launch, (b) after 10 seconds idle, (c) after 60 seconds idle,
-   (d) taps every half second. Write down the worst of each. Condition (c) decides whether the keep-alive prepare is needed;
+   (d) double-taps every second. Write down the worst of each. Condition (c) decides whether the keep-alive prepare is needed;
    if (c) fails, turn on `HAPTIC_KEEPALIVE`, make a new build and repeat (c).
-4. **Feel test, 10 trials:** rest a finger on the tile and press. The haptic is felt at the moment of contact, not on lift.
+4. **Feel test, 10 trials:** tap once, then rest a finger on the tile for the second tap. The haptic is felt at the moment of contact of the second tap, not on lift, and the first tap gives none.
    The note's success haptic feels different from the tile's and fires once per saved note.
 5. Not gated, but recorded: `TAP_TO_COMMIT`, the interval from the press handler to the acknowledged commit (M3).
 
@@ -924,7 +926,9 @@ resolve to decision N)
 1. **Haptic before the commit (DS-01).** The impact haptic fires on touch-down, before the entry is committed, and the
    commit confirmation (strip, badge, toast) follows. DS-01 is reworded to speak of confirmation. This unblocks the wiring
    in 5.7, not 5.2. For Stage 3 and 4: record on press, so that a finger sliding off cannot fire a haptic without an
-   entry. (owner, 2026-11-07)
+   entry. (owner, 2026-11-07) **Amended (owner, 2026-11-09), double-tap to log:** "the press" is the touch that asks for the
+   entry, which is the touch of the second tap of a double-tap, or the end of a hold (Stage 4, 4.17a, decision 18); a
+   single tap logs nothing. The rule is unchanged: the haptic and the record come from the same handler, at that touch.
 2. **What counts as shared.** Any activity that completes, Copy included, because the sheet cannot tell a paste from
    none and the PRD lists Copy as a share target. If Slack reports cancelled although the post arrives (A3), the fix is
    a rule on activity type, and S3 gives the value to base it on. (owner, 2026-11-07)

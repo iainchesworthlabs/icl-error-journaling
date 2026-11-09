@@ -38,6 +38,8 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSignalSpy>
+#include <QSize>
+#include <QSizeF>
 #include <QString>
 #include <QVariant>
 #include <QVariantMap>
@@ -554,10 +556,13 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     app.play();
     CHECK(session.missing_fields().isEmpty());
 
-    // A tap: the impact haptic fires at touch-down, before the entry is committed; the count and the toast follow it.
+    // A double-tap: the impact haptic fires at the touch of the second tap, before the entry is committed; the count
+    // and the toast follow it. The first tap logs nothing.
     events.clear();
     app.services.go_to(7, 10, 5);
     const QString mute = app.tile(QStringLiteral("Mute Delay"));
+    app.ui.tap(app.need(mute));
+    CHECK(events.count(EventKind::HAPTIC, "impact") == 0);
     const int finger = app.ui.press(app.need(mute));
     // The haptic has fired and the entry has been asked for, and nothing has been committed.
     CHECK(events.count(EventKind::HAPTIC, "impact") == 1);
@@ -572,12 +577,13 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     CHECK(events.count(EventKind::HAPTIC, "impact") == 1);
     CHECK(app.count_of(QStringLiteral("Mute Delay")) == 1);
     CHECK(undo.active());
-    app.ui.advance(300ms);
+    app.ui.advance(400ms); // the toast, and the window of the double-tap runs out
     CHECK(app.shown(QStringLiteral("logToast")));
     CHECK(app.need(QStringLiteral("logLastBar"))->isVisible());
 
-    // A second tap on the tile is "x2" on the same toast, with one more haptic first.
+    // A second double-tap on the tile is "x2" on the same toast, with one more haptic first.
     app.services.go_to(7, 10, 5, 1);
+    app.ui.tap(app.need(mute));
     app.ui.tap(app.need(mute));
     app.ui.settle();
     CHECK(app.count_of(QStringLiteral("Mute Delay")) == 2);
@@ -827,6 +833,32 @@ TEST_CASE("app.theme: Dynamic Type and Reduce Motion reach the theme from the br
     app.ui.advance(16ms);
     CHECK(theme->property("textScale").toDouble() == 1.0);
     CHECK_FALSE(theme->property("reduceMotion").toBool());
+}
+
+TEST_CASE("app.window_layout: the shell tells WindowLayout its size, so the class follows the window", "[ui][app]")
+{
+    App app;
+    QObject* layout = app.ui.window_layout();
+    REQUIRE(layout != nullptr);
+    CHECK(layout->property("windowWidth").toDouble() == 402);
+    CHECK(layout->property("compact").toBool());
+
+    // The window and the shell change size as a rotation does. The rig is not told, so the class can only come from the
+    // shell's binding.
+    const auto resize = [&app](QSize size)
+    {
+        app.ui.window().resize(size);
+        app.shell->setSize(QSizeF(size));
+        app.ui.advance(16ms);
+    };
+    resize(QSize(1180, 820));
+    CHECK(layout->property("windowWidth").toDouble() == 1180);
+    CHECK(layout->property("windowHeight").toDouble() == 820);
+    CHECK(layout->property("wide").toBool());
+    resize(QSize(820, 1180));
+    CHECK(layout->property("regular").toBool());
+    resize(QSize(402, 874));
+    CHECK(layout->property("compact").toBool());
 }
 
 TEST_CASE("app.hooks: the shell leaves Stage 5 the board-enabled state", "[ui][app]")
