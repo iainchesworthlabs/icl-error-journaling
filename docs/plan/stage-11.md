@@ -10,9 +10,9 @@ Google Play. The listing text drafted for review is in [`store/`](https://github
 delivered last, but its plan comes early. That leaves time for the owner's accounts, agreements and legal advice
 ([Owner actions](#owner-actions)).
 
-What this page says about Apple's and Google's rules comes from their documentation as remembered up to mid-2026. Nothing
-here has been checked against App Store Connect or the Play Console. Task 11.0 re-reads each rule at its source before
-anything is submitted. The rows to re-check are marked *(re-check)*.
+Task 11.0 checked the rules on this page against Apple's and Google's published pages on 10 Nov 2026
+([Rule check](#rule-check-10-nov-2026) lists the sources and what changed). The page has not been checked against App
+Store Connect or the Play Console themselves, which have the last word when the owner fills them in.
 
 ## What the stage covers
 
@@ -50,7 +50,7 @@ stages land.
 The drafts are in `store/appstore/en-GB/`. They use the file layout that `fastlane deliver` reads, so 11.7 can upload them
 unchanged. The primary language is English (UK). Whether to add English (US) is an owner decision.
 
-| Field | Limit *(re-check)* | Draft file | Draft |
+| Field | Limit | Draft file | Draft |
 |---|---|---|---|
 | Name | 30 characters, unique on the store | `name.txt` | CS Bingo Board |
 | Subtitle | 30 characters | `subtitle.txt` | One-tap session error log |
@@ -77,15 +77,18 @@ Words that stay out of the listing:
 
 ### App Store screenshots
 
-Required sets *(re-check)*. The app runs on an iPad (Stage 8), so an iPad set is required.
+Required sets. The app runs on an iPad (Stage 8), so an iPad set is required. Apple's screenshot page also lists the
+6.1" class as required. If App Store Connect does not ask for it once a 6.9" set is given, it is left out. Its size is the
+iPhone 17's, the frame the capture rig already uses.
 
 | Set | Device class | Pixels, portrait | Points at scale |
 |---|---|---|---|
 | iPhone 6.9" | iPhone 17 Pro Max class | 1320 × 2868 | 440 × 956 at 3× |
-| iPhone 6.5" | Only if App Store Connect still asks for it when a 6.9" set is given | 1242 × 2688 | 414 × 896 at 3× |
+| iPhone 6.1" | iPhone 17 class, if App Store Connect asks for it | 1206 × 2622 | 402 × 874 at 3× |
+| iPhone 6.5" | Needed only when no 6.9" set is given, so not made | 1242 × 2688 | 414 × 896 at 3× |
 | iPad 13" | iPad Pro 13" class | 2064 × 2752 (and 2752 × 2064 landscape) | 1032 × 1376 at 2× |
 
-Each set has 1 to 10 images. The planned shots are the same for each device class, in this order:
+Each set has 1 to 10 images, PNG or JPEG, with no transparency. The planned shots are the same for each device class, in this order:
 
 1. The Log board mid-morning: a dozen entries, counts on four tiles, light appearance.
 2. The same board in dark appearance.
@@ -107,21 +110,21 @@ Two choices for the owner:
 
 - **Status bar.** A desktop render has no iOS status bar. Option (a) draws a neutral one (9:41, full signal and battery)
   in the safe-area band. Option (b) leaves the band empty in the board's background colour. Apple accepts either, as long as
-  the shot shows the app in use *(re-check guideline 2.3.3)*.
+  the shot shows the app in use.
 - **Captions.** Option (a) is a plain capture. Option (b) adds a caption band above a scaled capture, for example "One tap
   logs the error and the time". A caption is store text, so it is drafted in `store/appstore/en-GB/screenshot_captions.txt`
   and reviewed with the rest.
 
 ### App preview video (optional)
 
-Up to three previews per device class, 15 to 30 seconds each, captured from the device *(re-check)*. There is no Mac, so
+Up to three previews per device class, 15 to 30 seconds each, captured from the device. There is no Mac, so
 Simulator recording is not available. A screen recording from the iPhone 17 and the iPad, trimmed to 30 seconds, would
 work. The proposal is to skip the preview for 1.0 and decide again after release. This is an owner decision.
 
 ### App Privacy
 
 **Answer: Data Not Collected.** Apple counts data as collected only when it is sent off the device, where the developer
-or a third-party partner can get at it for longer than it takes to serve a request in real time *(re-check)*. The app
+or a third-party partner can get at it for longer than it takes to serve a request in real time. The app
 sends nothing anywhere. The log leaves the device only when the user shares it through the system share sheet, copies it,
 or backs up the device. In each case the user sends it, to a destination they choose. The developer never receives it.
 
@@ -129,7 +132,7 @@ What the code shows, checked on `develop` at 92080f9:
 
 | Check | Evidence | Result |
 |---|---|---|
-| Qt modules linked | `find_package(Qt6 … COMPONENTS …)` in `apps/` and `libs/`: Core, Gui, Qml, Quick, Sql, Test (tests only) | No `Network`, `WebSockets`, `WebView`, `Positioning` or `Bluetooth` |
+| Qt modules asked for | `find_package(Qt6 … COMPONENTS …)` in `apps/` and `libs/`: Core, Gui, Qml, Quick, Sql, Test (tests only) | No `Network`, `WebSockets`, `WebView`, `Positioning` or `Bluetooth` asked for. Qt QML still links Qt Network on its own (see below) |
 | Network APIs in the sources | `QNetwork*`, `QTcp*`, `QUdp*`, `QWebSocket`, `NSURLSession`, `URLSession`, `openUrlExternally` in `apps/` and `libs/` | No calls. The one hit, in `perf_marks.hpp`, is a comment that says "no network" |
 | Third-party SDKs | `vcpkg.json` | Catch2 (tests, desktop only). Tracy only with the `profiling` feature, which only the `linux-debug` preset turns on. No analytics, crash reporting or advertising SDK |
 | Permissions | `Info.plist.in` has no usage text, and `verify_app.sh` refuses any | None |
@@ -138,13 +141,18 @@ What the code shows, checked on `develop` at 92080f9:
 
 Two things the sources alone cannot prove. 11.2 turns both into checks:
 
-1. **Qt's static plugins.** `apps/app/packaging/ios.cmake` marks `QSecureTransportBackendPlugin` and
-   `QSCNetworkReachabilityNetworkInformationPlugin` as default plugins, in case the kit leaves them unset. They are linked
-   only when `Qt6::Network` is in the link, which nothing asks for. QtQml can still pull in network code for remote QML
-   or images. 11.2 adds a step to `verify_app.sh` that fails when the executable has Qt Network, `CFNetwork`/`Network`
-   framework links, or Tracy symbols. Then the claim is checked on every signed build, not just remembered.
+1. **Qt Network is linked, but never called.** The first iOS build with 11.2's check (PR #140) showed that Qt QML
+   links Qt Network, because the kit is built with `qml_network` so that QML could load a remote URL. Qt Network in turn
+   links `CFNetwork` and `Network`. So the executable carries network code, and the app never calls it. Two checks cover
+   this:
+   - `verify_app.sh` reports the network code it finds on every build, and fails only on the Tracy profiler.
+   - `tools/ci/check_no_network.py` fails when the app's own code uses a network API, links Qt Network, or names a
+     remote URL other than the project's own pages, which open in the browser.
+
+   "Data Not Collected" is about what the app sends, and it sends nothing, so the answer stands. On Android the same
+   link makes Qt add the `INTERNET` permission, which Stage 9 removes (T11-7).
 2. **Privacy manifest.** The repository has no `PrivacyInfo.xcprivacy`. Apple asks for one that declares tracking (none),
-   the collected data types (none), and a reason for each "required reason" API the binary calls *(re-check)*. A static Qt
+   the collected data types (none), and a reason for each "required reason" API the binary calls. A static Qt
    probably calls file-timestamp APIs (`stat`), system boot time (`mach_absolute_time`), and `NSUserDefaults` if
    `QSettings` is used. The exact list comes from the symbols in the signed build, together with any ITMS-91053 warnings
    Apple sent after the TestFlight uploads. The owner can forward those emails or say none came. 11.2 adds the manifest,
@@ -156,12 +164,12 @@ lives on the device, how to delete it (delete the app), and a contact address.
 ### Accessibility Nutrition Labels (optional)
 
 App Store Connect lets an app declare its support for VoiceOver, Voice Control, Larger Text, Dark Interface, Differentiate
-Without Colour, Sufficient Contrast and Reduced Motion *(re-check whether this is still optional)*. Stage 7 audits each of
+Without Colour, Sufficient Contrast and Reduced Motion. Stage 7 audits each of
 these. 11.8 declares only what the Stage 7 audit passed on a device.
 
 ### Age rating
 
-Apple's questionnaire (the 2025 version, with ratings 4+, 9+, 13+, 16+ and 18+) *(re-check the exact questions)*. The
+Apple's questionnaire (the 2025 version, with ratings 4+, 9+, 13+, 16+ and 18+). The
 drafted answers are in `store/appstore/age_rating.md`. In short, every content question is "None", and the capability
 questions are:
 
@@ -185,12 +193,12 @@ each build. The facts behind it:
 - The app has no encryption code of its own and no network access.
 - At rest, iOS Data Protection encrypts the files. That is the operating system's encryption, which the app only asks for
   through the entitlement and the file protection class.
-- If Qt's TLS backend were linked (11.2 checks that it is not), it would use Apple's system TLS. That is still the
+- Qt Network is linked (see App Privacy) but never called. Its TLS backend uses Apple's system TLS. That is still the
   system's encryption.
 
 Since only the operating system's encryption is used, the app is in the exempt category, and no documentation is uploaded.
 This is the owner's declaration to Apple, as `docs/releasing.md` says. 11.8 re-reads Apple's export compliance questions
-and the US export rules they cite, so the owner can confirm it *(re-check)*.
+and the US export rules they cite, so the owner can confirm it.
 
 ### App Review information
 
@@ -236,8 +244,8 @@ stores. Stage 9 decides.
 6. **Owner:** after approval, press **Release**, because the version is set to release manually.
 
 **Phased release.** Apple's phased release only affects automatic updates for existing users, over seven days (1%, 2%,
-5%, 10%, 20%, 50%, 100%). It can be paused, and new downloads always get the new version *(re-check)*. For 1.0.0 there are
-no existing users, so it does nothing. The proposal is: 1.0.0 released manually without a phased release, and every later
+5%, 10%, 20%, 50%, 100%). It can be paused for up to 30 days in all, and new downloads always get the new version. It
+applies only to version updates, so 1.0.0 cannot use it. The proposal is: 1.0.0 released manually without a phased release, and every later
 version phased and released manually. 11.7 writes these two settings in the metadata. The owner can change them on the
 version page.
 
@@ -247,7 +255,7 @@ version page.
 
 The drafts are in `store/play/en-GB/`, in the layout that `fastlane supply` reads.
 
-| Field | Limit *(re-check)* | Draft file |
+| Field | Limit | Draft file |
 |---|---|---|
 | App name | 30 characters | `title.txt` |
 | Short description | 80 characters | `short_description.txt` |
@@ -256,22 +264,24 @@ The drafts are in `store/play/en-GB/`, in the layout that `fastlane supply` read
 | Category | — | Productivity (set in the Console) |
 | Contact email, website, privacy policy | Email required, privacy policy required | Stage 10 and the owner |
 
-**Graphics** *(re-check)*:
+**Graphics**:
 
 | Asset | Size | Source |
 |---|---|---|
 | App icon | 512 × 512 PNG, 32-bit | Rendered from the same source as the iOS `AppIcon` (11.5) |
-| Feature graphic | 1024 × 500 PNG or JPEG, no transparency | Drawn by 11.5: the board's tiles in the brand colours and the name. No device frame. No text beyond the name |
+| Feature graphic | 1024 × 500, JPEG or 24-bit PNG, no transparency | Drawn by 11.5 (PR #143): the board's twelve tiles in the token palette and the app icon. No text |
 | Phone screenshots | 2 to 8. Each side 320 to 3,840 px, and the long side no more than twice the short side | 1080 × 1920 (9:16), the same eight shots as the App Store. The App Store's 1320 × 2868 is taller than 2:1, so it cannot be reused |
-| 7" and 10" tablet screenshots | Needed to be shown as a tablet app | 1200 × 1920 and 1600 × 2560 portrait, plus 2560 × 1600 landscape, from the Stage 8 layouts |
+| Large-screen screenshots (tablets and Chromebooks) | At least 4 for the app to be shown on large screens. 1,080 to 7,680 px, 16:9 or 9:16. Google no longer has separate 7" and 10" sets | 1440 × 2560 portrait and 2560 × 1440 landscape, from the Stage 8 layouts |
 
 ### Play app content
 
 The drafted answers are in `store/play/app_content.md`.
 
-- **Data safety: no data collected, no data shared.** Google counts data as collected when it is sent off the device by the
-  app. A transfer the user starts, to a destination they expect, such as the Android share sheet, is not counted as
-  "shared" *(re-check the wording of both)*. The Android build must hold the same facts as iOS: no `INTERNET` permission
+- **Data safety: no data collected, no data shared.** The form is required even for an app that collects nothing.
+  Google counts data as collected when the app sends it off the device. Google's "sharing" is wider than Apple's
+  "collect": it includes handing data to another app on the same device. Google exempts a transfer that the user starts
+  and expects, so the share sheet export is still not "sharing". Google's page does not name the share sheet, so this
+  answer rests on that exemption. The Android build must hold the same facts as iOS: no `INTERNET` permission
   in the merged manifest, and no advertising ID. Qt for Android adds `INTERNET` when Qt Network is linked. 11.2 adds a
   check, which Stage 9 runs on the AAB.
 - **Content rating (IARC):** category "Utility, productivity, communication or other". Every content question is No,
@@ -289,13 +299,19 @@ Stage 9 gives the signed AAB, Play App Signing with the upload key in CI, and th
 1. **Internal testing:** each tagged build goes here first (Stage 9).
 2. **Closed testing:** a named testers list. **If the Play account is a personal account created after November 2023,
    Google needs a closed test with at least 12 testers opted in for 14 days in a row before it allows production
-   access** *(re-check the numbers)*. An organisation account (which needs a D-U-N-S number) does not have this rule. This is
+   access** (confirmed on Google's page). The page names only personal accounts, so this plan assumes an organisation account
+(which needs a D-U-N-S number) does not have this rule. Only secondary sources say so outright. This is
    the longest wait in the stage, so it is first in the owner actions.
 3. **Production:** a staged rollout (for example 20%, then 100%), started by the owner in the Console. 11.7 can promote a
    release from closed to production as a draft. The owner reviews it and starts the rollout.
 
-Two Play technical rules Stage 9 must meet before production *(re-check both)*: the target API level (new apps and updates
-must target the API level of the last year's Android release), and support for 16 KB memory pages for native libraries.
+Play technical rules Stage 9 must meet before production:
+
+- **Target API.** Since 31 Aug 2026, new apps and updates must target API 36 (Android 16).
+- **16 KB memory pages.** Native libraries must support them. A new app needs this now, and an update without it cannot
+  be released after 1 Feb 2027.
+- **Developer verification.** The package name must be registered under Android developer verification, which Google
+  has enforced since 30 Sep 2026. Unregistered apps are removed from Play.
 
 ## Both stores
 
@@ -349,13 +365,14 @@ Agreement at apple.com/legal/internet-services/itunes/dev/stdeula/):
   developer gives its own EULA in App Store Connect. A custom EULA must include the minimum terms Apple lists.
 - Apple's standard EULA limits use to Apple devices the user owns or controls, as the Usage Rules allow. It forbids
   transfer, redistribution and sublicensing, and forbids copying, reverse engineering and modification, except as the law
-  or the licence terms of included open-source components allow *(re-check this exception's wording)*.
+  or the licence terms of included open-source components allow.
 - Installing an app on an iPhone needs Apple's signature. A user can install a modified build only with their own Apple
   developer account and a provisioning profile.
 
 **What Google Play's terms say** (summarised. The adviser reads the current Developer Distribution Agreement): the
-developer grants the user the licence to use the app, either under the developer's own terms or under a default licence in
-the agreement. Android lets users install apps from outside the store.
+developer, not Google, grants each user a non-exclusive, worldwide, perpetual licence to use the app (section 5.3 of the
+agreement in force from 15 Sep 2025). A developer's own EULA governs if one is given, but where it conflicts with the
+agreement, the agreement wins. Android lets users install apps from outside the store.
 
 **History, for context:** in January 2011 VLC for iOS was taken off the App Store after one of its copyright holders
 complained that the App Store terms conflicted with the GPL. VLC came back in 2013, after its developers relicensed the
@@ -439,7 +456,7 @@ Each one is a small pull request into `develop`, squash merged. 11.1 is this pul
 
 | WP | What | Files | Test labels |
 |---|---|---|---|
-| 11.0 | Re-read every *(re-check)* rule at Apple's and Google's sources, and correct this page | `docs/plan/stage-11.md` | — |
+| 11.0 | Re-read every rule at Apple's and Google's sources, and correct this page | `docs/plan/stage-11.md` | — |
 | 11.1 | Store text drafts (this PR). Then a check of the limits and of the confidentiality words over `store/` | `store/`, `tools/ci/check_store_text.py`, tests | `unit` |
 | 11.2 | No-network and no-Tracy check on the signed IPA. `PrivacyInfo.xcprivacy` and its check. The `INTERNET` permission check for Stage 9 | `apps/app/packaging/ios/`, `tools/ci/check_ios_plist.py` | `unit`, `system` |
 | 11.3 | Open-source licences page and the bundled texts. Demo setup file test. Third-party list from the link | `apps/app/qml/screens/settings/`, `libs/` or `apps/app/src/`, tests, `changelog.d/` | `unit`, `ui` |
@@ -457,7 +474,7 @@ Each one is a small pull request into `develop`, squash merged. 11.1 is this pul
 | T11-2 | The confidentiality guard covers `store/`. It fails on a name outside the stand-in list | `unit` |
 | T11-3 | Every URL file holds an `https` URL on the documentation site's host | `unit` |
 | T11-4 | The demo setup file equals `config/sample-config.json` and imports with no warnings | `unit` |
-| T11-5 | The signed IPA links no Qt Network, `CFNetwork` or `Network` framework, and has no Tracy symbols | `system` (release job) |
+| T11-5 | The app's own code uses no network API and no remote URL (`check_no_network.py`). The IPA has no Tracy symbols, and its linked network code is reported | `unit`, `system` |
 | T11-6 | `PrivacyInfo.xcprivacy` is in the bundle, with `NSPrivacyTracking` false, no tracking domains, no collected types, and a reason for each API category the symbol scan finds | `system` |
 | T11-7 | The Android merged manifest has no `INTERNET` permission and no `AD_ID` (with Stage 9) | `system` |
 | T11-8 | Every screenshot has its set's exact pixel size, the list of shots matches the committed list, and two runs give the same bytes | `system` |
@@ -471,7 +488,8 @@ the order that best saves waiting time.
 
 1. **Google Play developer account.** Choose personal or organisation. An organisation account needs a D-U-N-S number,
    which can take days to weeks. A personal account needs identity checks and, if new, the 12-tester and 14-day closed
-   test. Pay the one-time fee.
+   test. Pay the one-time fee. Complete Android developer verification and register the package name
+   `com.iainchesworthlabs.errorjournaling`.
 2. **Legal advice on the licence** ([facts and options](#licence-facts-and-options)), and a decision. This blocks 11.3's
    final text and the listing's open-source paragraph.
 3. **App Store Connect app record for public release:** the existing TestFlight record is the one that is released. Check
@@ -479,12 +497,15 @@ the order that best saves waiting time.
    Paid Apps agreement, tax forms and banking.
 4. **EU trader status (Digital Services Act)** in App Store Connect, and the matching declaration in Play. A trader's
    address, phone and email are shown on the listing in the EU. Not declaring removes the app from EU storefronts
-   *(re-check)*.
-5. **Price and countries** for both stores (free or paid, and which storefronts).
-6. **Contact details** for App Review and the Play listing: typed into the consoles, never committed.
-7. **Play service-account key** for `supply`, added as a repository secret, if 11.7 uses fastlane.
-8. **Forward any ITMS-91053 email** from earlier TestFlight uploads, or say that none came (for the privacy manifest).
-9. **Submission and release** on both stores, at the end.
+   (confirmed: since February 2025 Apple has removed apps without a declaration from EU storefronts). For an organisation
+   the address shown comes from its D-U-N-S record.
+5. **Mac availability** (Stage 12, O-M3). In App Store Connect, Pricing and Availability, turn off "iPhone and iPad Apps
+   on Apple Silicon Macs", which is on by default. Desktop support is v2.
+6. **Price and countries** for both stores (free or paid, and which storefronts).
+7. **Contact details** for App Review and the Play listing: typed into the consoles, never committed.
+8. **Play service-account key** for `supply`, added as a repository secret, if 11.7 uses fastlane.
+9. **Forward any ITMS-91053 email** from earlier TestFlight uploads, or say that none came (for the privacy manifest).
+10. **Submission and release** on both stores, at the end.
 
 ## Decisions for the owner
 
@@ -504,8 +525,72 @@ the order that best saves waiting time.
 
 ## Assumptions only the stores can confirm
 
-- The limits and required screenshot sizes above. 11.0 re-reads them, and App Store Connect and the Play Console reject
-  what is wrong.
+- The limits and required screenshot sizes above, checked against the published pages in 11.0. App Store Connect and the
+  Play Console reject what is wrong, and decide whether the 6.1" set is needed.
 - That Apple and Google accept "no data collected" for an app whose only way out is the system share sheet.
 - That the 2025 age-rating questions give 4+ for these answers.
-- That the static Qt link has no network code. T11-5 proves this on the first signed build after 11.2.
+- That Apple and Google accept "no data collected" for an app whose binary carries Qt Network, which it never calls.
+
+## Rule check, 10 Nov 2026
+
+Task 11.0 read each rule on this page against the stores' published pages. What changed on this page as a result:
+
+- **Screenshots.**
+  - Apple's page also lists the 6.1" iPhone class (1206 × 2622) as required, so it is added "if asked".
+  - The 6.5" set is needed only when no 6.9" set is given.
+  - Google replaced the 7" and 10" tablet sets with one "large screens" set: at least 4 images, 1,080 to 7,680 px, 16:9
+    or 9:16.
+- **Phased release** applies only to version updates, so it cannot apply to 1.0.0.
+- **Data safety.** Google's "sharing" includes handing data to another app on the device. The share sheet answer rests on
+  Google's exemption for transfers the user starts.
+- **Google Play's licence to users** comes from the developer (Developer Distribution Agreement, 5.3). There is no
+  default licence from Google.
+- **New requirements:**
+  - Apple builds must use Xcode 26 and the iOS 26 SDK (since 28 Apr 2026). The minimum target is iOS 13 (since 9 Sep
+    2026). `release.yml` already builds on `macos-26`, whose Xcode is 26, and
+    targets iOS 18.
+  - Play apps and updates must target API 36 (since 31 Aug 2026).
+  - Native libraries must support 16 KB pages: updates without it are refused from 1 Feb 2027.
+  - Android developer verification and package registration are enforced from 30 Sep 2026.
+- **Owner action added** (from Stage 12): turn off the app on Apple Silicon Macs.
+
+Confirmed as written:
+
+- The App Store text limits. Keywords are 100 bytes, and each keyword must be over 2 characters. What's New cannot be
+  set on a first version.
+- App previews: 3 per size, 15 to 30 seconds.
+- The definition of collected data. The privacy manifest's five categories and their reason codes.
+- The age rating questions and ratings. Apple sets the rating from the answers, which are required on every
+  submission.
+- Accessibility Nutrition Labels are voluntary, with nine features.
+- Export compliance needs no documentation for an app that uses only the system's encryption. Whether a US annual
+  self-classification report applies is not on Apple's page; it is a question for the owner's adviser.
+- The EU trader declaration and its removal rule.
+- The standard EULA's open-source exception, and the custom EULA field.
+- Google's text and graphic limits.
+- The 12 testers for 14 days rule for new personal accounts.
+- A privacy policy is required for every Play app.
+
+Sources (official pages only):
+
+- developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information
+- developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
+- developer.apple.com/help/app-store-connect/reference/app-information/app-preview-specifications
+- developer.apple.com/app-store/review/guidelines/
+- developer.apple.com/app-store/app-privacy-details/
+- developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api
+- developer.apple.com/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions
+- developer.apple.com/help/app-store-connect/manage-app-accessibility/overview-of-accessibility-nutrition-labels
+- developer.apple.com/help/app-store-connect/reference/app-information/export-compliance-documentation-for-encryption
+- developer.apple.com/help/app-store-connect/update-your-app/release-a-version-update-in-phases
+- developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements
+- developer.apple.com/news/upcoming-requirements/
+- apple.com/legal/internet-services/itunes/dev/stdeula/
+- support.google.com/googleplay/android-developer/answer/9859152
+- support.google.com/googleplay/android-developer/answer/9866151
+- support.google.com/googleplay/android-developer/answer/10787469
+- support.google.com/googleplay/android-developer/answer/14151465
+- support.google.com/googleplay/android-developer/answer/10144311
+- developer.android.com/google/play/requirements/target-sdk
+- developer.android.com/guide/practices/page-sizes
+- play.google/developer-distribution-agreement.html
