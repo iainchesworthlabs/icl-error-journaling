@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import json
+import plistlib
 import struct
 import sys
 import tempfile
@@ -232,6 +233,81 @@ class LaunchScreenCheckTest(unittest.TestCase):
     def test_image_must_be_the_3x_one(self) -> None:
         self.images[0] = image_entry("light.png", scale="2x")
         self.assertTrue(any("3x" in p for p in self.problems()))
+
+
+class PrivacyManifestCheckTest(unittest.TestCase):
+    """The privacy manifest (docs/plan/stage-11.md, 11.2, T11-6)."""
+
+    GOOD = {
+        "NSPrivacyTracking": False,
+        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyCollectedDataTypes": [],
+        "NSPrivacyAccessedAPITypes": [
+            {"NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+             "NSPrivacyAccessedAPITypeReasons": ["C617.1"]},
+        ],
+    }
+
+    def problems(self, **changes) -> list[str]:
+        manifest = copy.deepcopy(self.GOOD)
+        for key, value in changes.items():
+            if value is None:
+                manifest.pop(key)
+            else:
+                manifest[key] = value
+        return plist_check.check_privacy_manifest(manifest)
+
+    def test_repository_manifest_passes(self) -> None:
+        manifest = plistlib.loads((ROOT / plist_check.PRIVACY_MANIFEST).read_bytes())
+        self.assertEqual(plist_check.check_privacy_manifest(manifest), [])
+
+    def test_good_manifest_passes(self) -> None:
+        self.assertEqual(self.problems(), [])
+
+    def test_tracking_true_fails(self) -> None:
+        self.assertIn("NSPrivacyTracking must be false", " ".join(self.problems(NSPrivacyTracking=True)))
+
+    def test_missing_tracking_fails(self) -> None:
+        self.assertIn("NSPrivacyTracking is missing", " ".join(self.problems(NSPrivacyTracking=None)))
+
+    def test_tracking_domain_fails(self) -> None:
+        self.assertIn("TrackingDomains must be empty", " ".join(self.problems(NSPrivacyTrackingDomains=["example.com"])))
+
+    def test_collected_type_fails(self) -> None:
+        collected = [{"NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeCrashData"}]
+        self.assertIn("CollectedDataTypes must be empty", " ".join(self.problems(NSPrivacyCollectedDataTypes=collected)))
+
+    def test_unknown_category_fails(self) -> None:
+        types = [{"NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryMadeUp",
+                  "NSPrivacyAccessedAPITypeReasons": ["C617.1"]}]
+        self.assertIn("not a required-reason API category", " ".join(self.problems(NSPrivacyAccessedAPITypes=types)))
+
+    def test_sdk_reason_fails(self) -> None:
+        types = [{"NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+                  "NSPrivacyAccessedAPITypeReasons": ["0A2A.1"]}]
+        self.assertIn("not an application's reason", " ".join(self.problems(NSPrivacyAccessedAPITypes=types)))
+
+    def test_reason_of_other_category_fails(self) -> None:
+        types = [{"NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+                  "NSPrivacyAccessedAPITypeReasons": ["C617.1"]}]
+        self.assertIn("not an application's reason", " ".join(self.problems(NSPrivacyAccessedAPITypes=types)))
+
+    def test_no_reason_fails(self) -> None:
+        types = [{"NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+                  "NSPrivacyAccessedAPITypeReasons": []}]
+        self.assertIn("gives no reason", " ".join(self.problems(NSPrivacyAccessedAPITypes=types)))
+
+    def test_category_twice_fails(self) -> None:
+        entry = self.GOOD["NSPrivacyAccessedAPITypes"][0]
+        self.assertIn("declared twice", " ".join(self.problems(NSPrivacyAccessedAPITypes=[entry, entry])))
+
+    def test_missing_manifest_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for rel in (plist_check.PLIST, plist_check.CONSTANTS):
+                (root / rel).parent.mkdir(parents=True, exist_ok=True)
+                (root / rel).write_bytes((ROOT / rel).read_bytes())
+            self.assertTrue(any("PrivacyInfo.xcprivacy not found" in p for p in plist_check.run(root)))
 
 
 class EjconfigFilesTest(unittest.TestCase):

@@ -10,7 +10,8 @@
     "mkdocs.yml",
     "LICENSE*",
     "changelog.d/**",
-    "requirements/docs.txt"
+    "requirements/docs.txt",
+    "tools/docs/**"
   ],
   "no_build": [
     ".github/PULL_REQUEST_TEMPLATE*",
@@ -23,6 +24,7 @@
     ".editorconfig",
     "LICENSES/**",
     "tools/tests/**",
+    "tools/visual/**",
     "store/**"
   ],
   "build": [

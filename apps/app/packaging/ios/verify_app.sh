@@ -17,6 +17,11 @@
 #     a framework or to a path on the build machine means the build picked up
 #     the wrong libraries; and the bundle holds no dynamic library or framework, so
 #     what the notices call statically linked is;
+#   * it carries no Tracy profiler, and it reports the network code Qt links (Qt QML
+#     brings Qt Network) without refusing it (docs/plan/stage-11.md, 11.2);
+#   * PrivacyInfo.xcprivacy is at the top of the bundle, declares no tracking and no
+#     collected data, and declares each required-reason API category the executable
+#     calls (found from its imports and its Objective-C names);
 #   * Info.plist declares that the application uses no encryption beyond the system's, and a
 #     build number, as TestFlight asks;
 #   * with --signed: the code signature verifies, the profile is embedded, it is an
@@ -26,7 +31,7 @@
 #     default data protection entitlement with its exact value, and no iCloud, app
 #     group or associated domain entitlement.
 #
-# macOS only (plutil, otool, codesign, security).
+# macOS only (plutil, otool, nm, codesign, security).
 set -euo pipefail
 
 target=""
@@ -42,7 +47,7 @@ while [ $# -gt 0 ]; do
     --version) version="${2:?}"; shift 2 ;;
     --signed) signed=true; shift ;;
     --store) store=true; shift ;;
-    -h|--help) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "verify_app.sh: unknown argument '$1'" >&2; exit 2 ;;
     *) target="$1"; shift ;;
   esac
@@ -140,6 +145,60 @@ echo "    executable: arm64, links only the system"
 shipped_libraries="$(find "$app" \( -name '*.dylib' -o -name '*.framework' -o -name 'Frameworks' \) | head -n 5)"
 [ -z "$shipped_libraries" ] || fail "the bundle holds a dynamic library, but the licence notices say everything is linked statically: $shipped_libraries"
 echo "    no dynamic library or framework in the bundle: every third-party library is linked statically"
+
+# Network code and the profiler (docs/plan/stage-11.md, 11.2, T11-5). Qt QML links Qt Network (the kit is built with
+# qml_network, so QML could load a remote URL), and Qt Network links CFNetwork and Network. So the executable carries
+# network code that the application never calls: tools/ci/check_no_network.py keeps the application's own code free of
+# network use and of remote URLs. Here the network code is reported, not refused, so that a change in what is linked shows
+# in the log; Tracy, the profiler, opens a socket of its own and must never be in a device build.
+imports="$(mktemp)"
+nm -u "$app/$executable" 2>/dev/null | awk '{print $NF}' | sort -u > "$imports" || fail "cannot read the imported symbols of the executable"
+[ -s "$imports" ] || fail "the executable imports no symbols: nm could not read it"
+profiler="$(grep -a -o -E 'TracyProfiler|___tracy_[a-z_]+' "$app/$executable" | sort -u | tr '\n' ' ' || true)"
+[ -z "$profiler" ] || fail "the executable carries the Tracy profiler: $profiler"
+network_frameworks="$(otool -L "$app/$executable" | tail -n +2 | awk '{print $1}' | grep -E '/(CFNetwork|Network)\.framework/' | xargs -n1 basename 2>/dev/null | tr '\n' ' ' || true)"
+network_calls="$(grep -E '^_(getaddrinfo|gethostbyname|connect|nw_connection_.*|nw_listener_.*|CFSocketCreate.*|CFStreamCreatePairWithSocket.*|SSLHandshake|sec_protocol_options_.*)$' "$imports" | tr '\n' ' ' || true)"
+network_classes="$(grep -a -o -E 'QNetworkAccessManager|QTcpSocket|QUdpSocket|QSslSocket|QWebSocket|QLocalSocket' "$app/$executable" | sort -u | tr '\n' ' ' || true)"
+echo "    no profiler; network code linked by Qt and not called by the application: frameworks ${network_frameworks:-none}; imports ${network_calls:-none}; classes ${network_classes:-none}"
+
+# The privacy manifest (11.2, T11-6): no tracking, nothing collected, and a declared category for each required-reason
+# API that the executable calls. A category is found by the system functions it imports, or for Objective-C APIs by the
+# class or selector name in the binary. The manifest may declare a category the scan does not find (Apple's scan sees
+# what this one does not), and that is shown, not refused.
+manifest="$app/PrivacyInfo.xcprivacy"
+[ -f "$manifest" ] || fail "no PrivacyInfo.xcprivacy at the top of the bundle"
+plutil -lint "$manifest" > /dev/null || fail "PrivacyInfo.xcprivacy is not a valid property list"
+[ "$(plutil -extract NSPrivacyTracking raw -o - "$manifest" 2>/dev/null || true)" = "false" ] || fail "PrivacyInfo.xcprivacy: NSPrivacyTracking is not false"
+for empty_key in NSPrivacyTrackingDomains NSPrivacyCollectedDataTypes; do
+  [ "$(plutil -extract "$empty_key" raw -o - "$manifest" 2>/dev/null || true)" = "0" ] || fail "PrivacyInfo.xcprivacy: $empty_key is not an empty array"
+done
+declared="$(plutil -convert json -o - "$manifest" | python3 -c 'import json,sys; print(" ".join(e["NSPrivacyAccessedAPIType"] for e in json.load(sys.stdin).get("NSPrivacyAccessedAPITypes", [])))')" \
+  || fail "cannot read the accessed API types of PrivacyInfo.xcprivacy"
+uses_import() { grep -Eq "$1" "$imports"; }
+uses_name() { grep -a -q -E "$1" "$app/$executable"; }
+found=""
+if uses_import '^_(stat|fstat|lstat|fstatat|getattrlist|fgetattrlist|getattrlistat|getattrlistbulk)$'; then found="$found NSPrivacyAccessedAPICategoryFileTimestamp"; fi
+if uses_import '^_mach_absolute_time$' || uses_name 'systemUptime'; then found="$found NSPrivacyAccessedAPICategorySystemBootTime"; fi
+if uses_import '^_(statfs|statvfs|fstatfs|fstatvfs)$' || uses_name 'NSFileSystemFreeSize|volumeAvailableCapacity'; then found="$found NSPrivacyAccessedAPICategoryDiskSpace"; fi
+if uses_import '^_OBJC_CLASS_\$_NSUserDefaults$' || uses_import '^_CFPreferences'; then found="$found NSPrivacyAccessedAPICategoryUserDefaults"; fi
+if uses_name 'activeInputModes'; then found="$found NSPrivacyAccessedAPICategoryActiveKeyboards"; fi
+undeclared=""
+for category in $found; do
+  case " $declared " in
+    *" $category "*) ;;
+    *) undeclared="$undeclared $category" ;;
+  esac
+done
+[ -z "$undeclared" ] || fail "the executable calls required-reason APIs that PrivacyInfo.xcprivacy does not declare:$undeclared"
+
+for category in $declared; do
+  case " $found " in
+    *" $category "*) ;;
+    *) echo "    note: PrivacyInfo.xcprivacy declares $category, which this scan did not find in the executable" ;;
+  esac
+done
+rm -f "$imports"
+echo "    privacy manifest: no tracking, nothing collected; required-reason APIs found:${found:- none}; all declared"
 
 if $signed; then
   codesign --verify --strict --verbose=2 "$app" || fail "the code signature does not verify"
