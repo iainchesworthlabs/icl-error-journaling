@@ -17,9 +17,11 @@ SettingsPage {
     id: root
 
     required property var settings
-    // The footer of the list: the version and platform text, and the timing line behind five taps on it. Empty hides it.
+    // The foot of the list: the version and platform text, as a plain caption. Empty hides it. The build's facts, the licence and
+    // the timing line (five taps on the version) are on the About page, which the last row opens.
     property string aboutText
-    property string timingText
+    // Whether the About row is there: the About model is given. The screen sets it from `about`.
+    property bool aboutAvailable: false
 
     signal errorTypesRequested
     signal templatesRequested
@@ -27,6 +29,7 @@ SettingsPage {
     signal facilitatorRequested
     signal timeFormatRequested
     signal importExportRequested
+    signal aboutRequested
     // A tile of the board is to get another type: its position (1 to 11) and the type it has now.
     signal replaceRequested(int position, string typeId)
 
@@ -231,11 +234,29 @@ SettingsPage {
                 onActivated: root.importExportRequested()
             }
         }
+
+        Item {
+            width: parent.width
+            height: Theme.space.sectionGap
+            visible: root.aboutAvailable
+        }
+
+        GroupedList {
+            width: parent.width
+            visible: root.aboutAvailable
+
+            ListRow {
+                objectName: "settingsAboutRow"
+                text: qsTr("About CS Bingo Board")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.aboutRequested()
+            }
+        }
     }
 
     SettingsAbout {
         objectName: "settingsAboutFooter"
         aboutText: root.aboutText
-        timingText: root.timingText
     }
 }

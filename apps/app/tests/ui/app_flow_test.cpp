@@ -20,6 +20,7 @@
 #include "viewmodel/settings_model.hpp"
 #include "viewmodel/undo_controller.hpp"
 
+#include "about_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"
 // clang-format on
@@ -33,6 +34,7 @@
 #include <QHash>
 #include <QMetaObject>
 #include <QObject>
+#include <QPointF>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -172,6 +174,9 @@ struct App
         QQmlComponent component(&ui.engine(), MODULE, "UiStubFileChooser");
         chooser.reset(component.create());
         REQUIRE(chooser != nullptr);
+        QQmlComponent opener_component(&ui.engine(), MODULE, "UiStubUrlOpener");
+        url_opener.reset(opener_component.create());
+        REQUIRE(url_opener != nullptr);
         if (load_shell)
         {
             load();
@@ -197,6 +202,8 @@ struct App
                            {QStringLiteral("appRoot"), object(root)},
                            {QStringLiteral("bridge"), object(bridge)},
                            {QStringLiteral("fileChooser"), object(*chooser)},
+                           {QStringLiteral("urlOpener"), object(*url_opener)},
+                           {QStringLiteral("about"), object(about)},
                            {QStringLiteral("aboutText"), QStringLiteral("0.1.0 · test, storage: memory")}};
     }
 
@@ -317,8 +324,10 @@ struct App
 
     Rig services;
     FakeBridge bridge;
+    ej::viewmodel::AboutModel about{ej::test::about_facts(), [] { return ej::test::about_notices(); }};
     UiRig ui;
     std::unique_ptr<QObject> chooser;
+    std::unique_ptr<QObject> url_opener;
     QQuickItem* shell = nullptr;
 };
 
@@ -841,30 +850,33 @@ TEST_CASE("app.hooks: the shell leaves Stage 5 the board-enabled state", "[ui][a
     CHECK(shell->property("boardEnabled").toBool());
 }
 
-TEST_CASE(
-    "app.timing: five taps on the version text at the foot of Settings show the timing line, and five more hide it",
-    "[ui][app]")
+TEST_CASE("app.timing: five taps on the Version row of the About page show the timing line, and five more hide it",
+          "[ui][app]")
 {
     App app;
     app.choose_tab(SETTINGS_TAB);
 
-    // The foot of the list: the version and platform text, and no timing line.
-    QQuickItem* about = app.need(QStringLiteral("settingsAbout"));
-    CHECK(about->property("text").toString() == QStringLiteral("0.1.0 · test, storage: memory"));
-    // It is at the end of a long list: scroll there, as the person does.
+    // The foot of the Settings list is a plain caption now: the version and platform text, and no timing line.
+    QQuickItem* caption = app.need(QStringLiteral("settingsVersionCaption"));
+    CHECK(caption->property("text").toString() == QStringLiteral("0.1.0 · test, storage: memory"));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTiming")));
+
+    // The About row is at the end of the list: scroll there, as the person does, and open the page.
     QQuickItem* flickable = app.need(QStringLiteral("settingsFlickable"));
     flickable->setProperty("contentY", flickable->property("contentHeight").toDouble() - flickable->height());
     app.ui.layout();
-    QQuickItem* footer = app.need(QStringLiteral("settingsAboutFooter"));
+    app.tap(QStringLiteral("settingsAboutRow"));
+    app.play();
+    QQuickItem* version = app.need(QStringLiteral("aboutVersion"));
     CHECK_FALSE(app.shown(QStringLiteral("settingsTiming")));
 
     // Four taps do nothing; the fifth shows the line the bridge gives, which is the one the gate is read from.
     for (int i = 0; i < 4; ++i)
     {
-        app.ui.tap(footer);
+        app.ui.tap(version);
     }
     CHECK_FALSE(app.shown(QStringLiteral("settingsTiming")));
-    app.ui.tap(footer);
+    app.ui.tap(version);
     app.ui.advance(16ms);
     REQUIRE(app.shown(QStringLiteral("settingsTiming")));
     CHECK(app.need(QStringLiteral("settingsTiming"))->property("text").toString() ==
@@ -874,10 +886,32 @@ TEST_CASE(
     // Five more hide it again.
     for (int i = 0; i < 5; ++i)
     {
-        app.ui.tap(footer);
+        app.ui.tap(version);
     }
     app.ui.advance(16ms);
     CHECK_FALSE(app.shown(QStringLiteral("settingsTiming")));
+}
+
+TEST_CASE("app.about: the shell opens the source address through the opener it was given, once", "[ui][app]")
+{
+    App app;
+    app.choose_tab(SETTINGS_TAB);
+    QQuickItem* flickable = app.need(QStringLiteral("settingsFlickable"));
+    flickable->setProperty("contentY", flickable->property("contentHeight").toDouble() - flickable->height());
+    app.ui.layout();
+    app.tap(QStringLiteral("settingsAboutRow"));
+    app.play();
+    QQuickItem* flick = app.need(QStringLiteral("settingsFlickable"));
+    QQuickItem* link = app.need(QStringLiteral("aboutSourceLink"));
+    auto* content = flick->property("contentItem").value<QQuickItem*>();
+    REQUIRE(content != nullptr);
+    flick->setProperty("contentY", link->mapToItem(content, QPointF(0, 0)).y() - flick->height() / 3);
+    app.ui.layout();
+    CHECK(app.url_opener->property("opened").toList().isEmpty());
+    app.tap(QStringLiteral("aboutSourceLink"));
+    const QVariantList opened = app.url_opener->property("opened").toList();
+    REQUIRE(opened.size() == 1);
+    CHECK(opened.at(0).toString() == QStringLiteral("https://github.com/iainchesworthlabs/icl-error-journaling"));
 }
 
 TEST_CASE("app.accessibility: the tree of each tab is named and in order in light and dark", "[ui][app]")

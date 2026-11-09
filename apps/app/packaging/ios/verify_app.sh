@@ -15,7 +15,8 @@
 #     the launch colour that Info.plist names, each in a light and a dark variant;
 #   * the executable is for arm64 and links nothing outside the system: a link to
 #     a framework or to a path on the build machine means the build picked up
-#     the wrong libraries;
+#     the wrong libraries; and the bundle holds no dynamic library or framework, so
+#     what the notices call statically linked is;
 #   * Info.plist declares that the application uses no encryption beyond the system's, and a
 #     build number, as TestFlight asks;
 #   * with --signed: the code signature verifies, the profile is embedded, it is an
@@ -134,6 +135,11 @@ archs="$(lipo -archs "$app/$executable" 2>/dev/null || true)"
 bad="$(otool -L "$app/$executable" | tail -n +2 | awk '{print $1}' | grep -Ev '^(/usr/lib/|/System/Library/)' || true)"
 [ -z "$bad" ] || fail "the executable links outside the system: $bad"
 echo "    executable: arm64, links only the system"
+# Qt and everything it bundles are static libraries inside the executable. The About page and the notices say so
+# (tools/licences/notices.py reads it off the link line), so a library file in the bundle would make them wrong.
+shipped_libraries="$(find "$app" \( -name '*.dylib' -o -name '*.framework' -o -name 'Frameworks' \) | head -n 5)"
+[ -z "$shipped_libraries" ] || fail "the bundle holds a dynamic library, but the licence notices say everything is linked statically: $shipped_libraries"
+echo "    no dynamic library or framework in the bundle: every third-party library is linked statically"
 
 if $signed; then
   codesign --verify --strict --verbose=2 "$app" || fail "the code signature does not verify"
