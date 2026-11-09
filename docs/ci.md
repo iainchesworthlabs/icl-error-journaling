@@ -14,6 +14,7 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Push to `develop` | Everything: the groups above, the macOS desktop builds (debug and release, with the tests), Xcode 27 as a leg that cannot fail the run, and the kill harness. Then Report red and Mark green |
 | Change to what the iOS build reads, or a manual run | iOS compile check for a device (`ios-build.yml`, not required). A pull request runs it only for Apple paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
 | Nightly | CodeQL; the kill harness at 1,000 random kills (`kill-nightly.yml`); the weekly CI metrics (`ci-metrics.yml`, Mondays 06:00 UTC) |
+| Hourly | The Actions cache prune (`cache-prune.yml`, below) |
 | Manual run of the Stage 2 exit gate | The kill harness at 10,000 random kills on Linux and macOS (`kill-gate.yml`) |
 | Tag `v*` | Release: the source archive, and the signed iOS build for TestFlight |
 
@@ -106,6 +107,53 @@ looks inside the device bundle (`apps/app/packaging/ios/verify_app.sh`); it need
 There is no Windows leg and no desktop package: Windows, Android and desktop packaging are outside v1. Run every leg on a
 branch with `gh workflow run ci.yml --ref <branch>`, and the iOS build with `gh workflow run ios-build.yml --ref <branch>`.
 Nothing in CI runs on a device or in the simulator: the bundle is built and inspected, not started.
+
+## Actions cache
+
+The repository's Actions cache holds 10 GB. Past that, GitHub evicts the least recently used entries. On
+9 November 2026 the cache held 11.2 GB. Of that, 7 GB was ccache saved from merge-queue and pull-request refs, and the
+oldest entry was two days old. The same morning, `bootstrap-vcpkg` failed with HTTP 504 in most queue entries. It
+downloads the vcpkg tool from GitHub's releases, and nothing cached that download.
+
+**Who writes.** Only a push to `develop`, a scheduled run and a manual run on `develop` save caches. Pull requests,
+merge-queue entries and tags restore `develop`'s entries and save nothing. This is the `cache-write: auto` default of
+`setup-vcpkg` and `setup-ccache` in `icl-common-infra`. `build.yml` and `kill-harness.yml` save the ccache only when
+`CCACHE_SAVE` is `true`, and `save-vcpkg-cache` checks `VCPKG_CACHE_WRITE`. Every ref can read `develop`'s entries.
+A merge-queue ref's entries can never be read again, and a pull request's are read only by that pull request.
+
+**What is cached, and the keys.** Each entry is keyed by OS and architecture (`Linux-X64`, `macOS-ARM64`).
+
+| Entry | Key | Measured, 9 Nov 2026 | Holds |
+|---|---|---|---|
+| vcpkg tool | `vcpkg-tool-<OS>-<ARCH>-<tool tag>-<hash of vcpkg-tool-metadata.txt>` | about 10 MB each | The bootstrapped `vcpkg` binary. Exact key; a new key only when the vcpkg pin moves to a new tool release |
+| vcpkg binaries | `vcpkg-<OS>-<ARCH>-<pin>-<manifest hash>-<lineage>-<content hash>` | 21 MB Linux, 15 MB macOS | Built packages (Catch2; Tracy in the `profiling` lineage). vcpkg names archives by ABI hash, which covers triplet and compiler, so gcc and clang share one entry |
+| vcpkg downloads | `vcpkg-downloads-…`, same shape | 7 MB Linux, 1 MB macOS | Port sources and the tools vcpkg fetches itself. vcpkg reads this directory before going upstream, so it is the asset cache |
+| ccache | `ccache-<OS>-<ARCH>-<leg>[-kill]-<commit>` | 1.2 GB for 11 legs; ASan/UBSan, TSan and macOS debug are 240 to 400 MB each | One lineage per build leg and kill-harness leg. Coverage restores but does not save |
+| Qt kits | `install-qt-action-…` (setup-qt) | 324 MB Linux, 374 MB for each of the two macOS images | Saved once per Qt version and runner image |
+| pip | `setup-python-…` | 25 MB | The Python packages of the static checks |
+
+Not cached: the clone of the vcpkg fork (GitHub's git service, retried), apt packages, Homebrew and the GCC install.
+`setup-vcpkg` runs the bootstrap only when the tool cache has no copy that runs. The bootstrap, the clone and the fetch
+retry 5 times, waiting 20, 40, 80 and 160 seconds.
+
+**Budget.** One generation of `develop`'s entries is about 2.4 GB: 1.2 GB of ccache, 1.1 GB of Qt and 0.1 GB for the
+rest. Each push to `develop` saves a new ccache generation and leaves the last one behind until it is pruned, so three
+pushes in an hour peak at about 4.8 GB. The budget is 8 GB, leaving 2 GB for an Xcode or Qt upgrade, when two kits
+exist side by side until the old one is pruned. The prune step warns at 80% of 10 GB.
+
+**Eviction.** `cache-prune.yml` runs every hour at 23 minutes past and on demand. It calls `prune-actions-cache` from
+`icl-common-infra`, which deletes entries whose ref is gone (a merged pull request, a merge-queue branch) and every
+generation but the newest of each family on a ref. An entry read in the last 20 minutes is kept. A new vcpkg pin, Qt
+version or runner image starts a new family, and the old family's entries go when their last reader stops using them.
+GitHub also deletes an entry nobody has read for 7 days. A manual run with `dry-run` lists what would go. A manual run
+with `purge` set to a key prefix, for example `vcpkg-Linux-X64-`, deletes that family on every ref, which resets a
+vcpkg cache that has carried stale archives too long.
+
+**Binary cache choice.** The `files` binary source in `~/.cache/vcpkg/archives`, saved with `actions/cache`. vcpkg
+deprecated `x-gha`, which also writes one cache entry per package from every ref. A GitHub Packages NuGet feed would
+not count against the 10 GB, but it needs a token with `packages: write` for the writers. It also needs `mono` and
+`nuget` on Linux and macOS, one more download that can fail upstream. vcpkg's binaries here are under 40 MB, so the
+feed would not change the budget, which is dominated by ccache and Qt.
 
 ## QML checks
 
