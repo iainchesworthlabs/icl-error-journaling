@@ -723,6 +723,29 @@ shorter than that opens nothing); `longpress.records_once` (the hold records one
 (the note is on the same line in the timeline); `longpress.cancel`; `longpress.slow_commit` (the hold passes before the
 commit: the sheet waits for `entryRecorded` and then opens); `longpress.voiceover` (no gesture needed: Edit is the path).
 
+### 4.13a Plain words in the note template editor (TestFlight feedback)
+
+The facilitator did not understand "Prompt", "Output pattern" or that `{value}` has to be typed. The model stays as it is
+(a template has a name, a question and a line with the answer in it; the file format keeps `value_prompt` and
+`output_pattern`, and the stored pattern keeps `{value}`). The editor and its messages change:
+
+1. **Mock-ups first:** `TemplateEdit` and `TemplateEditInvalid`, light and dark, and the `Templates` list rows.
+2. **Words:** one sentence at the top ("Templates are quick notes you log often. Tap one on the Log screen and answer one
+   question."); the fields are Name ("This is what the chip on the Log screen says."), Question to ask ("This is what you
+   are asked when you tap the chip.") and Line in the log; an Insert answer button puts the answer at the cursor, shown as
+   `[answer]`; an Example card under the fields says "In the log: 10:30 (Free Text) Played Morning Medley". The list rows say
+   "Asks: ... Logs: ...". `validatePattern`, `addTemplate`, `updateTemplate` and the import messages use the same words.
+3. **View model:** `patternToField` and `patternFromField` (`{value}` and `[answer]`, doubled braces left alone) and
+   `defaultTemplateQuestion` and `defaultTemplateLine` for a new template (the question is "<Name>?" and the line is
+   "<Name>: [answer]", each following the name until the person edits it). No file format change.
+4. **Accessibility:** Insert answer is a named button whose description says what it puts in; the token is explained in the
+   line field's description; large text is covered by the cross-cutting checks.
+
+Tests: `editor.templates` (the labels and hints, the sentence, the example, Insert answer at the cursor, over a selection
+and on a refused line, the defaults following the name and stopping once edited, the stored pattern saved as `{value}`),
+`editor.voiceover`, the model's `patternToField`/`patternFromField`/default cases and message wording, the import messages,
+and the visual pass for `TemplateEdit`, `TemplateEditInvalid` and `Templates`.
+
 ### 4.18 Exit-gate pass
 
 Run the checklist on an iPhone 17 in light and dark with the facilitator, record the results at the end of this file,
