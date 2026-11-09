@@ -436,7 +436,7 @@ struct Phone
 /// Today's details, filled in as the header screen's fields would be (the screen has its own tests).
 void fill_header(Phone& phone, const QString& unit = QStringLiteral("27"),
                  const QString& location = QStringLiteral("North Site"),
-                 const QString& version = QStringLiteral("1.4.2"))
+                 const QString& version = QStringLiteral("1.4.2"), const QString& commit = QStringLiteral("a1b2c3d"))
 {
     auto& session = phone.services.session();
     REQUIRE(session.correctHeader(QStringLiteral("unit_number"), unit));
@@ -444,7 +444,8 @@ void fill_header(Phone& phone, const QString& unit = QStringLiteral("27"),
     const int row = row_with_label(locations, location, "name");
     REQUIRE(row >= 0);
     REQUIRE(session.correctHeader(QStringLiteral("location"), role_of(locations, row, "locationId").toString()));
-    REQUIRE(session.correctHeader(QStringLiteral("software_version"), version));
+    // A commit too, as the mock-ups show one, so that the Log card has no "still to fill" strip (HDR-09).
+    REQUIRE(session.correctVersion(version, commit));
     phone.ui.settle();
 }
 
@@ -746,18 +747,23 @@ void scene_header(Phone& phone)
     phone.play();
 }
 
+void scroll_details_to_end(Phone& phone);
+
 void scene_change_version(Phone& phone)
 {
     log_with_day(phone);
     phone.services.go_to(7, 13, 15);
     phone.services.advance(6s);
     open_details(phone);
-    // As a person opens the version sheet now: the check mark of the Software version field is its button.
+    // As a person opens the version sheet now: the check mark of the Software version field is its button, and the
+    // field is below the foot bar while the page is at rest, so the page is scrolled to it first.
+    scroll_details_to_end(phone);
     phone.tap(QStringLiteral("formAccessory"), phone.need(QStringLiteral("headerVersion")));
     phone.play();
     phone.tap(QStringLiteral("versionChanged"));
     phone.play();
     phone.type_into(QStringLiteral("versionTo"), QStringLiteral("1.5.0"));
+    phone.type_into(QStringLiteral("versionCommit"), QStringLiteral("e4f5a6b"));
     phone.play();
 }
 
@@ -1019,7 +1025,8 @@ std::vector<Scene> scenes()
          QStringLiteral("Filled in as the person does: version, location, then the unit number (27), whose field keeps "
                         "the focus. The mock-up's Date line has the year; the app's does not.")},
         {QStringLiteral("ChangeVersion"), TODAY, scene_change_version,
-         QStringLiteral("\"It changed during the day\", To typed 1.5.0, the time is now 13:15.")},
+         QStringLiteral(
+             "\"It changed during the day\", To typed 1.5.0 with the commit e4f5a6b, the time is now 13:15.")},
         {QStringLiteral("Review"), TODAY, scene_review,
          QStringLiteral("The mock-up's seven entries; the second row is swiped open.")},
         {QStringLiteral("EditEntry"), TODAY, scene_edit_entry,

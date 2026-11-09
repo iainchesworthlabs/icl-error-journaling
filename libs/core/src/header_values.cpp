@@ -51,7 +51,7 @@ std::optional<std::string> header_field_text(const HeaderValues& header, HeaderF
     case HeaderField::SOFTWARE_VERSION:
         if (header.m_SoftwareVersion)
         {
-            return header.m_SoftwareVersion->format();
+            return header.m_SoftwareVersion->stored();
         }
         break;
     }
@@ -74,7 +74,7 @@ Result<void, HeaderError> set_header_field(HeaderValues& header, HeaderField fie
     }
     case HeaderField::SOFTWARE_VERSION:
     {
-        auto parsed = SoftwareVersion::parse(text);
+        auto parsed = SoftwareVersion::parse_stored(text);
         if (!parsed)
         {
             return fail(version_error(parsed.error()));

@@ -78,6 +78,20 @@ QString name_of_item(UiRig& rig, QQuickItem* item)
     return QString();
 }
 
+/// Whether a shown `Text` under `from` has exactly this text.
+bool shows_text(UiRig& rig, QQuickItem* from, const QString& text)
+{
+    for (const Node& node : rig.tree(from))
+    {
+        if (node.m_TypeName.startsWith(QStringLiteral("QQuickText")) && node.m_Visible &&
+            node.m_Item->property("text").toString() == text)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 QString input_text(UiRig& rig, const char* field)
 {
     QQuickItem* input = input_of(rig, need(rig, QString::fromLatin1(field)));
@@ -369,14 +383,15 @@ TEST_CASE("details.correct_first_fill: filling an empty field is a Correct and a
     UiRig rig(TALL_WINDOW);
     load_screen(rig, world);
     REQUIRE(world.timeline().entry_count() == 0);
-    REQUIRE(world.session().missing_fields().size() == 3);
+    REQUIRE(world.session().missing_fields().size() == 4);
 
     retype(rig, need(rig, QStringLiteral("headerUnit")), QStringLiteral("27"));
     retype(rig, need(rig, QStringLiteral("headerVersion")), QStringLiteral("1.4.2"));
     rig.tap(location_row(rig, QStringLiteral("North Site")));
     rig.settle();
 
-    CHECK(world.session().missing_fields().isEmpty());
+    // The commit is optional: the three fields are filled, and it is the one thing still to fill.
+    CHECK(world.session().missing_fields() == QStringList{"software_commit"});
     CHECK(world.session().unit_text() == QStringLiteral("UNIT-27"));
     CHECK(world.session().version_text() == QStringLiteral("1.4.2"));
     CHECK(world.session().location_text() == QStringLiteral("North Site"));
@@ -984,6 +999,234 @@ TEST_CASE("details.environment: a new log starts with None", "[ui][header_screen
     rig.settle();
     CHECK(row->property("value").toString() == QStringLiteral("None"));
     CHECK(input_text(rig, "headerUnit").isEmpty());
+}
+
+// ---------------------------------------------------------------------------------------------------------- commit
+
+namespace
+{
+
+const QString COMMIT_HINT = QStringLiteral("The short code (7 to 12 letters and numbers) that identifies the exact "
+                                           "build. Leave it empty if you can\u2019t get "
+                                           "it.");
+
+} // namespace
+
+TEST_CASE("details.commit_field: an optional field under the version, empty at first, with a plain hint",
+          "[ui][header_screen][commit]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* commit = need(rig, QStringLiteral("headerCommit"));
+    QQuickItem* version = need(rig, QStringLiteral("headerVersion"));
+
+    CHECK(commit->property("label").toString() == QStringLiteral("Commit"));
+    CHECK(commit->property("placeholderText").toString() == QStringLiteral("For example a1b2c3d"));
+    CHECK(commit->property("hint").toString() == COMMIT_HINT);
+    CHECK(commit->property("errorText").toString().isEmpty());
+    CHECK_FALSE(commit->property("valid").toBool());
+    CHECK(input_text(rig, "headerCommit").isEmpty());
+    // The hint is in the design's words and is shown; the process of getting the code is not described.
+    CHECK(shows_text(rig, commit, COMMIT_HINT));
+    CHECK_FALSE(COMMIT_HINT.contains(QStringLiteral("SSH"), Qt::CaseInsensitive));
+    // It sits under the version field, which is the same as it was.
+    CHECK(rig.geometry(commit).top() >= rig.geometry(version).bottom());
+    CHECK(input_text(rig, "headerVersion") == QStringLiteral("1.4.2"));
+    CHECK(version->property("hint").toString() == QStringLiteral("Format 1.4.2 \u2013 numbers only."));
+    // The same 20 pt face as the version.
+    CHECK(input_of(rig, commit)->property("font").value<QFont>().pixelSize() == 20);
+    CHECK(commit->height() >= 52.0);
+
+    // A VoiceOver user hears the name "Commit" and the hint with the field.
+    for (const Node& node : rig.tree(commit))
+    {
+        if (node.m_ObjectName == QStringLiteral("formInput"))
+        {
+            CHECK(node.m_Name == QStringLiteral("Commit"));
+            CHECK(node.m_Description == COMMIT_HINT);
+            CHECK(node.m_InAccessibleTree);
+            CHECK(node.m_Rect.height() >= 44.0);
+        }
+    }
+
+    // Empty is valid: leaving the field empty saves nothing and scolds nothing.
+    rig.tap(input_of(rig, commit));
+    rig.tap(input_of(rig, need(rig, QStringLiteral("headerUnit"))));
+    rig.settle();
+    CHECK(commit->property("errorText").toString().isEmpty());
+    CHECK(world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER) == 0);
+}
+
+TEST_CASE("details.commit_field: the commit is lower-cased, a full hash is shortened, and it is saved with the version",
+          "[ui][header_screen][commit]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* commit = need(rig, QStringLiteral("headerCommit"));
+    const auto writes = [&world] { return world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER); };
+    REQUIRE(world.session().missing_fields() == QStringList{"software_commit"});
+
+    retype(rig, commit, QStringLiteral("A1B2C3D"));
+    CHECK(world.session().commit_text() == QStringLiteral("a1b2c3d"));
+    CHECK(world.session().version_text() == QStringLiteral("1.4.2"));
+    CHECK(writes() == 1);
+    CHECK(world.timeline().entry_count() == 0);
+    CHECK(world.storage().repository().call_count(RepositoryOp::ADD_ENTRY) == 0);
+    CHECK(world.session().missing_fields().isEmpty());
+    // The field shows what was kept.
+    CHECK(input_text(rig, "headerCommit") == QStringLiteral("a1b2c3d"));
+    CHECK(commit->property("valid").toBool());
+
+    retype(rig, commit, QStringLiteral("a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6a7b8c9d0"));
+    CHECK(world.session().commit_text() == QStringLiteral("a1b2c3d"));
+    CHECK(input_text(rig, "headerCommit") == QStringLiteral("a1b2c3d"));
+
+    retype(rig, commit, QStringLiteral("0123456789ab"));
+    CHECK(world.session().commit_text() == QStringLiteral("0123456789ab"));
+    CHECK(world.session().version_display_text() == QStringLiteral("1.4.2 (0123456789ab)"));
+
+    // Emptying the field takes the commit away, and the strip on the Log card comes back.
+    retype(rig, commit, QString());
+    CHECK(world.session().commit_text().isEmpty());
+    CHECK(world.session().version_text() == QStringLiteral("1.4.2"));
+    CHECK(world.session().missing_fields() == QStringList{"software_commit"});
+}
+
+TEST_CASE("details.commit_field: a refused commit shows a plain message inline and is not saved",
+          "[ui][header_screen][commit]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* commit = need(rig, QStringLiteral("headerCommit"));
+    const auto writes = [&world] { return world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER); };
+
+    for (const char* refused : {"a1b2c3", "a1b2c3d4e5f6a", "g1b2c3d", "a1b2-c3d"})
+    {
+        CAPTURE(refused);
+        retype(rig, commit, QString::fromLatin1(refused));
+        const QString message = world.session().validateCommit(QString::fromLatin1(refused));
+        REQUIRE_FALSE(message.isEmpty());
+        CHECK(commit->property("errorText").toString() == message);
+        CHECK_FALSE(commit->property("valid").toBool());
+        CHECK(world.session().commit_text().isEmpty());
+        // The message is shown in place of the hint, and read with the field.
+        CHECK(shows_text(rig, commit, message));
+        CHECK_FALSE(shows_text(rig, commit, COMMIT_HINT));
+    }
+    CHECK(writes() == 0);
+    // Two kinds of refusal say different things, in plain words.
+    CHECK(world.session().validateCommit(QStringLiteral("a1b2c3")).contains(QStringLiteral("7 to 12")));
+    CHECK(world.session().validateCommit(QStringLiteral("g1b2c3d")).contains(QStringLiteral("a to f")));
+
+    retype(rig, commit, QStringLiteral("a1b2c3d"));
+    CHECK(commit->property("errorText").toString().isEmpty());
+    CHECK(shows_text(rig, commit, COMMIT_HINT));
+    CHECK(world.session().commit_text() == QStringLiteral("a1b2c3d"));
+    CHECK(writes() == 1);
+}
+
+TEST_CASE("details.commit_field: a commit typed before the version waits for it, and is saved with it",
+          "[ui][header_screen][commit]")
+{
+    HeaderWorld world;
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* commit = need(rig, QStringLiteral("headerCommit"));
+    QQuickItem* version = need(rig, QStringLiteral("headerVersion"));
+    QQuickItem* unit = need(rig, QStringLiteral("headerUnit"));
+    const auto writes = [&world] { return world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER); };
+
+    retype(rig, commit, QStringLiteral("a1b2c3d"));
+    CHECK(writes() == 0);
+    CHECK(world.session().commit_text().isEmpty());
+    CHECK(world.session().version_text().isEmpty());
+    // The hint says it waits; the field keeps what was typed, even when another field is saved meanwhile.
+    CHECK(commit->property("hint").toString() == QStringLiteral("Saved with the version, once you have typed it."));
+    retype(rig, unit, QStringLiteral("27"));
+    CHECK(writes() == 1);
+    CHECK(input_text(rig, "headerCommit") == QStringLiteral("a1b2c3d"));
+
+    // The version is typed: both are saved in one write.
+    retype(rig, version, QStringLiteral("1.4.2"));
+    CHECK(writes() == 2);
+    CHECK(world.session().version_text() == QStringLiteral("1.4.2"));
+    CHECK(world.session().commit_text() == QStringLiteral("a1b2c3d"));
+    CHECK(commit->property("hint").toString() == COMMIT_HINT);
+    CHECK(world.timeline().entry_count() == 0);
+}
+
+TEST_CASE("details.commit_field: Start logging saves a valid commit and leaves a refused one",
+          "[ui][header_screen][commit]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    QQuickItem* screen = load_screen(rig, world);
+    QQuickItem* commit = need(rig, QStringLiteral("headerCommit"));
+    QSignalSpy closed(screen, SIGNAL(closeRequested()));
+
+    SECTION("valid")
+    {
+        rig.tap(input_of(rig, commit));
+        rig.type(QStringLiteral("e4f5a6b"));
+        rig.tap(need(rig, QStringLiteral("headerStart")));
+        rig.settle();
+        CHECK(closed.count() == 1);
+        CHECK(world.session().commit_text() == QStringLiteral("e4f5a6b"));
+    }
+
+    SECTION("refused: logging is not blocked and nothing is saved")
+    {
+        rig.tap(input_of(rig, commit));
+        rig.type(QStringLiteral("e4f5"));
+        rig.tap(need(rig, QStringLiteral("headerStart")));
+        rig.settle();
+        CHECK(closed.count() == 1);
+        CHECK(world.session().commit_text().isEmpty());
+        CHECK(world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER) == 0);
+    }
+}
+
+TEST_CASE("details.commit_field: a new log starts with no commit, as it starts with no version",
+          "[ui][header_screen][commit]")
+{
+    HeaderWorld world(true);
+    REQUIRE(world.session().correctVersion(QStringLiteral("1.4.2"), QStringLiteral("a1b2c3d")));
+    world.gateway().run_all();
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    CHECK(input_text(rig, "headerCommit") == QStringLiteral("a1b2c3d"));
+    CHECK(input_text(rig, "headerVersion") == QStringLiteral("1.4.2"));
+
+    REQUIRE(world.session().startNewLog());
+    rig.settle();
+    CHECK(input_text(rig, "headerCommit").isEmpty());
+    CHECK(input_text(rig, "headerVersion").isEmpty());
+}
+
+TEST_CASE("details.commit_field: names, targets, order and text scale, in light and dark",
+          "[ui][header_screen][commit]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    retype(rig, need(rig, QStringLiteral("headerCommit")), QStringLiteral("g1"));
+
+    SECTION("with a message under the field")
+    {
+        expect_clean(check_everything(rig));
+        rig.set_dark(true);
+        rig.settle();
+        expect_clean(check_everything(rig));
+    }
+
+    SECTION("with the hint")
+    {
+        retype(rig, need(rig, QStringLiteral("headerCommit")), QString());
+        expect_clean(check_everything(rig));
+    }
 }
 
 #include "header_screen_test.moc"

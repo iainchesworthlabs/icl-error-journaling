@@ -1799,6 +1799,34 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         CHECK(rig.model().entryForEdit(text_of(3)).value("footnote") ==
               "Logged at 13:00 on UNIT-27-dev, version 1.4.2.");
     }
+    SECTION("the commit follows the version in brackets, and follows a change of it")
+    {
+        HeaderValues header = sample_header();
+        header.m_SoftwareVersion = SoftwareVersion::parse("1.4.2", "a1b2c3d").value();
+        Rig rig;
+        rig.start(list_of(error_at(1, 11, 2, "Mute Delay"),
+                          change_at(2, 12, 0, HeaderField::SOFTWARE_VERSION, "1.5.0+e4f5a6b"),
+                          change_at(3, 13, 0, HeaderField::SOFTWARE_VERSION, "1.5.0"),
+                          note_at(4, 14, 0, "Robot restarted")),
+                  header);
+
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") ==
+              "Logged at 11:02 on UNIT-27, version 1.4.2 (a1b2c3d).");
+        // A new version with its own commit, then the same version with none: the footnote is what was in force.
+        CHECK(rig.model().entryForEdit(text_of(2)).value("footnote") ==
+              "Logged at 12:00 on UNIT-27, version 1.5.0 (e4f5a6b).");
+        CHECK(rig.model().entryForEdit(text_of(4)).value("footnote") == "Logged at 14:00 on UNIT-27, version 1.5.0.");
+    }
+    SECTION("the commit with no unit")
+    {
+        HeaderValues header = sample_header();
+        header.m_UnitNumber.reset();
+        header.m_SoftwareVersion = SoftwareVersion::parse("1.4.2", "a1b2c3d").value();
+        Rig rig;
+        rig.start(list_of(error_at(1, 11, 2)), header);
+
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02, version 1.4.2 (a1b2c3d).");
+    }
     SECTION("with no configuration the unit is its number")
     {
         Rig rig;

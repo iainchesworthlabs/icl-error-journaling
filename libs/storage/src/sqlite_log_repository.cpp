@@ -595,7 +595,7 @@ Result<HeaderValues, StorageError> read_header(const QSqlQuery& query, int first
     }
     if (const auto version = optional_text(query.value(first + 5)))
     {
-        const auto parsed = SoftwareVersion::parse(*version);
+        const auto parsed = SoftwareVersion::parse_stored(*version);
         if (!parsed)
         {
             return Failure(corrupt("a stored software version is not valid"));
@@ -613,7 +613,7 @@ QVariantList header_values(const HeaderValues& header)
     values << (header.m_Location && header.m_Location->m_Id ? QVariant(to_qt(header.m_Location->m_Id->format()))
                                                             : null_text());
     values << (header.m_Location ? QVariant(to_qt(header.m_Location->m_Text)) : null_text());
-    values << (header.m_SoftwareVersion ? QVariant(to_qt(header.m_SoftwareVersion->format())) : null_text());
+    values << (header.m_SoftwareVersion ? QVariant(to_qt(header.m_SoftwareVersion->stored())) : null_text());
     return values;
 }
 

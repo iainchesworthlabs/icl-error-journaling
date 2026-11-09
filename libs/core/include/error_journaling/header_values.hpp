@@ -54,7 +54,8 @@ struct HeaderError
 };
 
 /// The stored text of a field: the unit number's digits and, when it has an environment, a dash and the environment
-/// ("27" or "27-prod"), the software version as major.minor.patch, and for a location the id formatted as a UUID or
+/// ("27" or "27-prod"), the software version as major.minor.patch with, when it has a commit, a plus sign and the
+/// commit ("1.4.2" or "1.4.2+a1b2c3d"), and for a location the id formatted as a UUID or
 /// else the free text. Empty optional when the field is empty.
 [[nodiscard]] std::optional<std::string> header_field_text(const HeaderValues& header, HeaderField field);
 

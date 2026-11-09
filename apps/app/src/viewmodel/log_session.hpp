@@ -68,10 +68,15 @@ class LogSession : public QObject, public OpenLogSource
     // "prod", or empty when the unit has no environment (and when it has no number): the environment alone (PRF-11).
     Q_PROPERTY(QString unitEnvironment READ unit_environment NOTIFY headerChanged)
     Q_PROPERTY(QString locationText READ location_text NOTIFY headerChanged) // the name, resolved from the id
-    Q_PROPERTY(QString versionText READ version_text NOTIFY headerChanged)
+    Q_PROPERTY(QString versionText READ version_text NOTIFY headerChanged)   // "1.4.2": the components alone
+    // "a1b2c3d", or empty when the version has no commit (HDR-09): the commit alone.
+    Q_PROPERTY(QString commitText READ commit_text NOTIFY headerChanged)
+    // "1.4.2" or "1.4.2 (a1b2c3d)": the version as the log prints it, or empty when there is no version.
+    Q_PROPERTY(QString versionDisplayText READ version_display_text NOTIFY headerChanged)
     Q_PROPERTY(QString dateText READ date_text NOTIFY headerChanged) // "Sat 7 Nov"
-    Q_PROPERTY(
-        QStringList missingFields READ missing_fields NOTIFY headerChanged) // HDR-06 banner: keys of empty fields
+    // HDR-06 banner: keys of empty fields. The keys are those of `header_field_key`, and `software_commit` while the
+    // version has no commit (HDR-09); that one is a reminder and never stops anything.
+    Q_PROPERTY(QStringList missingFields READ missing_fields NOTIFY headerChanged)
     // What a new log would archive: the live (not deleted) entries of the open log, every kind. It follows commits and
     // undo, so it is notified with the header: any change of the log is a `headerChanged`, except a share.
     Q_PROPERTY(int liveEntryCount READ live_entry_count NOTIFY headerChanged)
@@ -130,6 +135,8 @@ public:
     }
     [[nodiscard]] QString location_text() const;
     [[nodiscard]] QString version_text() const;
+    [[nodiscard]] QString commit_text() const;
+    [[nodiscard]] QString version_display_text() const;
     [[nodiscard]] QString date_text() const;
     [[nodiscard]] QStringList missing_fields() const;
     [[nodiscard]] int live_entry_count() const;
@@ -163,6 +170,33 @@ public:
     /// A Correct (HDR-07) of the unit from its two parts: the same as `correctHeader("unit_number", ...)` with the
     /// stored text "27-prod" or "27" put together here. False for a pair `validateUnit` refuses.
     Q_INVOKABLE bool correctUnit(const QString& digits, const QString& environment);
+
+    /// The inline check of the commit alone (HDR-09), "" when it is valid: empty, 7 to 12 hexadecimal characters, or a
+    /// full 40-character hash. Upper case is accepted (it is lower-cased when saved).
+    Q_INVOKABLE QString validateCommit(const QString& commit) const;
+
+    /// The commit as it is kept: trimmed, lower-cased, and a full 40-character hash shortened to its first 7
+    /// characters. A commit that `validateCommit` refuses comes back trimmed and otherwise as it was.
+    Q_INVOKABLE QString normalizeCommit(const QString& commit) const;
+
+    /// The inline check of the version as the person builds it (HDR-04, HDR-09): the components as typed in the
+    /// version field, and the commit as typed, "" for none. "" when the pair is valid. The version is judged first.
+    Q_INVOKABLE QString validateVersion(const QString& version, const QString& commit) const;
+
+    /// The version as the log will print it for these two parts: "1.4.2 (a1b2c3d)", with the commit lower-cased and
+    /// a full hash shortened. Empty for a pair `validateVersion` refuses.
+    Q_INVOKABLE QString versionDisplay(const QString& version, const QString& commit) const;
+
+    /// A Correct (HDR-07) of the version from its two parts: the same as `correctHeader("software_version", ...)`
+    /// with the stored text "1.4.2+a1b2c3d" or "1.4.2" put together here. False for a pair `validateVersion` refuses.
+    Q_INVOKABLE bool correctVersion(const QString& version, const QString& commit);
+
+    /// A Change (HDR-07) of the version from its two parts, as `changeHeader` does for the stored text.
+    Q_INVOKABLE bool changeVersion(const QString& version, const QString& commit, int localSeconds);
+
+    /// What `changeVersion` would record, as `previewHeaderChange` gives it, or the plain refusal of
+    /// `validateVersion`.
+    Q_INVOKABLE QString previewVersionChange(const QString& version, const QString& commit, int localSeconds) const;
 
     /// HDR-07 Correct: fixes the value in force and writes no entry. A first fill of an empty field is also a Correct.
     Q_INVOKABLE bool correctHeader(const QString& fieldKey, const QString& text);

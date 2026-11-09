@@ -1,0 +1,12 @@
+Facilitator: Sam Example
+Date: 7 Nov 2026
+UNIT #: UNIT-27
+Location: North Site
+Software Version: 1.4.2 (a1b2c3d)
+
+10:05 T| Wrong Response
+11:00 Software Version changed: 1.4.2 (a1b2c3d) → 1.5.0 (e4f5a6b)
+11:30 T| Mute Delay
+12:00 Software Version changed: 1.5.0 (e4f5a6b) → 1.5.0
+12:15 Software Version changed: 1.5.0 → 1.5.0 (0123456789ab)
+12:30 T| Speech Delay

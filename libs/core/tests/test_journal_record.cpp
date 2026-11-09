@@ -418,3 +418,61 @@ TEST_CASE("A journal record whose unit has a damaged environment is refused", "[
         CHECK(decoded.error() == DecodeError::BAD_FIELD);
     }
 }
+
+TEST_CASE("A version with a commit is stored as the version, a plus sign and the commit; one without is unchanged",
+          "[journal][commit]")
+{
+    // A log with no commit writes the same bytes as before commits existed: the three components alone.
+    const std::string plain = encoded(sample_record(1, CreateLogBody{sample_header(), sample_time(0), std::nullopt}));
+    CHECK(plain.find("\"version\":\"1.4.2\"") != std::string::npos);
+
+    HeaderValues with_commit = sample_header();
+    with_commit.m_SoftwareVersion = SoftwareVersion::parse("1.4.2", "A1B2C3D").value();
+    const std::string line = encoded(sample_record(1, CreateLogBody{with_commit, sample_time(0), std::nullopt}));
+    CHECK(line.find("\"version\":\"1.4.2+a1b2c3d\"") != std::string::npos);
+
+    const auto decoded = decode_record(line);
+    REQUIRE(decoded.has_value());
+    const auto& header = std::get<CreateLogBody>(decoded->m_Body).m_Header;
+    CHECK(header.m_SoftwareVersion->format() == "1.4.2");
+    CHECK(header.m_SoftwareVersion->commit() == "a1b2c3d");
+    CHECK(encoded(*decoded) == line);
+
+    // The line a build wrote before commits existed decodes to a version without one.
+    const auto old = decode_record(plain);
+    REQUIRE(old.has_value());
+    const auto& old_header = std::get<CreateLogBody>(old->m_Body).m_Header;
+    CHECK(old_header.m_SoftwareVersion == SoftwareVersion::parse("1.4.2").value());
+    CHECK(old_header.m_SoftwareVersion->commit().empty());
+
+    // A change and a correction carry the stored text.
+    const auto change = decode_record(
+        encoded(sample_record(5, AddEntryBody{sample_change(5, 34, HeaderField::SOFTWARE_VERSION, "1.5.0+e4f5a6b")})));
+    REQUIRE(change.has_value());
+    CHECK(std::get<HeaderChangeEntry>(std::get<AddEntryBody>(change->m_Body).m_Entry.m_Body).m_NewValue ==
+          "1.5.0+e4f5a6b");
+    const auto correction =
+        decode_record(encoded(sample_record(10, CorrectHeaderBody{HeaderField::SOFTWARE_VERSION, "1.4.3+a1b2c3d"})));
+    REQUIRE(correction.has_value());
+    CHECK(std::get<CorrectHeaderBody>(correction->m_Body).m_Value == "1.4.3+a1b2c3d");
+}
+
+TEST_CASE("A journal record whose version has a damaged commit is refused", "[journal][commit]")
+{
+    HeaderValues with_commit = sample_header();
+    with_commit.m_SoftwareVersion = SoftwareVersion::parse("1.4.2", "a1b2c3d").value();
+    const std::string line = encoded(sample_record(1, CreateLogBody{with_commit, sample_time(0), std::nullopt}));
+    // Rebuild the line with a commit that is not valid and the checksum of the new text.
+    std::string object = line.substr(0, line.size() - 18) + "}";
+    const auto at = object.find("1.4.2+a1b2c3d");
+    REQUIRE(at != std::string::npos);
+    for (const char* bad : {"1.4.2+a1b2c3", "1.4.2+g1b2c3d", "1.4.2+", "1.4.2+a1b2c3d4e5f6a"})
+    {
+        INFO(bad);
+        std::string damaged = object;
+        damaged.replace(at, 13, bad);
+        const auto decoded = decode_record(with_crc(damaged));
+        REQUIRE_FALSE(decoded.has_value());
+        CHECK(decoded.error() == DecodeError::BAD_FIELD);
+    }
+}
