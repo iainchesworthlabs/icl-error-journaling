@@ -372,6 +372,7 @@ TEST_CASE("toast.shield: a touch on the toast never reaches the tile under it, a
     advance_through(rig, 240);
     REQUIRE_FALSE(toast->isVisible());
     rig.tap(under, QPointF(200, 26));
-    CHECK(pressed.count() == 1);
-    CHECK(tapped.count() == 1);
+    rig.tap(under, QPointF(200, 26));
+    CHECK(pressed.count() == 1); // the second tap of a double-tap
+    CHECK(tapped.count() == 2);
 }

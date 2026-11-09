@@ -705,6 +705,14 @@ QtObject {
         readonly property real tilePressScale: 0.96
         readonly property int tilePressMs: 120
         readonly property int undoToastVisibleMs: 5000
+        // How a tile is touched to log (docs/plan/stage-4.md, 4.17a). Time, not motion, so Reduce Motion does not change them.
+        // The longest gap between the lift of a tap and the touch of the next for the two to be a double-tap, the time a finger
+        // stays on a tile for a hold, how long the "Double-tap to log" hint stays after a single tap, and the least time between
+        // two hints (counted from the start of one).
+        readonly property int doubleTapMs: 300
+        readonly property int holdMs: 500
+        readonly property int tapHintVisibleMs: 2000
+        readonly property int tapHintIntervalMs: 5000
         readonly property int reducedMotionMs: 100
         readonly property int sheetPresentMs: reduceMotion ? reducedMotionMs : 320
         readonly property int toastMs: reduceMotion ? reducedMotionMs : 240
