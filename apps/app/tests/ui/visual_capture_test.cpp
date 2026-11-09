@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The visual capture (not a test of behaviour): renders each state of the app that has a mock-up in
-// docs/design/screens, at 402 x 874 points in light and dark, and writes PNGs for the comparison of the mock-ups with
-// the app (tools/visual/).
+// docs/design/screens, at 402 x 874 points (the iPad mock-ups of Stage 8 at 820 x 1180 and 1180 x 820) in light and
+// dark, and writes PNGs for the comparison of the mock-ups with the app (tools/visual/).
 //
 // It is hidden: the tag [.capture] keeps it out of every ctest run (`catch_discover_tests` lists the cases that
 // `TEST_SPEC "~[perf]"` selects, and Catch2 does not select a hidden case with an exclusion-only spec; `ctest -N` shows
@@ -16,8 +16,8 @@
 // the mock-up renders); the layout stays 402 x 874 points.
 //
 // The app is the real shell over the real Stage 3 services (the in-memory store, a fake clock), driven as the person
-// drives it: taps, a swipe, typing. The shell sits under an item that adds the safe-area insets of an iPhone 17 (59 pt
-// at the top, 34 pt at the bottom), which the offscreen window does not have.
+// drives it: taps, a swipe, typing. The shell sits under an item that adds the safe-area insets of the device (an
+// iPhone 17: 59 pt at the top, 34 pt at the bottom; an iPad: 24 and 20), which the offscreen window does not have.
 //
 // The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the
 // Windows headers behind Qt Quick define as a macro. clang-format would sort them the other way, so it is switched off.
@@ -57,10 +57,12 @@
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSize>
 #include <QString>
 #include <QStringList>
 #include <QVariant>
 #include <QVariantMap>
+#include <algorithm>
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -79,10 +81,20 @@ constexpr int REVIEW_TAB = 1;
 constexpr int HISTORY_TAB = 2;
 constexpr int SETTINGS_TAB = 3;
 
-/// The insets of an iPhone 17 in portrait (the mock-ups leave 59 pt at the top; the tab bar is 83 pt with the 34 pt
-/// home-indicator inset).
-constexpr int INSET_TOP = 59;
-constexpr int INSET_BOTTOM = 34;
+/// The window a mock-up is drawn for: its size in points, its safe-area insets, and the suffix of its mock-up's name.
+struct Device
+{
+    QString m_Suffix;
+    QSize m_Size;
+    int m_InsetTop = 0;
+    int m_InsetBottom = 0;
+};
+
+/// An iPhone 17 in portrait (the mock-ups leave 59 pt at the top; the tab bar is 83 pt with the 34 pt home-indicator
+/// inset), and the iPad Air 11-inch of the Stage 8 mock-ups (a 24 pt status bar and a 20 pt home indicator).
+const Device PHONE{QString(), QSize(402, 874), 59, 34};
+const Device IPAD_PORTRAIT{QStringLiteral(".ipad-portrait"), QSize(820, 1180), 24, 20};
+const Device IPAD_LANDSCAPE{QStringLiteral(".ipad-landscape"), QSize(1180, 820), 24, 20};
 
 /// The shell, under an item that adds the safe-area insets of the phone, which every SafeFrame below it reads.
 const char* const WRAPPER = R"(
@@ -267,11 +279,12 @@ struct Start
     bool m_Configured = true;
 };
 
-/// The application as the phone has it, under the insets of an iPhone 17: the services over the fakes, the shell on
-/// top, and a file chooser that shows no dialog.
+/// The application as the device has it, under its insets: the services over the fakes, the shell on top, and a file
+/// chooser that shows no dialog. Named for the phone, which most mock-ups are drawn for.
 struct Phone
 {
-    explicit Phone(const Start& start) : services(RigStore::MEMORY), bridge(services.platform())
+    explicit Phone(const Start& start, const Device& device = PHONE)
+        : services(RigStore::MEMORY), bridge(services.platform()), ui(device.m_Size), m_Device(device)
     {
         services.go_to(start.m_Day, 8, 55);
         if (start.m_Configured)
@@ -310,7 +323,8 @@ struct Phone
 
     void load()
     {
-        const QByteArray source = QString::fromUtf8(WRAPPER).arg(INSET_TOP).arg(INSET_BOTTOM).toUtf8();
+        const QByteArray source =
+            QString::fromUtf8(WRAPPER).arg(m_Device.m_InsetTop).arg(m_Device.m_InsetBottom).toUtf8();
         QQuickItem* wrapper = ui.load_source(source, properties());
         INFO(ui.errors().toStdString());
         REQUIRE(wrapper != nullptr);
@@ -429,6 +443,7 @@ struct Phone
     CaptureBridge bridge;
     UiRig ui;
     std::unique_ptr<QObject> chooser;
+    Device m_Device;
 };
 
 // ---- the data of the scenes: a day as the mock-ups show it, through the services the app has ----
@@ -626,6 +641,7 @@ struct Scene
     Start m_Start;
     std::function<void(Phone&)> m_Build;
     QString m_Note;
+    Device m_Device = PHONE;
 };
 
 /// The Log tab with the day, as the first four Log mock-ups have it.
@@ -1085,8 +1101,8 @@ const Start TODAY;
 const Start FIRST_LAUNCH{7, false};
 const Start FOUR_DAYS_BACK{2, true};
 
-/// Every mock-up of docs/design/screens, in the order of docs/design/README.md.
-std::vector<Scene> scenes()
+/// Every phone mock-up of docs/design/screens, in the order of docs/design/README.md.
+std::vector<Scene> phone_scenes()
 {
     return {
         {QStringLiteral("Main"), TODAY, scene_main,
@@ -1179,6 +1195,35 @@ std::vector<Scene> scenes()
     };
 }
 
+/// The iPad mock-ups of Stage 8 (docs/plan/stage-8.md): nine of the phone's screens, each in portrait and landscape,
+/// brought to the same state as on the phone.
+const QStringList IPAD_SCREENS{
+    QStringLiteral("Main"),          QStringLiteral("Review"),  QStringLiteral("Header"),
+    QStringLiteral("BoardSettings"), QStringLiteral("History"), QStringLiteral("Other"),
+    QStringLiteral("EditEntry"),     QStringLiteral("NewDay"),  QStringLiteral("FirstLaunch")};
+
+/// Every mock-up: the phone's, then the iPad's.
+std::vector<Scene> scenes()
+{
+    std::vector<Scene> all = phone_scenes();
+    const std::vector<Scene> phone = all;
+    for (const QString& name : IPAD_SCREENS)
+    {
+        const auto found =
+            std::find_if(phone.begin(), phone.end(), [&name](const Scene& s) { return s.m_Name == name; });
+        REQUIRE(found != phone.end());
+        for (const Device& device : {IPAD_PORTRAIT, IPAD_LANDSCAPE})
+        {
+            Scene scene = *found;
+            scene.m_Name = name + device.m_Suffix;
+            scene.m_Device = device;
+            scene.m_Note = QStringLiteral("The phone's scene in an iPad window. ") + found->m_Note;
+            all.push_back(scene);
+        }
+    }
+    return all;
+}
+
 QString capture_dir()
 {
     return qEnvironmentVariable("EJ_CAPTURE_DIR");
@@ -1238,7 +1283,7 @@ TEST_CASE("capture.mockups: render each state that has a mock-up, in light and d
         return;
     }
 
-    Phone phone(scene.m_Start);
+    Phone phone(scene.m_Start, scene.m_Device);
     scene.m_Build(phone);
     for (const bool dark : {false, true})
     {
