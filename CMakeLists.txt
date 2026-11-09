@@ -63,3 +63,9 @@ endif()
 if(ERROR_JOURNALING_BUILD_TESTS AND NOT IOS)
     add_subdirectory(tools/dataset)
 endif()
+
+# The desktop tool that draws the launch image from the skeleton of the Log screen and checks it (Stage 5, 5.8). It needs the
+# QML of the application and Qt Quick, so it is built where the application's tests are.
+if(ERROR_JOURNALING_BUILD_TESTS AND ERROR_JOURNALING_BUILD_APP AND NOT IOS)
+    add_subdirectory(tools/launch_image)
+endif()

@@ -8,7 +8,10 @@ Only fictional names are used.
 from __future__ import annotations
 
 import copy
+import json
+import struct
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -110,6 +113,125 @@ class PlistCheckTest(unittest.TestCase):
 
     def test_this_repository_passes(self) -> None:
         self.assertEqual(plist_check.run(ROOT), [])
+
+
+TOKENS = {"colour": {"light": {"background": "#F2F4F7"}, "dark": {"background": "#0E141A"}}}
+LAUNCH = {"UILaunchScreen": {"UIColorName": "Back", "UIImageName": "Board", "UIImageRespectsSafeAreaInsets": False}}
+
+
+def png(width: int = 1206, height: int = 2622, colour_type: int = 2, transparency: bool = False) -> bytes:
+    """The chunks of a PNG that the check reads (no image data: it never decodes)."""
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + b"\0\0\0\0"
+
+    header = struct.pack(">IIBBBBB", width, height, 8, colour_type, 0, 0, 0)
+    body = chunk(b"IHDR", header) + (chunk(b"tRNS", b"\0") if transparency else b"") + chunk(b"IEND", b"")
+    return plist_check.PNG_SIGNATURE + body
+
+
+def colour_entry(red: str, green: str, blue: str, dark: bool = False) -> dict:
+    entry = {"color": {"color-space": "srgb", "components": {"alpha": "1.000", "red": red, "green": green, "blue": blue}}}
+    if dark:
+        entry["appearances"] = [{"appearance": "luminosity", "value": "dark"}]
+    return entry
+
+
+def image_entry(filename: str, dark: bool = False, scale: str = "3x") -> dict:
+    entry = {"filename": filename, "idiom": "universal", "scale": scale}
+    if dark:
+        entry["appearances"] = [{"appearance": "luminosity", "value": "dark"}]
+    return entry
+
+
+class LaunchScreenCheckTest(unittest.TestCase):
+    """The launch screen against a catalogue built in a temporary directory."""
+
+    def setUp(self) -> None:
+        self._directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self._directory.cleanup)
+        self.catalogue = Path(self._directory.name)
+        self.colours = [colour_entry("0xF2", "0xF4", "0xF7"), colour_entry("0x0E", "0x14", "0x1A", dark=True)]
+        self.images = [image_entry("light.png"), image_entry("dark.png", dark=True)]
+        self.files = {"light.png": png(), "dark.png": png()}
+
+    def problems(self, plist: dict | None = None) -> list[str]:
+        colour_set = self.catalogue / "Back.colorset"
+        image_set = self.catalogue / "Board.imageset"
+        colour_set.mkdir(exist_ok=True)
+        image_set.mkdir(exist_ok=True)
+        (colour_set / "Contents.json").write_text(json.dumps({"colors": self.colours}), encoding="utf-8")
+        (image_set / "Contents.json").write_text(json.dumps({"images": self.images}), encoding="utf-8")
+        for name, data in self.files.items():
+            (image_set / name).write_bytes(data)
+        return plist_check.check_launch_screen(copy.deepcopy(LAUNCH) if plist is None else plist, self.catalogue, TOKENS)
+
+    def test_good_launch_screen_passes(self) -> None:
+        self.assertEqual(self.problems(), [])
+
+    def test_fractions_are_read_as_well_as_hex(self) -> None:
+        self.colours = [colour_entry("0.949", "0.957", "0.969"), colour_entry("0.055", "0.078", "0.102", dark=True)]
+        self.assertEqual(self.problems(), [])
+
+    def test_missing_launch_screen_fails(self) -> None:
+        self.assertTrue(any("UILaunchScreen" in p for p in self.problems({})))
+
+    def test_missing_names_fail(self) -> None:
+        plist = {"UILaunchScreen": {"UIImageRespectsSafeAreaInsets": False}}
+        problems = self.problems(plist)
+        self.assertTrue(any("UIColorName" in p for p in problems))
+        self.assertTrue(any("UIImageName" in p for p in problems))
+
+    def test_image_must_ignore_the_safe_area(self) -> None:
+        plist = copy.deepcopy(LAUNCH)
+        plist["UILaunchScreen"]["UIImageRespectsSafeAreaInsets"] = True
+        self.assertTrue(any("SafeArea" in p for p in self.problems(plist)))
+        del plist["UILaunchScreen"]["UIImageRespectsSafeAreaInsets"]
+        self.assertTrue(any("SafeArea" in p for p in self.problems(plist)))
+
+    def test_names_that_are_not_in_the_catalogue_fail(self) -> None:
+        plist = copy.deepcopy(LAUNCH)
+        plist["UILaunchScreen"]["UIColorName"] = "Nothing"
+        plist["UILaunchScreen"]["UIImageName"] = "Nothing"
+        problems = self.problems(plist)
+        self.assertTrue(any("colour Nothing" in p for p in problems))
+        self.assertTrue(any("image Nothing" in p for p in problems))
+
+    def test_colour_without_a_dark_variant_fails(self) -> None:
+        del self.colours[1]
+        self.assertTrue(any("dark entry" in p for p in self.problems()))
+
+    def test_image_without_a_dark_variant_fails(self) -> None:
+        del self.images[1]
+        self.assertTrue(any("dark entry" in p for p in self.problems()))
+
+    def test_colour_that_is_not_the_background_token_fails(self) -> None:
+        self.colours[0] = colour_entry("0xFF", "0xC9", "0x3C")
+        self.assertTrue(any("light is #FFC93C" in p for p in self.problems()))
+        self.colours = [colour_entry("0xF2", "0xF4", "0xF7"), colour_entry("0x00", "0x00", "0x00", dark=True)]
+        self.assertTrue(any("dark is #000000" in p for p in self.problems()))
+
+    def test_image_file_that_is_missing_fails(self) -> None:
+        del self.files["dark.png"]
+        self.assertTrue(any("dark.png" in p and "not there" in p for p in self.problems()))
+
+    def test_image_of_the_wrong_size_fails(self) -> None:
+        self.files["light.png"] = png(width=1179, height=2556)
+        self.assertTrue(any("1179 x 2556" in p for p in self.problems()))
+
+    def test_image_with_an_alpha_channel_fails(self) -> None:
+        self.files["light.png"] = png(colour_type=6)
+        self.assertTrue(any("opaque" in p for p in self.problems()))
+        self.files["light.png"] = png(colour_type=3, transparency=True)
+        self.assertTrue(any("opaque" in p for p in self.problems()))
+
+    def test_file_that_is_not_a_png_fails(self) -> None:
+        self.files["dark.png"] = b"not a picture at all, but long enough to be read"
+        self.assertTrue(any("not a PNG" in p for p in self.problems()))
+
+    def test_image_must_be_the_3x_one(self) -> None:
+        self.images[0] = image_entry("light.png", scale="2x")
+        self.assertTrue(any("3x" in p for p in self.problems()))
 
 
 class EjconfigFilesTest(unittest.TestCase):

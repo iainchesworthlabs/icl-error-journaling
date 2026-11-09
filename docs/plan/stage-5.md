@@ -822,6 +822,27 @@ haptic, share and import rows of the checklist.
 plist and `verify_app.sh` checks for the launch screen. If Stage 4 did not leave the Log screen's geometry in shared
 components, this package makes that small refactor, coordinated so Stage 4 has no other open change in those files.
 
+**As built.** Stage 4 left the geometry in shared components (`HeaderCard`, `NoteComposer`, `LastEntryBar`, `BoardGrid`,
+`TabBar`, `SafeFrame`, all in the `Theme` tokens), so the refactor was not needed and `LogScreen.qml` is unchanged:
+`screens/launch/LaunchSkeleton.qml` repeats its placing (the 16 pt margins and 12 pt gaps, five lines) and
+`launch.matches_screen` is what holds the two to the same rectangles. The skeleton uses the `skeleton` modes that Stage 4
+gave each component, with two additions so that the picture does not depend on the font of
+the machine that draws it (the plan assumed shapes without text are deterministic, but the placeholder shapes took their
+heights and widths from the font's metrics, which differ between Windows, Linux and macOS): `HeaderCard.nominalMetrics` takes
+the four lines at 1.2 times their size (`FontRole.nominalPitch`, the pitch of the phone's font) and the right column at 40% of
+the card, and the skeleton `TabBar` takes its label's height the same way. The Log screen's own loading placeholder is
+unchanged. `launch.same_in_any_font` renders the skeleton in a sans serif, a monospace and a serif font and requires the same
+picture. `launch.matches_screen` compares the skeleton with the real shell, filled in as in the design, under the iPhone 17 insets.
+The one thing in the real screen that depends on the font is the header card, which is at least 64 pt and as tall as its words,
+and the font of a test machine is not the phone's: the case measures how far the real card is from the skeleton's (65.6 pt, the
+phone's font at the default size) and requires the card's top and sides, and everything under it, to be where the skeleton has
+them once moved by that difference, within half a point. On the phone's font the difference is within half a point, and K1
+confirms it. Offscreen Qt has only one font on some machines, so `launch.same_in_any_font` can only compare fonts where the
+machine has several.
+`launch.image_current` is a `ctest` that runs `ej_launch_image --check`; its comparison is exact inside the tiles (corners
+apart) and allows 2 levels of a channel elsewhere. The PNGs are `launch-light.png` and `launch-dark.png` in
+`LaunchBoard.imageset`.
+
 ### 5.9 Device pass and the gate record
 
 Run the checklist, append "Device results" to this file with the figures, fix or log what fails, tick off the spike

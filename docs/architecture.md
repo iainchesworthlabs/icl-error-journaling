@@ -120,9 +120,11 @@ apps/app/             ej_app: the Qt Quick application (executable error-journal
   tests/viewmodel/    test_*.cpp (`unit`), integration/*.cpp (`integration`), perf/*.cpp (`perf`, built only when the
                       directory has files), support/: the test support (docs/testing.md)
   packaging/ios.cmake    bundle properties, signing and the plugin defaults of Qt's iOS kit
-  packaging/ios/         Info.plist.in, asset catalogue (icon, launch colour), verify_app.sh
+  packaging/ios/         Info.plist.in, asset catalogue (icon, launch colour, launch image), verify_app.sh
 cmake/icl/            vendored CMake modules from icl-common-infra (do not edit)
 tools/                project scripts, baselines and coverage floors (ci/check_ios_plist.py, ci/check_platform_layout.py)
+  launch_image/        ej_launch_image: a desktop tool that draws the launch image (qml/screens/launch/LaunchSkeleton.qml,
+                       light and dark) into the iOS asset catalogue and checks that the PNGs there are current (Stage 5, 5.8)
   dataset/             ej_dataset: a desktop tool that writes the one-year fictional store for the device measurements
 ```
 
