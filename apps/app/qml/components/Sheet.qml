@@ -56,9 +56,11 @@ FocusScope {
     // Whether a drag of the grabber, a tap on the scrim or the Escape key dismisses it.
     property bool dismissible: true
     property color scrimColour: Theme.colour.sheetScrim
-    // The height of the keyboard in points; 0 when there is none. The shell's keyboard is Qt.inputMethod (assumption U5);
-    // a test sets this directly.
-    property real keyboardHeight: inputMethod.visible ? inputMethod.keyboardRectangle.height : 0
+    // How far the keyboard reaches up into the sheet's layer, in points; 0 when there is none. It is read from Keyboard
+    // (assumption U5), in the coordinates of the window: the layer is the window or a screen, and the keyboard docks at the
+    // bottom of the window, so a layer that ends above the window's bottom (above the tab bar) is covered by less than the
+    // height of the keyboard. A test can set it directly.
+    property real keyboardHeight: Keyboard.coverage(root)
     // For a centred sheet and the Content detent: the height its content needs, so that the sheet is no taller than that.
     property real contentImplicitHeight: 0
     // The content area of a bottom sheet runs under the home indicator; the content pads itself by contentBottomInset.
@@ -76,9 +78,6 @@ FocusScope {
     readonly property real bottomInset: frame.bottomInset
 
     default property alias content: body.data
-
-    // The platform's input method, untyped because the QML type system sees it only as a QObject.
-    readonly property var inputMethod: Qt.inputMethod
 
     // True from open() until the dismissal has finished.
     readonly property bool isOpen: modalState.open
@@ -135,7 +134,9 @@ FocusScope {
 
         property bool open: false
         property bool closing: false
-        // The item that had focus when the sheet opened.
+        // The item that had focus when the sheet opened, to give it back when the sheet closes. It is never a text field: a
+        // field is left when a sheet opens (its value is saved by its own screen) and must not bring the keyboard back
+        // when the sheet goes.
         property Item previousFocus: null
     }
 
@@ -153,7 +154,11 @@ FocusScope {
         dismissAnimation.stop();
         if (!modalState.open) {
             const window = Window.window;
-            modalState.previousFocus = window ? window.activeFocusItem : null;
+            const focused = window ? window.activeFocusItem : null;
+            modalState.previousFocus = Keyboard.isTextInput(focused) ? null : focused;
+            // The field that was being typed in is left now: it saves what it holds on losing the focus, and the keyboard goes.
+            if (Keyboard.isTextInput(focused))
+                Keyboard.dismiss(root, null);
         }
         modalState.closing = false;
         modalState.open = true;
@@ -167,6 +172,8 @@ FocusScope {
         if (!modalState.open || modalState.closing)
             return;
         modalState.closing = true;
+        // The keyboard goes with the sheet, not after its animation.
+        Keyboard.dismiss(root, null);
         presentAnimation.stop();
         snapBack.stop();
         dismissAnimation.restart();
@@ -186,7 +193,7 @@ FocusScope {
         root.bindGeometry();
         const target = modalState.previousFocus;
         modalState.previousFocus = null;
-        if (target)
+        if (target && !Keyboard.isTextInput(target))
             target.forceActiveFocus(Qt.OtherFocusReason);
         root.closed();
     }

@@ -221,3 +221,55 @@ TEST_CASE("list_row.cross_cutting: names, targets, order and text scale, in ligh
     rig.set_reduce_motion(true);
     expect_clean(check_motion_reduced(rig));
 }
+
+TEST_CASE("list_row.focus: a tap on a row takes the focus from the text field beside it before it asks to be opened",
+          "[ui][list_row]")
+{
+    UiRig rig;
+    REQUIRE(rig.load_source(QByteArrayLiteral(R"(
+        import QtQuick
+        import ErrorJournalingApp
+        Item {
+            id: host
+            property int opened: 0
+            property bool fieldFocusedWhenOpened: true
+            TextInput {
+                id: field
+                objectName: "field"
+                x: 20; y: 100; width: 200; height: 40
+                inputMethodHints: Qt.ImhDigitsOnly
+            }
+            GroupedList {
+                x: Theme.space.screenMargin
+                y: 200
+                width: host.width - 2 * Theme.space.screenMargin
+                ListRow {
+                    objectName: "row"
+                    text: "Environment"
+                    value: "None"
+                    showChevron: true
+                    onActivated: {
+                        host.opened += 1;
+                        host.fieldFocusedWhenOpened = field.activeFocus;
+                    }
+                }
+            }
+        })")) != nullptr);
+    QQuickItem* host = rig.root();
+    QQuickItem* field = rig.find(QStringLiteral("field"));
+    QQuickItem* row = rig.find(QStringLiteral("row"));
+    REQUIRE(field != nullptr);
+    REQUIRE(row != nullptr);
+
+    field->forceActiveFocus();
+    rig.show_keyboard(301);
+    REQUIRE(rig.focused_input() == field);
+
+    rig.tap(row);
+    rig.advance(std::chrono::milliseconds(16));
+    CHECK(host->property("opened").toInt() == 1);
+    // By the time the row asks to be opened the field is no longer being typed in.
+    CHECK_FALSE(host->property("fieldFocusedWhenOpened").toBool());
+    CHECK(rig.focused_input() == nullptr);
+    CHECK(row->hasActiveFocus());
+}

@@ -20,6 +20,8 @@ import ErrorJournalingApp
 //     PageStack { anchors.fill: parent; initialItem: settingsList }
 //     stack.push(editorComponent, { "title": qsTr("Locations") })
 //     stack.pop()
+//
+// The keyboard does not stay over a page that was left: see `onCurrentItemChanged`.
 StackView {
     id: root
 
@@ -83,6 +85,11 @@ StackView {
             duration: root.transitionMs
         }
     }
+
+    // The page that was shown may have a text field with the focus (Today's details with the version being typed): when
+    // another page comes in, or this one is popped, the typing ends, the field is saved by its own focus change and the
+    // keyboard goes. A field on the page that has just come in (an editor that focuses its field) keeps its focus.
+    onCurrentItemChanged: Keyboard.dismiss(root, root.currentItem)
 
     clip: true
     Accessible.role: Accessible.Pane

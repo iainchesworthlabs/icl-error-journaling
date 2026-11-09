@@ -142,6 +142,63 @@ void UiRig::set_reduce_motion(bool reduce)
     layout();
 }
 
+void UiRig::set_safe_area(double top, double bottom)
+{
+    theme()->setProperty("overrideSafeArea", true);
+    theme()->setProperty("overrideSafeTop", top);
+    theme()->setProperty("overrideSafeBottom", bottom);
+    layout();
+}
+
+QObject* UiRig::keyboard()
+{
+    return m_Impl->m_Engine.singletonInstance<QObject*>(MODULE, "Keyboard");
+}
+
+void UiRig::show_keyboard(double height)
+{
+    const double window_height = window().height();
+    keyboard()->setProperty("overrideKeyboard", true);
+    keyboard()->setProperty("overrideRectangle", QRectF(0, window_height - height, window().width(), height));
+    keyboard()->setProperty("overrideVisible", true);
+    layout();
+}
+
+void UiRig::show_keyboard_starting(double height)
+{
+    keyboard()->setProperty("overrideKeyboard", true);
+    keyboard()->setProperty("overrideRectangle", QRectF(0, window().height(), window().width(), height));
+    keyboard()->setProperty("overrideVisible", true);
+    layout();
+}
+
+void UiRig::hide_keyboard()
+{
+    keyboard()->setProperty("overrideVisible", false);
+    keyboard()->setProperty("overrideRectangle", QRectF());
+    layout();
+}
+
+bool UiRig::keyboard_up()
+{
+    return keyboard()->property("visible").toBool();
+}
+
+int UiRig::keyboard_hides()
+{
+    return keyboard()->property("hideCount").toInt();
+}
+
+QQuickItem* UiRig::focused_input()
+{
+    QQuickItem* item = window().activeFocusItem();
+    if (item == nullptr || !item->property("inputMethodHints").isValid())
+    {
+        return nullptr;
+    }
+    return item;
+}
+
 QQuickItem* UiRig::adopt(QObject* created)
 {
     auto* item = qobject_cast<QQuickItem*>(created);

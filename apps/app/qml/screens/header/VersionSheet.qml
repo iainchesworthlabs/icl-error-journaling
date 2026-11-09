@@ -200,12 +200,7 @@ Sheet {
 
             // Brings an item of the column into view, for a field that the keyboard would otherwise cover.
             function reveal(item: Item): void {
-                const top = item.mapToItem(column, 0, 0).y;
-                const bottom = top + item.height + Theme.space.sectionGap;
-                if (top < contentY)
-                    contentY = Math.max(0, top - Theme.space.sectionGap);
-                else if (bottom > contentY + height)
-                    contentY = Math.min(Math.max(0, contentHeight - height), bottom - height);
+                Keyboard.reveal(scroller, item, 0);
             }
 
             objectName: "versionScroller"
@@ -216,6 +211,8 @@ Sheet {
             contentWidth: width
             contentHeight: column.height + Theme.space.sectionGap
             boundsBehavior: Flickable.StopAtBounds
+            // The keyboard shortens the sheet after the field has the focus: the field is brought into view again.
+            onHeightChanged: Keyboard.revealFocused(scroller, 0)
 
             Column {
                 id: column

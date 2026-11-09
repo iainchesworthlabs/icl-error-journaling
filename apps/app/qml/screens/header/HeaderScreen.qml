@@ -53,10 +53,9 @@ SheetHost {
     property real overrideTop: 0
     property real overrideBottom: 0
 
-    // The height of the keyboard in points, 0 when there is none (assumption U5). A test sets it directly.
-    property real keyboardHeight: inputMethod.visible ? inputMethod.keyboardRectangle.height : 0
-    // The platform's input method, untyped because the QML type system sees it only as a QObject.
-    readonly property var inputMethod: Qt.inputMethod
+    // How far the keyboard reaches up into the screen, in points, 0 when there is none (Keyboard, assumption U5). The page
+    // ends at the top of the keyboard and the foot bar steps aside.
+    readonly property real keyboardHeight: frame.keyboardInset
 
     // What is typed, what the model was last given, and whether the person has typed in the field yet. A field shows no
     // refusal until it has been edited, so an empty field is not scolded when the screen opens.
@@ -266,7 +265,10 @@ SheetHost {
         closeRequested();
     }
 
-    onKeyboardHeightChanged: Qt.callLater(() => root.reveal(root.activeField))
+    onKeyboardHeightChanged: {
+        root.reveal(root.activeField);
+        Qt.callLater(() => root.reveal(root.activeField));
+    }
     Component.onCompleted: {
         root.restBarHeight = nav.implicitHeight;
         refresh(true);
@@ -315,6 +317,9 @@ SheetHost {
         overrideInsets: root.overrideInsets
         overrideTop: root.overrideTop
         overrideBottom: root.overrideBottom
+        // The frame ends at the keyboard; the page scrolls to the field itself, because its bar covers the top of it.
+        avoidKeyboard: true
+        revealFocus: false
 
         // The page scrolls under the bar, so the bar has a background of the screen's colour behind it.
         Rectangle {
@@ -345,8 +350,8 @@ SheetHost {
 
             objectName: "headerScroller"
             width: parent.width
-            // Down to the foot bar, or to the keyboard when that is up and the bar is hidden.
-            height: Math.max(0, footer.visible ? footer.y : parent.height - Math.max(0, root.keyboardHeight - frame.bottomInset))
+            // Down to the foot bar, or to the bottom of the frame, which is the keyboard when that is up and the bar is hidden.
+            height: Math.max(0, footer.visible ? footer.y : parent.height)
             clip: true
             topMargin: root.restBarHeight
             contentWidth: width

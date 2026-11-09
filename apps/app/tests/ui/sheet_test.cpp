@@ -573,3 +573,88 @@ TEST_CASE("motion.reduce: with Reduce Motion the sheet fades in 100 ms and does 
         CHECK_FALSE(f.is_open());
     }
 }
+
+TEST_CASE(
+    "sheet.focus_return: the keyboard goes with the sheet, and a text field under it is never given the focus back",
+    "[ui][sheet]")
+{
+    UiRig rig;
+    REQUIRE(rig.load_source(QByteArrayLiteral(R"(
+        import QtQuick
+        import ErrorJournalingApp
+        SheetHost {
+            TextInput {
+                objectName: "pageField"
+                x: 20; y: 200; width: 200; height: 40
+                inputMethodHints: Qt.ImhDigitsOnly
+            }
+            Rectangle {
+                objectName: "opener"
+                x: 20; y: 100; width: 120; height: 54
+                activeFocusOnTab: true
+            }
+            sheets: [
+                Sheet {
+                    objectName: "sheet"
+                    accessibleName: "Environment"
+                    TextInput {
+                        objectName: "sheetField"
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        y: 20
+                        height: 40
+                    }
+                }
+            ]
+        })")) != nullptr);
+    QQuickItem* sheet = rig.find(QStringLiteral("sheet"));
+    QQuickItem* page_field = rig.find(QStringLiteral("pageField"));
+    QQuickItem* sheet_field = rig.find(QStringLiteral("sheetField"));
+    QQuickItem* opener = rig.find(QStringLiteral("opener"));
+    REQUIRE(sheet != nullptr);
+    REQUIRE(page_field != nullptr);
+    REQUIRE(sheet_field != nullptr);
+    REQUIRE(opener != nullptr);
+
+    SECTION("a field that had the focus when the sheet opened does not get it back, and the keyboard stays down")
+    {
+        page_field->forceActiveFocus();
+        rig.show_keyboard(301);
+        REQUIRE(rig.focused_input() == page_field);
+        QMetaObject::invokeMethod(sheet, "open");
+        rig.advance(600ms);
+        // The page is disabled under the sheet: the field has lost the focus and the keyboard has gone.
+        CHECK(rig.focused_input() == nullptr);
+        CHECK_FALSE(rig.keyboard_up());
+        QMetaObject::invokeMethod(sheet, "close");
+        rig.advance(1000ms);
+        CHECK_FALSE(sheet->property("isOpen").toBool());
+        CHECK(rig.focused_input() == nullptr);
+        CHECK_FALSE(page_field->hasActiveFocus());
+        CHECK_FALSE(rig.keyboard_up());
+    }
+
+    SECTION("an item that is not a field gets the focus back")
+    {
+        opener->forceActiveFocus();
+        QMetaObject::invokeMethod(sheet, "open");
+        rig.advance(600ms);
+        QMetaObject::invokeMethod(sheet, "close");
+        rig.advance(1000ms);
+        CHECK(opener->hasActiveFocus());
+    }
+
+    SECTION("a field of the sheet is let go with the sheet, and the keyboard with it")
+    {
+        QMetaObject::invokeMethod(sheet, "open");
+        rig.advance(600ms);
+        sheet_field->forceActiveFocus();
+        rig.show_keyboard(301);
+        REQUIRE(rig.focused_input() == sheet_field);
+        QMetaObject::invokeMethod(sheet, "close");
+        rig.advance(1000ms);
+        CHECK(rig.focused_input() == nullptr);
+        CHECK_FALSE(rig.keyboard_up());
+        CHECK(rig.keyboard_hides() >= 1);
+    }
+}

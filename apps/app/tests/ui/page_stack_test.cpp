@@ -339,3 +339,67 @@ TEST_CASE("page_stack.opacity: a replace ends with the new page opaque and visib
     CHECK(two->opacity() == 1);
     CHECK(f.depth() == 1);
 }
+
+TEST_CASE("page_stack.keyboard: a page that is left takes the focus of its field and the keyboard with it",
+          "[ui][page_stack]")
+{
+    UiRig rig;
+    REQUIRE(rig.load_source(QByteArrayLiteral(R"(
+        import QtQuick
+        import ErrorJournalingApp
+        Item {
+            id: host
+            function pushEditor() { stack.push(editor) }
+            function popPage() { stack.pop() }
+            Component {
+                id: first
+                Rectangle { objectName: "pageOne"; color: Theme.colour.background }
+            }
+            Component {
+                id: editor
+                Rectangle {
+                    color: Theme.colour.background
+                    TextInput {
+                        objectName: "digits"
+                        x: 20; y: 100; width: 200; height: 40
+                        inputMethodHints: Qt.ImhDigitsOnly
+                    }
+                }
+            }
+            PageStack {
+                id: stack
+                anchors.fill: parent
+                initialItem: first
+            }
+        })")) != nullptr);
+    QQuickItem* host = rig.root();
+
+    SECTION("popping the page that holds the field with the number pad up")
+    {
+        QMetaObject::invokeMethod(host, "pushEditor");
+        rig.advance(600ms);
+        QQuickItem* digits = rig.find_item(QStringLiteral("digits"));
+        REQUIRE(digits != nullptr);
+        digits->forceActiveFocus();
+        rig.show_keyboard(301);
+        REQUIRE(rig.focused_input() == digits);
+        QMetaObject::invokeMethod(host, "popPage");
+        rig.advance(600ms);
+        CHECK(rig.focused_input() == nullptr);
+        CHECK_FALSE(rig.keyboard_up());
+    }
+
+    SECTION("pushing another page over the page that holds the field")
+    {
+        QMetaObject::invokeMethod(host, "pushEditor");
+        rig.advance(600ms);
+        QQuickItem* digits = rig.find_item(QStringLiteral("digits"));
+        REQUIRE(digits != nullptr);
+        digits->forceActiveFocus();
+        rig.show_keyboard(301);
+        QMetaObject::invokeMethod(host, "pushEditor");
+        rig.advance(600ms);
+        CHECK(rig.focused_input() == nullptr);
+        CHECK_FALSE(rig.keyboard_up());
+    }
+}

@@ -34,6 +34,9 @@ Rectangle {
         id: frame
 
         anchors.fill: parent
+        // The page ends at the top of the keyboard, the bar stays where it is, and the field being typed in is scrolled
+        // into view.
+        avoidKeyboard: true
 
         NavBar {
             id: nav

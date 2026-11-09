@@ -42,6 +42,7 @@
 #include <QVariant>
 #include <QVariantMap>
 #include <chrono>
+#include <cstdio>
 #include <memory>
 
 using namespace ej;
@@ -914,3 +915,583 @@ TEST_CASE("app.accessibility: the tree of each tab is named and in order in ligh
 }
 
 #include "app_flow_test.moc"
+
+// ---- the keyboard on the phone's window (the bugs of TestFlight build 9) ----
+//
+// The window covers the whole screen under `Qt.ExpandedClientAreaHint`: the insets are the real ones (iPhone 17: 62 at
+// the top, 34 at the bottom) and iOS reports the keyboard rectangle in the window's own coordinates, docked at its
+// bottom. The tests above load the window of the offscreen platform, which has no insets and no keyboard, and a test
+// that sets a height on a screen cannot see a screen that takes the keyboard from the wrong coordinates.
+
+namespace
+{
+
+constexpr double PHONE_TOP = 62.0;
+constexpr double PHONE_BOTTOM = 34.0;
+constexpr double PHONE_KEYBOARD = 301.0;
+constexpr double PHONE_HEIGHT = 874.0;
+constexpr double KEYBOARD_TOP = PHONE_HEIGHT - PHONE_KEYBOARD;
+/// A large sheet starts 5 pt above the safe area, as the design has it (`Theme.size.sheetTop` is 54 and the safe area
+/// 59).
+constexpr double SHEET_TOP = PHONE_TOP - 5.0;
+
+/// The text input inside a field of the app: a FormField holds one named `formInput`, and the note composer's field is
+/// a TextField itself.
+QQuickItem* input_in(App& app, QQuickItem* field)
+{
+    REQUIRE(field != nullptr);
+    QQuickItem* input = app.ui.find_item(QStringLiteral("formInput"), field);
+    return input != nullptr ? input : field;
+}
+
+/// The person taps a field: it takes the focus, and the keyboard comes up from below the window (the "will show" report
+/// of Qt, which has the final size) and arrives.
+void focus_field(App& app, QQuickItem* field)
+{
+    QQuickItem* input = input_in(app, field);
+    QMetaObject::invokeMethod(input, "forceActiveFocus");
+    app.ui.show_keyboard_starting(PHONE_KEYBOARD);
+    app.ui.advance(64ms);
+    app.ui.show_keyboard(PHONE_KEYBOARD);
+    app.ui.advance(300ms);
+}
+
+/// What every screen with a text field must do with the keyboard up: the focused field whole and above the keyboard and
+/// not under the status bar; the area that the screen scrolls in down to the top of the keyboard, not a point short of
+/// it, and not moved at its top (the bar above it is where it was).
+void expect_clear_of_keyboard(App& app, QQuickItem* field, QQuickItem* area, double area_top_before)
+{
+    QQuickItem* input = input_in(app, field);
+    INFO("field " << input->objectName().toStdString() << " of " << field->objectName().toStdString());
+    REQUIRE(app.ui.focused_input() == input);
+    const QRectF shown = app.ui.geometry(input);
+    CHECK(shown.bottom() <= KEYBOARD_TOP);
+    CHECK(shown.top() >= PHONE_TOP);
+    if (area != nullptr)
+    {
+        const QRectF where = app.ui.geometry(area);
+        CHECK(where.bottom() == KEYBOARD_TOP);
+        CHECK(where.top() == area_top_before);
+        CHECK(where.top() >= PHONE_TOP);
+        CHECK(shown.top() >= where.top());
+        CHECK(shown.bottom() <= where.bottom());
+    }
+}
+
+/// Takes the keyboard down as the platform does when the person is done.
+void put_keyboard_away(App& app)
+{
+    app.ui.hide_keyboard();
+    app.ui.advance(100ms);
+}
+
+/// The phone's window for an app: the real insets.
+void phone(App& app)
+{
+    app.ui.set_safe_area(PHONE_TOP, PHONE_BOTTOM);
+    app.ui.advance(50ms);
+}
+
+/// The content area of the editor page that is in view: the pages under it on a stack are hidden.
+QQuickItem* shown_page(App& app)
+{
+    for (QQuickItem* candidate : app.ui.find_items(QStringLiteral("editorPageContent")))
+    {
+        if (candidate->isVisible())
+        {
+            return candidate;
+        }
+    }
+    FAIL("no editor page is shown");
+    return nullptr;
+}
+
+/// A row of a list that may be under the tab bar or off the page: the row's own signal, which a tap sends.
+void activate(App& app, const QString& name)
+{
+    QQuickItem* row = app.need(name);
+    REQUIRE(QMetaObject::invokeMethod(row, "activated"));
+    app.play();
+}
+
+QQuickItem* inside(App& app, const QString& name, QQuickItem* from)
+{
+    QQuickItem* item = app.ui.find_item(name, from);
+    INFO(name.toStdString());
+    REQUIRE(item != nullptr);
+    return item;
+}
+
+} // namespace
+
+TEST_CASE(
+    "app.keyboard_details: Today's details ends at the keyboard for each field, from the top of the page and from "
+    "the foot, with the bar in place and nothing under the status bar",
+    "[ui][app]")
+{
+    App app;
+    phone(app);
+    app.tap(QStringLiteral("logHeaderCard"));
+    app.play();
+    QQuickItem* screen = app.need(QStringLiteral("headerScreen"));
+    QQuickItem* scroller = inside(app, QStringLiteral("headerScroller"), screen);
+    QQuickItem* nav = inside(app, QStringLiteral("headerNav"), screen);
+    const double top_before = app.ui.geometry(scroller).top();
+    const double nav_top = app.ui.geometry(nav).top();
+    CHECK(nav_top == PHONE_TOP);
+
+    for (const char* name : {"headerUnit", "headerVersion", "headerCommit"})
+    {
+        for (const double scrolled : {0.0, 1.0})
+        {
+            CAPTURE(name, scrolled);
+            QQuickItem* field = inside(app, QString::fromLatin1(name), screen);
+            const double most = scroller->property("contentHeight").toDouble() - scroller->height();
+            scroller->setProperty("contentY", -scroller->property("topMargin").toDouble() + scrolled * most);
+            app.ui.advance(100ms);
+            focus_field(app, field);
+            expect_clear_of_keyboard(app, field, scroller, top_before);
+            CHECK(app.ui.geometry(nav).top() == nav_top);
+            put_keyboard_away(app);
+        }
+    }
+
+    // The location typed by hand is a field of the page too.
+    app.ui.tap(inside(app, QStringLiteral("headerOther"), screen));
+    app.play();
+    QQuickItem* other = inside(app, QStringLiteral("headerOtherText"), screen);
+    focus_field(app, other);
+    expect_clear_of_keyboard(app, other, scroller, top_before);
+}
+
+TEST_CASE("app.keyboard_version_sheet: the version sheet ends at the keyboard, with both fields whole above it",
+          "[ui][app]")
+{
+    App app;
+    phone(app);
+    app.fill_header();
+    app.tap(QStringLiteral("logHeaderCard"));
+    app.play();
+    QQuickItem* screen = app.need(QStringLiteral("headerScreen"));
+    QQuickItem* sheet = inside(app, QStringLiteral("versionSheet"), screen);
+    REQUIRE(QMetaObject::invokeMethod(sheet, "show"));
+    app.play();
+    QQuickItem* area = sheet->property("contentArea").value<QQuickItem*>();
+    REQUIRE(area != nullptr);
+    for (const char* name : {"versionTo", "versionCommit"})
+    {
+        CAPTURE(name);
+        QQuickItem* field = inside(app, QString::fromLatin1(name), sheet);
+        focus_field(app, field);
+        QQuickItem* input = input_in(app, field);
+        REQUIRE(app.ui.focused_input() == input);
+        CHECK(app.ui.geometry(input).bottom() <= KEYBOARD_TOP);
+        CHECK(app.ui.geometry(input).top() >= PHONE_TOP);
+        CHECK(app.ui.geometry(area).bottom() == KEYBOARD_TOP);
+        // The sheet is shorter, never lifted into the status bar.
+        CHECK(app.ui.geometry(inside(app, QStringLiteral("sheetPanel"), sheet)).top() >= SHEET_TOP);
+        put_keyboard_away(app);
+    }
+}
+
+TEST_CASE(
+    "app.keyboard_log: the note composer is above the keyboard and the Log screen does not move, and the template "
+    "value sheet and the Other picker end at the keyboard",
+    "[ui][app]")
+{
+    App app;
+    phone(app);
+    app.fill_header();
+    QQuickItem* log = app.need(QStringLiteral("logScreen"));
+    QQuickItem* card = inside(app, QStringLiteral("logHeaderCard"), log);
+    const double card_top = app.ui.geometry(card).top();
+    CHECK(card_top >= PHONE_TOP);
+
+    SECTION("the note composer")
+    {
+        QQuickItem* note = inside(app, QStringLiteral("noteInput"), log);
+        focus_field(app, note);
+        REQUIRE(app.ui.focused_input() == note);
+        CHECK(app.ui.geometry(note).bottom() <= KEYBOARD_TOP);
+        CHECK(app.ui.geometry(note).top() >= PHONE_TOP);
+        // Nothing is scrolled: the screen is as it was, the card under the Dynamic Island and not behind it.
+        CHECK(app.ui.geometry(card).top() == card_top);
+    }
+
+    SECTION("the template value sheet")
+    {
+        std::vector<QQuickItem*> chips = app.ui.find_items(QStringLiteral("chip"), log);
+        REQUIRE_FALSE(chips.empty());
+        app.ui.tap(chips.front());
+        app.play();
+        QQuickItem* sheet = app.need(QStringLiteral("logTemplateSheet"));
+        REQUIRE(sheet->property("isOpen").toBool());
+        QQuickItem* field = inside(app, QStringLiteral("templateValueField"), sheet);
+        focus_field(app, field);
+        QQuickItem* area = sheet->property("contentArea").value<QQuickItem*>();
+        CHECK(app.ui.geometry(input_in(app, field)).bottom() <= KEYBOARD_TOP);
+        CHECK(app.ui.geometry(area).bottom() == KEYBOARD_TOP);
+        CHECK(app.ui.geometry(inside(app, QStringLiteral("sheetPanel"), sheet)).top() >= SHEET_TOP);
+    }
+
+    SECTION("the Other picker's form for a new error type")
+    {
+        app.tap(QStringLiteral("tile11"));
+        app.play();
+        QQuickItem* picker = app.need(QStringLiteral("otherPicker"));
+        REQUIRE(picker->property("isOpen").toBool());
+        app.ui.tap(inside(app, QStringLiteral("pickerAdd"), picker));
+        app.play();
+        QQuickItem* field = inside(app, QStringLiteral("pickerNewName"), picker);
+        focus_field(app, field);
+        QQuickItem* area = picker->property("contentArea").value<QQuickItem*>();
+        CHECK(app.ui.geometry(input_in(app, field)).bottom() <= KEYBOARD_TOP);
+        CHECK(app.ui.geometry(area).bottom() == KEYBOARD_TOP);
+        CHECK(app.ui.geometry(inside(app, QStringLiteral("sheetPanel"), picker)).top() >= SHEET_TOP);
+    }
+}
+
+TEST_CASE("app.keyboard_review: the note of Edit entry is above the keyboard and the sheet ends at it", "[ui][app]")
+{
+    App app;
+    app.fill_header();
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+    app.ui.settle();
+    app.choose_tab(REVIEW_TAB);
+    phone(app);
+    app.ui.tap(app.need(QStringLiteral("reviewSwipe")));
+    app.play();
+    QQuickItem* sheet = app.need(QStringLiteral("editSheet"));
+    REQUIRE(sheet->property("isOpen").toBool());
+    QQuickItem* field = inside(app, QStringLiteral("editNote"), sheet);
+    focus_field(app, field);
+    QQuickItem* area = sheet->property("contentArea").value<QQuickItem*>();
+    CHECK(app.ui.geometry(input_in(app, field)).bottom() <= KEYBOARD_TOP);
+    CHECK(app.ui.geometry(area).bottom() == KEYBOARD_TOP);
+    CHECK(app.ui.geometry(inside(app, QStringLiteral("sheetPanel"), sheet)).top() >= SHEET_TOP);
+}
+
+TEST_CASE(
+    "app.keyboard_settings: the facilitator page, the editors of locations and note templates, and the sheets of the "
+    "error types and of a location end at the keyboard",
+    "[ui][app]")
+{
+    App app;
+    // The tab is chosen first: the Log screen of the test machine's fonts is taller than the phone's, and its board
+    // reaches under the tab bar of the window with its real insets.
+    app.choose_tab(SETTINGS_TAB);
+    phone(app);
+    QQuickItem* settings = app.need(QStringLiteral("settingsScreen"));
+
+    SECTION("the facilitator page: the page ends at the keyboard, and a field that is clear does not scroll it")
+    {
+        activate(app, QStringLiteral("settingsFacilitator"));
+        QQuickItem* field = inside(app, QStringLiteral("settingsTextField"), settings);
+        // The page in view is the last one of the stack: the list under it has a Flickable of the same name.
+        const auto flicks = app.ui.find_items(QStringLiteral("settingsFlickable"), settings);
+        REQUIRE_FALSE(flicks.empty());
+        QQuickItem* flick = flicks.back();
+        const double top_before = app.ui.geometry(flick).top();
+        focus_field(app, field);
+        CHECK(app.ui.geometry(flick).bottom() == KEYBOARD_TOP);
+        CHECK(app.ui.geometry(flick).top() == top_before);
+        CHECK(app.ui.geometry(input_in(app, field)).bottom() <= KEYBOARD_TOP);
+        CHECK(app.ui.geometry(input_in(app, field)).top() >= PHONE_TOP);
+        // The title bar of the page is where it was: nothing scrolled.
+        CHECK(flick->property("contentY").toDouble() == 0.0);
+    }
+
+    SECTION("the locations editor, and the sheet that renames a location")
+    {
+        activate(app, QStringLiteral("settingsLocations"));
+        QQuickItem* page = shown_page(app);
+        const double top_before = app.ui.geometry(page).top();
+        QQuickItem* field = inside(app, QStringLiteral("newLocationField"), page);
+        focus_field(app, field);
+        expect_clear_of_keyboard(app, field, page, top_before);
+        put_keyboard_away(app);
+
+        app.ui.tap(app.ui.find_items(QStringLiteral("locationRow"), page).front());
+        app.play();
+        QQuickItem* rename = app.need(QStringLiteral("renameField"));
+        focus_field(app, rename);
+        QQuickItem* sheet = app.ui.find_item(QStringLiteral("sheetPanel"));
+        REQUIRE(sheet != nullptr);
+        CHECK(app.ui.geometry(input_in(app, rename)).bottom() <= KEYBOARD_TOP);
+        CHECK(app.ui.geometry(sheet).top() >= SHEET_TOP);
+    }
+
+    SECTION("the note template editor")
+    {
+        activate(app, QStringLiteral("settingsTemplates"));
+        REQUIRE(QMetaObject::invokeMethod(app.ui.find_items(QStringLiteral("templateRow")).front(), "activated"));
+        app.play();
+        QQuickItem* page = shown_page(app);
+        const double top_before = app.ui.geometry(page).top();
+        for (const char* name : {"nameField", "promptField", "patternField"})
+        {
+            CAPTURE(name);
+            QQuickItem* field = inside(app, QString::fromLatin1(name), page);
+            focus_field(app, field);
+            expect_clear_of_keyboard(app, field, page, top_before);
+            put_keyboard_away(app);
+        }
+    }
+
+    SECTION("the sheet of a new error type")
+    {
+        activate(app, QStringLiteral("settingsErrorTypes"));
+        app.ui.tap(app.ui.find_items(QStringLiteral("addRow")).front());
+        app.play();
+        QQuickItem* field = app.need(QStringLiteral("nameField"));
+        focus_field(app, field);
+        QQuickItem* sheet = app.ui.find_item(QStringLiteral("sheetPanel"));
+        REQUIRE(sheet != nullptr);
+        CHECK(app.ui.geometry(input_in(app, field)).bottom() <= KEYBOARD_TOP);
+        CHECK(app.ui.geometry(sheet).top() >= SHEET_TOP);
+    }
+}
+
+TEST_CASE("app.keyboard_first_launch: setting up by hand ends the page at the keyboard, with Continue just above it",
+          "[ui][app]")
+{
+    App app(false);
+    phone(app);
+    app.tap(QStringLiteral("manualCard"));
+    app.play();
+    QQuickItem* page = shown_page(app);
+    const double top_before = app.ui.geometry(page).top();
+    for (const char* name : {"facilitatorField", "prefixField"})
+    {
+        CAPTURE(name);
+        QQuickItem* field = inside(app, QString::fromLatin1(name), page);
+        focus_field(app, field);
+        expect_clear_of_keyboard(app, field, page, top_before);
+        // Continue is above the keyboard and is not pushed past it.
+        QQuickItem* proceed = inside(app, QStringLiteral("continueButton"), page);
+        CHECK(app.ui.geometry(proceed).bottom() <= KEYBOARD_TOP);
+        put_keyboard_away(app);
+    }
+}
+
+// ---- the keyboard does not stay (build 9: it stayed over the Log screen after Today's details was left) ----
+//
+// A field has the focus and the keyboard is up. Leaving the page, changing the tab or dismissing the sheet that holds
+// the field must end the typing: no text field keeps the focus, the keyboard goes, and what was typed is saved by the
+// field's own focus change. The rig's keyboard goes only when the app puts it away (`Keyboard.hide()`), as the phone's
+// does not go by itself when the focus moves to something that takes no text, so a keyboard that is still up is a
+// failure of the app.
+
+namespace
+{
+
+/// The first item with this name that is shown (a page on a stack that is under another is hidden).
+QQuickItem* shown_item(App& app, const QString& name)
+{
+    for (QQuickItem* candidate : app.ui.find_items(name))
+    {
+        if (candidate->isVisible() && candidate->width() > 0)
+        {
+            return candidate;
+        }
+    }
+    FAIL("nothing named " << name.toStdString() << " is shown");
+    return nullptr;
+}
+
+void expect_no_typing(App& app)
+{
+    CHECK(app.ui.focused_input() == nullptr);
+    CHECK_FALSE(app.ui.keyboard_up());
+}
+
+QString unit_text(App& app)
+{
+    return app.services.root().session()->property("unitText").toString();
+}
+
+} // namespace
+
+TEST_CASE("app.keyboard_back: going back from Today's details puts the keyboard away, for a field of digits and for a "
+          "text field, and saves what was typed",
+          "[ui][app]")
+{
+    App app;
+    app.tap(QStringLiteral("logHeaderCard"));
+    app.play();
+    QQuickItem* screen = app.need(QStringLiteral("headerScreen"));
+
+    SECTION("the unit number, which has the number pad")
+    {
+        QQuickItem* field = inside(app, QStringLiteral("headerUnit"), screen);
+        focus_field(app, field);
+        app.ui.type(QStringLiteral("27"));
+        app.ui.advance(16ms);
+        REQUIRE(app.ui.keyboard_up());
+        app.ui.tap(inside(app, QStringLiteral("navLeading"), screen));
+        app.play();
+        CHECK(app.shown(QStringLiteral("logScreen")));
+        expect_no_typing(app);
+        CHECK(app.ui.keyboard_hides() >= 1);
+        app.ui.settle();
+        CHECK(unit_text(app).contains(QStringLiteral("27")));
+    }
+
+    SECTION("the commit, which has the letters")
+    {
+        QQuickItem* field = inside(app, QStringLiteral("headerCommit"), screen);
+        focus_field(app, field);
+        app.ui.type(QStringLiteral("a1b2c3d"));
+        app.ui.advance(16ms);
+        REQUIRE(app.ui.keyboard_up());
+        app.ui.tap(inside(app, QStringLiteral("navLeading"), screen));
+        app.play();
+        CHECK(app.shown(QStringLiteral("logScreen")));
+        expect_no_typing(app);
+    }
+}
+
+TEST_CASE(
+    "app.keyboard_picker: a row that opens a sheet ends the typing in the field beside it, and the sheet gives the "
+    "focus back to the row and never to the field",
+    "[ui][app]")
+{
+    App app;
+    app.tap(QStringLiteral("logHeaderCard"));
+    app.play();
+    QQuickItem* screen = app.need(QStringLiteral("headerScreen"));
+    QQuickItem* unit = inside(app, QStringLiteral("headerUnit"), screen);
+    QQuickItem* row = inside(app, QStringLiteral("headerEnvironment"), screen);
+
+    // The sequence of the owner: type the unit, pick an environment, go back.
+    focus_field(app, unit);
+    app.ui.type(QStringLiteral("27"));
+    app.ui.advance(16ms);
+    REQUIRE(app.ui.keyboard_up());
+
+    // Tapping the row ends the typing before the sheet is up: the field is saved and the keyboard goes.
+    app.ui.tap(row);
+    app.ui.advance(16ms);
+    CHECK(app.ui.focused_input() == nullptr);
+    CHECK_FALSE(app.ui.keyboard_up());
+    app.ui.settle();
+    CHECK(unit_text(app).contains(QStringLiteral("27")));
+    app.play();
+    QQuickItem* sheet = inside(app, QStringLiteral("environmentSheet"), screen);
+    REQUIRE(sheet->property("isOpen").toBool());
+    expect_no_typing(app);
+
+    // Prod is picked and the sheet closes: the number pad does not come back, and the focus is on the row that opened
+    // it.
+    app.ui.tap(inside(app, QStringLiteral("environment_prod"), sheet));
+    app.play();
+    CHECK_FALSE(sheet->property("isOpen").toBool());
+    expect_no_typing(app);
+    CHECK(row->hasActiveFocus());
+    CHECK(inside(app, QStringLiteral("headerEnvironment"), screen)->property("value").toString() ==
+          QStringLiteral("prod"));
+
+    // Back to Log: still nothing up.
+    app.ui.tap(inside(app, QStringLiteral("navLeading"), screen));
+    app.play();
+    CHECK(app.shown(QStringLiteral("logScreen")));
+    expect_no_typing(app);
+}
+
+TEST_CASE("app.keyboard_tabs: changing the tab, and pushing or popping a page, puts the keyboard away", "[ui][app]")
+{
+    App app;
+
+    SECTION("a tab change while a field of Settings has the focus")
+    {
+        app.choose_tab(SETTINGS_TAB);
+        activate(app, QStringLiteral("settingsFacilitator"));
+        QQuickItem* field =
+            inside(app, QStringLiteral("settingsTextField"), app.need(QStringLiteral("settingsScreen")));
+        focus_field(app, field);
+        REQUIRE(app.ui.keyboard_up());
+        app.choose_tab(LOG_TAB);
+        expect_no_typing(app);
+    }
+
+    SECTION("Back of a Settings editor, with the new location being typed")
+    {
+        app.choose_tab(SETTINGS_TAB);
+        activate(app, QStringLiteral("settingsLocations"));
+        QQuickItem* page = shown_page(app);
+        focus_field(app, inside(app, QStringLiteral("newLocationField"), page));
+        REQUIRE(app.ui.keyboard_up());
+        app.ui.tap(shown_item(app, QStringLiteral("navLeading")));
+        app.play();
+        expect_no_typing(app);
+    }
+
+    SECTION("the note being typed on Log, and Today's details opened from the card")
+    {
+        focus_field(app, app.need(QStringLiteral("noteInput")));
+        REQUIRE(app.ui.keyboard_up());
+        app.tap(QStringLiteral("logHeaderCard"));
+        app.play();
+        CHECK(app.shown(QStringLiteral("headerScreen")));
+        expect_no_typing(app);
+    }
+
+    SECTION("the editor of a note template, popped back to its list")
+    {
+        app.choose_tab(SETTINGS_TAB);
+        activate(app, QStringLiteral("settingsTemplates"));
+        REQUIRE(QMetaObject::invokeMethod(app.ui.find_items(QStringLiteral("templateRow")).front(), "activated"));
+        app.play();
+        focus_field(app, inside(app, QStringLiteral("nameField"), shown_page(app)));
+        REQUIRE(app.ui.keyboard_up());
+        app.ui.tap(shown_item(app, QStringLiteral("navLeading")));
+        app.play();
+        expect_no_typing(app);
+    }
+}
+
+TEST_CASE(
+    "app.keyboard_sheets: dismissing a sheet with a field in it puts the keyboard away and does not give the focus to "
+    "a field under it",
+    "[ui][app]")
+{
+    App app;
+    // The real insets: the sheet starts at the status bar, so the scrim is there to be tapped over it.
+    phone(app);
+    app.fill_header();
+    app.tap(QStringLiteral("logHeaderCard"));
+    app.play();
+    QQuickItem* screen = app.need(QStringLiteral("headerScreen"));
+    QQuickItem* version = inside(app, QStringLiteral("headerVersion"), screen);
+
+    // The version field has the focus, and the check mark beside it opens the sheet, which has fields of its own.
+    focus_field(app, version);
+    QQuickItem* sheet = inside(app, QStringLiteral("versionSheet"), screen);
+    REQUIRE(QMetaObject::invokeMethod(sheet, "show"));
+    app.play();
+    focus_field(app, inside(app, QStringLiteral("versionTo"), sheet));
+    REQUIRE(app.ui.keyboard_up());
+
+    SECTION("Cancel")
+    {
+        app.ui.tap(inside(app, QStringLiteral("navLeading"), sheet));
+        app.ui.advance(1000ms);
+    }
+
+    SECTION("a tap on the scrim")
+    {
+        QQuickItem* scrim = inside(app, QStringLiteral("sheetScrim"), sheet);
+        app.ui.tap(scrim, QPointF(scrim->width() / 2, 20));
+        app.ui.advance(1000ms);
+    }
+
+    SECTION("close()")
+    {
+        REQUIRE(QMetaObject::invokeMethod(sheet, "close"));
+        app.ui.advance(1000ms);
+    }
+
+    CHECK_FALSE(sheet->property("isOpen").toBool());
+    expect_no_typing(app);
+    CHECK_FALSE(version->property("hasFocus").toBool());
+}

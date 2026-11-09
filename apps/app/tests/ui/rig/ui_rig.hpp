@@ -89,6 +89,25 @@ public:
     void set_text_scale(double scale);
     void set_reduce_motion(bool reduce);
 
+    /// Makes every `SafeFrame` that has no override of its own see a safe area, as the phone under the full-screen
+    /// window has: the top and bottom insets in points (iPhone 17: 62 and 34). Offscreen there is none.
+    void set_safe_area(double top, double bottom);
+    /// The `Keyboard` singleton of this engine.
+    [[nodiscard]] QObject* keyboard();
+    /// Puts up the keyboard as iOS reports it under `Qt.ExpandedClientAreaHint`: `Qt.inputMethod.keyboardRectangle` in
+    /// window coordinates, docked at the bottom of the window, `height` points tall. `settle` it; the layout follows.
+    void show_keyboard(double height);
+    /// The same before the keyboard has come up: Qt's "will show" notification reports the rectangle the keyboard
+    /// starts from, below the window, with its final size.
+    void show_keyboard_starting(double height);
+    void hide_keyboard();
+    /// Whether the keyboard is up: `Qt.inputMethod.visible`, which the app's `Keyboard.hide()` takes down.
+    [[nodiscard]] bool keyboard_up();
+    /// How many times the app put the keyboard away (`Keyboard.hide()`).
+    [[nodiscard]] int keyboard_hides();
+    /// The item of a text field that has the focus now, or null.
+    [[nodiscard]] QQuickItem* focused_input();
+
     /// Creates the QML type `type` of the module `ErrorJournalingApp` with `properties` (required ones included), makes
     /// it a child of the window's content item and sizes it to the window. Returns null and records the errors in
     /// `errors()` when it cannot. The item is owned by the rig. Each call replaces the previous one.
