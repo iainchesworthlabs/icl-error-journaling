@@ -77,12 +77,13 @@ TEST_CASE("A name in use is refused in the words of the designs, for each kind o
     CHECK(rig.m_Gateway.pending() == 0);
 }
 
-TEST_CASE("A pattern without {value} is refused in the words of the designs", "[viewmodel][settings]")
+TEST_CASE("A line without the answer is refused in the words of the designs", "[viewmodel][settings]")
 {
     SettingsRig rig;
     rig.load_sample();
     const QString expected =
-        "The pattern needs {value} where the answer goes, for example " + curly("Played {value}") + ".";
+        "The line needs the answer in it. Tap Insert answer to put it where it goes, for example " +
+        curly("Played [answer]") + ".";
 
     CHECK(rig.m_Settings.validatePattern("Played") == expected);
     CHECK(rig.m_Settings.validatePattern("") == expected);
@@ -166,9 +167,9 @@ TEST_CASE("A template value is previewed as the log line it would make", "[viewm
         CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 15 * 3600 + 5 * 60) ==
               "03:05 PM (Free Text) Played x");
     }
-    SECTION("a pattern that is not valid has no preview")
+    SECTION("a line that is not valid has no example")
     {
-        const QString fix = "Fix the pattern to see a preview.";
+        const QString fix = "Fix the line to see an example.";
         CHECK(rig.m_Settings.previewTemplateLine("Played", "x", 37800) == fix);
         CHECK(rig.m_Settings.previewTemplateLine("", "x") == fix);
         CHECK(rig.m_Settings.previewTemplateLine("Played {name}", "x") == fix);
@@ -320,9 +321,9 @@ TEST_CASE("A refused file is described in the plain sentences of the design, in 
     rig.m_Gateway.run_all();
 
     REQUIRE(failed.count() == 1);
-    CHECK(failed.at(0).at(0).toStringList() == QStringList{"Error type 3 has no name.",
-                                                           "Locations 1 and 2 are both called North Site.",
-                                                           "Note template 1: the pattern has no {value}."});
+    CHECK(failed.at(0).at(0).toStringList() ==
+          QStringList{"Error type 3 has no name.", "Locations 1 and 2 are both called North Site.",
+                      "Note template 1: the line in the log has no {value} where the answer goes."});
     CHECK_FALSE(rig.m_Settings.configured());
 }
 

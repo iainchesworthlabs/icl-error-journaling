@@ -47,9 +47,9 @@ Each row has a light file and a dark file (`Name.dc.html`, `Name.dark.dc.html`).
 | 21 | `ErrorTypes` | Error types editor | PRF-04 | Add row, the list with colour swatch, drag handle and Move earlier and Move later arrows (so reordering needs no drag), and a note on the 11-tile board. |
 | 22 | `ErrorTypeEdit` | Rename or retire an error type | PRF-04 | A sheet with the name field and its inline refusal (duplicate name), the colour that stays with the type, and "Retire this error type". |
 | 23 | `Locations` | Locations editor | PRF-03 | Add field, list with handles and Remove buttons. |
-| 24 | `Templates` | Note templates list | PRF-06 | Each template with its prompt and output pattern; "Add a template". |
-| 25 | `TemplateEdit` | Edit a template | PRF-06, NOTE-04 | Name, prompt, output pattern with `{value}`, and a live preview line. |
-| 26 | `TemplateEditInvalid` | Template pattern refused | PRF-06 | The same page with the inline message from `validatePattern`, no preview, Save disabled. |
+| 24 | `Templates` | Note templates list | PRF-06 | Each template with the question it asks and the line it logs ("Asks: ... Logs: ... [answer]"); "Add a template". |
+| 25 | `TemplateEdit` | Edit a template | PRF-06, NOTE-04 | One sentence on what a template is; Name, Question to ask, Line in the log with an Insert answer button (the answer shows as `[answer]`), and an Example card with the line as the log will show it. |
+| 26 | `TemplateEditInvalid` | Template pattern refused | PRF-06 | The same page with the inline message from `validatePattern`, no example, Save disabled. |
 | 27 | `FirstLaunch` | First launch | PRF-09 | "Import a setup file" or "Set up by hand", with one line on what a setup file holds. |
 | 28 | `FirstLaunchManual` | First launch, by hand | PRF-09 | Facilitator and UNIT prefix, then Continue. |
 | 29 | `ImportExport` | Import or export | PRF-08 | The two rows, what a setup file does and does not contain, and the "Exported to Files" confirmation. |

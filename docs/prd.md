@@ -117,7 +117,7 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 | NOTE-01 | A note field sits at the top of the main screen. Pressing Add (or Return) commits the text as a journal entry timestamped at commit, then clears the field.                                                                                      | Must     |
 | NOTE-02 | Committed entries cannot be changed or deleted from the main screen. Changes happen only on the review screen.                                                                                                                                   | Must     |
 | NOTE-03 | Uncommitted text in the note field survives the app being backgrounded or closed.                                                                                                                                                                | Must     |
-| NOTE-04 | Note templates appear as chips above the field. Tapping one (for example Played song) prompts for the value, and the entry is stored with the template and value and rendered from the template's output pattern (for example "Played {value}"). | Must     |
+| NOTE-04 | Note templates appear as chips above the field. Tapping one (for example Played song) asks its question (for example "Which song?"), and the entry is stored with the template and the answer and rendered from the template's line in the log (for example "Played Morning Medley"). | Must     |
 | NOTE-05 | Dictation uses the standard iOS keyboard microphone. The app adds no speech recognition of its own.                                                                                                                                              | Must     |
 | NOTE-06 | A note can be attached to an error entry, from BRD-07 or from the review screen. It is exported on the same line as the error.                                                                                                                   | Should   |
 
@@ -150,7 +150,7 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 | PRF-03 | Locations: add, rename, reorder, remove.                                                                                                                                             | Must     |
 | PRF-04 | Error types master list: add, rename, retire. A retired type disappears from pickers but stays on past entries.                                                                      | Must     |
 | PRF-05 | Board layout, edited on a miniature copy of the board: hold and drag to move a tile, tap a tile to swap in another type.                                                             | Must     |
-| PRF-06 | Note templates: name, value prompt and output pattern.                                                                                                                               | Must     |
+| PRF-06 | Note templates: name, question to ask and line in the log. The editor says what a template is in one sentence, has an Insert answer button instead of typing {value}, and shows an example line.                                                                                                                             | Must     |
 | PRF-07 | Time format, defaulting to 24-hour HH:mm. A 12-hour or with-seconds display is optional. Changing it re-renders all logs, including past days.                                       | Must     |
 | PRF-08 | The whole configuration can be exported to and imported from a JSON file through Files or AirDrop. This lets the work-specific setup be prepared and delivered outside the codebase. | Must     |
 | PRF-09 | On first launch the app offers to import a configuration file or set up manually.                                                                                                    | Must     |
@@ -172,7 +172,7 @@ Header values are held as an initial value plus timestamped change entries. The 
 | HeaderChangeEntry | entry_id, field (unit_number, location, software_version), old_value, new_value                                                  | kind = header_change. Created by the Change action (HDR-07). Values of `unit_number` are stored as above.                                                                                                  |
 | ErrorType         | id, name, retired, board_position (1–11 or null)                                                                                 | Master list. Retired types keep their history.                                                                                                                |
 | Location          | id, name, sort_order, retired                                                                                                    |                                                                                                                                                               |
-| NoteTemplate      | id, name, value_prompt, output_pattern, sort_order                                                                               | Output pattern uses {value}.                                                                                                                                  |
+| NoteTemplate      | id, name, value_prompt, output_pattern, sort_order                                                                               | The output pattern uses {value} for the answer; the editor shows it as [answer].                                                                                                                                  |
 | Preferences       | facilitator, unit_prefix, unit_environments, time_format, include_totals                                                         | Single row.                                                                                                                                                   |
 
 IDs are UUIDs. The schema carries a version number with forward migrations from the first TestFlight build. The configuration export (PRF-08) covers Preferences, ErrorType, Location and NoteTemplate. Day logs are not included.
@@ -204,7 +204,7 @@ Rendering rules:
 
 3.  Error lines are \<time\> T\| \<error type name\>, with an attached note after an en dash. The T\| ticket marker is fixed and not configurable, because the downstream ticket indexer reads it.
 
-4.  Note lines are \<time\> (Free Text) \<text\>, where templated notes render through their output pattern. Notes carry no ticket marker.
+4.  Note lines are \<time\> (Free Text) \<text\>, where templated notes render through their template's line in the log. Notes carry no ticket marker.
 
 5.  Header change lines are \<time\> \<field label\> changed: \<old\> → \<new\>, with no ticket marker.
 

@@ -29,7 +29,7 @@ void settle_page(World& world)
 
 } // namespace
 
-TEST_CASE("editor.templates: the templates are listed with their question and pattern, and a row opens one",
+TEST_CASE("editor.templates: the templates are listed with their question and line, and a row opens one",
           "[ui][editor]")
 {
     World world;
@@ -39,7 +39,7 @@ TEST_CASE("editor.templates: the templates are listed with their question and pa
     CHECK(names(world) == QStringList{QStringLiteral("Played song"), QStringLiteral("Visitor interaction")});
     QQuickItem* first = row_with(world, ROWS, QStringLiteral("Played song"));
     REQUIRE(first != nullptr);
-    CHECK(first->property("detail").toString() == QStringLiteral("Prompt: Which song? · Output: Played {value}"));
+    CHECK(first->property("detail").toString() == QStringLiteral("Asks: Which song? · Logs: Played [answer]"));
     CHECK(item(world, QStringLiteral("templateGroup"))->property("title").toString() ==
           QStringLiteral("Chips on the Log screen · 2"));
 
@@ -54,7 +54,7 @@ TEST_CASE("editor.templates: the templates are listed with their question and pa
         CHECK(up->isVisible());
     }
     CHECK(field_text(world, QStringLiteral("nameField")) == QStringLiteral("Played song"));
-    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played {value}"));
+    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played [answer]"));
 
     // Back returns to the list, and nothing was saved.
     world.m_Ui.tap(find_item(world.m_Ui.root(), QStringLiteral("navLeading")));
@@ -103,14 +103,14 @@ TEST_CASE("editor.templates: the Settings button asks to close", "[ui][editor]")
     CHECK(closed.count() == 1);
 }
 
-TEST_CASE("editor.voiceover: the template rows are buttons named with their question and pattern", "[ui][editor]")
+TEST_CASE("editor.voiceover: the template rows are buttons named with their question and line", "[ui][editor]")
 {
     World world;
     QQuickItem* screen = world.load("Templates");
     world.m_Ui.layout();
 
     QQuickItem* first = row_with(world, ROWS, QStringLiteral("Played song"));
-    CHECK(name_of(label_of(first)) == QStringLiteral("Played song, Prompt: Which song? · Output: Played {value}"));
+    CHECK(name_of(label_of(first)) == QStringLiteral("Played song, Asks: Which song? · Logs: Played [answer]"));
     CHECK(name_of(label_of(item(world, QStringLiteral("addRow")))) == QStringLiteral("Add a template"));
     CHECK(name_of(find_item(screen, QStringLiteral("navLeading"))) == QStringLiteral("Back to Settings"));
 

@@ -4,8 +4,9 @@ import QtQuick
 import ErrorJournalingApp
 
 // The note templates of Settings (docs/design/screens/Templates.dc.html, PRF-06): "Add a template" and the templates
-// that are chips on the Log screen, each with its question and its output pattern. A row opens the TemplateEdit page,
-// which slides in over the list. A template is never removed in v1, because a note holds its template's id.
+// that are chips on the Log screen, each with the question it asks and the line it logs ("Asks: Which song? · Logs:
+// Played [answer]"). A row opens the TemplateEdit page, which slides in over the list. A template is never removed in
+// v1, because a note holds its template's id.
 //
 // Required: `settings`, the SettingsModel. `closeRequested` is "Settings" at the top left.
 Item {
@@ -80,7 +81,7 @@ Item {
                         width: parent.width
                         visible: repeater.count > 0
                         title: qsTr("Chips on the Log screen · %1").arg(repeater.count)
-                        footer: qsTr("Tapping a chip asks for the value and adds a note built from the output pattern.")
+                        footer: qsTr("Tapping a chip asks its question and adds a note to the log.")
 
                         Repeater {
                             id: repeater
@@ -95,7 +96,7 @@ Item {
 
                                 objectName: "templateRow"
                                 text: name
-                                detail: qsTr("Prompt: %1 · Output: %2").arg(valuePrompt).arg(outputPattern)
+                                detail: qsTr("Asks: %1 · Logs: %2").arg(valuePrompt).arg(root.settings.patternToField(outputPattern))
                                 chevron: true
                                 minimumHeight: Theme.size.rowHeightTall + Theme.space.tileGap / 2
                                 onActivated: root.openTemplate(templateId, name, valuePrompt, outputPattern)

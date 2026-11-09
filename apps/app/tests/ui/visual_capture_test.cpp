@@ -1064,7 +1064,7 @@ std::vector<Scene> scenes()
         {QStringLiteral("TemplateEdit"), TODAY, scene_template_edit,
          QStringLiteral("The first template of the sample setup.")},
         {QStringLiteral("TemplateEditInvalid"), TODAY, scene_template_edit_invalid,
-         QStringLiteral("The pattern edited to \"Played\", which has no {value}.")},
+         QStringLiteral("The line edited to \"Played \" (the answer deleted), which has no [answer].")},
         {QStringLiteral("FirstLaunch"), FIRST_LAUNCH, scene_first_launch, QStringLiteral("No setup imported yet.")},
         {QStringLiteral("FirstLaunchManual"), FIRST_LAUNCH, scene_first_launch_manual,
          QStringLiteral("\"Set up by hand\" chosen.")},

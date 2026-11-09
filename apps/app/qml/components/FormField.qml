@@ -58,6 +58,21 @@ Item {
         field.forceActiveFocus();
     }
 
+    // Puts `inserted` at the cursor, in place of any selected text, leaves the cursor after it and keeps the field
+    // focused (a button beside the field does not take the keyboard away). It is a change by the person, so
+    // `textEdited` fires with the new text.
+    function insertAtCursor(inserted: string): void {
+        field.forceActiveFocus();
+        const from = Math.min(field.selectionStart, field.selectionEnd);
+        const to = Math.max(field.selectionStart, field.selectionEnd);
+        if (to > from)
+            field.remove(from, to);
+        const at = Math.min(field.cursorPosition, field.length);
+        field.insert(at, inserted);
+        field.cursorPosition = at + inserted.length;
+        root.textEdited(field.text);
+    }
+
     implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
     implicitHeight: heading.height + box.height + message.height
     width: parent ? parent.width : implicitWidth
