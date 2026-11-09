@@ -111,7 +111,7 @@ A new QML singleton, `WindowLayout` (`apps/app/qml/theme/WindowLayout.qml`), hol
 `Theme.textScale` to the bridge. On a phone the values in `Compact` are exactly today's `Theme` values. That is how the
 phone layout stays unchanged: a component reads `WindowLayout.screenMargin` where it reads `Theme.space.screenMargin` today, and
 in `Compact` the two are the same number. The rules themselves are in `tokens.json` under `layout` and in `Theme.layout`, so `WindowLayout.qml` writes no
-number. It is not called `WindowLayout`, so that it cannot clash with the attached `Layout` of Qt Quick Layouts.
+number. It is not called `Layout`, so that it cannot clash with the attached `Layout` of Qt Quick Layouts.
 
 ### Layout rules
 
