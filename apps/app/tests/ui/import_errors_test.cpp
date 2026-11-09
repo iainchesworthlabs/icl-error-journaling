@@ -12,9 +12,9 @@ using namespace ej::ui::editors;
 namespace
 {
 
-const QStringList MESSAGES{QStringLiteral("Error type 3 has no name."),
-                           QStringLiteral("Locations 1 and 2 are both called North Site."),
-                           QStringLiteral("Note template 1: the pattern has no {value}.")};
+const QStringList MESSAGES{
+    QStringLiteral("Error type 3 has no name."), QStringLiteral("Locations 1 and 2 are both called North Site."),
+    QStringLiteral("Note template 1: the line in the log has no {value} where the answer goes.")};
 
 } // namespace
 

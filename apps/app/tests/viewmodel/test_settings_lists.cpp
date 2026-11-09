@@ -801,13 +801,83 @@ TEST_CASE("A pattern needs {value}; {name} and stray braces are refused with a m
     CHECK(rig.m_Settings.validatePattern("Braces {{ and }} with {value}").isEmpty());
     CHECK(rig.m_Settings.validatePattern(QString("{value}") + QString(493, 'x')).isEmpty());
 
-    CHECK(rig.m_Settings.validatePattern("Played song").contains("{value}"));
-    CHECK(rig.m_Settings.validatePattern("").contains("{value}"));
+    // The messages use the editor's words: "line", "Insert answer", "[answer]", and no curly brackets the person never
+    // typed.
+    for (const QString& pattern : {QString("Played song"), QString("")})
+    {
+        const QString message = rig.m_Settings.validatePattern(pattern);
+        CHECK(message.contains("Insert answer"));
+        CHECK(message.contains("[answer]"));
+        CHECK_FALSE(message.contains("{"));
+        CHECK_FALSE(message.contains("pattern"));
+    }
     CHECK(rig.m_Settings.validatePattern("Played {name}").contains("{name}"));
+    CHECK(rig.m_Settings.validatePattern("Played {name}").contains("Insert answer"));
     CHECK(rig.m_Settings.validatePattern("Played {value} {name}").contains("{name}"));
-    CHECK(rig.m_Settings.validatePattern("Played {value").contains("brace"));
-    CHECK(rig.m_Settings.validatePattern("Played } {value}").contains("brace"));
+    for (const QString& pattern : {QString("Played {value"), QString("Played } {value}")})
+    {
+        const QString message = rig.m_Settings.validatePattern(pattern);
+        CHECK(message.contains("curly bracket"));
+        CHECK(message.contains("Insert answer"));
+        CHECK_FALSE(message.contains("pattern"));
+    }
+    CHECK(rig.m_Settings.validatePattern(QString("{value}") + QString(494, 'x')).contains("500"));
     CHECK_FALSE(rig.m_Settings.validatePattern(QString("{value}") + QString(494, 'x')).isEmpty());
+}
+
+TEST_CASE("The line field shows [answer] for {value}, and the stored pattern stays {value}",
+          "[viewmodel][settings][templates][unit]")
+{
+    SettingsRig rig;
+    rig.load_sample();
+    const SettingsModel& settings = rig.m_Settings;
+
+    CHECK(settings.patternToField("Played {value}") == "Played [answer]");
+    CHECK(settings.patternToField("{value} and {value}") == "[answer] and [answer]");
+    CHECK(settings.patternToField("No slot") == "No slot");
+    CHECK(settings.patternToField("") == "");
+    // A doubled brace is a literal brace in the log: "{{value}}" is the text {value}, not a slot.
+    CHECK(settings.patternToField("Braces {{value}} and {value}") == "Braces {{value}} and [answer]");
+    CHECK(settings.patternToField("{{{value}}}") == "{{[answer]}}");
+
+    CHECK(settings.patternFromField("Played [answer]") == "Played {value}");
+    CHECK(settings.patternFromField("[answer] and [answer]") == "{value} and {value}");
+    // A slot the person typed by hand is left alone, and so is a half-typed token.
+    CHECK(settings.patternFromField("Played {value}") == "Played {value}");
+    CHECK(settings.patternFromField("Played [answe") == "Played [answe");
+
+    // What the field shows and what is stored round-trip, and what is stored is accepted by the renderer.
+    for (const QString& pattern : {QString("Played {value}"), QString("{{value}} is {value}"), QString("{{{value}}}")})
+    {
+        CHECK(settings.patternFromField(settings.patternToField(pattern)) == pattern);
+        CHECK(settings.validatePattern(settings.patternFromField(settings.patternToField(pattern))).isEmpty());
+    }
+    CHECK(settings.validatePattern(settings.patternFromField("Played [answer]")).isEmpty());
+    CHECK_FALSE(settings.validatePattern(settings.patternFromField("Played")).isEmpty());
+}
+
+TEST_CASE("A new template starts with a question and a line made from its name",
+          "[viewmodel][settings][templates][unit]")
+{
+    SettingsRig rig;
+    rig.load_sample();
+    const SettingsModel& settings = rig.m_Settings;
+
+    CHECK(settings.defaultTemplateQuestion("Played song") == "Played song?");
+    CHECK(settings.defaultTemplateLine("Played song") == "Played song: [answer]");
+    CHECK(settings.defaultTemplateQuestion("  Visitor  ") == "Visitor?");
+    CHECK(settings.defaultTemplateLine("  Visitor  ") == "Visitor: [answer]");
+    CHECK(settings.defaultTemplateQuestion("   ").isEmpty());
+    CHECK(settings.defaultTemplateLine("").isEmpty());
+
+    // The line is a valid pattern, even for a name with braces in it, and the preview shows the name and the answer.
+    for (const QString& name : {QString("Played song"), QString("Odd {name} and } here")})
+    {
+        const QString stored = settings.patternFromField(settings.defaultTemplateLine(name));
+        CHECK(settings.validatePattern(stored).isEmpty());
+    }
+    CHECK(settings.previewTemplateLine(settings.patternFromField(settings.defaultTemplateLine("Played song")), "",
+                                       37800) == "10:30 (Free Text) Played song: Morning Medley");
 }
 
 TEST_CASE("A template with a bad name, prompt or pattern is refused and nothing is saved",

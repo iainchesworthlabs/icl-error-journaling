@@ -54,11 +54,11 @@ QString field_name(const std::string& field)
     }
     if (field == "value_prompt")
     {
-        return translate("prompt");
+        return translate("question to ask");
     }
     if (field == "output_pattern")
     {
-        return translate("pattern");
+        return translate("line in the log");
     }
     if (field == "board_position")
     {
@@ -180,13 +180,14 @@ QString list_message(const ConfigError& error)
             .arg(text_of(error.m_Value));
     }
     case Problem::NO_PLACEHOLDER:
-        return translate("%1 %2: the pattern has no {value}.").arg(noun.m_One).arg(item);
+        return translate("%1 %2: the line in the log has no {value} where the answer goes.").arg(noun.m_One).arg(item);
     case Problem::STRAY_BRACE:
-        return translate("%1 %2: the pattern has a stray brace. Write {{ or }} for a literal brace.")
+        return translate("%1 %2: the line in the log has a stray curly bracket. Write {{ or }} to show one.")
             .arg(noun.m_One)
             .arg(item);
     case Problem::UNKNOWN_PLACEHOLDER:
-        return translate("%1 %2: the pattern uses a placeholder the app does not know. Only {value} is allowed.")
+        return translate("%1 %2: the line in the log has a word in curly brackets the app does not know. Only {value} "
+                         "is allowed.")
             .arg(noun.m_One)
             .arg(item);
     case Problem::OTHER:
