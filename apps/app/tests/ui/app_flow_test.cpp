@@ -1245,6 +1245,185 @@ TEST_CASE(
     CHECK(app.need(QStringLiteral("logLastBar"))->isVisible());
 }
 
+namespace
+{
+
+/// Every iPad window, in both orientations: sheets and alerts do not depend on the Log screen's own layout.
+const QSize IPAD_ALL_SIZES[] = {QSize(744, 1133), QSize(820, 1180), QSize(1032, 1376),
+                                QSize(1133, 744), QSize(1180, 820), QSize(1376, 1032)};
+constexpr double SHEET_WIDTH = 560.0;
+constexpr double SHEET_MARGIN = 64.0;
+constexpr double SHEET_MAX_HEIGHT = 720.0;
+constexpr double IPAD_KEYBOARD = 313.0;
+
+/// The new-day prompt over nothing, with the iPad's insets.
+constexpr auto NEW_DAY_ALERT = R"(
+            import QtQuick
+            import ErrorJournalingApp
+            SheetHost {
+                sheets: [
+                    Alert {
+                        id: alert
+                        objectName: "alert"
+                        title: "It's Sunday 8 November"
+                        message: "Saturday's log has 7 entries and hasn't been shared yet. Starting a new log keeps it in History."
+                        icon: Alert.Calendar
+                        confirmText: "Start a new log"
+                        alternateText: "Share Saturday's log first"
+                        cancelText: "Keep Saturday's log open"
+                        overrideInsets: true
+                        overrideTop: 24
+                        overrideBottom: 20
+                    }
+                ]
+            })";
+
+/// The panel of the sheet that is open in the app: the one that is shown.
+QQuickItem* open_panel(App& app, const QString& sheet)
+{
+    QQuickItem* item = app.need(sheet);
+    REQUIRE(item->property("isOpen").toBool());
+    auto* panel = item->property("panelItem").value<QQuickItem*>();
+    REQUIRE(panel != nullptr);
+    return panel;
+}
+
+/// The card is 560 wide (or the window's width less its margins), centred, and clear of the insets and the margin.
+void check_form_card(UiRig& ui, QQuickItem* panel, QSize window, double bottom_edge)
+{
+    const QRectF r = ui.geometry(panel);
+    INFO("panel " << r.x() << ", " << r.y() << " " << r.width() << " x " << r.height());
+    CHECK(std::abs(r.width() - std::min(SHEET_WIDTH, window.width() - 48.0)) <= 1.0);
+    CHECK(std::abs(r.center().x() - window.width() / 2.0) <= 1.0);
+    CHECK(r.top() >= IPAD_TOP + SHEET_MARGIN - 1.0);
+    CHECK(r.bottom() <= bottom_edge + 1.0);
+    CHECK(r.height() <= SHEET_MAX_HEIGHT + 1.0);
+}
+
+} // namespace
+
+TEST_CASE("ipad.form_sheet: on every iPad a sheet is a 560 pt card in the middle, clear of the insets and above the "
+          "keyboard, and the scrim dismisses it",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+    app.ui.settle();
+    const auto minimum = [](const Node&) { return 44.0; };
+
+    for (const QSize size : IPAD_ALL_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.choose_tab(LOG_TAB);
+        app.ui.layout();
+
+        // The Other picker: a Large sheet, so as tall as it may be.
+        QQuickItem* picker = app.need(QStringLiteral("otherPicker"));
+        REQUIRE(QMetaObject::invokeMethod(picker, "open"));
+        app.play();
+        QQuickItem* panel = open_panel(app, QStringLiteral("otherPicker"));
+        check_form_card(app.ui, panel, size, size.height() - IPAD_BOTTOM - SHEET_MARGIN);
+        const double space = size.height() - IPAD_TOP - IPAD_BOTTOM - 2 * SHEET_MARGIN;
+        CHECK(std::abs(app.ui.geometry(panel).height() - std::min(SHEET_MAX_HEIGHT, space)) <= 1.0);
+        // No grabber to drag, and the content ends inside the card.
+        CHECK_FALSE(app.need(QStringLiteral("sheetGrabber"))->isVisible());
+        const QRectF area = app.ui.geometry(picker->property("contentArea").value<QQuickItem*>());
+        CHECK(area.bottom() <= app.ui.geometry(panel).bottom() - 15.0);
+        expect_clean(check_names(app.ui));
+        expect_clean(check_targets(app.ui, minimum));
+        // check_safe_area is not used: it reads the rows of the list that are scrolled out of the card and clipped as
+        // in view. The card itself is checked against the insets and the margin above.
+
+        // The keyboard comes up over the search field: the card is above it, whole.
+        app.ui.show_keyboard(IPAD_KEYBOARD);
+        app.ui.settle();
+        app.ui.advance(100ms);
+        const QRectF lifted = app.ui.geometry(panel);
+        CHECK(lifted.bottom() <= size.height() - IPAD_KEYBOARD);
+        CHECK(lifted.top() >= IPAD_TOP + SHEET_MARGIN - 1.0);
+        app.ui.hide_keyboard();
+        app.ui.settle();
+
+        // A tap on the scrim, outside the card, dismisses it.
+        app.ui.tap(app.need(QStringLiteral("sheetScrim")), QPointF(8, 8));
+        app.play();
+        CHECK_FALSE(picker->property("isOpen").toBool());
+        CHECK(app.need(QStringLiteral("shellTabs"))->isEnabled());
+    }
+}
+
+TEST_CASE("ipad.form_sheet_content: a sheet that is as tall as its content is a card of that height, centred",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+    app.ui.settle();
+    for (const QSize size : IPAD_ALL_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.choose_tab(REVIEW_TAB);
+        app.ui.layout();
+        app.ui.tap(app.need(QStringLiteral("reviewSwipe")));
+        app.play();
+        QQuickItem* panel = open_panel(app, QStringLiteral("editSheet"));
+        const QRectF r = app.ui.geometry(panel);
+        check_form_card(app.ui, panel, size, size.height() - IPAD_BOTTOM - SHEET_MARGIN);
+        // Centred in the space between the margins.
+        const double top_limit = IPAD_TOP + SHEET_MARGIN;
+        const double bottom_limit = size.height() - IPAD_BOTTOM - SHEET_MARGIN;
+        CHECK(std::abs((r.top() - top_limit) - (bottom_limit - r.bottom())) <= 1.5);
+        expect_clean(check_names(app.ui));
+        expect_clean(check_text_scale(app.ui));
+        REQUIRE(QMetaObject::invokeMethod(app.need(QStringLiteral("editSheet")), "close"));
+        app.play();
+    }
+}
+
+TEST_CASE("ipad.alert: on an iPad an alert is the phone's card, 338 pt wide, centred in the window", "[ui][app][ipad]")
+{
+    for (const QSize size : IPAD_ALL_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        UiRig ui(size);
+        REQUIRE(ui.load_source(NEW_DAY_ALERT) != nullptr);
+        ui.set_window_size(size);
+        QQuickItem* alert = ui.find_item(QStringLiteral("alert"));
+        REQUIRE(alert != nullptr);
+        REQUIRE(QMetaObject::invokeMethod(alert, "open"));
+        ui.advance(600ms);
+        auto* panel = alert->property("panelItem").value<QQuickItem*>();
+        REQUIRE(panel != nullptr);
+        const QRectF r = ui.geometry(panel);
+        CHECK(std::abs(r.width() - 338.0) <= 1.0);
+        CHECK(std::abs(r.center().x() - size.width() / 2.0) <= 1.0);
+        // Centred between the status bar and the home indicator.
+        CHECK(std::abs((r.top() - IPAD_TOP) - (size.height() - IPAD_BOTTOM - r.bottom())) <= 1.5);
+        expect_clean(check_names(ui));
+    }
+}
+
+TEST_CASE("ipad.phone_sheet: in a Compact window a sheet is still a bottom sheet, the full width", "[ui][app][ipad]")
+{
+    App app;
+    app.ui.set_window_size(QSize(507, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    REQUIRE(app.ui.window_layout()->property("compact").toBool());
+    QQuickItem* picker = app.need(QStringLiteral("otherPicker"));
+    REQUIRE(QMetaObject::invokeMethod(picker, "open"));
+    app.play();
+    const QRectF r = app.ui.geometry(open_panel(app, QStringLiteral("otherPicker")));
+    CHECK(r.left() == 0);
+    CHECK(r.width() == 507);
+    CHECK(app.need(QStringLiteral("sheetGrabber"))->isVisible());
+}
+
 #include "app_flow_test.moc"
 
 // ---- the keyboard on the phone's window (the bugs of TestFlight build 9) ----

@@ -250,6 +250,7 @@ QtObject {
         readonly property real toastMaxWidth: 520
         readonly property real sheetWidth: 560
         readonly property real sheetMargin: 64
+        readonly property real sheetMaxHeight: 720
         readonly property real minimumWindowWidth: 375
         readonly property real minimumWindowHeight: 720
     }

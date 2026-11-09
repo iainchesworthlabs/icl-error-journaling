@@ -131,8 +131,8 @@ The mock-up script uses these numbers, and so will `WindowLayout.qml`. `Compact`
 | Last bar | shown | shown | hidden (the log pane shows the last entry) |
 | Undo toast | above the tab bar | under the board, ≤ 520 wide, centred | at the foot of the log pane, above Share log |
 | Tab bar | 49 + inset, full width | 49 + inset, tabs in the 680 column | as Regular |
-| Sheets | bottom sheet with detents | form sheet: 560 wide, centred, as tall as its content, at most the height less 64 above and below | as Regular |
-| Alerts | card hung from the alert anchor | the same card, centred vertically | as Regular |
+| Sheets | bottom sheet with detents | form sheet: 560 wide, centred, four rounded corners, no grabber or drag, as tall as its content (the Content detent) or 720 (the others), at most the height less the insets and 64 above and below; above the keyboard when it is up | as Regular |
+| Alerts | card hung from the alert anchor | the same 338 pt card, centred between the status bar and the home indicator | as Regular |
 | Other text | unchanged | unchanged | unchanged |
 
 Text sizes other than the tile label do not change. iPadOS uses the same type sizes as iOS, and Dynamic Type still
