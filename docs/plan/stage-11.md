@@ -132,7 +132,7 @@ What the code shows, checked on `develop` at 92080f9:
 
 | Check | Evidence | Result |
 |---|---|---|
-| Qt modules linked | `find_package(Qt6 … COMPONENTS …)` in `apps/` and `libs/`: Core, Gui, Qml, Quick, Sql, Test (tests only) | No `Network`, `WebSockets`, `WebView`, `Positioning` or `Bluetooth` |
+| Qt modules asked for | `find_package(Qt6 … COMPONENTS …)` in `apps/` and `libs/`: Core, Gui, Qml, Quick, Sql, Test (tests only) | No `Network`, `WebSockets`, `WebView`, `Positioning` or `Bluetooth` asked for. Qt QML still links Qt Network on its own (see below) |
 | Network APIs in the sources | `QNetwork*`, `QTcp*`, `QUdp*`, `QWebSocket`, `NSURLSession`, `URLSession`, `openUrlExternally` in `apps/` and `libs/` | No calls. The one hit, in `perf_marks.hpp`, is a comment that says "no network" |
 | Third-party SDKs | `vcpkg.json` | Catch2 (tests, desktop only). Tracy only with the `profiling` feature, which only the `linux-debug` preset turns on. No analytics, crash reporting or advertising SDK |
 | Permissions | `Info.plist.in` has no usage text, and `verify_app.sh` refuses any | None |
@@ -141,11 +141,16 @@ What the code shows, checked on `develop` at 92080f9:
 
 Two things the sources alone cannot prove. 11.2 turns both into checks:
 
-1. **Qt's static plugins.** `apps/app/packaging/ios.cmake` marks `QSecureTransportBackendPlugin` and
-   `QSCNetworkReachabilityNetworkInformationPlugin` as default plugins, in case the kit leaves them unset. They are linked
-   only when `Qt6::Network` is in the link, which nothing asks for. QtQml can still pull in network code for remote QML
-   or images. 11.2 adds a step to `verify_app.sh` that fails when the executable has Qt Network, `CFNetwork`/`Network`
-   framework links, or Tracy symbols. Then the claim is checked on every signed build, not just remembered.
+1. **Qt Network is linked, but never called.** The first iOS build with 11.2's check (PR #140) showed that Qt QML
+   links Qt Network, because the kit is built with `qml_network` so that QML could load a remote URL. Qt Network in turn
+   links `CFNetwork` and `Network`. So the executable carries network code, and the app never calls it. Two checks cover
+   this:
+   - `verify_app.sh` reports the network code it finds on every build, and fails only on the Tracy profiler.
+   - `tools/ci/check_no_network.py` fails when the app's own code uses a network API, links Qt Network, or names a
+     remote URL other than the project's own pages, which open in the browser.
+
+   "Data Not Collected" is about what the app sends, and it sends nothing, so the answer stands. On Android the same
+   link makes Qt add the `INTERNET` permission, which Stage 9 removes (T11-7).
 2. **Privacy manifest.** The repository has no `PrivacyInfo.xcprivacy`. Apple asks for one that declares tracking (none),
    the collected data types (none), and a reason for each "required reason" API the binary calls. A static Qt
    probably calls file-timestamp APIs (`stat`), system boot time (`mach_absolute_time`), and `NSUserDefaults` if
@@ -188,7 +193,7 @@ each build. The facts behind it:
 - The app has no encryption code of its own and no network access.
 - At rest, iOS Data Protection encrypts the files. That is the operating system's encryption, which the app only asks for
   through the entitlement and the file protection class.
-- If Qt's TLS backend were linked (11.2 checks that it is not), it would use Apple's system TLS. That is still the
+- Qt Network is linked (see App Privacy) but never called. Its TLS backend uses Apple's system TLS. That is still the
   system's encryption.
 
 Since only the operating system's encryption is used, the app is in the exempt category, and no documentation is uploaded.
@@ -469,7 +474,7 @@ Each one is a small pull request into `develop`, squash merged. 11.1 is this pul
 | T11-2 | The confidentiality guard covers `store/`. It fails on a name outside the stand-in list | `unit` |
 | T11-3 | Every URL file holds an `https` URL on the documentation site's host | `unit` |
 | T11-4 | The demo setup file equals `config/sample-config.json` and imports with no warnings | `unit` |
-| T11-5 | The signed IPA links no Qt Network, `CFNetwork` or `Network` framework, and has no Tracy symbols | `system` (release job) |
+| T11-5 | The app's own code uses no network API and no remote URL (`check_no_network.py`). The IPA has no Tracy symbols, and its linked network code is reported | `unit`, `system` |
 | T11-6 | `PrivacyInfo.xcprivacy` is in the bundle, with `NSPrivacyTracking` false, no tracking domains, no collected types, and a reason for each API category the symbol scan finds | `system` |
 | T11-7 | The Android merged manifest has no `INTERNET` permission and no `AD_ID` (with Stage 9) | `system` |
 | T11-8 | Every screenshot has its set's exact pixel size, the list of shots matches the committed list, and two runs give the same bytes | `system` |
@@ -524,7 +529,7 @@ the order that best saves waiting time.
   Play Console reject what is wrong, and decide whether the 6.1" set is needed.
 - That Apple and Google accept "no data collected" for an app whose only way out is the system share sheet.
 - That the 2025 age-rating questions give 4+ for these answers.
-- That the static Qt link has no network code. T11-5 proves this on the first signed build after 11.2.
+- That Apple and Google accept "no data collected" for an app whose binary carries Qt Network, which it never calls.
 
 ## Rule check, 10 Nov 2026
 
