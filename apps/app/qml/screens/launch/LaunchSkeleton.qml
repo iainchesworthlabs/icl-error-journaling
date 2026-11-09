@@ -86,6 +86,7 @@ Item {
             draft: ""
             chips: []
             skeleton: true
+            nominalMetrics: true
         }
 
         LastEntryBar {

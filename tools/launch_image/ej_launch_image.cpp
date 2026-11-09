@@ -169,6 +169,12 @@ void collect(QQuickItem* item, const QString& name, std::vector<QQuickItem*>& ou
             .arg(expected.width())
             .arg(expected.height());
     }
+    // Every pixel that is too far off, summarised: how many, where, how far, and the first one. One look at the CI log
+    // then says whether a corner differs in its anti-aliasing or a shape has moved.
+    int count = 0;
+    int worst_delta = 0;
+    QRect box;
+    QString first;
     for (int y = 0; y < actual.height(); ++y)
     {
         for (int x = 0; x < actual.width(); ++x)
@@ -179,19 +185,37 @@ void collect(QQuickItem* item, const QString& name, std::vector<QQuickItem*>& ou
             {
                 continue;
             }
-            const int worst =
+            const int delta =
                 std::max({std::abs(qRed(a) - qRed(e)), std::abs(qGreen(a) - qGreen(e)), std::abs(qBlue(a) - qBlue(e))});
             const bool exact = inside_tile(tiles, x, y);
-            if (exact || worst > CHANNEL_TOLERANCE)
+            if (!exact && delta <= CHANNEL_TOLERANCE)
             {
-                return QStringLiteral("pixel (%1, %2) is %3, expected %4%5")
-                    .arg(x)
-                    .arg(y)
-                    .arg(QColor(a).name())
-                    .arg(QColor(e).name())
-                    .arg(exact ? QStringLiteral(" (inside a tile, where the match is exact)") : QString());
+                continue;
             }
+            if (count == 0)
+            {
+                first = QStringLiteral("the first is pixel (%1, %2), %3 and expected %4%5")
+                            .arg(x)
+                            .arg(y)
+                            .arg(QColor(a).name())
+                            .arg(QColor(e).name())
+                            .arg(exact ? QStringLiteral(" (inside a tile, where the match is exact)") : QString());
+            }
+            ++count;
+            worst_delta = std::max(worst_delta, delta);
+            box = box.isNull() ? QRect(x, y, 1, 1) : box.united(QRect(x, y, 1, 1));
         }
+    }
+    if (count > 0)
+    {
+        return QStringLiteral("%1 pixels differ, by up to %2 levels, within (%3, %4) to (%5, %6); %7")
+            .arg(count)
+            .arg(worst_delta)
+            .arg(box.left())
+            .arg(box.top())
+            .arg(box.right())
+            .arg(box.bottom())
+            .arg(first);
     }
     return {};
 }
