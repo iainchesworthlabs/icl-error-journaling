@@ -832,9 +832,13 @@ heights and widths from the font's metrics, which differ between Windows, Linux 
 the four lines at 1.2 times their size (`FontRole.nominalPitch`, the pitch of the phone's font) and the right column at 40% of
 the card, and the skeleton `TabBar` takes its label's height the same way. The Log screen's own loading placeholder is
 unchanged. `launch.same_in_any_font` renders the skeleton in a sans serif, a monospace and a serif font and requires the same
-picture. `launch.matches_screen` compares the skeleton with the real shell at the smallest iOS text size, where the real header
-card is its 64 pt minimum in any font; at the default size the real card is as tall as its words, which on a test machine is not
-the phone's font, so K1 is what confirms the card's height on the phone (the skeleton's is 65.6 pt at the default size).
+picture. `launch.matches_screen` compares the skeleton with the real shell, filled in as in the design, under the iPhone 17 insets.
+The one thing in the real screen that depends on the font is the header card, which is at least 64 pt and as tall as its words,
+and the font of a test machine is not the phone's: the case measures how far the real card is from the skeleton's (65.6 pt, the
+phone's font at the default size) and requires the card's top and sides, and everything under it, to be where the skeleton has
+them once moved by that difference, within half a point. On the phone's font the difference is within half a point, and K1
+confirms it. Offscreen Qt has only one font on some machines, so `launch.same_in_any_font` can only compare fonts where the
+machine has several.
 `launch.image_current` is a `ctest` that runs `ej_launch_image --check`; its comparison is exact inside the tiles (corners
 apart) and allows 2 levels of a channel elsewhere. The PNGs are `launch-light.png` and `launch-dark.png` in
 `LaunchBoard.imageset`.
