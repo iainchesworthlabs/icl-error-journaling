@@ -580,7 +580,7 @@ TEST_CASE("An unshared log with entries is unshared; an empty log never is", "[v
     }
 }
 
-TEST_CASE("A log that was shared is not unshared, even when it changed after", "[viewmodel][day]")
+TEST_CASE("A log that was shared and not changed since is not unshared", "[viewmodel][day]")
 {
     WatcherRig rig;
     rig.tap_at(melbourne(7, 17, 30));
@@ -588,13 +588,129 @@ TEST_CASE("A log that was shared is not unshared, even when it changed after", "
     rig.gateway.run_all();
     REQUIRE(rig.stored(rig.log_id).m_Meta.m_LastSharedUtc.has_value());
 
-    rig.tap_at(melbourne(7, 18, 0)); // an edit after sharing does not clear it
     rig.at(melbourne(8, 8, 5));
     rig.watcher->check();
 
     CHECK(rig.watcher->prompt_visible());
+    CHECK_FALSE(rig.watcher->unshared()); // no nag: "Start a new log" and nothing else
+    CHECK_FALSE(rig.watcher->changed_since_share());
+    CHECK(rig.watcher->open_log_entry_count() == 1);
+}
+
+TEST_CASE("A log that changed after it was shared is unshared again, until it is shared again", "[viewmodel][day]")
+{
+    // Sharing can happen several times a day: a share is not the end of the day.
+    WatcherRig rig;
+    rig.tap_at(melbourne(7, 12, 0));
+    REQUIRE(rig.share->shareOpenLog());
+    rig.gateway.run_all();
+
+    SECTION("an entry added after the share")
+    {
+        rig.tap_at(melbourne(7, 18, 0));
+    }
+    SECTION("an entry deleted after the share")
+    {
+        rig.tap_at(melbourne(7, 12, 30));
+        REQUIRE(rig.share->shareOpenLog());
+        rig.gateway.run_all();
+        REQUIRE_FALSE(rig.document().meta().m_ChangedSinceShare);
+        const Entry last = **rig.document().log().sorted_entries().begin();
+        REQUIRE(rig.document().set_deleted(last.m_Id, true, LogChange::Origin::USER, {}));
+        rig.gateway.run_all();
+    }
+    rig.at(melbourne(8, 8, 5));
+    rig.watcher->check();
+
+    REQUIRE(rig.watcher->prompt_visible());
+    CHECK(rig.watcher->unshared());
+    CHECK(rig.watcher->changed_since_share()); // the text says "changed", not "never shared"
+    CHECK(rig.watcher->property("unshared").toBool());
+    CHECK(rig.watcher->property("changedSinceShare").toBool());
+
+    // Sharing again ends it, while the prompt is up.
+    QSignalSpy changed(rig.watcher.get(), &DayWatcher::promptChanged);
+    REQUIRE(rig.watcher->shareFirst());
+    rig.gateway.run_all();
     CHECK_FALSE(rig.watcher->unshared());
+    CHECK_FALSE(rig.watcher->changed_since_share());
+    CHECK(changed.count() == 1);
+}
+
+TEST_CASE("An edit made while the prompt is up brings the offer to share back", "[viewmodel][day]")
+{
+    WatcherRig rig;
+    rig.tap_at(melbourne(7, 12, 0));
+    REQUIRE(rig.share->shareOpenLog());
+    rig.gateway.run_all();
+    rig.at(melbourne(8, 0, 30));
+    rig.watcher->check();
+    REQUIRE(rig.watcher->prompt_visible());
+    REQUIRE_FALSE(rig.watcher->unshared());
+
+    rig.tap_at(melbourne(8, 0, 35)); // an entry past midnight, still in the open log
+    CHECK(rig.watcher->prompt_visible());
+    CHECK(rig.watcher->unshared());
+    CHECK(rig.watcher->changed_since_share());
     CHECK(rig.watcher->open_log_entry_count() == 2);
+}
+
+TEST_CASE("The prompt comes on the next day the app is used, whatever the gap", "[viewmodel][day]")
+{
+    // The facilitator works on Mondays and Fridays: the open log is Monday's (the sample log is dated Saturday the 7th,
+    // so Tuesday the 10th stands for the next time it is used, three days on).
+    SECTION("never shared")
+    {
+        WatcherRig rig;
+        rig.tap_at(melbourne(7, 17, 30));
+        rig.at(melbourne(10, 8, 5));
+        rig.watcher->check();
+        REQUIRE(rig.watcher->prompt_visible());
+        CHECK(rig.watcher->new_date_text() == QStringLiteral("Tuesday 10 November"));
+        CHECK(rig.watcher->open_log_day_text() == QStringLiteral("Saturday"));
+        CHECK(rig.watcher->unshared());
+        CHECK_FALSE(rig.watcher->changed_since_share());
+    }
+    SECTION("shared, and nothing changed since")
+    {
+        WatcherRig rig;
+        rig.tap_at(melbourne(7, 17, 30));
+        REQUIRE(rig.share->shareOpenLog());
+        rig.gateway.run_all();
+        rig.at(melbourne(10, 8, 5));
+        rig.watcher->check();
+        REQUIRE(rig.watcher->prompt_visible());
+        CHECK(rig.watcher->new_date_text() == QStringLiteral("Tuesday 10 November"));
+        CHECK_FALSE(rig.watcher->unshared()); // just "start a new log"
+    }
+    SECTION("shared, and changed since")
+    {
+        WatcherRig rig;
+        rig.tap_at(melbourne(7, 12, 0));
+        REQUIRE(rig.share->shareOpenLog());
+        rig.gateway.run_all();
+        rig.tap_at(melbourne(7, 18, 0));
+        rig.at(melbourne(10, 8, 5));
+        rig.watcher->check();
+        REQUIRE(rig.watcher->prompt_visible());
+        CHECK(rig.watcher->new_date_text() == QStringLiteral("Tuesday 10 November"));
+        CHECK(rig.watcher->unshared());
+        CHECK(rig.watcher->changed_since_share());
+    }
+    SECTION("the date of the open log decides, not yesterday")
+    {
+        WatcherRig rig;
+        rig.at(melbourne(9, 8, 5)); // the day before: still later than the log's date
+        rig.watcher->check();
+        CHECK(rig.watcher->prompt_visible());
+        rig.watcher->keepOpen();
+        rig.at(melbourne(7, 23, 59)); // the day of the log: no prompt
+        rig.watcher->check();
+        CHECK_FALSE(rig.watcher->prompt_visible());
+        rig.at(melbourne(8, 0, 0)); // the next day, at midnight
+        rig.watcher->check();
+        CHECK(rig.watcher->prompt_visible());
+    }
 }
 
 TEST_CASE("Sharing first turns unshared off while the prompt is still up", "[viewmodel][day]")

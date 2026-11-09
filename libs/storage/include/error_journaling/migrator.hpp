@@ -44,8 +44,9 @@ struct MigrationStep
     std::function<Result<void, StorageError>(MigrationConnection&)> m_Apply;
 };
 
-/// The steps of the product. Version 1 is the only schema that ships in Stage 2, so the list is empty and a migration
-/// to the current version is always "up to date". A later schema adds its step here and raises `SQLITE_SCHEMA_VERSION`.
+/// The steps of the product, in order. Version 1 is the schema of Stage 2; version 2 adds
+/// `day_log.changed_since_share`. A later schema adds its step here and raises `SQLITE_SCHEMA_VERSION`. `Recovery::run`
+/// migrates a database to the current version before it opens it.
 [[nodiscard]] std::vector<MigrationStep> product_migration_steps();
 
 struct MigrationOptions

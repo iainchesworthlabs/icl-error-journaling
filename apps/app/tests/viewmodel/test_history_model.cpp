@@ -362,7 +362,7 @@ TEST_CASE("The roles have the names the screens bind to", "[viewmodel][history][
     Fixture fixture;
     const auto names = fixture.history().roleNames();
 
-    CHECK(names.size() == 13);
+    CHECK(names.size() == 14);
     CHECK(names.value(HistoryModel::LOG_ID) == "logId");
     CHECK(names.value(HistoryModel::DATE_TEXT) == "dateText");
     CHECK(names.value(HistoryModel::SECTION) == "section");
@@ -376,6 +376,7 @@ TEST_CASE("The roles have the names the screens bind to", "[viewmodel][history][
     CHECK(names.value(HistoryModel::DETAIL_TEXT) == "detailText");
     CHECK(names.value(HistoryModel::SHARED_DATE_TEXT) == "sharedDateText");
     CHECK(names.value(HistoryModel::LONG_DATE_TEXT) == "longDateText");
+    CHECK(names.value(HistoryModel::CHANGED_SINCE_SHARE) == "changedSinceShare");
 }
 
 TEST_CASE("Summaries only: refresh lists the logs and loads none", "[viewmodel][history][unit]")
@@ -706,8 +707,9 @@ TEST_CASE("Editing and deleting an entry of a past log persists and re-renders",
     CHECK(cell(history, row, HistoryModel::ENTRY_COUNT).toInt() == 3);
     REQUIRE(changed.count() == 1);
     CHECK(changed.at(0).at(0).value<QModelIndex>().row() == row);
-    CHECK(changed.at(0).at(2).value<QList<int>>() ==
-          QList<int>{HistoryModel::ENTRY_COUNT, HistoryModel::ENTRIES_TEXT, HistoryModel::DETAIL_TEXT});
+    CHECK(changed.at(0).at(2).value<QList<int>>() == QList<int>{HistoryModel::ENTRY_COUNT, HistoryModel::SHARED,
+                                                                HistoryModel::CHANGED_SINCE_SHARE,
+                                                                HistoryModel::ENTRIES_TEXT, HistoryModel::DETAIL_TEXT});
 
     // Edit: the same entry types, a new attached note.
     const QString first = review.data(review.index(0), TimelineModel::ENTRY_ID).toString();
@@ -778,7 +780,9 @@ TEST_CASE("The row follows a correction of the header of the log under review", 
 
     CHECK(cell(history, row, HistoryModel::UNIT_TEXT).toString() == "UNIT-28");
     REQUIRE(changed.count() == 1);
-    CHECK(changed.at(0).at(2).value<QList<int>>() == QList<int>{HistoryModel::UNIT_TEXT});
+    // The log was shared, so the correction also makes it changed since the share.
+    CHECK(changed.at(0).at(2).value<QList<int>>() ==
+          QList<int>{HistoryModel::UNIT_TEXT, HistoryModel::SHARED, HistoryModel::CHANGED_SINCE_SHARE});
 }
 
 TEST_CASE("The row shows the environment of the unit, and follows a correction of it",
@@ -1038,6 +1042,99 @@ TEST_CASE("Sharing a past log marks it shared and the row updates in place with 
     CHECK(log_id(history, row) == text_of(EVENING));
     // The other rows did not move or change.
     CHECK_FALSE(cell(history, row_of(history, YESTERDAY), HistoryModel::SHARED).toBool());
+}
+
+// ------------------------------------------------------------------------------------- changed since the last share
+
+TEST_CASE("A log that changed after its share is not shown as shared", "[viewmodel][history][unit][share]")
+{
+    Fixture fixture;
+    // The morning log was shared and then had an entry added, one edited, and one deleted in Review (the store keeps
+    // past logs editable). The evening log was never shared.
+    const LogId morning = sample_id<LogId>(MORNING);
+    SECTION("an entry edited after the share")
+    {
+        REQUIRE(fixture.storage().memory().edit_entry(morning, error_at(31, 10, 6), utc(2026, 11, 8, 1, 0)));
+    }
+    SECTION("an entry deleted after the share")
+    {
+        REQUIRE(fixture.storage().memory().set_entry_deleted(morning, sample_id<EntryId>(32), true));
+    }
+    SECTION("a header corrected after the share")
+    {
+        REQUIRE(fixture.storage().memory().correct_header(morning, HeaderField::UNIT_NUMBER, "31"));
+    }
+    fixture.load();
+    HistoryModel& history = fixture.history();
+
+    const int row = row_of(history, MORNING);
+    CHECK_FALSE(cell(history, row, HistoryModel::SHARED).toBool()); // the ring, as a log never shared has
+    CHECK(cell(history, row, HistoryModel::CHANGED_SINCE_SHARE).toBool());
+    // The time of the last share is still said: it is when the log last left the phone.
+    CHECK(cell(history, row, HistoryModel::SHARED_AT_TEXT).toString() == "08:05");
+    CHECK_FALSE(cell(history, row, HistoryModel::SHARED_DATE_TEXT).toString().isEmpty());
+
+    // The other rows are as they were: never shared, and (no share, no change) not changed since a share.
+    CHECK_FALSE(cell(history, row_of(history, EVENING), HistoryModel::SHARED).toBool());
+    CHECK_FALSE(cell(history, row_of(history, EVENING), HistoryModel::CHANGED_SINCE_SHARE).toBool());
+}
+
+TEST_CASE("A log that was shared and not changed since is shown as shared", "[viewmodel][history][unit][share]")
+{
+    Fixture fixture;
+    fixture.load();
+    const int row = row_of(fixture.history(), MORNING);
+    CHECK(cell(fixture.history(), row, HistoryModel::SHARED).toBool());
+    CHECK_FALSE(cell(fixture.history(), row, HistoryModel::CHANGED_SINCE_SHARE).toBool());
+}
+
+TEST_CASE("An edit made in Review changes the row at once, and sharing again puts the check back",
+          "[viewmodel][history][unit][share]")
+{
+    Fixture fixture;
+    fixture.load();
+    HistoryModel& history = fixture.history();
+    history.openLog(text_of(MORNING));
+    fixture.settle();
+    const int row = row_of(history, MORNING);
+    REQUIRE(cell(history, row, HistoryModel::SHARED).toBool());
+    QSignalSpy changed(&history, &QAbstractItemModel::dataChanged);
+
+    REQUIRE(history.review_document()->set_deleted(sample_id<EntryId>(32), true, LogChange::Origin::USER, {}));
+    fixture.settle();
+
+    CHECK_FALSE(cell(history, row, HistoryModel::SHARED).toBool());
+    CHECK(cell(history, row, HistoryModel::CHANGED_SINCE_SHARE).toBool());
+    REQUIRE(changed.count() >= 1);
+    const auto roles = changed.at(changed.count() - 1).at(2).value<QList<int>>();
+    CHECK(roles.contains(HistoryModel::SHARED));
+    CHECK(roles.contains(HistoryModel::CHANGED_SINCE_SHARE));
+
+    fixture.world().m_Clock.set_wall(utc(2026, 11, 8, 3, 30)); // 14:30 on 8 Nov in Melbourne
+    REQUIRE(fixture.share().shareLog(text_of(MORNING)));
+    fixture.settle();
+
+    CHECK(cell(history, row, HistoryModel::SHARED).toBool());
+    CHECK_FALSE(cell(history, row, HistoryModel::CHANGED_SINCE_SHARE).toBool());
+    CHECK(cell(history, row, HistoryModel::SHARED_AT_TEXT).toString() == "14:30");
+}
+
+TEST_CASE("Copying a past log does not share it", "[viewmodel][history][unit][share]")
+{
+    Fixture fixture;
+    fixture.load();
+    HistoryModel& history = fixture.history();
+    history.openLog(text_of(EVENING));
+    fixture.settle();
+    const int row = row_of(history, EVENING);
+
+    REQUIRE(history.review_model()->copyAll());
+    REQUIRE(history.review_model()->copyLine(0));
+    fixture.settle();
+
+    CHECK_FALSE(cell(history, row, HistoryModel::SHARED).toBool());
+    CHECK(cell(history, row, HistoryModel::SHARED_AT_TEXT).toString().isEmpty());
+    CHECK(fixture.stored_share(EVENING) == std::nullopt);
 }
 
 TEST_CASE("Sharing again moves the shared time of a row that was shared", "[viewmodel][history][unit]")
@@ -1367,7 +1464,9 @@ TEST_CASE("A log with no version reads as its entries alone, and a correction mo
     CHECK(cell(history, row, HistoryModel::DETAIL_TEXT).toString() == "4 entries");
     REQUIRE(changed.count() == 1);
     const auto roles = changed.at(0).at(2).value<QList<int>>();
-    CHECK(roles == QList<int>{HistoryModel::VERSION_TEXT, HistoryModel::DETAIL_TEXT});
+    // The morning log was shared: a correction made in Review also makes it changed since the share.
+    CHECK(roles == QList<int>{HistoryModel::SHARED, HistoryModel::CHANGED_SINCE_SHARE, HistoryModel::VERSION_TEXT,
+                              HistoryModel::DETAIL_TEXT});
 
     REQUIRE(history.review_document()->correct_header(HeaderField::SOFTWARE_VERSION, "1.5.0", {}));
     fixture.settle();

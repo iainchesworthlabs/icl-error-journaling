@@ -601,7 +601,8 @@ confirmation `Alert`, and an open row that pushes the Review screen bound to `hi
 Tests: `newday.visibility` (the alert follows `promptVisible`; it blocks the tab bar; it is not dismissable by a scrim tap);
 `newday.text` (the new date and the old day come from the model and are shown without edits); `newday.unshared` (the warning
 and the share-first choice appear only while `unshared`, and the warning disappears the moment a share is recorded while the
-prompt is still up); `newday.actions` (each choice calls its one invokable once; Start a new log on `false` keeps the prompt
+prompt is still up); `newday.changed` (a log shared and then added to says it changed since it was last shared and offers to
+share again, on the next day or three days on; one shared and not changed says nothing); `newday.actions` (each choice calls its one invokable once; Start a new log on `false` keeps the prompt
 and shows the failure; Keep hides it); `newday.share_first_flow` (Share first leaves the prompt up, then Start works);
 `history.sections` (newest first, two logs on one date under one heading, shared and unshared rows, the shared time in the
 user's format); `history.refresh` (shown on entry, a loading state, one reset without flicker; an error keeps the old list

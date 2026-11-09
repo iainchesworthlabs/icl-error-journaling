@@ -21,8 +21,9 @@ namespace ej
 inline constexpr std::int32_t SQLITE_APPLICATION_ID = 0x454A4C47;
 
 /// The schema this build writes: `PRAGMA user_version`. A database with a higher value was written by a newer build and
-/// is refused untouched (C16, M5).
-inline constexpr std::int32_t SQLITE_SCHEMA_VERSION = 1;
+/// is refused untouched (C16, M5). Version 2 adds `day_log.changed_since_share`; a version 1 database is migrated
+/// (`product_migration_steps`) before it is opened.
+inline constexpr std::int32_t SQLITE_SCHEMA_VERSION = 2;
 
 /// The answer of a SQLite check: `ok`, or SQLite's own description of what is wrong (pages and tables, never row
 /// content).

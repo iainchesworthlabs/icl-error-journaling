@@ -77,7 +77,7 @@ StorageError error_of(const Result<void, StorageError>& result)
 
 }  // namespace
 
-TEST_CASE("A new database has the schema, the identity and the settings of version 1", "[sqlite]")
+TEST_CASE("A new database has the schema, the identity and the settings of the current version", "[sqlite]")
 {
     Store store;
     RawDb raw(store.database());
@@ -100,6 +100,9 @@ TEST_CASE("A new database has the schema, the identity and the settings of versi
                          {QString::fromLatin1(name)})
                   .toInt() == 1);
     }
+    CHECK(raw.scalar(
+                 QStringLiteral("SELECT count(*) FROM pragma_table_info('day_log') WHERE name = 'changed_since_share'"))
+              .toInt() == 1);
     CHECK(raw.scalar(QStringLiteral("SELECT applied_seq FROM store_state")).toInt() == 0);
     CHECK(raw.scalar(QStringLiteral("SELECT journal_generation FROM store_state")).toInt() == 0);
 }
@@ -554,7 +557,7 @@ TEST_CASE("A database written by a newer version is refused and left exactly as 
     store.m_Repository.reset();
     {
         RawDb raw(store.database());
-        REQUIRE(raw.exec(QStringLiteral("PRAGMA user_version = 2")));
+        REQUIRE(raw.exec(QStringLiteral("PRAGMA user_version = %1").arg(SQLITE_SCHEMA_VERSION + 1)));
     }
     const auto before = snapshot_of(store.m_Dir.path()).at("ej.db");
     const auto opened = SqliteLogRepository::open(store.database(), store.m_Clock, store.m_Journal);

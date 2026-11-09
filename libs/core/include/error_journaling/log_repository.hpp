@@ -47,10 +47,17 @@ struct LogSummary
     HeaderValues m_Header;  // the values the log started with: date, facilitator, unit number, location
     UtcMillis m_CreatedUtc;
     std::optional<UtcMillis> m_LastSharedUtc;
+    bool m_ChangedSinceShare = false; // `LogMeta::m_ChangedSinceShare`
     bool m_Archived = false;
     std::size_t m_LiveEntryCount = 0;   // not soft-deleted
     std::size_t m_TotalEntryCount = 0;  // live and deleted
 };
+
+/// `is_unshared` for a line of the list.
+[[nodiscard]] constexpr bool is_unshared(const LogSummary& summary) noexcept
+{
+    return is_unshared(summary.m_LastSharedUtc, summary.m_ChangedSinceShare, summary.m_LiveEntryCount);
+}
 
 /// The note field's uncommitted text (NOTE-03).
 struct Draft

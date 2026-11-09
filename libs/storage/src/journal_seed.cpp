@@ -25,11 +25,20 @@ std::vector<JournalRecord> seed_records(const StoredLog& log)
         records.push_back(std::move(record));
     };
     add(std::in_place_type<CreateLogBody>, log.m_Log.initial_header(), log.m_Meta.m_CreatedUtc, log.m_Meta.m_Previous);
-    for (const Entry& entry : log.m_Log.entries())
+    // A log that changed after its share has the share before its last entry, so that replaying the records leaves a
+    // change after the share, as the log has. (Which entry changed is not known, and does not matter: any one will do.)
+    // A shared log that is unchanged has the share after all of them.
+    const auto entries = log.m_Log.entries();
+    const bool share_before_last = log.m_Meta.m_LastSharedUtc && log.m_Meta.m_ChangedSinceShare && !entries.empty();
+    for (std::size_t i = 0; i < entries.size(); ++i)
     {
-        add(std::in_place_type<AddEntryBody>, entry);
+        if (share_before_last && i + 1 == entries.size())
+        {
+            add(std::in_place_type<MarkSharedBody>, *log.m_Meta.m_LastSharedUtc);
+        }
+        add(std::in_place_type<AddEntryBody>, entries[i]);
     }
-    if (log.m_Meta.m_LastSharedUtc)
+    if (log.m_Meta.m_LastSharedUtc && !share_before_last)
     {
         add(std::in_place_type<MarkSharedBody>, *log.m_Meta.m_LastSharedUtc);
     }

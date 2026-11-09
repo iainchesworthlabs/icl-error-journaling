@@ -158,7 +158,9 @@ QVariant HistoryModel::data(const QModelIndex& index, int role) const
     case ENTRY_COUNT:
         return row.m_Count;
     case SHARED:
-        return row.m_Shared.has_value();
+        return row.m_Shared.has_value() && !changed_after_share(row);
+    case CHANGED_SINCE_SHARE:
+        return changed_after_share(row);
     case SHARED_AT_TEXT:
         return row.m_SharedAt;
     case ENTRIES_TEXT:
@@ -190,7 +192,8 @@ QHash<int, QByteArray> HistoryModel::roleNames() const
             {VERSION_TEXT, "versionText"},
             {DETAIL_TEXT, "detailText"},
             {SHARED_DATE_TEXT, "sharedDateText"},
-            {LONG_DATE_TEXT, "longDateText"}};
+            {LONG_DATE_TEXT, "longDateText"},
+            {CHANGED_SINCE_SHARE, "changedSinceShare"}};
 }
 
 void HistoryModel::render(Row& row) const
@@ -246,6 +249,12 @@ void HistoryModel::render(Row& row) const
     }
 }
 
+bool HistoryModel::changed_after_share(const Row& row)
+{
+    return row.m_Shared.has_value() &&
+           is_unshared(row.m_Shared, row.m_ChangedSinceShare, static_cast<std::size_t>(row.m_Count));
+}
+
 QList<int> HistoryModel::changed_roles(const Row& before, const Row& after)
 {
     QList<int> roles;
@@ -261,9 +270,10 @@ QList<int> HistoryModel::changed_roles(const Row& before, const Row& after)
     {
         roles.push_back(ENTRY_COUNT);
     }
-    if (before.m_Shared != after.m_Shared)
+    if (before.m_Shared != after.m_Shared || changed_after_share(before) != changed_after_share(after))
     {
         roles.push_back(SHARED);
+        roles.push_back(CHANGED_SINCE_SHARE);
     }
     if (before.m_SharedAt != after.m_SharedAt)
     {
@@ -354,6 +364,7 @@ void HistoryModel::list_arrived(const Result<std::vector<LogSummary>, StorageErr
         row.m_Header = summary.m_Header;
         row.m_Created = summary.m_CreatedUtc;
         row.m_Shared = summary.m_LastSharedUtc;
+        row.m_ChangedSinceShare = summary.m_ChangedSinceShare;
         row.m_Count = static_cast<int>(summary.m_LiveEntryCount);
         rows.push_back(std::move(row));
     }
@@ -395,6 +406,7 @@ void HistoryModel::show_document(const LogDocument& document)
     Row after = m_Rows[*at];
     after.m_Header = document.log().initial_header();
     after.m_Shared = document.last_shared();
+    after.m_ChangedSinceShare = document.meta().m_ChangedSinceShare;
     after.m_Count = static_cast<int>(live_entries(document.log()));
     render(after);
 

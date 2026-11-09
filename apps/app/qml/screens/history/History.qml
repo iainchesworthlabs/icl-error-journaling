@@ -24,8 +24,8 @@ import ErrorJournalingApp
 // gone: the page keeps showing the log until its slide has ended.
 //
 // Layout (History, HistoryEmpty, DeleteLog): rows 60 pt high with the unit and site in 16/600 and "4 entries · v1.4.2" under
-// them (the model's `detailText`), the shared state as a check and "Shared 17:42" or a ring and "Not shared", then a thin
-// chevron; the separators run the full width of the card and the last row of a card has none. The delete alert names the date in
+// them (the model's `detailText`), the shared state as a check and "Shared 17:42" or a ring and "Not shared" (or "Changed since sharing" for a log that was
+// shared and has changed since), then a thin chevron; the separators run the full width of the card and the last row of a card has none. The delete alert names the date in
 // full ("Thu 5 Nov 2026", the model's `longDateText`).
 //
 // The screen fills the window and keeps `bottomClearance` free at the bottom for the tab bar, which the shell draws. The shell
@@ -63,6 +63,7 @@ Item {
     property string openedTitle
     property string openedSharedDate
     property string openedSharedTime
+    property bool openedChangedSinceShare: false
     property string openedEntries
     // The timeline of the log that is open. It is kept after the log is closed, so that the page that is sliding away still
     // has a model to show.
@@ -393,13 +394,14 @@ Item {
                     required property string detailText
                     required property string longDateText
                     required property bool shared
+                    required property bool changedSinceShare
                     required property string sharedAtText
                     required property string sharedDateText
 
                     readonly property bool firstInSection: ListView.previousSection !== line.section
                     readonly property bool lastInSection: ListView.nextSection !== line.section
                     readonly property bool isOpened: line.logId === root.openedLogId
-                    readonly property string statusText: line.shared ? qsTr("Shared %1").arg(line.sharedAtText) : qsTr("Not shared")
+                    readonly property string statusText: line.shared ? qsTr("Shared %1").arg(line.sharedAtText) : line.changedSinceShare ? qsTr("Changed since sharing") : qsTr("Not shared")
                     readonly property string rowName: qsTr("%1, %2, %3, %4").arg(line.dateText).arg(root.placeTitle(line.unitText, line.locationText)).arg(line.entriesText).arg(line.statusText)
 
                     objectName: "historyRow"
@@ -410,7 +412,7 @@ Item {
                     Binding {
                         target: root
                         property: "openedSharedDate"
-                        value: line.shared ? line.sharedDateText : ""
+                        value: line.sharedDateText
                         when: line.isOpened
                         restoreMode: Binding.RestoreNone
                     }
@@ -426,7 +428,15 @@ Item {
                     Binding {
                         target: root
                         property: "openedSharedTime"
-                        value: line.shared ? line.sharedAtText : ""
+                        value: line.sharedAtText
+                        when: line.isOpened
+                        restoreMode: Binding.RestoreNone
+                    }
+
+                    Binding {
+                        target: root
+                        property: "openedChangedSinceShare"
+                        value: line.changedSinceShare
                         when: line.isOpened
                         restoreMode: Binding.RestoreNone
                     }
@@ -662,6 +672,7 @@ Item {
             entriesText: root.openedEntries
             sharedDateText: root.openedSharedDate
             sharedTimeText: root.openedSharedTime
+            changedSinceShare: root.openedChangedSinceShare
             sheetLayer: root.sheetLayer
             bottomClearance: root.bottomClearance
             overrideInsets: root.overrideInsets

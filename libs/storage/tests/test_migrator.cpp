@@ -2,7 +2,8 @@
 //
 // Schema migrations (work package 2.7, section 2.9 of docs/plan/stage-2.md): M1, M2, M4, M5, M6 and M7, and the states
 // a killed migration can leave behind (M3 and K8 run as real kills in the kill harness). The steps are test-only
-// (migration_steps.hpp): the product ships schema version 1 and no steps.
+// (migration_steps.hpp): the test steps start from the schema version the product writes now, and
+// the product's own step is tried on a version 1 database in test_schema_upgrade.cpp.
 #include "error_journaling/migrator.hpp"
 #include "migration_steps.hpp"
 #include "recovery_fixture.hpp"
@@ -82,11 +83,11 @@ TEST_CASE("M1: a forward migration keeps every row, adds what the steps add, and
     const auto report = migrator_for(store, clock, test_steps()).run();
     REQUIRE(report.has_value());
     CHECK(report->m_Outcome == MigrationOutcome::MIGRATED);
-    CHECK(report->m_FromVersion == 1);
-    CHECK(report->m_ToVersion == 3);
+    CHECK(report->m_FromVersion == TEST_FROM_VERSION);
+    CHECK(report->m_ToVersion == TEST_TARGET_VERSION);
     CHECK(report->m_Steps == std::vector<std::string>{"add a column", "add a table"});
 
-    CHECK(user_version(store.database()) == 3);
+    CHECK(user_version(store.database()) == TEST_TARGET_VERSION);
     CHECK(counts(store.database()) == before_counts);
     {
         RawDb db(store.database());
@@ -100,7 +101,7 @@ TEST_CASE("M1: a forward migration keeps every row, adds what the steps add, and
 
     const auto backups = backups_of(store);
     REQUIRE(backups.size() == 1);
-    CHECK(backups.front().filename().string().starts_with("ej-v1-20261109T"));
+    CHECK(backups.front().filename().string().starts_with("ej-v" + std::to_string(TEST_FROM_VERSION) + "-20261109T"));
     CHECK(read_bytes(backups.front()) == before_bytes);
     CHECK(report->m_Backup == "backup/" + backups.front().filename().string());
 
@@ -111,7 +112,7 @@ TEST_CASE("M1: a forward migration keeps every row, adds what the steps add, and
     CHECK(backups_of(store).size() == 1);
 }
 
-TEST_CASE("The product has no steps, so the current version is always up to date", "[migration]")
+TEST_CASE("The product's steps reach the current version, which is then always up to date", "[migration]")
 {
     StoreCopy store;
     ScriptedClock clock(sample_time(4000));
@@ -119,7 +120,7 @@ TEST_CASE("The product has no steps, so the current version is always up to date
     const auto report = Migrator(store.location(), clock, product_migration_steps(), SQLITE_SCHEMA_VERSION).run();
     REQUIRE(report.has_value());
     CHECK(report->m_Outcome == MigrationOutcome::UP_TO_DATE);
-    CHECK(product_migration_steps().empty());
+    CHECK(product_migration_steps().size() == static_cast<std::size_t>(SQLITE_SCHEMA_VERSION - 1));
     CHECK(tree_of(store.root()) == before);
 }
 
@@ -135,7 +136,7 @@ TEST_CASE("M2: a step that fails restores the previous database byte for byte", 
     CHECK(report.error().m_Message.find("restored from the backup copy") != std::string::npos);
 
     CHECK(database_bytes(store) == before_bytes);
-    CHECK(user_version(store.database()) == 1);
+    CHECK(user_version(store.database()) == TEST_FROM_VERSION);
     CHECK_FALSE(std::filesystem::exists(store.location().migration_marker()));
     {
         RawDb db(store.database());
@@ -162,7 +163,7 @@ TEST_CASE("M4: a post-check that fails restores, whether it is foreign_key_check
         REQUIRE_FALSE(report.has_value());
         CHECK(report.error().m_Message.find("foreign_key_check") != std::string::npos);
         CHECK(database_bytes(store) == before_bytes);
-        CHECK(user_version(store.database()) == 1);
+        CHECK(user_version(store.database()) == TEST_FROM_VERSION);
         CHECK_FALSE(std::filesystem::exists(store.location().migration_marker()));
     }
     SECTION("the caller's check")
@@ -177,7 +178,7 @@ TEST_CASE("M4: a post-check that fails restores, whether it is foreign_key_check
         REQUIRE_FALSE(report.has_value());
         CHECK(report.error().m_Message.find("the extra check refused") != std::string::npos);
         CHECK(database_bytes(store) == before_bytes);
-        CHECK(user_version(store.database()) == 1);
+        CHECK(user_version(store.database()) == TEST_FROM_VERSION);
     }
 }
 
@@ -201,7 +202,7 @@ TEST_CASE("A hook that fails before the commit is a failed migration and restore
         REQUIRE_FALSE(report.has_value());
         CHECK(calls == fail_at);
         CHECK(database_bytes(store) == before_bytes);
-        CHECK(user_version(store.database()) == 1);
+        CHECK(user_version(store.database()) == TEST_FROM_VERSION);
         CHECK_FALSE(std::filesystem::exists(store.location().migration_marker()));
     }
 }
@@ -275,7 +276,8 @@ TEST_CASE("M6: the backup copy exists and is synced, and the marker names it, be
     options.m_Observer = [&](std::string_view event) { events.emplace_back(event); };
 
     bool step_ran = false;
-    MigrationStep probe{1, "look at the files", [&](MigrationConnection& sql) -> Result<void, StorageError>
+    MigrationStep probe{TEST_FROM_VERSION, "look at the files",
+                        [&](MigrationConnection& sql) -> Result<void, StorageError>
                         {
                             step_ran = true;
                             // What the first step finds: the order of the durable steps, the copy, and the marker.
@@ -286,12 +288,13 @@ TEST_CASE("M6: the backup copy exists and is synced, and the marker names it, be
                             {
                                 CHECK(read_bytes(backups.front()) == before_bytes);
                                 const std::string marker = read_bytes(store.location().migration_marker());
-                                CHECK(marker.find("from=1\nto=2\nbackup=backup/" +
+                                CHECK(marker.find("from=" + std::to_string(TEST_FROM_VERSION) +
+                                                  "\nto=" + std::to_string(TEST_FROM_VERSION + 1) + "\nbackup=backup/" +
                                                   backups.front().filename().string()) != std::string::npos);
                             }
                             return sql.exec("UPDATE day_log SET facilitator = facilitator");
                         }};
-    REQUIRE(migrator_for(store, clock, {probe}, options, 2).run().has_value());
+    REQUIRE(migrator_for(store, clock, {probe}, options, TEST_FROM_VERSION + 1).run().has_value());
     CHECK(step_ran);
     CHECK(events == std::vector<std::string>{"backup_synced", "marker_synced"});
 }
@@ -303,7 +306,8 @@ TEST_CASE("The backup names never collide, and an old backup is never overwritte
     // Two failed runs from the same version at the same clock reading leave two backups.
     for (int i = 0; i < 2; ++i)
     {
-        const auto report = migrator_for(store, clock, {failing_step(1)}, {}, 2).run();
+        const auto report =
+            migrator_for(store, clock, {failing_step(TEST_FROM_VERSION)}, {}, TEST_FROM_VERSION + 1).run();
         REQUIRE_FALSE(report.has_value());
     }
     CHECK(backups_of(store).size() == 2);
@@ -315,7 +319,7 @@ TEST_CASE("M7: a migrated database still rebuilds from the journals written befo
     const auto journals_before = snapshot_of(store.root() / "journal");
     ScriptedClock clock(sample_time(4000));
     REQUIRE(migrator_for(store, clock, test_steps()).run().has_value());
-    REQUIRE(user_version(store.database()) == 3);
+    REQUIRE(user_version(store.database()) == TEST_TARGET_VERSION);
     CHECK(snapshot_of(store.root() / "journal") == journals_before);
 
     // The database is lost; the journals rebuild it, at this build's schema.
@@ -337,7 +341,7 @@ TEST_CASE("A marker with the database still at the old version: the migration ne
     const std::string before_bytes = database_bytes(store);
     std::filesystem::create_directories(store.location().backup_dir());
     write_bytes(store.location().backup_dir() / "ej-v1-copy.db", before_bytes);
-    write_marker(store, 1, 3, "backup/ej-v1-copy.db");
+    write_marker(store, TEST_FROM_VERSION, TEST_TARGET_VERSION, "backup/ej-v1-copy.db");
     ScriptedClock clock(sample_time(4000));
 
     const auto report = Migrator::resume(store.location(), clock);
@@ -356,14 +360,15 @@ TEST_CASE("A marker with the database at the new version and sound: the migratio
     const auto backups = backups_of(store);
     REQUIRE(backups.size() == 1);
     const std::string migrated = database_bytes(store);
-    write_marker(store, 1, 3, "backup/" + backups.front().filename().string()); // killed before it was removed
+    write_marker(store, TEST_FROM_VERSION, TEST_TARGET_VERSION,
+                 "backup/" + backups.front().filename().string()); // killed before it was removed
 
     const auto report = Migrator::resume(store.location(), clock);
     REQUIRE(report.has_value());
     CHECK(report->m_Outcome == MigrationOutcome::COMPLETED);
     CHECK_FALSE(std::filesystem::exists(store.location().migration_marker()));
     CHECK(database_bytes(store) == migrated);
-    CHECK(user_version(store.database()) == 3);
+    CHECK(user_version(store.database()) == TEST_TARGET_VERSION);
 }
 
 TEST_CASE("A marker with a database that is neither: the backup copy is put back and the rest is kept",
@@ -377,7 +382,7 @@ TEST_CASE("A marker with a database that is neither: the backup copy is put back
         REQUIRE(migrator_for(store, clock, test_steps()).run().has_value());
         const auto backups = backups_of(store);
         REQUIRE(backups.size() == 1);
-        write_marker(store, 1, 3, "backup/" + backups.front().filename().string());
+        write_marker(store, TEST_FROM_VERSION, TEST_TARGET_VERSION, "backup/" + backups.front().filename().string());
         const std::string damaged = std::string(5000, '\x5A');
         write_bytes(store.database(), damaged);
 
@@ -396,7 +401,7 @@ TEST_CASE("A marker with a database that is neither: the backup copy is put back
         const std::string before_bytes = database_bytes(store);
         ScriptedClock clock(sample_time(4000));
         write_bytes(store.location().backup_dir() / "ej-v1-copy.db", before_bytes);
-        write_marker(store, 1, 3, "backup/ej-v1-copy.db");
+        write_marker(store, TEST_FROM_VERSION, TEST_TARGET_VERSION, "backup/ej-v1-copy.db");
         std::filesystem::remove(store.database());
 
         const auto report = Migrator::resume(store.location(), clock);
@@ -411,7 +416,7 @@ TEST_CASE("A marker with a database that is neither: the backup copy is put back
         ScriptedClock clock(sample_time(4000));
         REQUIRE(migrator_for(store, clock, test_steps()).run().has_value());
         const auto backups = backups_of(store);
-        write_marker(store, 1, 3, "backup/" + backups.front().filename().string());
+        write_marker(store, TEST_FROM_VERSION, TEST_TARGET_VERSION, "backup/" + backups.front().filename().string());
         {
             RawDb db(store.database());
             REQUIRE(db.exec(QStringLiteral("INSERT INTO error_entry (entry_id, error_type_id, error_type_label)"
@@ -429,7 +434,7 @@ TEST_CASE("A marker whose backup copy is missing, or that cannot be read, change
     SECTION("no copy, and a database that needs one")
     {
         StoreCopy store;
-        write_marker(store, 1, 3, "backup/none.db");
+        write_marker(store, TEST_FROM_VERSION, TEST_TARGET_VERSION, "backup/none.db");
         write_bytes(store.database(), std::string(5000, '\x5A'));
         const auto before = tree_of(store.root());
         ScriptedClock clock(sample_time(4000));
@@ -463,13 +468,13 @@ TEST_CASE("Recovery deals with a migration marker before it opens anything, and 
 {
     StoreCopy store;
     ScriptedClock clock(sample_time(4000));
-    REQUIRE(migrator_for(store, clock, {add_column_step()}, {}, 2).run().has_value());
+    REQUIRE(migrator_for(store, clock, {add_column_step()}, {}, TEST_FROM_VERSION + 1).run().has_value());
     // Killed after the commit and before the marker was removed; the database is at a version this build refuses, so
     // put the old one back by hand as the "never committed" case.
     const auto backups = backups_of(store);
     REQUIRE(backups.size() == 1);
     write_bytes(store.database(), read_bytes(backups.front()));
-    write_marker(store, 1, 2, "backup/" + backups.front().filename().string());
+    write_marker(store, TEST_FROM_VERSION, TEST_FROM_VERSION + 1, "backup/" + backups.front().filename().string());
 
     const auto report = recover(store.location());
     REQUIRE(report.has_value());
@@ -478,8 +483,9 @@ TEST_CASE("Recovery deals with a migration marker before it opens anything, and 
     bool noted = false;
     for (const std::string& note : report->m_Notes)
     {
-        noted = noted ||
-                note.find("migration from version 1 to 2 had been interrupted: not_committed") != std::string::npos;
+        noted = noted || note.find("migration from version " + std::to_string(TEST_FROM_VERSION) + " to " +
+                                   std::to_string(TEST_FROM_VERSION + 1) + " had been interrupted: not_committed") !=
+                             std::string::npos;
     }
     CHECK(noted);
     require_recovered(store, pristine().m_Digests, pristine().m_OpenLog);
@@ -491,9 +497,9 @@ TEST_CASE("Recovery restores the backup of a migration that left a damaged datab
     StoreCopy store;
     const std::string before_bytes = database_bytes(store);
     ScriptedClock clock(sample_time(4000));
-    REQUIRE(migrator_for(store, clock, {add_column_step()}, {}, 2).run().has_value());
+    REQUIRE(migrator_for(store, clock, {add_column_step()}, {}, TEST_FROM_VERSION + 1).run().has_value());
     const auto backups = backups_of(store);
-    write_marker(store, 1, 2, "backup/" + backups.front().filename().string());
+    write_marker(store, TEST_FROM_VERSION, TEST_FROM_VERSION + 1, "backup/" + backups.front().filename().string());
     write_bytes(store.database(), std::string(9000, '\x33'));
 
     const auto report = recover(store.location());
@@ -554,13 +560,13 @@ TEST_CASE("A marker left by a killed migration is dealt with before the next one
     const std::string original = database_bytes(store);
     std::filesystem::create_directories(store.location().backup_dir());
     write_bytes(store.location().backup_dir() / "ej-v1-copy.db", original);
-    write_marker(store, 1, 3, "backup/ej-v1-copy.db");
+    write_marker(store, TEST_FROM_VERSION, TEST_TARGET_VERSION, "backup/ej-v1-copy.db");
 
     const auto report = migrator_for(store, clock, test_steps()).run();
     REQUIRE(report.has_value());
     CHECK(report->m_Outcome == MigrationOutcome::MIGRATED);
     CHECK_FALSE(std::filesystem::exists(store.location().migration_marker()));
-    CHECK(user_version(store.database()) == 3);
+    CHECK(user_version(store.database()) == TEST_TARGET_VERSION);
 }
 
 TEST_CASE("A marker with a number that is not one cannot be read", "[migration][resume]")
@@ -579,7 +585,7 @@ TEST_CASE("When even the restore fails, the error says so and the marker stays f
     StoreCopy store;
     ScriptedClock clock(sample_time(4000));
     // A step that fails after taking the backup away, so that there is nothing to put back.
-    MigrationStep sabotage{1, "removes the backup and fails",
+    MigrationStep sabotage{TEST_FROM_VERSION, "removes the backup and fails",
                            [&](MigrationConnection&) -> Result<void, StorageError>
                            {
                                for (const auto& backup : backups_of(store))
@@ -588,7 +594,7 @@ TEST_CASE("When even the restore fails, the error says so and the marker stays f
                                }
                                return fail(make_error(StorageErrorKind::DATABASE, "the step failed"));
                            }};
-    const auto report = migrator_for(store, clock, {sabotage}, {}, 2).run();
+    const auto report = migrator_for(store, clock, {sabotage}, {}, TEST_FROM_VERSION + 1).run();
     REQUIRE_FALSE(report.has_value());
     CHECK(report.error().m_Message.find("could not be put back") != std::string::npos);
     CHECK(std::filesystem::exists(store.location().migration_marker()));

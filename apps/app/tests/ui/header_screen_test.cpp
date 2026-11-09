@@ -562,6 +562,46 @@ TEST_CASE("details.new_log_row: an unshared log offers to be shared first, and t
     CHECK(alert->property("isOpen").toBool());
 }
 
+TEST_CASE("details.new_log_row: a log shared and then added to is unshared again, and the alert says it changed",
+          "[ui][header_screen][share]")
+{
+    HeaderWorld world(true);
+    world.record_errors(2);
+    REQUIRE(world.session().open_log() != nullptr);
+    REQUIRE(world.session().open_log()->mark_shared(world.clock().now(), {}));
+    world.gateway().run_all();
+    REQUIRE_FALSE(world.session().unshared());
+    FakeShare share(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world, &share);
+    QQuickItem* alert = need(rig, QStringLiteral("newLogAlert"));
+
+    SECTION("shared, no change: the log is only archived")
+    {
+        rig.tap(need(rig, QStringLiteral("headerNewLogRow")));
+        play(rig, 400);
+        REQUIRE(alert->property("isOpen").toBool());
+        CHECK_FALSE(need(rig, QStringLiteral("alertAlternate"))->isVisible());
+        CHECK(alert->property("message").toString() ==
+              QStringLiteral("UNIT-27 at North Site has 2 entries. It stays in History. The new log starts empty, with "
+                             "Sam Example as facilitator."));
+    }
+
+    SECTION("shared, then another entry")
+    {
+        world.record_errors(1);
+        REQUIRE(world.session().unshared());
+        REQUIRE(world.session().changed_since_share());
+        rig.tap(need(rig, QStringLiteral("headerNewLogRow")));
+        play(rig, 400);
+        REQUIRE(alert->property("isOpen").toBool());
+        CHECK(need(rig, QStringLiteral("alertAlternate"))->isVisible());
+        CHECK(alert->property("message").toString() ==
+              QStringLiteral("UNIT-27 at North Site has 3 entries and has changed since it was last shared. It stays "
+                             "in History. The new log starts empty, with Sam Example as facilitator."));
+    }
+}
+
 TEST_CASE("details.new_log_row: without a share sheet, or with the log shared, there is no \"Share this log first\"",
           "[ui][header_screen]")
 {

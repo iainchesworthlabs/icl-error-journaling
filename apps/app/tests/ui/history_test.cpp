@@ -616,6 +616,62 @@ TEST_CASE("history.reshare: Share log again on the open past log shares that log
     CHECK(s.status(s.index_of(HistoryWorld::MORNING)) == QStringLiteral("Shared 19:10"));
 }
 
+TEST_CASE(
+    "history.changed: a log changed after its share shows the ring and says so, and sharing again restores the check",
+    "[ui][history][share]")
+{
+    Screen s(true, true, false);
+    // The morning log was shared at 17:42 and then had its fourth entry deleted (a past log stays editable).
+    REQUIRE(s.m_World.storage().memory().set_entry_deleted(test::sample_id<LogId>(HistoryWorld::MORNING),
+                                                           test::sample_id<EntryId>(4), true));
+    s.shown();
+    const int morning = s.index_of(HistoryWorld::MORNING);
+    REQUIRE(morning >= 0);
+
+    CHECK(s.status(morning) == QStringLiteral("Changed since sharing"));
+    QQuickItem* icon = s.required("historyStatusIcon", s.row(morning));
+    CHECK(icon->property("kind").toString() == QStringLiteral("ring"));
+    CHECK(icon->property("colour").value<QColor>() == input::theme_colour(s.m_Rig, "textSecondary"));
+    // The other rows are as before.
+    CHECK(s.status(s.index_of(HistoryWorld::EVENING)) == QStringLiteral("Not shared"));
+
+    // Review says when the log was last shared, and that it has changed since.
+    s.open(HistoryWorld::MORNING);
+    CHECK(s.text("reviewSubtitle") == QStringLiteral("5 entries · Changed since sharing on 7 Nov at 17:42"));
+
+    // Share log again: the clock of this world is on 8 Nov, 19:10.
+    s.m_Rig.tap(s.named("reviewShare"));
+    s.m_Rig.settle();
+    s.m_Rig.advance(100ms);
+    CHECK(s.text("reviewSubtitle") == QStringLiteral("5 entries · Shared 8 Nov at 19:10"));
+    s.m_Rig.tap(s.named("reviewBack"));
+    s.m_Rig.advance(700ms);
+    s.m_Rig.settle();
+    const int again = s.index_of(HistoryWorld::MORNING);
+    CHECK(s.status(again) == QStringLiteral("Shared 19:10"));
+    CHECK(s.required("historyStatusIcon", s.row(again))->property("kind").toString() == QStringLiteral("check"));
+}
+
+TEST_CASE("history.changed: an edit made in Review turns the check into the ring at once", "[ui][history][share]")
+{
+    Screen s;
+    s.open(HistoryWorld::MORNING);
+    REQUIRE(s.m_World.history().review_document() != nullptr);
+    REQUIRE(s.text("reviewSubtitle") == QStringLiteral("6 entries · Shared 7 Nov at 17:42"));
+
+    REQUIRE(s.m_World.history().review_document()->set_deleted(test::sample_id<EntryId>(1), true,
+                                                               viewmodel::LogChange::Origin::USER, {}));
+    s.m_World.settle();
+    s.m_Rig.settle();
+    s.m_Rig.advance(100ms);
+
+    CHECK(s.text("reviewSubtitle") == QStringLiteral("5 entries · Changed since sharing on 7 Nov at 17:42"));
+    s.m_Rig.tap(s.named("reviewBack"));
+    s.m_Rig.advance(700ms);
+    s.m_Rig.settle();
+    CHECK(s.status(s.index_of(HistoryWorld::MORNING)) == QStringLiteral("Changed since sharing"));
+}
+
 TEST_CASE("history.reshare: a platform that cannot share offers no Share on a row", "[ui][history]")
 {
     Screen s(false);

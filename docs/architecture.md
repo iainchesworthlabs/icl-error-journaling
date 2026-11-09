@@ -32,7 +32,7 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              (`CrashPoint` and `CrashHook`, the places the kill harness ends the process),
                              draft_store.hpp (`DraftStore` and the `DraftTimer` interface under it: the note draft,
                              written at most 300 ms after it changes), migrator.hpp (`Migrator`: schema migrations with a
-                             backup copy and a marker; the product's list of steps is empty at version 1),
+                             backup copy and a marker; the product's steps take version 1 to 2, which adds `day_log.changed_since_share`),
                              storage_location.hpp (the folders of one store)
   src/                       one file per component; quarantine (where recovery puts what it replaces), journal_seed
                              (a journal written again from a log)

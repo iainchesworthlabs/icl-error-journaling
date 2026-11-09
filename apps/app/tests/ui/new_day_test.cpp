@@ -254,6 +254,78 @@ TEST_CASE("newday.unshared: the warning and the share-first choice go the moment
     CHECK(s.has_button("alertCancel"));
 }
 
+TEST_CASE("newday.changed: a log shared and then added to says it changed, and offers sharing again",
+          "[ui][newday][share]")
+{
+    const QString wrong_response = QStringLiteral("00000000-0000-4000-8000-0000000000a1");
+    Screen s(3);
+    REQUIRE(s.m_World.share().shareOpenLog());
+    s.m_World.gateway().run_all();
+
+    SECTION("shared and not changed since: no nag, just a new log")
+    {
+        s.raise();
+        REQUIRE(s.is_open());
+        CHECK_FALSE(s.m_World.watcher().unshared());
+        CHECK(s.text("alertMessage") ==
+              QStringLiteral("Saturday’s log has 3 entries. Starting a new log keeps it in History."));
+        CHECK_FALSE(s.has_button("alertAlternate"));
+        CHECK(s.has_button("alertConfirm"));
+    }
+
+    SECTION("shared, then an entry added: unshared, and the words say so")
+    {
+        s.m_World.at(melbourne(7, 21, 0));
+        REQUIRE(s.m_World.session().recordError(wrong_response));
+        s.m_World.gateway().run_all();
+        s.raise();
+        REQUIRE(s.is_open());
+        CHECK(s.m_World.watcher().unshared());
+        CHECK(s.m_World.watcher().changed_since_share());
+        CHECK(
+            s.text("alertMessage") ==
+            QStringLiteral("Saturday’s log has 4 entries and has changed since it was last shared. Starting a new log "
+                           "keeps it in History."));
+        CHECK(s.label_of("alertAlternate") == QStringLiteral("Share Saturday’s log first"));
+
+        // Sharing again takes the warning away.
+        REQUIRE(s.m_World.watcher().shareFirst());
+        s.m_Rig.settle();
+        s.m_Rig.advance(100ms);
+        CHECK_FALSE(s.m_World.watcher().unshared());
+        CHECK(s.text("alertMessage") ==
+              QStringLiteral("Saturday’s log has 4 entries. Starting a new log keeps it in History."));
+        CHECK_FALSE(s.has_button("alertAlternate"));
+    }
+
+    SECTION("three days on, on the next day the app is used")
+    {
+        s.m_World.at(melbourne(7, 21, 0));
+        REQUIRE(s.m_World.session().recordError(wrong_response));
+        s.m_World.gateway().run_all();
+        s.m_World.at(melbourne(10, 9, 0)); // Tuesday: nothing was opened on the 8th or the 9th
+        s.m_World.watcher().check();
+        s.m_Rig.advance(500ms);
+        REQUIRE(s.is_open());
+        CHECK(s.text("alertTitle") == QStringLiteral("It’s Tuesday 10 November"));
+        CHECK(
+            s.text("alertMessage") ==
+            QStringLiteral("Saturday’s log has 4 entries and has changed since it was last shared. Starting a new log "
+                           "keeps it in History."));
+        CHECK(s.has_button("alertAlternate"));
+    }
+
+    SECTION("three days on with nothing changed since the share")
+    {
+        s.m_World.at(melbourne(10, 9, 0));
+        s.m_World.watcher().check();
+        s.m_Rig.advance(500ms);
+        REQUIRE(s.is_open());
+        CHECK(s.text("alertTitle") == QStringLiteral("It’s Tuesday 10 November"));
+        CHECK_FALSE(s.has_button("alertAlternate"));
+    }
+}
+
 TEST_CASE("newday.actions: Start a new log calls acceptNewLog once and the prompt goes after the commit",
           "[ui][newday]")
 {

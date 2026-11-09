@@ -590,8 +590,10 @@ signals:
 - `refresh` runs `list_logs()` on the storage thread and delivers the summaries as one batch; the model resets once.
   Summaries only: History never loads every entry of a year.
 - `section` is the local date text (`"7 Nov 2026"`), so two logs on the same date (a move to another unit or site) sit
-  under one heading, newest first. `shared` is true when `last_shared_utc` is set; `sharedAtText` is that time in the
-  user's format. Only archived logs are listed; the open log is the Log and Review tabs.
+  under one heading, newest first. `shared` is true when `last_shared_utc` is set and the log has not changed since that
+  share (`is_unshared` is false); `changedSinceShare` is true for a log that was shared and has changed since (the row
+  shows the ring and "Changed since sharing"); `sharedAtText` is the time of the last share in the user's format. Only
+  archived logs are listed; the open log is the Log and Review tabs.
 - `openLog` takes the document from the registry and binds `reviewModel` to it. Edits to it go through the same
   `TimelineModel` invokables and the same journalled path (open question 11).
 - Delete: `requestDelete` returns a token for an archived log and nothing for the open one; `confirmDelete(token)` is the
@@ -619,7 +621,7 @@ Tests (`unit`):
 ### DayWatcher (DAY-01)
 
 Checks for a later calendar day on launch and on return to the foreground and raises the new-day prompt, with the flag
-that the open log has not been shared.
+that the open log is unshared (never shared, or changed since its last share).
 
 ```cpp
 class DayWatcher : public QObject
@@ -630,6 +632,7 @@ class DayWatcher : public QObject
     Q_PROPERTY(QString openLogDayText READ open_log_day_text NOTIFY promptChanged)   // "Saturday"
     Q_PROPERTY(int openLogEntryCount READ open_log_entry_count NOTIFY promptChanged)
     Q_PROPERTY(bool unshared READ unshared NOTIFY promptChanged)
+    Q_PROPERTY(bool changedSinceShare READ changed_since_share NOTIFY promptChanged)  // unshared, and shared before
 public slots:
     void check();                      // Stage 5 connects it to launch and Qt::ApplicationActive
 public:
@@ -642,8 +645,12 @@ public:
 - `check()` reads the clock and the device zone, then calls the core's `day_prompt(open_log_date, now, zones)`. There is
   no timer: the prompt is raised by launch and by returning to the foreground only, so a session that is still open at
   midnight keeps logging into the open log (DAY-01). A prompt that was kept open is raised again by the next `check()`.
-- `unshared` is true when the open log has no `last_shared_utc` and at least one live entry (an empty log has nothing to
-  share). It is computed from the open document, so it turns false as soon as a share is recorded, while the prompt is up.
+- `unshared` is `is_unshared(meta, live entries)`: the open log has at least one live entry (an empty log has nothing to
+  share) and either has no `last_shared_utc` or has changed since it (an entry added, edited, deleted or restored, or a
+  header corrected so that the exported text differs). Sharing can happen several times a day, so a share is not the end
+  of the day. It is computed from the open document, so it turns false as soon as a share is recorded, while the prompt is
+  up, and true again as soon as an entry is added past midnight. `changedSinceShare` is `unshared` for a log that was
+  shared before, so the words can say "changed since it was last shared".
 - `check()` before the log has loaded does nothing and runs again when the session becomes `OPEN`. Calling it again while
   the prompt is up changes nothing and emits nothing. A failure to convert the time (unknown zone) leaves the prompt
   hidden and reports once.
@@ -663,7 +670,11 @@ Tests (`unit`, `TestClock`, fake zone provider and, in one case, the Qt provider
   the same UTC day gives no prompt, at 00:30 it does.
 - The unshared flag: true for an unshared log with entries; false for an empty log; false after a share is recorded
   (the property changes while the prompt is visible); true again after a share the facilitator cancelled; it is
-  per open log, so it is true again for a new log once that has entries.
+  per open log, so it is true again for a new log once that has entries. After a share: an added entry, an edit, a delete
+  and a restore each make it true again (`changedSinceShare` too), and a second share clears it; a share with no change
+  after it leaves it false.
+- The prompt on a gap of several days (the facilitator works on some days only): the open log's date is compared, not
+  "yesterday", so a check three days later raises the prompt naming that day, unshared or not as the rule says.
 - `shareFirst` leaves the prompt up, and `acceptNewLog` afterwards starts the log; `acceptNewLog` while a write fails
   keeps the prompt.
 - `check()` before load does nothing and fires on `OPEN`; repeated checks do not repeat `promptChanged`.
@@ -1017,8 +1028,14 @@ that number.
 9. **The configuration is stored as the JSON file** the user imports and exports, replaced atomically on every change,
    not as tables in schema 1. (owner, 2026-11-07)
 10. **What counts as shared** (reconciled with Stage 5, decision 2): any share-sheet activity that completes, including
-    the sheet's own Copy action, sets the shared time. The in-app Copy buttons do not. An edit after sharing does not
-    clear the shared time, and an empty log is never unshared. (owner, 2026-11-07)
+    the sheet's own Copy action, sets the shared time. The in-app Copy buttons ("Copy all", a single line) do not.
+    An empty log is never unshared. (owner, 2026-11-07) **Changed 2026-11-09 (owner):** sharing can happen several times a
+    day, so a share is not the end of the day. A log is unshared when it has entries that were added, edited, deleted or
+    restored since the last share (or a header correction that changes the exported text), or has entries and was never
+    shared. Adding, editing or deleting an entry after a share makes the log unshared again until the next share. The
+    new-day prompt offers to share first only for an unshared log. It was "an edit after sharing does not clear the
+    shared time", which hid work added after a mid-day share. The change is tracked by the order of the journal records,
+    not by clocks (`LogMeta::m_ChangedSinceShare`, `day_log.changed_since_share`, schema version 2).
 11. **Archived journals are reopened** to append edit, delete and shared records, so DS-02 holds for history. Stage 2's
     2.3 and 2.4 adapt to this. (owner, 2026-11-07)
 12. **Adding a type from the Other sheet does not record it.** The new type appears in the list and the facilitator taps

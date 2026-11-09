@@ -25,6 +25,7 @@ add_executable(ej_storage_integration_tests
     test_platform_files.cpp
     test_protect.cpp
     test_recovery.cpp
+    test_schema_upgrade.cpp
     test_sqlite_repository.cpp
     test_storage_location.cpp
     test_unit_environment.cpp)

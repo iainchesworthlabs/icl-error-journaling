@@ -28,7 +28,28 @@ struct LogMeta
     std::optional<UtcMillis> m_LastSharedUtc;
     bool m_Archived = false;
     std::optional<LogId> m_Previous;
+
+    /// True when the log has been shared and a record that changes what a share would send has been applied since the
+    /// last `mark_shared`: an entry added, edited, deleted or restored, or a header corrected. The order of the records
+    /// decides it, never a clock, so a clock set back or a change of time zone cannot hide a change. A share clears it.
+    /// A log that was never shared leaves it false (the share time says everything then), and so does a log from a
+    /// database that had no such marker: a log that was shared before the marker existed reads as shared.
+    bool m_ChangedSinceShare = false;
 };
+
+/// Whether a log has work that has not left the phone (DAY-01, REV-05): it has at least one live entry, and either was
+/// never shared or changed after its last share. A log with no live entry has nothing to share, so it is never
+/// unshared. The one definition: the session, the new-day prompt and History all ask this.
+[[nodiscard]] constexpr bool is_unshared(const std::optional<UtcMillis>& last_shared, bool changed_since_share,
+                                         std::size_t live_entries) noexcept
+{
+    return live_entries > 0 && (!last_shared.has_value() || changed_since_share);
+}
+
+[[nodiscard]] constexpr bool is_unshared(const LogMeta& meta, std::size_t live_entries) noexcept
+{
+    return is_unshared(meta.m_LastSharedUtc, meta.m_ChangedSinceShare, live_entries);
+}
 
 /// A log as storage holds it: the domain `Log` and its metadata. Iterating `m_Log.entries()` goes in journal sequence
 /// order, so `sorted_entries()` breaks equal times by `seq`. An error entry carries the snapshot label of its type.
@@ -68,7 +89,9 @@ enum class ApplyMode
                                                       ApplyMode mode = ApplyMode::STRICT);
 
 /// A summary of a log that two copies of it can be compared by (section 2.7 step 5): how many entries it holds and a
-/// hash of everything about it that a journal records.
+/// hash of everything about it that a journal records. `m_ChangedSinceShare` is not part of it: it is a hint derived
+/// from the order of the records, and a database from before it existed holds none, so the two copies of a legacy log
+/// would differ for no reason a person could see.
 struct StateDigest
 {
     std::size_t m_Entries = 0;

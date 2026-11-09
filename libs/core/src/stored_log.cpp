@@ -80,6 +80,37 @@ Result<std::string, StorageError> canonical_header_text(HeaderField field, std::
     return header_field_text(scratch, field).value_or(std::string());
 }
 
+/// What a log has changed in the text of its header, in one string: the values it started with and the value of each
+/// header change. Two logs with the same string export the same header lines.
+std::string header_text_of(const Log& log)
+{
+    std::string text;
+    for (const HeaderField field : {HeaderField::UNIT_NUMBER, HeaderField::LOCATION, HeaderField::SOFTWARE_VERSION})
+    {
+        text += header_field_text(log.initial_header(), field).value_or(std::string());
+        text.push_back('');
+    }
+    for (const Entry& entry : log.entries())
+    {
+        if (const auto* change = std::get_if<HeaderChangeEntry>(&entry.m_Body))
+        {
+            text += change->m_NewValue;
+            text.push_back('');
+        }
+    }
+    return text;
+}
+
+/// A record that changes what a share would send has been applied. Only a log that was shared can have changed since;
+/// before the first share the missing share time says it all.
+void note_change(StoredLog& log)
+{
+    if (log.m_Meta.m_LastSharedUtc)
+    {
+        log.m_Meta.m_ChangedSinceShare = true;
+    }
+}
+
 }  // namespace
 
 Result<void, StorageError> validate_header(const HeaderValues& header)
@@ -268,13 +299,40 @@ Result<void, StorageError> apply_record(StoredLog& log, const JournalRecord& rec
         ApplyMode m_Mode;
 
         Result<void, StorageError> operator()(const CreateLogBody&) const { return invalid("a log is created once"); }
-        Result<void, StorageError> operator()(const AddEntryBody& b) const { return apply_add(m_Log, b, m_Mode); }
-        Result<void, StorageError> operator()(const EditEntryBody& b) const { return apply_edit(m_Log, b); }
+        Result<void, StorageError> operator()(const AddEntryBody& b) const
+        {
+            auto done = apply_add(m_Log, b, m_Mode);
+            if (done)
+            {
+                note_change(m_Log);
+            }
+            return done;
+        }
+        Result<void, StorageError> operator()(const EditEntryBody& b) const
+        {
+            auto done = apply_edit(m_Log, b);
+            if (done)
+            {
+                note_change(m_Log);
+            }
+            return done;
+        }
         Result<void, StorageError> operator()(const SetDeletedBody& b) const
         {
+            const Entry* const entry = m_Log.m_Log.find(b.m_Entry);
+            if (entry == nullptr)
+            {
+                return Failure(make_error(StorageErrorKind::NOT_FOUND, "no such entry"));
+            }
+            // Deleting what is deleted already, or restoring what is there, changes nothing a share would send.
+            const bool differs = entry->m_Deleted != b.m_Deleted;
             if (auto done = m_Log.m_Log.set_deleted(b.m_Entry, b.m_Deleted); !done)
             {
                 return Failure(make_error(StorageErrorKind::NOT_FOUND, "no such entry"));
+            }
+            if (differs)
+            {
+                note_change(m_Log);
             }
             return {};
         }
@@ -284,9 +342,15 @@ Result<void, StorageError> apply_record(StoredLog& log, const JournalRecord& rec
             {
                 return ok;
             }
+            const std::string before = header_text_of(m_Log.m_Log);
             if (auto done = correct_header(m_Log.m_Log, b.m_Field, b.m_Value); !done)
             {
                 return Failure(from_header_error(done.error()));
+            }
+            // Only a correction that changes the header text changes what a share would send.
+            if (header_text_of(m_Log.m_Log) != before)
+            {
+                note_change(m_Log);
             }
             return {};
         }
@@ -297,6 +361,7 @@ Result<void, StorageError> apply_record(StoredLog& log, const JournalRecord& rec
                 return ok;
             }
             m_Log.m_Meta.m_LastSharedUtc = b.m_Utc;
+            m_Log.m_Meta.m_ChangedSinceShare = false;
             return {};
         }
         Result<void, StorageError> operator()(const ArchiveBody&) const
