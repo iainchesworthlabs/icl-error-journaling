@@ -118,6 +118,13 @@ def linking_of(token: str) -> str:
     try:
         with open(token, "rb") as handle:
             header = handle.read(16)
+            if header[:4] in (bytes([0xCA, 0xFE, 0xBA, 0xBE]), bytes([0xCA, 0xFE, 0xBA, 0xBF])):
+                # A universal binary: read the first of its slices.
+                handle.seek(0)
+                fat = handle.read(32)
+                offset = int.from_bytes(fat[16:20], "big") if header[3] == 0xBE else int.from_bytes(fat[16:24], "big")
+                handle.seek(offset)
+                header = handle.read(16)
     except OSError:
         return "unknown"
     if header.startswith(b"!<arch>\n"):
@@ -463,7 +470,14 @@ class Notices:
         self.record(token, "unresolved", "", linking)
 
     def record(self, token: str, kind: str, component: str, linking: str) -> None:
-        self.m_Linked.append({"input": token, "kind": kind, "component": component, "linking": linking})
+        entry = {"input": token, "kind": kind, "component": component, "linking": linking}
+        if linking == "unknown" and kind == "qt":
+            try:
+                with open(token, "rb") as handle:
+                    entry["header"] = handle.read(16).hex()
+            except OSError:
+                entry["header"] = "unreadable"
+        self.m_Linked.append(entry)
 
     # -- 2. Qt closure ---------------------------------------------------------------------------------------------
 

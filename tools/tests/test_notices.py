@@ -120,6 +120,13 @@ class LinkingFromTheFileTests(unittest.TestCase):
         header = bytes([0xCF, 0xFA, 0xED, 0xFE]) + (12).to_bytes(4, "little") + (0).to_bytes(4, "little") + (6).to_bytes(4, "little")
         self.assertEqual(notices.linking_of(self.file_with("QtCore.framework/QtCore", header)), "dynamic")
 
+    def test_a_universal_binary_is_read_at_its_first_slice(self) -> None:
+        slice_ = b"!<arch>\n" + bytes(8)
+        header = bytes([0xCA, 0xFE, 0xBA, 0xBE]) + (1).to_bytes(4, "big")
+        entry = (0).to_bytes(4, "big") + (0).to_bytes(4, "big") + (32).to_bytes(4, "big") + len(slice_).to_bytes(4, "big") + (0).to_bytes(4, "big")
+        content = header + entry + bytes(32 - len(header) - len(entry)) + slice_
+        self.assertEqual(notices.linking_of(self.file_with("QtCore.framework/QtCore", content)), "static")
+
     def test_a_file_that_is_not_there_or_not_known_is_unknown(self) -> None:
         self.assertEqual(notices.linking_of("/nowhere/QtCore.framework/QtCore"), "unknown")
         self.assertEqual(notices.linking_of(self.file_with("odd.bin", b"hello")), "unknown")
