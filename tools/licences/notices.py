@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -387,8 +388,9 @@ class Notices:
         if not tokens and not problems:
             self.unresolved(f"The link line of {args.target} is empty")
         triplet = lower_path(self.m_Vcpkg.m_Dir) if self.m_Vcpkg.m_Dir else ""
-        binary = lower_path(self.m_Binary)
-        source = lower_path(self.m_Source)
+        # A path may reach the same folder by a link (/var is /private/var on a Mac), so both spellings count.
+        binary = tuple({lower_path(self.m_Binary), lower_path(self.m_Binary.resolve())})
+        source = tuple({lower_path(self.m_Source), lower_path(self.m_Source.resolve())})
         skip_next = False
         for raw in tokens:
             # -Wl,-force_load,/path/libqios.a is one token on the link line of an Xcode build
@@ -411,7 +413,8 @@ class Notices:
         if tokens and not self.m_Linked:
             self.unresolved(f"The link line of {args.target} names no library, so nothing could be checked")
 
-    def classify_token(self, raw: str, triplet: str, binary: str, source: str, target_build_dir: Path | None) -> None:
+    def classify_token(self, raw: str, triplet: str, binary: tuple[str, ...], source: tuple[str, ...],
+                       target_build_dir: Path | None) -> None:
         token = slash(raw)
         token = re.sub(r"([^/])/+", r"\1/", token)
         token = re.sub(r"^/(WHOLEARCHIVE|DEFAULTLIB):", "", token, flags=re.I)
@@ -432,7 +435,7 @@ class Notices:
             else:
                 token = slash(self.m_Binary / token)
         if "/../" in token:
-            token = slash(Path(token).resolve())
+            token = slash(os.path.normpath(token))
         lowered = lower_path(token)
         if not looks_like_library(lowered):
             return  # a directory (-Wl,-rpath,<dir>) or another argument of a flag
@@ -440,7 +443,7 @@ class Notices:
 
         in_vcpkg = bool(triplet) and lowered.startswith(triplet + "/")
         in_qt = bool(self.m_Qt_Prefix) and lowered.startswith(self.m_Qt_Prefix + "/")
-        first_party = (lowered.startswith(binary + "/") or lowered.startswith(source + "/")) and not in_vcpkg and not in_qt
+        first_party = any(lowered.startswith(root + "/") for root in binary + source) and not in_vcpkg and not in_qt
         if first_party:
             self.record(token, "first-party", "", linking)
             return
