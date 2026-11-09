@@ -48,7 +48,8 @@ def main(argv: list[str] | None = None) -> int:
         print("| Kind | Linking | Input |")
         print("|---|---|---|")
         for item in document["linked"]:
-            print(f"| {item['kind']} | {item['linking']} | `{item['input']}` |")
+            extra = f" (file starts {item['header']})" if item.get("header") else ""
+            print(f"| {item['kind']} | {item['linking']} | `{item['input']}`{extra} |")
         print()
         print("</details>")
     return 0
