@@ -176,12 +176,15 @@ if uses_import '^_mach_absolute_time$' || uses_name 'systemUptime'; then found="
 if uses_import '^_(statfs|statvfs|fstatfs|fstatvfs)$' || uses_name 'NSFileSystemFreeSize|volumeAvailableCapacity'; then found="$found NSPrivacyAccessedAPICategoryDiskSpace"; fi
 if uses_import '^_OBJC_CLASS_\$_NSUserDefaults$' || uses_import '^_CFPreferences'; then found="$found NSPrivacyAccessedAPICategoryUserDefaults"; fi
 if uses_name 'activeInputModes'; then found="$found NSPrivacyAccessedAPICategoryActiveKeyboards"; fi
+undeclared=""
 for category in $found; do
   case " $declared " in
     *" $category "*) ;;
-    *) fail "the executable calls a required-reason API of $category, which PrivacyInfo.xcprivacy does not declare" ;;
+    *) undeclared="$undeclared $category" ;;
   esac
 done
+[ -z "$undeclared" ] || fail "the executable calls required-reason APIs that PrivacyInfo.xcprivacy does not declare:$undeclared"
+
 for category in $declared; do
   case " $found " in
     *" $category "*) ;;
