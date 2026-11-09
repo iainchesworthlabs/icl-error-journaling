@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Tile (docs/plan/stage-4.md, "Tile (4.5)"): tile.press_emits_first, tile.slide_off, tile.press_scale, tile.badge,
-// tile.label, tile.empty, tile.other, tile.colour, the VoiceOver activation of decision 7, and perf.press_path for the
-// Tile.
+// Tile (docs/plan/stage-4.md, "Tile (4.5)" and 4.17a): tile.double_tap, tile.double_tap_window, tile.triple_tap,
+// tile.hold, tile.slide_off, tile.press_scale, tile.badge, tile.label, tile.empty, tile.other, tile.colour, the
+// VoiceOver activation of decision 7, and perf.press_path for the Tile, counted from the touch of the second tap.
 #include "board_test_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"
@@ -99,6 +99,8 @@ QQuickItem* load_logged_tile(UiRig& rig, QQuickItem*& tile)
                 accessibleName: "Mute Delay, 2 today"
                 onPressed: wrapper.log = wrapper.log.concat(["pressed"])
                 onTapped: wrapper.log = wrapper.log.concat(["tapped"])
+                onHeld: wrapper.log = wrapper.log.concat(["held"])
+                onSingleTapped: wrapper.log = wrapper.log.concat(["single"])
             }
         })"));
     REQUIRE(wrapper != nullptr);
@@ -144,61 +146,229 @@ double tile_minimum(const Node& /*node*/)
 
 } // namespace
 
-TEST_CASE("tile.press_emits_first: pressed fires on the touch-down, once, and tapped on the release", "[ui][tile]")
+TEST_CASE("tile.double_tap: one tap asks for nothing, the second touch inside the window asks once, and tapped comes "
+          "on each lift",
+          "[ui][tile]")
 {
     UiRig rig;
+    rig.steady_time();
     QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8, 2));
     QSignalSpy pressed(tile, SIGNAL(pressed()));
     QSignalSpy tapped(tile, SIGNAL(tapped()));
+    QSignalSpy single(tile, SIGNAL(singleTapped()));
+    QSignalSpy held(tile, SIGNAL(held()));
     REQUIRE(pressed.isValid());
     REQUIRE(tapped.isValid());
+    REQUIRE(single.isValid());
+    REQUIRE(held.isValid());
 
-    const int finger = rig.press(tile);
-    CHECK(pressed.count() == 1);
-    CHECK(tapped.count() == 0);
-
-    rig.advance(300ms);
-    CHECK(pressed.count() == 1);
-
-    rig.release(finger);
-    CHECK(pressed.count() == 1);
+    // The first tap: no pressed, whatever the touch does.
+    const int first = rig.press(tile);
+    CHECK(pressed.count() == 0);
+    rig.advance(100ms);
+    CHECK(pressed.count() == 0);
+    rig.release(first);
+    CHECK(pressed.count() == 0);
     CHECK(tapped.count() == 1);
 
-    // A second tap is a second pair.
-    rig.tap(tile);
-    CHECK(pressed.count() == 2);
+    // The second, 150 ms after the lift: pressed at the touch, once, whatever the finger does after.
+    rig.advance(150ms);
+    const int second = rig.press(tile);
+    CHECK(pressed.count() == 1);
+    CHECK(tapped.count() == 1);
+    rig.advance(200ms);
+    CHECK(pressed.count() == 1);
+    rig.release(second);
+    CHECK(pressed.count() == 1);
     CHECK(tapped.count() == 2);
+
+    // Nothing else comes: no hint for a gesture that logged, and no hold.
+    rig.advance(600ms);
+    CHECK(single.count() == 0);
+    CHECK(held.count() == 0);
+    CHECK(pressed.count() == 1);
 }
 
-TEST_CASE("tile.press_emits_first: pressed and tapped come in that order", "[ui][tile]")
+TEST_CASE("tile.double_tap: pressed and tapped come in that order, and the pair of a tap is only the tapped",
+          "[ui][tile]")
 {
     UiRig rig;
     QQuickItem* tile = nullptr;
     QQuickItem* wrapper = load_logged_tile(rig, tile);
     rig.tap(tile);
-    CHECK(wrapper->property("log").toStringList() == QStringList{QStringLiteral("pressed"), QStringLiteral("tapped")});
+    CHECK(wrapper->property("log").toStringList() == QStringList{QStringLiteral("tapped")});
+    rig.tap(tile);
+    CHECK(wrapper->property("log").toStringList() ==
+          QStringList{QStringLiteral("tapped"), QStringLiteral("pressed"), QStringLiteral("tapped")});
 }
 
-TEST_CASE("tile.slide_off: press, drag out and release asks once, at the press, and does not tap", "[ui][tile]")
+TEST_CASE(
+    "tile.double_tap_window: 250 ms between the taps is a double-tap, 400 ms is two single taps, and the hint comes "
+    "once the window has gone by",
+    "[ui][tile]")
 {
     UiRig rig;
+    rig.steady_time();
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    QSignalSpy pressed(tile, SIGNAL(pressed()));
+    QSignalSpy single(tile, SIGNAL(singleTapped()));
+    const int window = theme_group(rig, "motion")->property("doubleTapMs").toInt();
+    CHECK(window == 300);
+    CHECK(tile->property("doubleTapMs").toInt() == window);
+
+    rig.tap(tile);
+    rig.advance(250ms);
+    rig.tap(tile);
+    CHECK(pressed.count() == 1);
+    rig.advance(1s);
+    CHECK(single.count() == 0);
+
+    rig.tap(tile);
+    rig.advance(200ms);
+    CHECK(single.count() == 0); // the window is still open
+    rig.advance(200ms);
+    CHECK(single.count() == 1); // 400 ms: it has gone by, the tap was alone
+    rig.tap(tile);
+    CHECK(pressed.count() == 1); // so this one is the first of another
+    rig.advance(1s);
+    CHECK(single.count() == 2);
+    CHECK(pressed.count() == 1);
+}
+
+TEST_CASE("tile.triple_tap: the third tap logs nothing more and the fourth starts a new double-tap", "[ui][tile]")
+{
+    UiRig rig;
+    rig.steady_time();
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    QSignalSpy pressed(tile, SIGNAL(pressed()));
+    QSignalSpy single(tile, SIGNAL(singleTapped()));
+
+    for (int tap = 1; tap <= 3; ++tap)
+    {
+        rig.tap(tile);
+        rig.advance(100ms);
+    }
+    CHECK(pressed.count() == 1); // logged at the second, not at the third
+
+    rig.tap(tile); // the fourth: the first of a new double-tap
+    CHECK(pressed.count() == 1);
+    rig.advance(100ms);
+    rig.tap(tile); // its second
+    CHECK(pressed.count() == 2);
+    rig.advance(1s);
+    CHECK(single.count() == 0);
+}
+
+TEST_CASE("tile.hold: a hold asks at 500 ms, once, and then holds; before that it is a tap", "[ui][tile]")
+{
+    UiRig rig;
+    rig.steady_time();
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    QQuickItem* face = rig.find(QStringLiteral("tileFace"));
+    REQUIRE(face != nullptr);
+    QSignalSpy pressed(tile, SIGNAL(pressed()));
+    QSignalSpy held(tile, SIGNAL(held()));
+    QSignalSpy single(tile, SIGNAL(singleTapped()));
+    CHECK(theme_group(rig, "motion")->property("holdMs").toInt() == 500);
+    CHECK(tile->property("holdMs").toInt() == 500);
+
+    // The press scale is at the hold, with the asking, and not at the touch.
+    const int finger = rig.press(tile);
+    rig.advance(400ms);
+    CHECK(pressed.count() == 0);
+    CHECK(face->scale() == 1.0);
+    rig.advance(200ms);
+    REQUIRE(pressed.count() == 1);
+    REQUIRE(held.count() == 1);
+    advance_through(rig, 120);
+    CHECK(face->scale() == 0.96);
+    rig.advance(500ms);
+    CHECK(pressed.count() == 1);
+    CHECK(held.count() == 1);
+    rig.release(finger);
+    advance_through(rig, 120);
+    CHECK(face->scale() == 1.0);
+
+    // A hold is not a tap: no hint, and the tap that follows is the first of a gesture.
+    rig.advance(1s);
+    CHECK(single.count() == 0);
+    rig.tap(tile);
+    CHECK(pressed.count() == 1);
+
+    // Shorter than 500 ms it is a tap.
+    rig.advance(1s);
+    rig.hold(tile, 400ms);
+    CHECK(held.count() == 1);
+    CHECK(pressed.count() == 1);
+    rig.advance(1s);
+    CHECK(single.count() == 2);
+}
+
+TEST_CASE("tile.hold: a tap and then a hold asks at the second touch and the hold does not ask again", "[ui][tile]")
+{
+    UiRig rig;
+    rig.steady_time();
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    QSignalSpy pressed(tile, SIGNAL(pressed()));
+    QSignalSpy held(tile, SIGNAL(held()));
+
+    rig.tap(tile);
+    rig.advance(100ms);
+    const int finger = rig.press(tile);
+    CHECK(pressed.count() == 1);
+    CHECK(held.count() == 0);
+    rig.advance(600ms);
+    CHECK(pressed.count() == 1);
+    CHECK(held.count() == 1);
+    rig.release(finger);
+    rig.advance(1s);
+    CHECK(pressed.count() == 1);
+}
+
+TEST_CASE("tile.slide_off: a first tap that slides off is no tap, and a second that slides off has asked once and does "
+          "not tap",
+          "[ui][tile]")
+{
+    UiRig rig;
+    rig.steady_time();
     QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Wrong Response"), 1));
     QSignalSpy pressed(tile, SIGNAL(pressed()));
     QSignalSpy tapped(tile, SIGNAL(tapped()));
+    QSignalSpy single(tile, SIGNAL(singleTapped()));
+    QSignalSpy held(tile, SIGNAL(held()));
+    const QPointF outside(TILE_WIDTH + 60, TILE_HEIGHT / 2);
 
-    const int finger = rig.press(tile);
-    REQUIRE(pressed.count() == 1);
-    rig.move(finger, tile, QPointF(TILE_WIDTH + 60, TILE_HEIGHT / 2));
-    rig.advance(300ms);
-    rig.release(finger);
-
-    CHECK(pressed.count() == 1);
+    // A first touch that slides off: no tap, no hint, no hold, and it is no first half either.
+    const int lost = rig.press(tile);
+    rig.move(lost, tile, outside);
+    rig.advance(600ms);
+    rig.release(lost);
+    CHECK(pressed.count() == 0);
     CHECK(tapped.count() == 0);
+    CHECK(held.count() == 0);
+    rig.tap(tile);
+    CHECK(pressed.count() == 0);
+    rig.advance(1s);
+    CHECK(single.count() == 1);
+
+    // A second touch that slides off has asked at the touch (a finger that slides off cannot fire a haptic without an
+    // entry), and neither taps nor holds.
+    rig.tap(tile);
+    rig.advance(100ms);
+    const int second = rig.press(tile);
+    REQUIRE(pressed.count() == 1);
+    rig.move(second, tile, outside);
+    rig.advance(600ms);
+    rig.release(second);
+    CHECK(pressed.count() == 1);
+    CHECK(tapped.count() == 2); // the two taps of the earlier steps; the slid-off touch is not one
+    CHECK(held.count() == 0);
 }
 
-TEST_CASE("tile.press_scale: 0.96 within 120 ms of the press, back on release and on cancel", "[ui][tile]")
+TEST_CASE("tile.press_scale: 0.96 within 120 ms of the touch that asks, back on release and on cancel", "[ui][tile]")
 {
     UiRig rig;
+    rig.steady_time();
     QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
     QQuickItem* face = rig.find(QStringLiteral("tileFace"));
     REQUIRE(face != nullptr);
@@ -210,7 +380,15 @@ TEST_CASE("tile.press_scale: 0.96 within 120 ms of the press, back on release an
     CHECK(press_ms == 120);
     CHECK(face->scale() == 1.0);
 
-    // The animation starts in the press itself, before any frame and before any commit (nothing here commits).
+    // The first tap does not scale the tile: only the touch that logs does.
+    const int first = rig.press(tile);
+    CHECK_FALSE(pressIn->property("running").toBool());
+    advance_through(rig, press_ms);
+    CHECK(face->scale() == 1.0);
+    rig.release(first);
+
+    // The animation starts in the touch of the second tap itself, before any frame and before any commit (nothing here
+    // commits).
     const int finger = rig.press(tile);
     CHECK(pressIn->property("running").toBool());
     advance_through(rig, press_ms);
@@ -223,7 +401,9 @@ TEST_CASE("tile.press_scale: 0.96 within 120 ms of the press, back on release an
     advance_through(rig, press_ms);
     CHECK(face->scale() == 1.0);
 
-    // Cancel: the finger leaves the tile, which cancels the tap and reverses the press.
+    // Cancel: after another double-tap, the finger leaves the tile, which cancels the touch and reverses the press.
+    rig.advance(1s);
+    rig.tap(tile);
     const int second = rig.press(tile);
     advance_through(rig, press_ms);
     CHECK(face->scale() == pressed_scale);
@@ -239,10 +419,12 @@ TEST_CASE("tile.press_scale: 0.96 within 120 ms of the press, back on release an
 TEST_CASE("tile.press_scale: Reduce Motion keeps the press scale, because it is feedback", "[ui][tile]")
 {
     UiRig rig;
+    rig.steady_time();
     rig.set_reduce_motion(true);
     QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
     QQuickItem* face = rig.find(QStringLiteral("tileFace"));
     REQUIRE(face != nullptr);
+    rig.tap(tile);
     const int finger = rig.press(tile);
     advance_through(rig, 120);
     CHECK(face->scale() == 0.96);
@@ -443,6 +625,30 @@ TEST_CASE("tile.other: neutral fill, a dashed border of the token width, and the
     }
 }
 
+TEST_CASE("tile.other: one tap opens it at once, with no double-tap, no hold and no hint", "[ui][tile]")
+{
+    UiRig rig;
+    rig.steady_time();
+    QQuickItem* tile = load_tile(rig, other_properties());
+    QSignalSpy pressed(tile, SIGNAL(pressed()));
+    QSignalSpy tapped(tile, SIGNAL(tapped()));
+    QSignalSpy single(tile, SIGNAL(singleTapped()));
+    QSignalSpy held(tile, SIGNAL(held()));
+
+    // The touch is the press (the screen records nothing for Other) and the lift is the tap that opens the list.
+    rig.tap(tile);
+    CHECK(pressed.count() == 1);
+    CHECK(tapped.count() == 1);
+    rig.advance(1s);
+    CHECK(single.count() == 0);
+
+    // A hold is not a hold on Other: it taps when the finger lifts, as before.
+    rig.hold(tile, 700ms);
+    CHECK(held.count() == 0);
+    CHECK(single.count() == 0);
+    CHECK(tapped.count() == 2);
+}
+
 TEST_CASE("tile.other: the other tile draws a count too, and a type tile has no dashed border", "[ui][tile]")
 {
     UiRig rig;
@@ -508,7 +714,7 @@ TEST_CASE("tile.skeleton: shapes only, in a neutral colour, with no text, badge,
     CHECK_FALSE(require_item(rig, QStringLiteral("tileOtherIcon"))->isVisible());
 }
 
-TEST_CASE("tile.voiceover: an activation sends the same pressed and tapped pair as a touch", "[ui][tile]")
+TEST_CASE("tile.voiceover: one activation sends the pressed and tapped pair, with no second and no hint", "[ui][tile]")
 {
     UiRig rig;
     QQuickItem* tile = nullptr;
@@ -518,9 +724,16 @@ TEST_CASE("tile.voiceover: an activation sends the same pressed and tapped pair 
     REQUIRE(accessible_press(tile));
     CHECK(wrapper->property("log").toStringList() == pair);
 
+    // One activation is enough, and it sends no hint.
+    rig.advance(1s);
+    CHECK(wrapper->property("log").toStringList() == pair);
+
+    // A touch is the second tap that asks, and the lift of each tap.
     wrapper->setProperty("log", QStringList{});
     rig.tap(tile);
-    CHECK(wrapper->property("log").toStringList() == pair);
+    rig.tap(tile);
+    CHECK(wrapper->property("log").toStringList() ==
+          QStringList{QStringLiteral("tapped"), QStringLiteral("pressed"), QStringLiteral("tapped")});
 
     const std::vector<Node> nodes = rig.accessible_tree();
     const auto self = std::ranges::find_if(nodes, [tile](const Node& node) { return node.m_Item == tile; });
@@ -545,7 +758,8 @@ TEST_CASE("tile.a11y: names, 88 pt target and the text scales, in light and dark
     }
 }
 
-TEST_CASE("perf.press_path: from a synthetic press to the pressed signal and the first frame of feedback, under 16 ms",
+TEST_CASE("perf.press_path: from the touch of the second tap to the pressed signal and the first frame of feedback, "
+          "under 16 ms",
           "[ui][perf][tile]")
 {
     // The target is 16 ms, one frame at 60 Hz, from the press to the handler and the start of the feedback. CI runs
@@ -565,10 +779,16 @@ TEST_CASE("perf.press_path: from a synthetic press to the pressed signal and the
     auto* pressIn = object_named(tile, QStringLiteral("tilePressIn"));
     REQUIRE(pressIn != nullptr);
     QSignalSpy handled(tile, SIGNAL(pressed()));
+    // The budget is counted from the touch of the second tap (NFR-03, BRD-03). Each round is a first tap, then the
+    // timed touch, then the time that lets the window run out; the window is made short for that, and nothing about the
+    // touch changes.
+    tile->setProperty("doubleTapMs", 20);
 
     for (int i = 0; i < WARM_UP; ++i)
     {
+        rig.tap(tile);
         rig.release(rig.press(tile));
+        rig.advance(64ms);
     }
     handled.clear();
 
@@ -577,6 +797,7 @@ TEST_CASE("perf.press_path: from a synthetic press to the pressed signal and the
     times.reserve(PRESSES);
     for (int i = 0; i < PRESSES; ++i)
     {
+        rig.tap(tile);
         const auto start = std::chrono::steady_clock::now();
         const int finger = rig.press(tile);
         const auto end = std::chrono::steady_clock::now();
@@ -587,6 +808,7 @@ TEST_CASE("perf.press_path: from a synthetic press to the pressed signal and the
             ++animating;
         }
         rig.release(finger);
+        rig.advance(64ms);
     }
     std::ranges::sort(times);
 

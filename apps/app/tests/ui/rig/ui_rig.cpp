@@ -28,6 +28,8 @@ namespace
 
 constexpr int FRAME_MS = 16;
 constexpr auto MODULE = "ErrorJournalingApp";
+// The phone's design frame (Theme.frame), where WindowLayout starts.
+constexpr QSize PHONE_FRAME(402, 874);
 
 bool inherits_class(const QObject* object, const char* name)
 {
@@ -150,6 +152,31 @@ void UiRig::set_safe_area(double top, double bottom)
     layout();
 }
 
+void UiRig::set_safe_area_sides(double left, double right)
+{
+    theme()->setProperty("overrideSafeLeft", left);
+    theme()->setProperty("overrideSafeRight", right);
+    layout();
+}
+
+QObject* UiRig::window_layout()
+{
+    return m_Impl->m_Engine.singletonInstance<QObject*>(MODULE, "WindowLayout");
+}
+
+void UiRig::set_window_size(QSize size)
+{
+    m_Impl->m_Window->resize(size);
+    if (m_Impl->m_Root != nullptr)
+    {
+        m_Impl->m_Root->setSize(QSizeF(size));
+    }
+    QObject* const classes = window_layout();
+    classes->setProperty("windowWidth", size.width());
+    classes->setProperty("windowHeight", size.height());
+    layout();
+}
+
 QObject* UiRig::keyboard()
 {
     return m_Impl->m_Engine.singletonInstance<QObject*>(MODULE, "Keyboard");
@@ -212,6 +239,15 @@ QQuickItem* UiRig::adopt(QObject* created)
     m_Impl->m_Root = item;
     item->setParentItem(m_Impl->m_Window->contentItem());
     item->setSize(QSizeF(m_Impl->m_Window->size()));
+    // A component loaded alone has no shell to tell WindowLayout the window's size. WindowLayout starts at the phone's
+    // design frame, so it is told only of another size: making it makes the Theme, which reads the font database, and a
+    // test that does not use either would see the offscreen platform's warning about its fonts.
+    if (m_Impl->m_Window->size() != PHONE_FRAME)
+    {
+        QObject* const classes = window_layout();
+        classes->setProperty("windowWidth", m_Impl->m_Window->width());
+        classes->setProperty("windowHeight", m_Impl->m_Window->height());
+    }
     layout();
     return item;
 }

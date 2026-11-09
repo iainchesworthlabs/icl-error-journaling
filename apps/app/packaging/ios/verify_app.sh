@@ -15,7 +15,8 @@
 #     the launch colour that Info.plist names, each in a light and a dark variant;
 #   * the executable is for arm64 and links nothing outside the system: a link to
 #     a framework or to a path on the build machine means the build picked up
-#     the wrong libraries;
+#     the wrong libraries; and the bundle holds no dynamic library or framework, so
+#     what the notices call statically linked is;
 #   * it carries no Tracy profiler, and it reports the network code Qt links (Qt QML
 #     brings Qt Network) without refusing it (docs/plan/stage-11.md, 11.2);
 #   * PrivacyInfo.xcprivacy is at the top of the bundle, declares no tracking and no
@@ -46,7 +47,7 @@ while [ $# -gt 0 ]; do
     --version) version="${2:?}"; shift 2 ;;
     --signed) signed=true; shift ;;
     --store) store=true; shift ;;
-    -h|--help) sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "verify_app.sh: unknown argument '$1'" >&2; exit 2 ;;
     *) target="$1"; shift ;;
   esac
@@ -139,6 +140,11 @@ archs="$(lipo -archs "$app/$executable" 2>/dev/null || true)"
 bad="$(otool -L "$app/$executable" | tail -n +2 | awk '{print $1}' | grep -Ev '^(/usr/lib/|/System/Library/)' || true)"
 [ -z "$bad" ] || fail "the executable links outside the system: $bad"
 echo "    executable: arm64, links only the system"
+# Qt and everything it bundles are static libraries inside the executable. The About page and the notices say so
+# (tools/licences/notices.py reads it off the link line), so a library file in the bundle would make them wrong.
+shipped_libraries="$(find "$app" \( -name '*.dylib' -o -name '*.framework' -o -name 'Frameworks' \) | head -n 5)"
+[ -z "$shipped_libraries" ] || fail "the bundle holds a dynamic library, but the licence notices say everything is linked statically: $shipped_libraries"
+echo "    no dynamic library or framework in the bundle: every third-party library is linked statically"
 
 # Network code and the profiler (docs/plan/stage-11.md, 11.2, T11-5). Qt QML links Qt Network (the kit is built with
 # qml_network, so QML could load a remote URL), and Qt Network links CFNetwork and Network. So the executable carries
