@@ -101,6 +101,31 @@ class SpdxTests(unittest.TestCase):
         self.assertEqual(notices.linking_of("/a/Qt6Core.dll"), "dynamic")
 
 
+class LinkingFromTheFileTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.m_Temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.m_Temp.cleanup)
+
+    def file_with(self, name: str, content: bytes) -> str:
+        path = Path(self.m_Temp.name) / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+        return str(path).replace("\\", "/")
+
+    def test_a_framework_that_holds_an_archive_is_static(self) -> None:
+        path = self.file_with("QtCore.framework/QtCore", b"!<arch>\n" + bytes(8))
+        self.assertEqual(notices.linking_of(path), "static")
+
+    def test_a_framework_that_holds_a_dynamic_library_is_dynamic(self) -> None:
+        header = bytes([0xCF, 0xFA, 0xED, 0xFE]) + (12).to_bytes(4, "little") + (0).to_bytes(4, "little") + (6).to_bytes(4, "little")
+        self.assertEqual(notices.linking_of(self.file_with("QtCore.framework/QtCore", header)), "dynamic")
+
+    def test_a_file_that_is_not_there_or_not_known_is_unknown(self) -> None:
+        self.assertEqual(notices.linking_of("/nowhere/QtCore.framework/QtCore"), "unknown")
+        self.assertEqual(notices.linking_of(self.file_with("odd.bin", b"hello")), "unknown")
+        self.assertEqual(notices.linking_of("C:/Qt/lib/Qt6Core.lib"), "unknown")
+
+
 class LinkLineTests(unittest.TestCase):
     def setUp(self) -> None:
         self.m_Temp = tempfile.TemporaryDirectory()
@@ -192,7 +217,7 @@ class LinkLineTests(unittest.TestCase):
         _, document = run(self.m_Binary, self.m_Out, platform="windows", qt=qt)
         self.assertEqual(document["unresolved"], [])
         self.assertEqual({i["kind"] for i in document["linked"]} - {"system", "qt"}, set())
-        self.assertTrue(all(c["linking"] in ("unknown", "dynamic") for c in document["components"]))
+        self.assertTrue(all(c["linking"] == "unknown" for c in document["components"]))
 
 
 class VcpkgTests(unittest.TestCase):
