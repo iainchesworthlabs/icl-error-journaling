@@ -26,7 +26,8 @@ add_executable(ej_storage_integration_tests
     test_protect.cpp
     test_recovery.cpp
     test_sqlite_repository.cpp
-    test_storage_location.cpp)
+    test_storage_location.cpp
+    test_unit_environment.cpp)
 target_link_libraries(ej_storage_integration_tests
     PRIVATE ej_storage Qt6::Sql Catch2::Catch2 icl::warnings icl::coverage)
 # platform/*.hpp: the internal headers of the platform pieces, which test_platform_files.cpp calls directly.

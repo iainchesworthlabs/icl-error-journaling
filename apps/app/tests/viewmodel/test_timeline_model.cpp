@@ -1785,6 +1785,20 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         neither.start(list_of(error_at(1, 11, 2)), header);
         CHECK(neither.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02.");
     }
+    SECTION("the environment of the unit is part of it, and follows a change of it")
+    {
+        HeaderValues header = sample_header();
+        header.m_UnitNumber = UnitNumber::parse("27", "prod").value();
+        Rig rig;
+        rig.start(list_of(error_at(1, 11, 2, "Mute Delay"), change_at(2, 12, 0, HeaderField::UNIT_NUMBER, "27-dev"),
+                          note_at(3, 13, 0, "Robot restarted")),
+                  header);
+
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") ==
+              "Logged at 11:02 on UNIT-27-prod, version 1.4.2.");
+        CHECK(rig.model().entryForEdit(text_of(3)).value("footnote") ==
+              "Logged at 13:00 on UNIT-27-dev, version 1.4.2.");
+    }
     SECTION("with no configuration the unit is its number")
     {
         Rig rig;
@@ -1792,6 +1806,16 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         rig.config().clear();
 
         CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on 27, version 1.4.2.");
+    }
+    SECTION("with no configuration the unit is its stored text, environment and all")
+    {
+        HeaderValues header = sample_header();
+        header.m_UnitNumber = UnitNumber::parse("27", "prod").value();
+        Rig rig;
+        rig.start(list_of(error_at(1, 11, 2)), header);
+        rig.config().clear();
+
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on 27-prod, version 1.4.2.");
     }
 }
 

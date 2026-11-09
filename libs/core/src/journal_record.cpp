@@ -260,7 +260,7 @@ void write_header(Writer& w, const HeaderValues& header)
     w.key("unit");
     if (header.m_UnitNumber)
     {
-        w.string(header.m_UnitNumber->digits());
+        w.string(header.m_UnitNumber->stored());
     }
     else
     {
@@ -675,7 +675,7 @@ HeaderValues read_header(const Fields& fields)
     header.m_LocalDate = parse_date(fields, fields.string("date"));
     if (const auto unit = fields.optional_string("unit"))
     {
-        auto parsed = UnitNumber::parse(*unit);
+        auto parsed = UnitNumber::parse_stored(*unit);
         if (parsed)
         {
             header.m_UnitNumber = std::move(*parsed);

@@ -21,9 +21,12 @@
 #include <QObject>
 #include <QQuickItem>
 #include <QString>
+#include <QStringList>
 #include <QVariant>
 #include <QVariantMap>
+#include <algorithm>
 #include <chrono>
+#include <vector>
 
 /// What the tests of the Today's details screen and the Software version sheet (package 4.9) share: the real Stage 3
 /// view models over the in-memory store and the manual gateway, wired as the composition root wires them, and a few
@@ -37,9 +40,10 @@ namespace ej::ui::header
 class HeaderWorld
 {
 public:
-    explicit HeaderWorld(bool existing = false) : m_Env(m_World.environment())
+    explicit HeaderWorld(bool existing = false, const Configuration& configuration = test::sample_configuration())
+        : m_Env(m_World.environment())
     {
-        m_Storage.config().set_saved(export_configuration(test::sample_configuration()));
+        m_Storage.config().set_saved(export_configuration(configuration));
         m_Settings.load();
         m_Gateway.run_all();
         REQUIRE(m_Settings.configured());
@@ -187,6 +191,56 @@ inline void play(UiRig& rig, int ms)
     {
         rig.advance(std::chrono::milliseconds(16));
     }
+}
+
+/// The Environment sheet of Today's details (PRF-11), which the tests of the screen and of the sheet share: the names
+/// of the choices on the sheet, in the order they are drawn, with None as "".
+inline QStringList sheet_choices(UiRig& rig)
+{
+    struct Choice
+    {
+        qreal m_Top;
+        QString m_Name;
+    };
+    std::vector<Choice> found;
+    for (const Node& node : rig.tree())
+    {
+        if (node.m_ObjectName == QStringLiteral("environmentNone"))
+        {
+            found.push_back({node.m_Rect.top(), QString()});
+        }
+        else if (node.m_ObjectName.startsWith(QStringLiteral("environment_")))
+        {
+            found.push_back({node.m_Rect.top(), node.m_ObjectName.mid(QStringLiteral("environment_").size())});
+        }
+    }
+    std::ranges::sort(found, [](const Choice& a, const Choice& b) { return a.m_Top < b.m_Top; });
+    QStringList names;
+    for (const Choice& choice : found)
+    {
+        names.push_back(choice.m_Name);
+    }
+    return names;
+}
+
+inline QQuickItem* choice(UiRig& rig, const char* name)
+{
+    // The choices are made by a Repeater, which `find` does not reach: they are found in the item tree.
+    for (const Node& node : rig.tree())
+    {
+        if (node.m_ObjectName == QString::fromLatin1(name))
+        {
+            return node.m_Item;
+        }
+    }
+    FAIL("no choice named " << name);
+}
+
+inline void open_environment_sheet(UiRig& rig)
+{
+    rig.tap(need(rig, QStringLiteral("headerEnvironment")));
+    play(rig, 500);
+    REQUIRE(need(rig, QStringLiteral("environmentSheet"))->property("isOpen").toBool());
 }
 
 } // namespace ej::ui::header

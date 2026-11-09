@@ -43,10 +43,20 @@ struct Location
     friend bool operator==(const Location&, const Location&) = default;
 };
 
+/// The environments that the picker of Today's details offers when a setup file does not name its own: "prod" and
+/// "dev" (PRF-11). "None" is not in the list: it is always the first choice.
+[[nodiscard]] inline std::vector<std::string> default_unit_environments()
+{
+    return {"prod", "dev"};
+}
+
 struct Configuration
 {
     std::string m_Facilitator;
     std::string m_UnitPrefix;
+    /// The choices for the environment of a unit, in the order the picker shows them (PRF-11). Never empty in a
+    /// configuration read from a file. The file's optional `unit_environments` key replaces the default.
+    std::vector<std::string> m_UnitEnvironments = default_unit_environments();
     TimeFormat m_TimeFormat;
     bool m_IncludeTotals = false;
     std::vector<ErrorType> m_ErrorTypes;
@@ -102,7 +112,8 @@ struct ConfigError
 /// list are rejected.
 [[nodiscard]] Result<Configuration, std::vector<ConfigError>> import_configuration(std::string_view json);
 
-/// Stable key order, two-space indent, LF, `schema_version` first, one trailing newline.
+/// Stable key order, two-space indent, LF, `schema_version` first, one trailing newline. The `unit_environments` key is
+/// written only when the list differs from `default_unit_environments()`.
 [[nodiscard]] std::string export_configuration(const Configuration& configuration);
 
 }  // namespace ej

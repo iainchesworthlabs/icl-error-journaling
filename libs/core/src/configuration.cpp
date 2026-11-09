@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/configuration.hpp"
 
+#include "error_journaling/unit_number.hpp"
+
 #include <QByteArray>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -8,7 +10,6 @@
 #include <QJsonParseError>
 #include <QJsonValue>
 #include <QString>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -142,6 +143,14 @@ void split_path(const std::string& path, ConfigError& error)
     {
         error.m_Item = static_cast<std::size_t>(std::stoul(parts[1])) + 1;
         next = 2;
+    }
+    if (error.m_Section == "preferences" && parts.size() == 3 && parts[1] == "unit_environments" && !parts[2].empty() &&
+        parts[2].find_first_not_of("0123456789") == std::string::npos && parts[2].size() < 9)
+    {
+        // One environment of the list: the item is its 1-based place, the field is the list's key.
+        error.m_Item = static_cast<std::size_t>(std::stoul(parts[2])) + 1;
+        error.m_Field = parts[1];
+        return;
     }
     for (std::size_t i = next; i < parts.size(); ++i)
     {
@@ -427,6 +436,97 @@ void read_time_format(Reader& r, const QJsonObject& preferences, Configuration& 
     r.reject_unknown(object, path, {"style", "seconds", "meridiem"});
 }
 
+/// The optional `unit_environments` list: the choices for the environment of a unit. Without the key the defaults stay.
+void read_unit_environments(Reader& r, const QJsonObject& preferences, Configuration& out)
+{
+    const std::string path = "/preferences";
+    const auto value = r.field(preferences, "unit_environments", path, false);
+    if (!value)
+    {
+        return;
+    }
+    const auto here = child(path, "unit_environments");
+    if (!value->isArray())
+    {
+        r.add(Code::WRONG_TYPE, here, "this must be a list of names, for example [\"prod\", \"dev\"].");
+        return;
+    }
+    const auto array = value->toArray();
+    if (array.isEmpty())
+    {
+        r.add(Code::OUT_OF_RANGE, here, "this list is empty. Name at least one environment, for example \"prod\".",
+              empty_detail());
+        return;
+    }
+    if (static_cast<std::size_t>(array.size()) > CONFIG_MAX_ENTRIES_PER_LIST)
+    {
+        r.add(Code::OUT_OF_RANGE, here,
+              "this list has " + std::to_string(array.size()) + " entries; the most allowed is " +
+                  std::to_string(CONFIG_MAX_ENTRIES_PER_LIST) + ". Remove the ones you do not use.");
+        return;
+    }
+    std::vector<std::string> names;
+    std::unordered_map<std::string, std::size_t> first_place;
+    bool usable = true;
+    for (int i = 0; i < array.size(); ++i)
+    {
+        const auto index = static_cast<std::size_t>(i);
+        const auto item_path = child(here, index);
+        const auto item = array.at(i);
+        if (!item.isString())
+        {
+            usable = false;
+            r.add(Code::WRONG_TYPE, item_path, "this must be text, for example \"prod\".");
+            continue;
+        }
+        const auto text = item.toString();
+        const std::string name = text.toStdString();
+        if (text.isEmpty())
+        {
+            usable = false;
+            r.add(Code::OUT_OF_RANGE, item_path, "this is empty. Enter a name, for example \"prod\".", empty_detail());
+            continue;
+        }
+        if (static_cast<std::size_t>(text.size()) > UnitNumber::MAX_ENVIRONMENT_LENGTH)
+        {
+            usable = false;
+            Detail detail = problem_detail(ConfigError::Problem::TOO_LONG);
+            detail.m_Limit = static_cast<int>(UnitNumber::MAX_ENVIRONMENT_LENGTH);
+            r.add(Code::OUT_OF_RANGE, item_path,
+                  "this is longer than " + std::to_string(UnitNumber::MAX_ENVIRONMENT_LENGTH) +
+                      " characters. Shorten it.",
+                  std::move(detail));
+            continue;
+        }
+        if (!UnitNumber::is_valid_environment(name))
+        {
+            usable = false;
+            r.add(Code::OUT_OF_RANGE, item_path,
+                  shown(text) + " is not an environment name. Use lower-case letters, digits and dashes, for example "
+                                "\"prod\". It cannot start or end with a dash.");
+            continue;
+        }
+        const auto [it, inserted] = first_place.emplace(name, index);
+        if (!inserted)
+        {
+            usable = false;
+            Detail detail = problem_detail(ConfigError::Problem::NAME_TAKEN);
+            detail.m_Other = it->second + 1;
+            detail.m_Value = name;
+            r.add(Code::DUPLICATE, item_path,
+                  "another environment (number " + std::to_string(it->second + 1) + " in the list) is already " +
+                      shown(text) + ". List each environment once.",
+                  std::move(detail));
+            continue;
+        }
+        names.push_back(name);
+    }
+    if (usable)
+    {
+        out.m_UnitEnvironments = std::move(names);
+    }
+}
+
 void read_preferences(Reader& r, const QJsonObject& root, Configuration& out)
 {
     const auto value = r.field(root, "preferences", "", true);
@@ -460,12 +560,14 @@ void read_preferences(Reader& r, const QJsonObject& root, Configuration& out)
             out.m_UnitPrefix = prefix->toStdString();
         }
     }
+    read_unit_environments(r, object, out);
     read_time_format(r, object, out);
     if (const auto totals = r.boolean(object, "include_totals", path))
     {
         out.m_IncludeTotals = *totals;
     }
-    r.reject_unknown(object, path, {"facilitator", "unit_prefix", "time_format", "include_totals"});
+    r.reject_unknown(object, path,
+                     {"facilitator", "unit_prefix", "unit_environments", "time_format", "include_totals"});
 }
 
 void read_error_types(Reader& r, const QJsonObject& root, Configuration& out)
@@ -856,6 +958,16 @@ std::string export_configuration(const Configuration& configuration)
     write_string(out, configuration.m_Facilitator);
     out += ",\n    \"unit_prefix\": ";
     write_string(out, configuration.m_UnitPrefix);
+    if (configuration.m_UnitEnvironments != default_unit_environments())
+    {
+        out += ",\n    \"unit_environments\": [";
+        for (std::size_t i = 0; i < configuration.m_UnitEnvironments.size(); ++i)
+        {
+            out += i == 0 ? "\n      " : ",\n      ";
+            write_string(out, configuration.m_UnitEnvironments[i]);
+        }
+        out += "\n    ]";
+    }
     out += ",\n    \"time_format\": {\n";
     out += std::string("      \"style\": ") +
            (configuration.m_TimeFormat.m_Style == TimeStyle::H12 ? "\"12h\"" : "\"24h\"") + ",\n";

@@ -1255,6 +1255,186 @@ TEST_CASE("The unit number alone is a property of its own", "[viewmodel][session
     CHECK(fresh.session->unit_digits().isEmpty());
 }
 
+// ------------------------------------------------------------------------------------- the environment of a unit
+
+namespace
+{
+
+HeaderValues header_with_environment(const char* digits, const char* environment)
+{
+    HeaderValues header = sample_header();
+    header.m_UnitNumber = UnitNumber::parse(digits, environment).value();
+    return header;
+}
+
+} // namespace
+
+TEST_CASE("A unit without an environment reads as before, and has no environment", "[viewmodel][session][environment]")
+{
+    SessionRig rig(Options().existing());
+    CHECK(rig.session->unit_text() == QStringLiteral("UNIT-27"));
+    CHECK(rig.session->unit_digits() == QStringLiteral("27"));
+    CHECK(rig.session->unit_environment().isEmpty());
+    CHECK(rig.session->property("unitEnvironment").toString().isEmpty());
+
+    // A log with no unit has no environment either.
+    SessionRig fresh;
+    CHECK(fresh.session->unit_text().isEmpty());
+    CHECK(fresh.session->unit_environment().isEmpty());
+}
+
+TEST_CASE("A unit with an environment shows it in the text and apart from the digits",
+          "[viewmodel][session][environment]")
+{
+    SessionRig rig(Options().existing().header(header_with_environment("27", "prod")));
+    CHECK(rig.session->unit_text() == QStringLiteral("UNIT-27-prod"));
+    CHECK(rig.session->unit_digits() == QStringLiteral("27"));
+    CHECK(rig.session->unit_environment() == QStringLiteral("prod"));
+    CHECK(rig.session->property("unitText").toString() == QStringLiteral("UNIT-27-prod"));
+    CHECK(rig.session->missing_fields() == QStringList{});
+
+    // Without a configuration the unit is shown as it is stored, as it was.
+    SessionRig unconfigured(Options().existing().unconfigured().header(header_with_environment("27", "prod")));
+    CHECK(unconfigured.session->unit_text() == QStringLiteral("27-prod"));
+}
+
+TEST_CASE("The unit is checked from its two parts, and the environment must be one of the choices",
+          "[viewmodel][session][environment]")
+{
+    SessionRig rig(Options().existing());
+    const auto check = [&rig](const char* digits, const char* environment)
+    { return rig.session->validateUnit(QString::fromUtf8(digits), QString::fromUtf8(environment)); };
+
+    CHECK(check("27", "").isEmpty());
+    CHECK(check("27", "prod").isEmpty());
+    CHECK(check(" 27 ", " dev ").isEmpty());
+    CHECK(check("27", "dev").isEmpty());
+
+    // The digits are judged as before; a typed dash is not a digit, so the stored form cannot be typed in.
+    CHECK(check("027", "prod") ==
+          rig.session->validateHeaderValue(QStringLiteral("unit_number"), QStringLiteral("027")));
+    CHECK(check("", "prod") == rig.session->validateHeaderValue(QStringLiteral("unit_number"), QString()));
+    CHECK(check("27-prod", "") ==
+          rig.session->validateHeaderValue(QStringLiteral("unit_number"), QStringLiteral("2a")));
+    CHECK_FALSE(check("27-prod", "").isEmpty());
+    CHECK_FALSE(check("27-prod", "dev").isEmpty());
+
+    // The environment is a choice. One that is not in the list is refused, with a plain sentence, whatever its shape.
+    const QString not_listed = check("27", "staging");
+    CHECK(not_listed == QStringLiteral("Choose an environment from the list."));
+    CHECK(check("27", "Prod") == QStringLiteral("An environment uses lower-case letters, digits and dashes."));
+    CHECK(check("27", "pre prod") == QStringLiteral("An environment uses lower-case letters, digits and dashes."));
+    CHECK(check("27", "-prod") == QStringLiteral("An environment uses lower-case letters, digits and dashes."));
+}
+
+TEST_CASE("An environment the log already has stays valid when the setup no longer lists it",
+          "[viewmodel][session][environment]")
+{
+    SessionRig rig(Options().existing().header(header_with_environment("27", "staging")));
+    CHECK(rig.session->unit_environment() == QStringLiteral("staging"));
+    // "staging" is not one of the choices (prod, dev), but it is in force, so a new number can keep it.
+    CHECK(rig.session->validateUnit(QStringLiteral("28"), QStringLiteral("staging")).isEmpty());
+    CHECK(rig.session->correctUnit(QStringLiteral("28"), QStringLiteral("staging")));
+    rig.gateway.run_all();
+    CHECK(rig.session->unit_text() == QStringLiteral("UNIT-28-staging"));
+    // Another one that is not offered is still refused.
+    CHECK_FALSE(rig.session->validateUnit(QStringLiteral("28"), QStringLiteral("qa")).isEmpty());
+    CHECK_FALSE(rig.session->correctUnit(QStringLiteral("28"), QStringLiteral("qa")));
+}
+
+TEST_CASE("The choices follow the configuration", "[viewmodel][session][environment]")
+{
+    SessionRig rig(Options().existing());
+    Configuration configuration = sample_configuration();
+    configuration.m_UnitEnvironments = {"qa", "live"};
+    rig.config.set(configuration);
+    CHECK(rig.session->validateUnit(QStringLiteral("27"), QStringLiteral("qa")).isEmpty());
+    CHECK(rig.session->validateUnit(QStringLiteral("27"), QStringLiteral("live")).isEmpty());
+    CHECK_FALSE(rig.session->validateUnit(QStringLiteral("27"), QStringLiteral("prod")).isEmpty());
+}
+
+TEST_CASE("Correct saves the unit with its environment as one Correct and writes no entry",
+          "[viewmodel][session][environment]")
+{
+    SessionRig rig(Options().existing());
+    QSignalSpy header(rig.session.get(), &LogSession::headerChanged);
+
+    REQUIRE(rig.session->correctUnit(QStringLiteral("27"), QStringLiteral("prod")));
+    rig.gateway.run_all();
+    CHECK(rig.session->unit_text() == QStringLiteral("UNIT-27-prod"));
+    CHECK(rig.session->unit_environment() == QStringLiteral("prod"));
+    CHECK(header.count() == 1);
+    CHECK(rig.entries().empty());
+    CHECK(header_field_text(rig.document().log().initial_header(), HeaderField::UNIT_NUMBER) == "27-prod");
+
+    // The number and the environment change together, and None takes the environment away.
+    REQUIRE(rig.session->correctUnit(QStringLiteral("31"), QStringLiteral("dev")));
+    rig.gateway.run_all();
+    CHECK(rig.session->unit_text() == QStringLiteral("UNIT-31-dev"));
+    REQUIRE(rig.session->correctUnit(QStringLiteral("31"), QString()));
+    rig.gateway.run_all();
+    CHECK(rig.session->unit_text() == QStringLiteral("UNIT-31"));
+    CHECK(rig.session->unit_environment().isEmpty());
+    CHECK(rig.entries().empty());
+
+    // A pair that is refused writes nothing.
+    const auto posted = rig.gateway.posted();
+    CHECK_FALSE(rig.session->correctUnit(QStringLiteral("031"), QStringLiteral("prod")));
+    CHECK_FALSE(rig.session->correctUnit(QStringLiteral("31"), QStringLiteral("nope")));
+    CHECK_FALSE(rig.session->correctUnit(QString(), QStringLiteral("prod")));
+    CHECK(rig.gateway.posted() == posted);
+    CHECK(rig.session->unit_text() == QStringLiteral("UNIT-31"));
+}
+
+TEST_CASE("A log with no unit takes its first unit with an environment", "[viewmodel][session][environment]")
+{
+    SessionRig rig;
+    REQUIRE(rig.session->correctUnit(QStringLiteral("9"), QStringLiteral("dev")));
+    rig.gateway.run_all();
+    CHECK(rig.session->unit_text() == QStringLiteral("UNIT-9-dev"));
+    CHECK(rig.session->missing_fields().contains(QStringLiteral("location")));
+    CHECK_FALSE(rig.session->missing_fields().contains(QStringLiteral("unit_number")));
+}
+
+TEST_CASE("A change of the environment is a timed entry, shown in the preview and in the log line",
+          "[viewmodel][session][environment]")
+{
+    SessionRig rig(Options().existing().header(header_with_environment("27", "prod")));
+    const QString preview =
+        rig.session->previewHeaderChange(QStringLiteral("unit_number"), QStringLiteral("27-dev"), LOCAL_0855 + 60);
+    CHECK(preview.contains(QStringLiteral("UNIT-27-prod")));
+    CHECK(preview.contains(QStringLiteral("UNIT-27-dev")));
+
+    REQUIRE(rig.session->changeHeader(QStringLiteral("unit_number"), QStringLiteral("27-dev"), LOCAL_0855));
+    rig.gateway.run_all();
+    CHECK(rig.entries().size() == 1);
+    CHECK(rig.session->unit_text() == QStringLiteral("UNIT-27-dev"));
+    // The same value again is not a change.
+    CHECK_FALSE(rig.session->changeHeader(QStringLiteral("unit_number"), QStringLiteral("27-dev"), LOCAL_0855 + 120));
+    // And the generic check accepts the stored form and refuses a damaged one.
+    CHECK(rig.session->validateHeaderValue(QStringLiteral("unit_number"), QStringLiteral("27-qa")).isEmpty());
+    CHECK_FALSE(rig.session->validateHeaderValue(QStringLiteral("unit_number"), QStringLiteral("27-QA")).isEmpty());
+}
+
+TEST_CASE("A new log starts with no unit and so no environment, as the number does not carry over",
+          "[viewmodel][session][environment]")
+{
+    SessionRig rig(Options().existing().header(header_with_environment("27", "prod")));
+    REQUIRE(rig.session->unit_environment() == QStringLiteral("prod"));
+    REQUIRE(rig.session->startNewLog());
+    rig.gateway.run_all();
+    CHECK(rig.session->unit_text().isEmpty());
+    CHECK(rig.session->unit_digits().isEmpty());
+    CHECK(rig.session->unit_environment().isEmpty());
+    CHECK(rig.session->facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session->missing_fields().contains(QStringLiteral("unit_number")));
+    // The old log is archived with the unit it had, environment and all.
+    const auto old_log = rig.storage.memory().load_log(rig.log_id);
+    REQUIRE(old_log.has_value());
+    CHECK(old_log->m_Meta.m_Archived);
+    CHECK(old_log->m_Log.initial_header().m_UnitNumber->stored() == "27-prod");
+}
+
 TEST_CASE("A log is unshared while it has entries and has never been shared", "[viewmodel][session]")
 {
     SessionRig rig(Options().existing());

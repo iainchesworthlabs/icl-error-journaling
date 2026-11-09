@@ -15,7 +15,11 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSignalSpy>
+#include <QStringList>
+#include <algorithm>
 #include <cmath>
+#include <string>
+#include <vector>
 
 using namespace ej::ui;
 using namespace ej::ui::header;
@@ -696,6 +700,10 @@ TEST_CASE("details.keyboard: the foot bar steps aside and the field being typed 
     CHECK(start->isVisible());
     const double window_height = rig.window().height();
 
+    // The version field is under the foot bar while the page is at rest (the Environment row is above it): the person
+    // scrolls to it first.
+    scroller->setProperty("contentY", scroller->property("contentHeight").toDouble() - scroller->height());
+    play(rig, 64);
     rig.tap(input_of(rig, version));
     screen->setProperty("keyboardHeight", 336.0);
     play(rig, 64);
@@ -786,6 +794,196 @@ TEST_CASE("details.a11y: names, targets, order and text scale, in light and dark
         rig.set_reduce_motion(true);
         expect_clean(check_motion_reduced(rig));
     }
+}
+
+// ------------------------------------------------------------------------------------------------------ environment
+
+TEST_CASE("details.environment: a row under the unit field says None until one is picked",
+          "[ui][header_screen][environment]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* row = need(rig, QStringLiteral("headerEnvironment"));
+    QQuickItem* unit = need(rig, QStringLiteral("headerUnit"));
+
+    CHECK(row->property("text").toString() == QStringLiteral("Environment"));
+    CHECK(row->property("value").toString() == QStringLiteral("None"));
+    CHECK(row->property("showChevron").toBool());
+    CHECK(row->height() >= 44.0);
+    // It sits under the unit number and above the location, as the design has it.
+    CHECK(rig.geometry(row).top() >= rig.geometry(unit).bottom());
+    CHECK(rig.geometry(row).bottom() <= rig.geometry(need(rig, QStringLiteral("headerLocations"))).top());
+    // The unit field is unchanged: the prefix, the digits.
+    CHECK(unit->property("prefixText").toString() == QStringLiteral("UNIT-"));
+    CHECK(input_text(rig, "headerUnit") == QStringLiteral("27"));
+    CHECK(world.session().unit_text() == QStringLiteral("UNIT-27"));
+    // The sheet is not open.
+    CHECK_FALSE(need(rig, QStringLiteral("environmentSheet"))->property("isOpen").toBool());
+}
+
+TEST_CASE("details.environment: choosing prod saves it with the unit, and choosing None takes it away",
+          "[ui][header_screen][environment]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* row = need(rig, QStringLiteral("headerEnvironment"));
+    QQuickItem* sheet = need(rig, QStringLiteral("environmentSheet"));
+    const auto writes = [&world] { return world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER); };
+
+    open_environment_sheet(rig);
+    rig.tap(choice(rig, "environment_prod"));
+    play(rig, 500);
+    rig.settle();
+    CHECK_FALSE(sheet->property("isOpen").toBool());
+    CHECK(world.session().unit_text() == QStringLiteral("UNIT-27-prod"));
+    CHECK(world.session().unit_environment() == QStringLiteral("prod"));
+    CHECK(row->property("value").toString() == QStringLiteral("prod"));
+    CHECK(writes() == 1);
+    CHECK(world.timeline().entry_count() == 0); // a Correct: no entry
+    // The digits in the field are untouched, and the field does not show the environment.
+    CHECK(input_text(rig, "headerUnit") == QStringLiteral("27"));
+
+    // Open again: prod is ticked, None is not. dev replaces prod.
+    open_environment_sheet(rig);
+    CHECK(choice(rig, "environment_prod")->property("checked").toBool());
+    CHECK_FALSE(choice(rig, "environmentNone")->property("checked").toBool());
+    rig.tap(choice(rig, "environment_dev"));
+    play(rig, 500);
+    rig.settle();
+    CHECK(world.session().unit_text() == QStringLiteral("UNIT-27-dev"));
+    CHECK(row->property("value").toString() == QStringLiteral("dev"));
+
+    // None takes it away.
+    open_environment_sheet(rig);
+    rig.tap(choice(rig, "environmentNone"));
+    play(rig, 500);
+    rig.settle();
+    CHECK(world.session().unit_text() == QStringLiteral("UNIT-27"));
+    CHECK(world.session().unit_environment().isEmpty());
+    CHECK(row->property("value").toString() == QStringLiteral("None"));
+    CHECK(writes() == 3);
+
+    // Choosing what is already chosen writes nothing.
+    open_environment_sheet(rig);
+    rig.tap(choice(rig, "environmentNone"));
+    play(rig, 500);
+    rig.settle();
+    CHECK(writes() == 3);
+}
+
+TEST_CASE("details.environment: a typed number and the environment are saved together",
+          "[ui][header_screen][environment]")
+{
+    HeaderWorld world;
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* row = need(rig, QStringLiteral("headerEnvironment"));
+    QQuickItem* unit = need(rig, QStringLiteral("headerUnit"));
+    const auto writes = [&world] { return world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER); };
+
+    SECTION("the environment is picked first and waits for the number")
+    {
+        open_environment_sheet(rig);
+        rig.tap(choice(rig, "environment_prod"));
+        play(rig, 500);
+        rig.settle();
+        CHECK(row->property("value").toString() == QStringLiteral("prod"));
+        CHECK(world.session().unit_text().isEmpty());
+        CHECK(writes() == 0);
+        // The note under the row says so.
+        CHECK(text_item(rig, QStringLiteral("Saved with the number, once you have typed it.")) != nullptr);
+
+        retype(rig, unit, QStringLiteral("27"));
+        rig.settle();
+        CHECK(world.session().unit_text() == QStringLiteral("UNIT-27-prod"));
+        CHECK(writes() == 1);
+        CHECK(row->property("value").toString() == QStringLiteral("prod"));
+        CHECK(text_item(rig, QStringLiteral("Saved with the number, once you have typed it.")) == nullptr);
+    }
+
+    SECTION("the number is typed first and the environment saved with it when picked")
+    {
+        rig.tap(input_of(rig, unit));
+        rig.type(QStringLiteral("31"));
+        open_environment_sheet(rig);
+        rig.tap(choice(rig, "environment_dev"));
+        play(rig, 500);
+        rig.settle();
+        CHECK(world.session().unit_text() == QStringLiteral("UNIT-31-dev"));
+        // Leaving the number field to open the row saved the number; picking the environment saved it with the number.
+        CHECK(writes() == 2);
+    }
+
+    SECTION("a refused number is not saved with the environment")
+    {
+        retype(rig, unit, QStringLiteral("027"));
+        open_environment_sheet(rig);
+        rig.tap(choice(rig, "environment_prod"));
+        play(rig, 500);
+        rig.settle();
+        CHECK(world.session().unit_text().isEmpty());
+        CHECK(writes() == 0);
+        CHECK_FALSE(unit->property("errorText").toString().isEmpty());
+    }
+
+    SECTION("Start logging saves what is valid, the environment with the number")
+    {
+        open_environment_sheet(rig);
+        rig.tap(choice(rig, "environment_prod"));
+        play(rig, 500);
+        rig.tap(input_of(rig, unit));
+        rig.type(QStringLiteral("12"));
+        rig.tap(need(rig, QStringLiteral("headerStart")));
+        rig.settle();
+        CHECK(world.session().unit_text() == QStringLiteral("UNIT-12-prod"));
+    }
+}
+
+TEST_CASE("details.environment: the digits field never takes the stored form", "[ui][header_screen][environment]")
+{
+    HeaderWorld world;
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* unit = need(rig, QStringLiteral("headerUnit"));
+
+    retype(rig, unit, QStringLiteral("27-prod"));
+    CHECK_FALSE(unit->property("errorText").toString().isEmpty());
+    CHECK(world.session().unit_text().isEmpty());
+}
+
+TEST_CASE("details.environment: the choices are the ones of the setup file, in its order",
+          "[ui][header_screen][environment]")
+{
+    ej::Configuration configuration = ej::test::sample_configuration();
+    configuration.m_UnitEnvironments = {"staging", "prod", "pre-prod"};
+    HeaderWorld world(true, configuration);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    open_environment_sheet(rig);
+    CHECK(sheet_choices(rig) == QStringList{"", "staging", "prod", "pre-prod"});
+
+    rig.tap(choice(rig, "environment_pre-prod"));
+    play(rig, 500);
+    rig.settle();
+    CHECK(world.session().unit_text() == QStringLiteral("UNIT-27-pre-prod"));
+}
+
+TEST_CASE("details.environment: a new log starts with None", "[ui][header_screen][environment]")
+{
+    HeaderWorld world(true);
+    REQUIRE(world.session().correctUnit(QStringLiteral("27"), QStringLiteral("prod")));
+    world.gateway().run_all();
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* row = need(rig, QStringLiteral("headerEnvironment"));
+    CHECK(row->property("value").toString() == QStringLiteral("prod"));
+
+    REQUIRE(world.session().startNewLog());
+    rig.settle();
+    CHECK(row->property("value").toString() == QStringLiteral("None"));
+    CHECK(input_text(rig, "headerUnit").isEmpty());
 }
 
 #include "header_screen_test.moc"
