@@ -8,7 +8,11 @@ import ErrorJournalingApp
 // (HDR-06), which carries a mark and a count so that it is not colour alone. Nothing here blocks logging.
 //
 // `missingFields` is `session.missingFields`, the keys of the empty fields. With `skeleton` the card draws its shapes
-// only, in the neutral swatch colour and with no text, for the launch screen (Stage 5); the geometry is the same.
+// only, in the neutral swatch colour and with no text, for the launch screen (Stage 5); the geometry is the same. The
+// shapes keep the room of the lines that the font gives them, so that the card has the height it will have once the values
+// are in. `nominalMetrics` takes the lines at the pitch of the phone's font instead (Theme: `nominalPitch`) and the right
+// column at the share of the card that the design gives it, so that the shapes do not depend on the font of the machine
+// that draws them: the launch image is made on a desktop, in CI, and has to come out the same on every one.
 //
 // Look (Main, LogBanner): the card is at least 64 pt; the right column is 12 pt, the date in 600 and white, the
 // facilitator in 400; the chevron is the 16 pt Icon. The strip under it is 41 pt: a full-width divider, 4 pt, a 30 pt
@@ -23,6 +27,8 @@ Item {
     required property string facilitatorText
     required property var missingFields
     property bool skeleton: false
+    // With `skeleton`: the lines and the right column from the design and not from the font (above).
+    property bool nominalMetrics: false
 
     // The prompts that stand in for an empty field. A screen sets them when the unit prefix is not "UNIT".
     property string unitPrompt: qsTr("Unit —")
@@ -114,6 +120,8 @@ Item {
                 font: Theme.font.headerUnit.font
                 text: root.unitText.length > 0 ? root.unitText : root.unitPrompt
                 wrapMode: Text.WordWrap
+                lineHeightMode: root.skeleton && root.nominalMetrics ? Text.FixedHeight : Text.ProportionalHeight
+                lineHeight: root.skeleton && root.nominalMetrics ? Theme.font.headerUnit.nominalPitch : 1
                 Accessible.ignored: true
             }
             Text {
@@ -125,6 +133,8 @@ Item {
                 font: Theme.font.caption.font
                 text: qsTr("%1 · %2").arg(root.locationText.length > 0 ? root.locationText : root.locationPrompt).arg(root.versionText.length > 0 ? qsTr("v%1").arg(root.versionText) : root.versionPrompt)
                 wrapMode: Text.WordWrap
+                lineHeightMode: root.skeleton && root.nominalMetrics ? Text.FixedHeight : Text.ProportionalHeight
+                lineHeight: root.skeleton && root.nominalMetrics ? Theme.font.caption.nominalPitch : 1
                 Accessible.ignored: true
             }
         }
@@ -134,7 +144,7 @@ Item {
 
             x: chevron.x - Theme.space.sectionGap - width
             y: (main.height - height) / 2
-            width: Math.min(Math.ceil(Math.max(dateMetrics.advanceWidth, facilitatorMetrics.advanceWidth)) + Theme.border.hairline, main.width * 0.4)
+            width: root.skeleton && root.nominalMetrics ? main.width * 0.4 : Math.min(Math.ceil(Math.max(dateMetrics.advanceWidth, facilitatorMetrics.advanceWidth)) + Theme.border.hairline, main.width * 0.4)
             spacing: Theme.border.hairline * 2
 
             Text {
@@ -147,6 +157,8 @@ Item {
                 font: Theme.font.captionSmall.selectedFont
                 text: root.dateText
                 wrapMode: Text.WordWrap
+                lineHeightMode: root.skeleton && root.nominalMetrics ? Text.FixedHeight : Text.ProportionalHeight
+                lineHeight: root.skeleton && root.nominalMetrics ? Theme.font.captionSmall.nominalPitch : 1
                 Accessible.ignored: true
             }
             Text {
@@ -159,6 +171,8 @@ Item {
                 font: Theme.font.captionSmall.font
                 text: root.facilitatorText.length > 0 ? root.facilitatorText : root.facilitatorPrompt
                 wrapMode: Text.WordWrap
+                lineHeightMode: root.skeleton && root.nominalMetrics ? Text.FixedHeight : Text.ProportionalHeight
+                lineHeight: root.skeleton && root.nominalMetrics ? Theme.font.captionSmall.nominalPitch : 1
                 Accessible.ignored: true
             }
         }

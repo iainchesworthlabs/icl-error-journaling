@@ -103,12 +103,20 @@
     <!-- No usage text for any permission: the application asks for none. Add the text with the first permission the
          application asks for; the check in packaging/verify_app.sh refuses the keys it lists until then. -->
 
-    <!-- A launch screen in the property list: without one iOS runs the program in a legacy 320 x 480 window and scales
-         it up. The colour is in Assets.xcassets (LaunchBackground). -->
+    <!-- The launch screen, in the property list so that no storyboard is needed: without one iOS runs the program in a legacy
+         320 x 480 window and scales it up. Both are in Assets.xcassets. LaunchBackground is the colour of the board's
+         background (light and dark), and LaunchBoard is the picture of the Log screen's skeleton, 402 x 874 points at 3x,
+         drawn from the application's own QML by tools/launch_image (the tests launch.image_current and
+         launch.matches_screen keep it true). The image fills the screen under the status bar and the home indicator, as
+         the application's window does, so it ignores the safe area. -->
     <key>UILaunchScreen</key>
     <dict>
         <key>UIColorName</key>
         <string>LaunchBackground</string>
+        <key>UIImageName</key>
+        <string>LaunchBoard</string>
+        <key>UIImageRespectsSafeAreaInsets</key>
+        <false/>
     </dict>
 
     <!-- Portrait only: the board is three across and four down in portrait (docs/design). The application takes the whole

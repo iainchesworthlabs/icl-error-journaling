@@ -822,6 +822,23 @@ haptic, share and import rows of the checklist.
 plist and `verify_app.sh` checks for the launch screen. If Stage 4 did not leave the Log screen's geometry in shared
 components, this package makes that small refactor, coordinated so Stage 4 has no other open change in those files.
 
+**As built.** Stage 4 left the geometry in shared components (`HeaderCard`, `NoteComposer`, `LastEntryBar`, `BoardGrid`,
+`TabBar`, `SafeFrame`, all in the `Theme` tokens), so the refactor was not needed and `LogScreen.qml` is unchanged:
+`screens/launch/LaunchSkeleton.qml` repeats its placing (the 16 pt margins and 12 pt gaps, five lines) and
+`launch.matches_screen` is what holds the two to the same rectangles. The skeleton uses the `skeleton` modes that Stage 4
+gave each component, with two additions so that the picture does not depend on the font of
+the machine that draws it (the plan assumed shapes without text are deterministic, but the placeholder shapes took their
+heights and widths from the font's metrics, which differ between Windows, Linux and macOS): `HeaderCard.nominalMetrics` takes
+the four lines at 1.2 times their size (`FontRole.nominalPitch`, the pitch of the phone's font) and the right column at 40% of
+the card, and the skeleton `TabBar` takes its label's height the same way. The Log screen's own loading placeholder is
+unchanged. `launch.same_in_any_font` renders the skeleton in a sans serif, a monospace and a serif font and requires the same
+picture. `launch.matches_screen` compares the skeleton with the real shell at the smallest iOS text size, where the real header
+card is its 64 pt minimum in any font; at the default size the real card is as tall as its words, which on a test machine is not
+the phone's font, so K1 is what confirms the card's height on the phone (the skeleton's is 65.6 pt at the default size).
+`launch.image_current` is a `ctest` that runs `ej_launch_image --check`; its comparison is exact inside the tiles (corners
+apart) and allows 2 levels of a channel elsewhere. The PNGs are `launch-light.png` and `launch-dark.png` in
+`LaunchBoard.imageset`.
+
 ### 5.9 Device pass and the gate record
 
 Run the checklist, append "Device results" to this file with the figures, fix or log what fails, tick off the spike
