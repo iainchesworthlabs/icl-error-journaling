@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The launch screen (docs/plan/stage-5.md, 5.8). The picture that iOS shows until the first frame is the skeleton of the Log
-// screen, LaunchSkeleton.qml, drawn into the PNGs of the asset catalogue by tools/launch_image (its tests, launch.image_current
-// and launch.image_compare, say that the PNGs are what the skeleton draws). The cases here say that the skeleton is what it
-// claims to be and that it is where the real screen is.
+// The launch screen (docs/plan/stage-5.md, 5.8). The picture that iOS shows until the first frame is the skeleton of
+// the Log screen, LaunchSkeleton.qml, drawn into the PNGs of the asset catalogue by tools/launch_image (its tests,
+// launch.image_current and launch.image_compare, say that the PNGs are what the skeleton draws). The cases here say
+// that the skeleton is what it claims to be and that it is where the real screen is.
 //
 // Cases: launch.skeleton, launch.matches_screen, launch.same_in_any_font.
 //
-// The real screen is the whole shell over the real Stage 3 services (the in-memory store, a fake clock), under the insets of an
-// iPhone 17: 59 pt at the top, 34 pt at the bottom, as the visual capture has it, with the header filled in and two short
-// template names. One thing in it depends on the font: the header card is at least 64 pt and as tall as its words when they are
-// taller, and the font of a test machine is not the phone's. The skeleton's sizes do not depend on a font
-// (launch.same_in_any_font), so the case measures how far the real card is from the skeleton's and requires everything under
-// it to have moved by exactly that; on the phone's font the difference is within half a point and nothing has moved.
+// The real screen is the whole shell over the real Stage 3 services (the in-memory store, a fake clock), under the
+// insets of an iPhone 17: 59 pt at the top, 34 pt at the bottom, as the visual capture has it, with the header filled
+// in and two short template names. One thing in it depends on the font: the header card is at least 64 pt and as tall
+// as its words when they are taller, and the font of a test machine is not the phone's. The skeleton's sizes do not
+// depend on a font (launch.same_in_any_font), so the case measures how far the real card is from the skeleton's and
+// requires everything under it to have moved by exactly that; on the phone's font the difference is within half a point
+// and nothing has moved.
 //
-// The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the Windows
-// headers behind Qt Quick define as a macro. clang-format would sort them the other way, so it is switched off.
+// The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the
+// Windows headers behind Qt Quick define as a macro. clang-format would sort them the other way, so it is switched off.
 // clang-format off
 #include "support/rig.hpp"
 #include "viewmodel/board_model.hpp"
@@ -51,6 +52,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
@@ -64,7 +66,7 @@ namespace
 {
 
 constexpr auto MODULE = "ErrorJournalingApp";
-constexpr int TILES = 12;
+constexpr std::size_t TILES = 12;
 /// The insets of an iPhone 17 in portrait, which the skeleton takes from the theme.
 constexpr int INSET_TOP = 59;
 constexpr int INSET_BOTTOM = 34;
@@ -196,13 +198,19 @@ Layout skeleton_layout(UiRig& rig, QQuickItem* skeleton)
 
 [[nodiscard]] std::string text(const QRectF& rect)
 {
-    return QStringLiteral("(%1, %2, %3 x %4)").arg(rect.x()).arg(rect.y()).arg(rect.width()).arg(rect.height()).toStdString();
+    return QStringLiteral("(%1, %2, %3 x %4)")
+        .arg(rect.x())
+        .arg(rect.y())
+        .arg(rect.width())
+        .arg(rect.height())
+        .toStdString();
 }
 
 /// Asserts that two rectangles agree within the tolerance, saying what each one is when they do not.
 void require_near(const char* what, const QRectF& shape, const QRectF& real, double shift = 0)
 {
-    INFO(what << ": the skeleton has " << text(shape) << " (moved down by " << shift << "), the screen has " << text(real));
+    INFO(what << ": the skeleton has " << text(shape) << " (moved down by " << shift << "), the screen has "
+              << text(real));
     CHECK(near(shape, real, shift));
 }
 
@@ -245,8 +253,8 @@ struct Phone
     Phone& operator=(const Phone&) = delete;
 
     /// The state the design draws: all five fields of the header filled in, so that the card has no strip of missing
-    /// fields under it, and two short template names, so that the chips share a row as they do in the design (the font of a
-    /// test machine is not the phone's, and may not have narrow glyphs).
+    /// fields under it, and two short template names, so that the chips share a row as they do in the design (the font
+    /// of a test machine is not the phone's, and may not have narrow glyphs).
     void fill_in_the_setup()
     {
         auto& session = services.session();
@@ -350,11 +358,13 @@ TEST_CASE("launch.skeleton: the launch screen is shapes only, in the colours of 
 
     // The background is the theme's, light or dark, in every pixel the shapes leave: the corners of the frame, and the
     // gap between two tiles.
-    const QColor background = rig.find_item(QStringLiteral("launchBackground"), skeleton)->property("color").value<QColor>();
+    const QColor background =
+        rig.find_item(QStringLiteral("launchBackground"), skeleton)->property("color").value<QColor>();
     CHECK(background == QColor(dark ? "#0E141A" : "#F2F4F7"));
     const QImage picture = rig.grab();
     const double scale = static_cast<double>(picture.width()) / 402.0;
-    const auto pixel = [&](double x, double y) { return QColor(picture.pixel(static_cast<int>(x * scale), static_cast<int>(y * scale))); };
+    const auto pixel = [&](double x, double y)
+    { return QColor(picture.pixel(static_cast<int>(x * scale), static_cast<int>(y * scale))); };
     CHECK(pixel(1, 1) == background);
     const QRectF first = layout.m_Tiles.at(0);
     const QRectF second = layout.m_Tiles.at(1);
@@ -368,9 +378,10 @@ TEST_CASE("launch.skeleton: the launch screen is shapes only, in the colours of 
     }
 }
 
-TEST_CASE("launch.matches_screen: the tiles, the cards and the tab bar are where the real Log screen has them, within half "
-          "a point",
-          "[ui][launch]")
+TEST_CASE(
+    "launch.matches_screen: the tiles, the cards and the tab bar are where the real Log screen has them, within half "
+    "a point",
+    "[ui][launch]")
 {
     const bool dark = GENERATE(false, true);
     CAPTURE(dark);
@@ -402,19 +413,21 @@ TEST_CASE("launch.matches_screen: the tiles, the cards and the tab bar are where
     const double shift = real.m_Header.height() - shapes.m_Header.height();
     INFO("the real header card is " << shift << " pt taller than the skeleton's");
     CHECK(std::abs(shift) <= 8.0);
-    require_near("header card, top and sides", QRectF(shapes.m_Header.topLeft(), QSizeF(shapes.m_Header.width(), real.m_Header.height())),
+    require_near("header card, top and sides",
+                 QRectF(shapes.m_Header.topLeft(), QSizeF(shapes.m_Header.width(), real.m_Header.height())),
                  real.m_Header);
     require_near("note composer", shapes.m_Composer, real.m_Composer, shift);
     require_near("Last bar", shapes.m_LastBar, real.m_LastBar, shift);
     require_near("board", shapes.m_Board, real.m_Board, shift);
     require_near("tab bar", shapes.m_TabBar, real.m_TabBar);
-    for (int i = 0; i < TILES; ++i)
+    for (std::size_t i = 0; i < TILES; ++i)
     {
         require_near(("tile " + std::to_string(i)).c_str(), shapes.m_Tiles.at(i), real.m_Tiles.at(i), shift);
     }
 }
 
-TEST_CASE("launch.same_in_any_font: the skeleton does not change with the font of the machine that draws it", "[ui][launch]")
+TEST_CASE("launch.same_in_any_font: the skeleton does not change with the font of the machine that draws it",
+          "[ui][launch]")
 {
     // The launch image is made on a desktop and checked in CI on others, and must come out the same.
     const auto draw = [](const QFont& font)
@@ -432,8 +445,9 @@ TEST_CASE("launch.same_in_any_font: the skeleton does not change with the font o
         return std::pair{picture, layout};
     };
 
-    // The installed families with the shortest and the tallest line at the size of the card's text, and the widest glyphs: the
-    // most that this machine's fonts can differ. (A machine with one font has nothing to compare, and the case is trivial.)
+    // The installed families with the shortest and the tallest line at the size of the card's text, and the widest
+    // glyphs: the most that this machine's fonts can differ. (A machine with one font has nothing to compare, and the
+    // case is trivial.)
     QFont low;
     QFont high;
     QFont wide;
