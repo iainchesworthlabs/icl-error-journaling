@@ -46,7 +46,7 @@ input::placeholder{color:#93A3B0}
       </div>
       <div style="display: flex; gap: 8px; align-items: center">
         <label for="note" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Journal note</label>
-        <input id="note" value="{{draft}}" onChange="{{onDraft}}" placeholder="Add a note to today’s log…" style="flex-grow: 1; min-width: 0; height: 44px; box-sizing: border-box; border-radius: 12px; border: 1px solid #34434F; background: #121A21; padding: 0 12px; font-family: inherit; font-size: 15px; color: #EEF2F6">
+        <input id="note" value="{{draft}}" onChange="{{onDraft}}" placeholder="Type a note, then hold a tile…" style="flex-grow: 1; min-width: 0; height: 44px; box-sizing: border-box; border-radius: 12px; border: 1px solid #34434F; background: #121A21; padding: 0 12px; font-family: inherit; font-size: 15px; color: #EEF2F6">
         <button onClick="{{addNote}}" style="height: 44px; min-width: 64px; border-radius: 12px; border: 0; background: #2A6F96; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 600">Add</button>
       </div>
     </div>
@@ -60,7 +60,7 @@ input::placeholder{color:#93A3B0}
 
     <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
       <sc-for list="{{tiles}}" as="tile" hint-placeholder-count="11">
-        <button class="tile" onClick="{{tile.tap}}" aria-label="{{tile.aria}}" style="position: relative; height: 104px; border-radius: 16px; border: 0; background: {{tile.bg}}; padding: 12px; display: flex; align-items: flex-end; text-align: left; font-family: inherit; font-size: 13.5px; font-weight: 600; line-height: 1.2; color: #EEF2F6; box-shadow: 0 1px 2px rgba(20,33,43,0.08)">
+        <button class="tile" onClick="{{tile.tap}}" onMouseDown="{{tile.down}}" onMouseUp="{{tile.up}}" onMouseLeave="{{tile.up}}" aria-label="{{tile.aria}}" style="position: relative; height: 104px; border-radius: 16px; border: 0; background: {{tile.bg}}; padding: 12px; display: flex; align-items: flex-end; text-align: left; font-family: inherit; font-size: 13.5px; font-weight: 600; line-height: 1.2; color: #EEF2F6; box-shadow: 0 1px 2px rgba(20,33,43,0.08)">
           <span>{{tile.name}}</span>
           <sc-if value="{{tile.hasCount}}" hint-placeholder-val="{{ false }}">
             <span style="position: absolute; top: 8px; right: 8px; min-width: 24px; height: 24px; padding: 0 7px; box-sizing: border-box; border-radius: 12px; background: #F2F4F7; color: #14212B; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{tile.count}}</span>
@@ -131,9 +131,11 @@ class Component extends DCLogic {
       lastTypeId: 'mute'
     };
     this.timer = null;
+    this.holdTimer = null;
   }
   componentWillUnmount() {
     if (this.timer) clearTimeout(this.timer);
+    if (this.holdTimer) clearTimeout(this.holdTimer);
   }
   now() {
     const d = new Date();
@@ -160,6 +162,31 @@ class Component extends DCLogic {
       repeat: repeat,
       lastTypeId: type.id,
       undoInfo: { kind: 'error', typeId: type.id, prevLine: s.lastLine, prevRepeat: s.repeat }
+    });
+    this.armToast();
+  }
+  // Hold a tile for 500 ms (BRD-07). The tap has logged the entry on the press; the hold adds a note to that one entry.
+  // With a note typed, it is attached to the line and the note box is cleared; one Undo removes the entry and gives the note back.
+  // With the box empty, the Edit entry sheet opens on the new entry with the cursor in the note (EditEntry.dc.html).
+  down(type) {
+    if (this.holdTimer) clearTimeout(this.holdTimer);
+    this.holdTimer = setTimeout(() => { this.holdTimer = null; this.hold(type); }, 500);
+  }
+  up() {
+    if (this.holdTimer) clearTimeout(this.holdTimer);
+    this.holdTimer = null;
+  }
+  hold(type) {
+    const s = this.state;
+    const text = s.draft.trim();
+    if (!text) return; // empty: the Edit entry sheet opens instead
+    const u = s.undoInfo;
+    if (!u || u.kind !== 'error' || u.typeId !== type.id) return;
+    this.setState({
+      draft: '',
+      lastLine: s.lastLine + ' – ' + text,
+      toastText: type.name + ' logged at ' + this.now() + ' with note',
+      undoInfo: Object.assign({}, u, { text: text })
     });
     this.armToast();
   }
@@ -191,7 +218,7 @@ class Component extends DCLogic {
     if (u.kind === 'error') {
       const counts = Object.assign({}, s.counts);
       counts[u.typeId] = Math.max(0, (counts[u.typeId] || 0) - 1);
-      this.setState({ counts: counts, entryCount: s.entryCount - 1, lastLine: u.prevLine, showToast: false, undoInfo: null, repeat: 1 });
+      this.setState({ counts: counts, draft: u.text ? u.text : s.draft, entryCount: s.entryCount - 1, lastLine: u.prevLine, showToast: false, undoInfo: null, repeat: 1 });
     } else {
       this.setState({ draft: u.text, entryCount: s.entryCount - 1, lastLine: u.prevLine, showToast: false, undoInfo: null, repeat: 1 });
     }
@@ -206,7 +233,9 @@ class Component extends DCLogic {
         count: count,
         hasCount: count > 0,
         aria: t.name + (count > 0 ? ', ' + count + ' today' : ''),
-        tap: () => this.tap(t)
+        tap: () => this.tap(t),
+        down: () => this.down(t),
+        up: () => this.up()
       };
     });
     return {

@@ -12,9 +12,14 @@ import ErrorJournalingApp
 //   pressed()  the finger went down. The screen fires the impact haptic and then records the entry, from this handler
 //              and nothing else (a finger that slides off cannot fire a haptic without an entry, Stage 5 decision 1).
 //   tapped()   the finger came up inside the tile. A release alone, or a release after sliding off, emits neither.
+//   held()     the finger stayed down on the tile for `holdMs` (500 ms) without leaving it (BRD-07). It comes after pressed(),
+//              which has already recorded the entry: a hold is a tap that went on, so the entry is recorded once. Sliding
+//              off, letting go earlier and a cancelled touch send nothing. An Other tile and an empty position cannot be held.
 //
 // A VoiceOver activation has no touch-down, so it sends the same pair, pressed() and then tapped() (decision 7), and the
-// screen's two calls are the same however the tile was reached.
+// screen's two calls are the same however the tile was reached. The board has a second VoiceOver element for each tile that
+// can be held, "Log <name> with note", while a note is typed (BoardGrid): it sends pressed() and then held() for a person
+// who cannot make the hold.
 //
 // An empty position is a button too, with a plus in it, so that a new board shows where its types go: it sends tapped()
 // alone, never pressed(), because there is nothing to record. The screen takes the person to the board setup.
@@ -41,14 +46,21 @@ Item {
     property bool skeleton: false
     // Under the empty-board card of the Log screen: drawn, but out of the screen reader's way (the card is read instead).
     property bool covered: false
-
+    // How long the finger has to stay down for held() (BRD-07, docs/plan/stage-4.md, 4.17). It is timed on the animation clock,
+    // like the press scale, so that a test moves it with the rig's `advance`.
+    property int holdMs: 500
+    // Runs from 0 to 1 while a hold is timed (see `holdTimer`); nothing reads it.
+    property real holdClock: 0
     signal pressed
     signal tapped
+    signal held
 
     // The tile takes touch and is announced as a button. Empty positions and the skeleton are neither.
     readonly property bool interactive: !isEmpty && !skeleton
     // An empty position: a button that only taps (it records nothing).
     readonly property bool addable: isEmpty && !skeleton
+    // A press on this tile can go on into a hold. Other opens a list on its tap and has nothing to hold.
+    readonly property bool holdable: interactive && !isOther
     // A finger is down on the tile.
     readonly property bool down: tap.pressed
     // The largest number the badge writes in full; from here on it reads "99+" (the accessible name has the full count).
@@ -243,6 +255,28 @@ Item {
         easing.type: Theme.motion.easingPress
     }
 
+    // The hold of BRD-07: runs from the press and is stopped by the release, a slide off and a cancel. It is timed on the animation
+    // clock and not by a Timer, so that the rig's virtual time moves it (a Timer runs on the wall clock). The clock is a number
+    // that runs from 0 to 1 and nothing reads: Qt ticks a lone PauseAnimation by the wall clock, and only a property animation
+    // by the animation clock that the rig replaces.
+    SequentialAnimation {
+        id: holdTimer
+
+        objectName: "tileHold"
+
+        NumberAnimation {
+            target: root
+            property: "holdClock"
+            from: 0
+            to: 1
+            duration: root.holdMs
+        }
+
+        ScriptAction {
+            script: root.held()
+        }
+    }
+
     TapHandler {
         id: tap
 
@@ -259,7 +293,10 @@ Item {
                 root.pressed();
                 pressOut.stop();
                 pressIn.restart();
+                if (root.holdable)
+                    holdTimer.restart();
             } else {
+                holdTimer.stop();
                 pressIn.stop();
                 pressOut.restart();
             }

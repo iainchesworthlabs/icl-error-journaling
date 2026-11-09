@@ -203,6 +203,7 @@ Tile {
     property bool skeleton: false
     signal pressedDown(real timestamp)    // from the press handler, before anything else
     signal activated()                    // VoiceOver activation, which has no touch-down
+    signal held()                         // the finger stayed on the tile for holdMs (500 ms), after pressedDown (4.17)
 }
 ```
 
@@ -231,7 +232,7 @@ for all of it; the tests are listed under each package and the device checks in 
   alternative that VoiceOver can reach. A review row is a button that opens the Edit sheet, which holds "Delete entry" and
   "Copy line"; the swipe is a shortcut for sighted users. The board-layout screen's drag has a "Move earlier", "Move later"
   and "Replace type" set of buttons on a selected miniature tile (which the screen shows to every user when a tile is
-  selected, so the path is tested by everyone). Long-press (BRD-07) is a Should; its alternative is the Edit sheet.
+  selected, so the path is tested by everyone). Long-press (BRD-07) is a Should; its alternatives are the Edit sheet of Review and, while a note is typed, the tile's second element "Log <name> with note".
 - State changes are spoken: the count after a tap is part of the announcement of the toast; the header card's name changes
   when a field is filled; the banner is announced when it appears.
 - Modal surfaces (Sheet, Alert) take accessibility focus when shown, trap it while open, and return it to the control that
@@ -751,14 +752,62 @@ in this page so a new screen cannot be forgotten).
 
 ### 4.17 Long-press to attach a note (BRD-07, Should)
 
-A press on a tile has already recorded the entry (see the rules above). Holding it for 500 ms opens the Edit sheet, focused
-on the note field, for the entry whose id arrived in `session.entryRecorded`; saving attaches the note (NOTE-06); cancelling
-leaves the entry as it was. This package is optional: it can slip to 1.1 without changing the gate.
+A press on a tile has already recorded the entry (see the rules above). Holding the finger on it for 500 ms (`Tile.holdMs`)
+adds a note to that one entry, in one of two ways. Which one is decided at the moment the hold completes, by whether the
+composer has a typed draft (**the owner chose both, 2026-11-09**, after the facilitator said "you type the note, press and
+hold the error, and it will log together"):
 
-Tests: `longpress.opens_note` (a hold beyond 500 ms after the commit opens the sheet for the new entry's id, and a tap
-shorter than that opens nothing); `longpress.records_once` (the hold records one entry, not two); `longpress.save`
-(the note is on the same line in the timeline); `longpress.cancel`; `longpress.slow_commit` (the hold passes before the
-commit: the sheet waits for `entryRecorded` and then opens); `longpress.voiceover` (no gesture needed: Edit is the path).
+1. **A draft is typed: log with it.** `session.attachDraft(entryId)` puts the draft, trimmed, on the entry as its attached
+   note (NOTE-06) and, when that has committed, clears the composer. The result is one entry on one line, with the error
+   and its note, and never an error plus a separate note. The success haptic of a saved note follows the commit, as it does
+   for a note. The toast reads "Mute Delay logged at 10:30 with note", and its **single Undo** removes the entry and puts the
+   draft back in the composer (the way a note's undo does, `UndoController::note_attached`). If the attach cannot be saved the
+   entry stays as the tap made it, the draft stays, and the write-failed banner says so; nothing typed is lost. A draft that
+   is only spaces is no draft. Text typed while the attach commits is kept.
+2. **The composer is empty: the Edit sheet.** The Edit entry sheet of Review (the same files, put in the shell's sheet layer
+   by the Log screen at the first hold) opens on the entry whose id arrived in `session.entryRecorded`, with the cursor in the
+   note field. Save attaches the note (NOTE-06); Cancel leaves the entry as it was.
+
+A **plain tap is unchanged**: it logs the error alone, leaves the composer as it is, and opens nothing. A press shorter than
+500 ms, a finger that slides off the tile before then, a cancelled touch, Other and an empty position are not holds.
+
+The press records the entry and fires the impact haptic, as always; the hold never records a second one. `recordErrorEntry`
+returns the id the entry has been given at the tap (the same id `entryRecorded` later reports), and the screen keeps the latest
+id of each tile. A hold that completes before the commit waits for `entryRecorded` of that id and then does its work (a slow
+commit changes only when). The hold has no haptic of its own: the bridge's impact haptic is the touch acknowledgement and is
+counted in the tap timing (M2), so a second one would spoil it; the success haptic of path 1 is the note's.
+
+**VoiceOver.** Activating a tile is a tap, as before. While a draft is typed, each tile that can be held has a second
+accessible element, "Log Mute Delay with note", which sends the press and then the hold, so path 1 needs no gesture. With
+no draft there is no such element: the way to a note is the Edit sheet of Review (a row opens it), as the accessibility rules
+above have it. Qt has no custom VoiceOver actions (U4), so the action is an element of its own, which only a device can
+confirm (device checklist A6; P4 and P5 are the hold itself).
+
+**The hint.** The composer's placeholder reads "Type a note, then hold a tile…" (it replaces "Add a note to today’s log…", and
+the Add button and the field's name still say what the field is). The mock-ups `Main`, `LogBanner`, `LogEmptyBoard`, `Recovery`,
+`TemplateValue`, `TileLabels`, `TileLabelsLarge` and `WriteFailed`, each in light and dark, carry the new text; the `Main`
+prototype also holds a tile for 500 ms and shows the toast and the undo of path 1. The skeleton of the launch screen has no
+placeholder, so its geometry is untouched.
+
+The hold is timed on the animation clock (a `NumberAnimation` of a property nothing reads, then a `ScriptAction`, in a
+`SequentialAnimation` that the press starts and the release, a slide off and a cancel stop), not by a `Timer` or the handler's own
+long-press timer, so that the UI rig moves it with `advance`: the rig's `hold(item, duration)` presses, advances virtual time and
+releases. (Qt ticks a lone `PauseAnimation` by the wall clock, so it is not used.)
+
+Tests (`ui` unless noted): `longpress.opens_note` (a hold beyond 500 ms after the commit opens the sheet for the new entry's
+id with the cursor in the note, and a press shorter than that opens nothing; Other, an empty position and a slide off are not
+holds); `longpress.records_once` (the hold records one entry, not two, with one impact, on both paths); `longpress.save` (the
+note is on the same line in the timeline); `longpress.cancel`; `longpress.slow_commit` (the hold passes before the commit: the
+sheet waits for `entryRecorded` and then opens); `longpress.voiceover` (no gesture needed: activation records once and
+opens nothing, and there is no "with note" element without a draft). For a typed draft: `longpress.draft_attaches` (the hold
+attaches the draft to the same line, records once and clears the draft), `longpress.draft_undo` (one Undo removes the entry
+and puts the draft back), `longpress.draft_tap` (a tap leaves the draft alone), `longpress.draft_slow_commit`,
+`longpress.draft_failed` (entry and draft stay, banner shown) and `longpress.note_action` ("Log <name> with note" exists
+only with a draft, is not on Other, and logs with it). View models (`unit`): `recordErrorEntry`, `attachDraft` (trimmed text,
+cleared after the commit, one confirmation, refusals, no overwrite, failure, text typed meanwhile is kept) and
+`UndoController::note_attached` (the toast text, the undo hands the draft back, another toast is not touched). Rig: `rig.hold`.
+
+This package is optional: it can slip to 1.1 without changing the gate.
 
 ### 4.13a Plain words in the note template editor (TestFlight feedback)
 
@@ -808,13 +857,16 @@ build and recorded (device, iOS version, result) under "Device results" at the e
 | A3 | VoiceOver: a review row opens Edit; Delete and Copy line are reachable; board layout can be edited with the buttons | REV-02 to 04, PRF-05; U4 |
 | A4 | VoiceOver: sheets and alerts trap focus and return it | NFR-07 |
 | A5 | VoiceOver: the toast and the banner are announced when they appear | U3 |
+| A6 | VoiceOver with a note typed: each tile has a second element, "Log <name> with note"; activating it logs the error with the note, once, and clears the note; with no note typed there is none | BRD-07; U4 |
 | M1 | Instruments (animation hitches): tile presses, sheet present and dismiss, toast, page push at 120 Hz | NFR-03; U7 |
 | M2 | A commit in flight (a slow store) while the sheet animates: no dropped frame | NFR-03 |
 | M3 | Reduce Motion on: transitions are fades and short | 4.3 |
 | M4 | 120 Hz: on a ProMotion phone (iPhone 17) Instruments' Display or the Core Animation frame rate shows 120 Hz during a sheet, a page push and a swipe, not 60 (`CADisableMinimumFrameDurationOnPhone`); check with Low Power Mode off, which caps the phone at 60 Hz | NFR-03; U7 |
 | M5 | Feel of the desktop defaults: the tile press (0.96, 120 ms), sheet present and dismiss (320 ms), toast in and out (240 ms), Settings page push and pop (280 ms) and row swipe release (200 ms). The `OutBack` curve overshoots by about 10 percent of the travel: the sheet must not show a gap above it nor the page stack a gap beside the page at the end of the overshoot. Note any value to change and record the final ones in "Recorded motion values" | NFR-03; U7 |
 | M6 | Reduce Motion switched on and off while the app is open: sheets, toast and page changes are 100 ms fades with no slide, the tile press still scales, and the animation is the same on the next transition after the switch | 4.3 |
-| P1 | Press a tile and hold: the haptic is at contact, the entry exists once, the count appears after the commit | BRD-03; Stage 5 decision 1 |
+| P1 | Press a tile and lift before half a second: the haptic is at contact, the entry exists once, the count appears after the commit, nothing else opens | BRD-03; Stage 5 decision 1 |
+| P4 | Hold a tile for half a second with the note box empty: one entry, the Edit entry sheet opens on it with the keyboard on the note; Save puts the note on the entry's line, Cancel leaves the entry | BRD-07, NOTE-06 |
+| P5 | Type a note, then hold a tile: the entry is logged with the note on its line and the box clears; one Undo removes the entry and the note comes back into the box. A tap on a tile with a note typed leaves the box alone. Sliding off before half a second does neither | BRD-07 |
 | P2 | Two fingers on two tiles at once record two entries | U9 |
 | P3 | Press a tile and slide off before lifting: one entry, one haptic, and the toast offers Undo | Stage 5 decision 1 |
 | K1 | Number pad appears for the unit number; the sheet lifts above the keyboard; dictation works in the note field | HDR-02, NOTE-05; U5 |
@@ -830,7 +882,7 @@ fakes. Not proved by any test on this page:
   display's colour management, and the Dynamic Island clearance. The screenshots of 4.16 and the facilitator's review are
   how this is judged, and the gate is her sign-off.
 - **VoiceOver itself.** The tests prove the accessible tree (names, roles, order, targets). They do not prove what iOS
-  speaks, the rotor behaviour, announcements (U3) or focus return. Device rows A1 to A5.
+  speaks, the rotor behaviour, announcements (U3) or focus return. Device rows A1 to A6.
 - **Dynamic Type, Reduce Motion and the appearance switch.** The tests inject scale, motion and scheme into the rig. That iOS
   delivers the changes to Qt and that Qt applies them is U6 and U8.
 - **Frame rate and animation feel.** CI proves no synchronous work is in the press path and that the right animator types
@@ -917,7 +969,10 @@ so references such as "decision 4" elsewhere on the page and in other pages reso
 15. **Orientation and iPad.** **Decided:** portrait only on iPhone, as NFR-01 and the plan have it; the layout uses
     `SafeFrame` and token sizes so a later iPad layout is a new set of screens, not a rewrite of components. (owner, 2026-11-07)
 16. **Long-press (BRD-07, Should).** **Decided:** build it last (4.17) because it depends on the Edit sheet and has no
-    effect on the gate; it can slip to 1.1. (owner, 2026-11-07)
+    effect on the gate; it can slip to 1.1. (owner, 2026-11-07) **Amended (owner, 2026-11-09), "both":** with a note typed in
+    the composer, holding a tile logs the error with that note as one entry and clears the composer, and one Undo removes the
+    entry and gives the note back; with the composer empty, the hold opens the Edit sheet on the new entry, focused on the
+    note, as first planned. A plain tap is unchanged. VoiceOver gets "Log <name> with note" while a note is typed.
 17. **Desktop build in CI.** The plan says the UI is iterated on a macOS desktop build; the Linux runner builds it too.
     **Decided:** keep the QML free of anything desktop-only except the dev file dialog in the shell, which 4.15 isolates in
     one file the iOS build does not load. (owner, 2026-11-07)

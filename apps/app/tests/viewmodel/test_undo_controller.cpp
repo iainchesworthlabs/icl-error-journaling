@@ -615,6 +615,83 @@ TEST_CASE("The undo of a tap does not touch the composer", "[viewmodel][undo]")
     CHECK(calls == 0);
 }
 
+TEST_CASE("A tap that a held tile gave a draft says so, and its undo gives the draft back", "[viewmodel][undo]")
+{
+    UndoRig rig;
+    std::vector<std::string> returned;
+    rig.controller.set_note_undo_target([&returned](const std::string& text) { returned.push_back(text); });
+    rig.commit(tap(1, melbourne(10, 20)));
+    CHECK(rig.text() == "Wrong Response logged at 10:20");
+    const int generation = rig.controller.generation();
+
+    rig.controller.note_attached(entry_id(1), "The robot paused twice");
+    CHECK(rig.text() == "Wrong Response logged at 10:20 with note");
+    // The window is the tap's: it does not restart.
+    CHECK(rig.controller.generation() == generation);
+
+    REQUIRE(rig.controller.undo());
+    CHECK(returned.empty()); // only once the undo has committed
+    rig.gateway().run_all();
+    CHECK(rig.deleted(1));
+    CHECK_FALSE(rig.controller.active());
+    REQUIRE(returned.size() == 1);
+    CHECK(returned[0] == "The robot paused twice");
+}
+
+TEST_CASE("A draft attached to another entry than the toast's is not the toast's to give back", "[viewmodel][undo]")
+{
+    UndoRig rig;
+    std::vector<std::string> returned;
+    rig.controller.set_note_undo_target([&returned](const std::string& text) { returned.push_back(text); });
+    rig.commit(tap(1, melbourne(10, 20)));
+    rig.commit(tap(2, melbourne(10, 21), 2));
+
+    rig.controller.note_attached(entry_id(1), "The robot paused twice");
+    CHECK(rig.text().find("with note") == std::string::npos);
+    REQUIRE(rig.controller.undo());
+    rig.gateway().run_all();
+    CHECK(rig.deleted(2));
+    CHECK(returned.empty());
+
+    // No toast at all: nothing happens.
+    rig.controller.note_attached(entry_id(1), "The robot paused twice");
+    CHECK_FALSE(rig.controller.active());
+}
+
+TEST_CASE("A tap with a draft whose undo commit fails keeps the draft for the retry", "[viewmodel][undo]")
+{
+    UndoRig rig;
+    std::vector<std::string> returned;
+    rig.controller.set_note_undo_target([&returned](const std::string& text) { returned.push_back(text); });
+    rig.commit(tap(1, melbourne(10, 20)));
+    rig.controller.note_attached(entry_id(1), "The robot paused twice");
+    rig.storage().repository().fail_next(RepositoryOp::SET_ENTRY_DELETED);
+
+    REQUIRE(rig.controller.undo());
+    rig.gateway().run_all();
+    CHECK(returned.empty());
+    CHECK(rig.controller.active());
+    CHECK(rig.text() == "Wrong Response logged at 10:20 with note");
+
+    REQUIRE(rig.controller.undo());
+    rig.gateway().run_all();
+    REQUIRE(returned.size() == 1);
+}
+
+TEST_CASE("A later tap replaces a toast that has a draft, and its undo takes nothing to the composer", "[viewmodel][undo]")
+{
+    UndoRig rig;
+    int calls = 0;
+    rig.controller.set_note_undo_target([&calls](const std::string&) { ++calls; });
+    rig.commit(tap(1, melbourne(10, 20)));
+    rig.controller.note_attached(entry_id(1), "The robot paused twice");
+    rig.commit(tap(2, melbourne(10, 21), 2));
+
+    REQUIRE(rig.controller.undo());
+    rig.gateway().run_all();
+    CHECK(calls == 0);
+}
+
 TEST_CASE("A delete from the review screen opens a toast and its undo restores the entry", "[viewmodel][undo]")
 {
     UndoRig rig;

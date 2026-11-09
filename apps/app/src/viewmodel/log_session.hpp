@@ -161,6 +161,19 @@ public:
     /// BRD-02. False for a type that is unknown or retired, and when the state is not `OPEN`.
     Q_INVOKABLE bool recordError(const QString& errorTypeId);
 
+    /// The same, for a caller that needs to name the entry afterwards (BRD-07: the tile that is held). Returns the id the
+    /// entry has, which is given at the tap and is the id of `entryRecorded` once the commit is through, or an empty
+    /// string when `recordError` would have returned false. The entry is not in the log until it has been committed.
+    Q_INVOKABLE QString recordErrorEntry(const QString& errorTypeId);
+
+    /// BRD-07 and NOTE-06 with a typed draft: puts the draft, trimmed, on the error entry `entryId` as its attached note,
+    /// and clears the draft when that has been committed. It is one entry with one note, never an error and a separate
+    /// note. Refused (false) for an entry that is not a live error entry of the open log (one that has not been committed
+    /// yet is not in it), one that has a note already, an empty draft, a draft over 10,000 characters, and when the state
+    /// is not `OPEN`. A draft that was changed while the commit ran is kept. The note-saved haptic follows the commit, as
+    /// for a note, and `draftAttached` tells the undo toast, which then hands the draft back when it is undone.
+    Q_INVOKABLE bool attachDraft(const QString& entryId);
+
     /// NOTE-01. The text is trimmed; empty text and text over 10,000 characters are refused.
     Q_INVOKABLE bool addNote(const QString& text);
 
@@ -246,6 +259,8 @@ signals:
     void draftChanged();
     void pendingWritesChanged();
     void entryRecorded(const QString& entryId); // after the commit; BRD-07 opens the note sheet from it
+    /// `attachDraft` has been committed: `text` (trimmed) is on the entry's line, and the draft is cleared.
+    void draftAttached(const QString& entryId, const QString& text);
     void unsharedChanged();
     /// A tap on an error type could not be saved: the commit failed or too many writes were waiting. Emitted just after
     /// the `writeFailed("recordError", ...)` of the same failure, which is unchanged, so a screen that wants the name
@@ -274,6 +289,8 @@ private:
     [[nodiscard]] bool settle(const char* operation, const Result<void, DocumentError>& submitted);
     void command_finished(const char* operation, const Result<void, StorageError>& result, Finished& finished);
     void fail_write(const char* operation, const QString& message);
+    [[nodiscard]] std::optional<EntryId> record_error(const QString& error_type_id);
+    void draft_attached(const QString& entry_id, const QString& text, const QString& submitted, std::uint64_t revision);
     [[nodiscard]] bool add_note_entry(const char* operation, NoteEntry body, const QString& submitted, bool free_text);
 
     // Header.

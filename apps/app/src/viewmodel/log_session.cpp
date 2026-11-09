@@ -527,21 +527,32 @@ bool LogSession::settle(const char* operation, const Result<void, DocumentError>
 
 bool LogSession::recordError(const QString& errorTypeId)
 {
+    return record_error(errorTypeId).has_value();
+}
+
+QString LogSession::recordErrorEntry(const QString& errorTypeId)
+{
+    const auto id = record_error(errorTypeId);
+    return id ? to_qstring(id->format()) : QString();
+}
+
+std::optional<EntryId> LogSession::record_error(const QString& errorTypeId)
+{
     constexpr const char* OPERATION = "recordError";
     if (!can_write(OPERATION))
     {
-        return false;
+        return std::nullopt;
     }
     const auto id = parse_id<ErrorTypeId>(errorTypeId);
     if (!id)
     {
-        return false;
+        return std::nullopt;
     }
     const auto& types = m_Configuration.configuration().m_ErrorTypes;
     const auto type = std::ranges::find_if(types, [&id](const ErrorType& candidate) { return candidate.m_Id == *id; });
     if (type == types.end() || type->m_Retired)
     {
-        return false;
+        return std::nullopt;
     }
 
     // The instant and the id of the tap are taken now, not when the commit finishes.
@@ -572,8 +583,64 @@ bool LogSession::recordError(const QString& errorTypeId)
     if (!accepted)
     {
         announce_record_failed(type_id, type_name);
+        return std::nullopt;
     }
-    return accepted;
+    return entry_id;
+}
+
+bool LogSession::attachDraft(const QString& entryId)
+{
+    constexpr const char* OPERATION = "attachDraft";
+    if (!can_write(OPERATION))
+    {
+        return false;
+    }
+    const auto id = parse_id<EntryId>(entryId);
+    const std::string text = to_utf8(m_Draft.trimmed());
+    if (!id || text.empty() || !note_text_fits(text))
+    {
+        return false;
+    }
+    // The mirror holds an entry from its commit on; the open log is the only one this session writes.
+    const Entry* found = m_Document->log().find(*id);
+    if (found == nullptr || found->m_Deleted)
+    {
+        return false;
+    }
+    const auto* error = std::get_if<ErrorEntry>(&found->m_Body);
+    if (error == nullptr || error->m_AttachedNote.has_value())
+    {
+        return false;
+    }
+    Entry edited = *found;
+    std::get<ErrorEntry>(edited.m_Body).m_AttachedNote = text;
+
+    const QString submitted = m_Draft;
+    const std::uint64_t revision = m_DraftRevision;
+    ++m_OwnPending;
+    auto done = make_done(OPERATION,
+                          [this, entry = *id, text, submitted, revision](bool succeeded)
+                          {
+                              if (succeeded)
+                              {
+                                  m_Feedback.note_saved(entry);
+                                  draft_attached(to_qstring(entry.format()), to_qstring(text), submitted, revision);
+                              }
+                          });
+    return settle(OPERATION, m_Document->edit_entry(*id, std::move(edited), std::move(done)));
+}
+
+void LogSession::draft_attached(const QString& entry_id, const QString& text, const QString& submitted,
+                                std::uint64_t revision)
+{
+    // The commit does not clear the stored draft (an edit does not, a note entry does), so the empty draft is written
+    // now. Text typed while the commit ran is not the text that was attached, and is kept.
+    if (m_DraftRevision == revision && m_Draft == submitted)
+    {
+        set_draft(QString());
+        write_draft_now();
+    }
+    emit draftAttached(entry_id, text);
 }
 
 bool LogSession::addNote(const QString& text)

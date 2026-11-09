@@ -11,7 +11,8 @@ import ErrorJournalingApp
 //   picker      the ErrorPickerModel, the list of error types an error entry can be given
 //   settings    the SettingsModel, for the time format of the time tumbler
 //
-// `edit(entryId)` opens the sheet on an entry. It shows the values `entryForEdit` gives and keeps the changes in a draft until
+// `edit(entryId)` opens the sheet on an entry; `editNote(entryId)` opens it with the cursor in the note, for the entry that a
+// held tile has just logged (BRD-07, NOTE-06: Cancel then leaves the entry as it was). It shows the values `entryForEdit` gives and keeps the changes in a draft until
 // Save; Cancel writes nothing. An error entry has a type, a time and an attached note; a note entry a time and its text; a
 // header change a time and its new value. The kind of an entry cannot change.
 //
@@ -56,6 +57,8 @@ Sheet {
     property string noteValue
     // The last Save or Delete was refused by the model.
     property bool saveFailed: false
+    // The sheet was opened for the note: the field takes the focus when the sheet has come up.
+    property bool noteFirst: false
 
     readonly property string kind: original.kind ?? ""
     readonly property bool isHeaderChange: kind === "header_change"
@@ -91,6 +94,10 @@ Sheet {
     // screen is dimmed once, as the design draws it.
     scrimColour: root.timeOpen ? "transparent" : Theme.colour.sheetScrim
     onClosed: root.timeOpen = false
+    onOpened: {
+        if (root.noteFirst)
+            noteInput.forceActiveFocus();
+    }
 
     // The map `validateEdit`, `previewLine` and `saveEntry` take. A key left out keeps the entry's value, so each kind sends
     // the keys it can change.
@@ -112,9 +119,14 @@ Sheet {
 
     // Opens the sheet on `id`. An entry that is not in the log opens nothing.
     function edit(id: string): void {
+        openOn(id, false);
+    }
+
+    function openOn(id: string, focusNote: bool): void {
         const data = timeline.entryForEdit(id);
         if (data.entryId === undefined)
             return;
+        noteFirst = focusNote;
         original = data;
         entryId = id;
         chosenTypeId = data.errorTypeId ?? "";
@@ -127,6 +139,11 @@ Sheet {
         page = "main";
         timeOpen = false;
         open();
+    }
+
+    // Opens the sheet on `id` with the cursor in the note.
+    function editNote(id: string): void {
+        openOn(id, true);
     }
 
     function save(): void {

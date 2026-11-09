@@ -29,6 +29,8 @@ namespace ej::viewmodel
 ///  - an error entry: "<name> logged at <time>", or "<name> logged x2 at <time>" for a repeat of the same type in the
 ///    same document while the toast was still showing (the window slides with every action);
 ///  - a note: "Note added at <time>"; its undo also hands the text back to the composer;
+///  - a tap that was held with a draft (BRD-07): `note_attached` makes its toast "<name> logged at <time> with note", and
+///    its undo takes the entry out, note and all, and hands the draft back to the composer, as a note's does;
 ///  - a delete from the review screen: "Entry deleted"; its undo restores the entry.
 /// The toast opens only after the commit, which is when the observers are told, so the window starts when the
 /// confirmation is shown and not when the finger landed. A change with origin `UNDO` never opens a toast, and nothing
@@ -102,6 +104,12 @@ public:
 
     /// Where the text of an undone note goes: the composer. Called once, after the undo has committed.
     void set_note_undo_target(MoveOnlyFunction<void(const std::string&)> target);
+
+    /// The typed draft `text` was attached, and committed, as the note of error entry `entry` (`LogSession::attachDraft`).
+    /// When the toast is that entry's tap, it now says "with note" and its undo gives `text` back to the composer along
+    /// with removing the entry (one undo, one entry). Nothing happens when the toast has moved on to another action: the
+    /// note then stays with its entry, which can no longer be undone.
+    void note_attached(EntryId entry, const std::string& text);
 
 signals:
     /// Any change of the toast: it opened, was refreshed, started or ended an undo, or closed.

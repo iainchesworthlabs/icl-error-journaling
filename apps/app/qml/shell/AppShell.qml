@@ -16,7 +16,7 @@ import ErrorJournalingApp
 //                 screen is the only one that is made for the first frame.
 //     sheets      one SheetHost for the window, so a sheet covers the tab bar: the Other picker, the new-day alert (NewDay,
 //                 which follows `day.promptVisible`), and the screens' own sheets
-//                 (the Log screen's template prompt and the Edit entry sheet of Review are put in its layer). The sheets
+//                 (the Log screen's template prompt and Edit entry sheet, and the Edit entry sheet of Review, are put in its layer). The sheets
 //                 that a screen keeps inside itself (Settings, Today's details, the editors) cover that screen.
 //     first run   while `settings.configured` is false, the first-launch screen (FirstLaunch) covers the tabs.
 //     import      the import and export rows of Settings and FirstLaunch, and "choose another file" of the import flow, go
@@ -229,6 +229,7 @@ Item {
                     timeline: root.timeline
                     settings: root.settings
                     bridge: root.bridge
+                    picker: root.picker
                     bottomClearance: tabBar.height
                     sheetLayer: root.sheetLayer
                     onTodaysDetailsRequested: root.showDetails(logStack)
