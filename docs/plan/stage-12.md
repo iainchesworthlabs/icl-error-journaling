@@ -199,7 +199,9 @@ Connect.
 - **Limits:** no Intel Macs; touch-first controls with a mouse; Qt's iOS plugin running under the Mac compatibility
   layer has not been checked; no menu bar or window sizing. Keyboard shortcuts are possible only if 12.3 is done for
   iPad hardware keyboards, which also helps iPad users.
-- **Recommended in every option** as the v1 answer for the Mac, if the check passes.
+- **Decided (owner, 10 Nov 2026): off in v1.** The iPhone and iPad app is not offered on Macs. In App Store Connect,
+  "Make this app available" on Apple-silicon Macs is turned off before the first public release (Stage 11). Route 0 is
+  considered again with the rest of this page in v2.
 
 #### Route 1: Developer ID, notarised `.dmg` (recommended if a Mac product ships)
 
@@ -396,7 +398,7 @@ None of these are done by an agent (AGENTS.md: secrets, settings and releases be
 | O-W2 | **Windows, outside-the-Store route:** buy an OV code-signing certificate through a cloud HSM service, or open Azure Trusted Signing if eligible; add its credentials as secrets | 12.7 release job | Before 12.7 merges |
 | O-M1 | **Mac, Developer ID route:** in the existing Apple Developer account, create a Developer ID Application certificate and an App Store Connect API key with the Developer role for `notarytool`; add both as repository secrets (`MACOS_DEVELOPER_ID_P12_BASE64`, its password, `ASC_API_KEY_*`); register the bundle ID (the iOS one, or a `.mac` variant, decision 6) | 12.9 | Before 12.9 merges |
 | O-M2 | **Mac, Store route (only if chosen):** add a macOS platform to the App Store Connect record, an Apple Distribution certificate and a Mac App Store profile | 12.9 | Before 12.9 merges |
-| O-M3 | **Mac, Route 0:** run the iPad TestFlight build on your Mac, and leave "Make this app available on Mac" on in App Store Connect (or turn it off if the check fails) | 12.11 | After Stage 8 is on TestFlight |
+| O-M3 | **Mac, Route 0 (v1, decided):** in App Store Connect, under Pricing and Availability, turn off availability on Apple-silicon Macs ("iPhone and iPad Apps on Apple Silicon Macs") | Stage 11 public release | Before the first public release |
 | O-H | Host the update feed (`appcast.xml`, `.appinstaller`, or the version JSON) and the downloads with the documentation | 12.7, 12.9 (non-store routes) | With Stage 11's hosting |
 | O-C | Run, or be present for, the Mac checklist; sign the gate for each platform | 12.10 | At the end |
 
@@ -404,7 +406,7 @@ None of these are done by an agent (AGENTS.md: secrets, settings and releases be
 
 | # | Decision | Recommendation |
 |---|---|---|
-| 1 | Which option: A both, B Windows only, C Mac only, D defer | **Decided (owner, 10 Nov 2026): desktop support is v2.** The recommendation was B if Stages 7 to 11 were on time, otherwise D, with Route 0 for the Mac and 12.1 now in every case. Route 0 (the iPad app on a Mac) is a store setting for Stage 11, not part of this stage |
+| 1 | Which option: A both, B Windows only, C Mac only, D defer | **Decided (owner, 10 Nov 2026): desktop support is v2.** The recommendation was B if Stages 7 to 11 were on time, otherwise D, with Route 0 for the Mac and 12.1 now in every case. Route 0 (the iPad app on a Mac) is off in v1 (owner, 10 Nov 2026), a store setting made in Stage 11 (O-M3) |
 | 2 | Windows distribution: Microsoft Store (MSIX) or a signed installer | **Microsoft Store**: no certificate, updates and SmartScreen handled, and accepting that uninstall removes the data |
 | 3 | On Windows, does a copy or a save count as "shared" for the end-of-day prompt (DAY-01)? | **Yes**, as Copy already does on the phone |
 | 4 | Exclude the Mac store from Time Machine, to match the phone's backup rule | Match whatever Stage 5 chose for the phone; if the phone's store is backed up, leave Time Machine alone |
