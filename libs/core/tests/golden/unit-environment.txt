@@ -1,0 +1,11 @@
+Facilitator: Sam Example
+Date: 7 Nov 2026
+UNIT #: UNIT-27-prod
+Location: North Site
+Software Version: 1.4.2
+
+10:05 T| Wrong Response
+11:00 UNIT # changed: UNIT-27-prod → UNIT-27-dev
+11:30 T| Mute Delay
+12:00 UNIT # changed: UNIT-27-dev → UNIT-31
+12:30 T| Speech Delay

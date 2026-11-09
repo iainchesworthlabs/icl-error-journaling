@@ -269,3 +269,58 @@ TEST_CASE("A change cannot be corrected to the value before it", "[header-histor
     CHECK(correct_header_change(log, id(1), "1.4.2").error().m_Kind == HeaderError::Kind::UNCHANGED);
     CHECK(line_of(log, id(1)) == "1.4.2 -> 1.5.0");
 }
+
+TEST_CASE("A unit may change its environment or lose it; the number can stay", "[header-history][environment]")
+{
+    Log log = make_log();
+    REQUIRE(change_header(log, HeaderField::UNIT_NUMBER, "27-prod", at(60), id(1)).has_value());
+    REQUIRE(change_header(log, HeaderField::UNIT_NUMBER, "27-dev", at(70), id(2)).has_value());
+    REQUIRE(change_header(log, HeaderField::UNIT_NUMBER, "27", at(80), id(3)).has_value());
+
+    const HeaderHistory history(log);
+    CHECK(history.at(minute(59)).m_UnitNumber->environment().empty());
+    CHECK(history.at(minute(65)).m_UnitNumber->environment() == "prod");
+    CHECK(history.at(minute(75)).m_UnitNumber->environment() == "dev");
+    CHECK(history.at(minute(85)).m_UnitNumber->environment().empty());
+    CHECK(history.at(minute(85)).m_UnitNumber->digits() == "27");
+    // The old side of a line is the stored text, so the export can print the unit as it was.
+    CHECK(history.previous_value(*log.find(id(1))) == "27");
+    CHECK(history.previous_value(*log.find(id(2))) == "27-prod");
+    CHECK(history.previous_value(*log.find(id(3))) == "27-dev");
+    CHECK(line_of(log, id(2)) == "27-prod -> 27-dev");
+
+    // Only the stored text of the log is kept, in the stored form of the unit.
+    CHECK(std::get<HeaderChangeEntry>(log.find(id(1))->m_Body).m_NewValue == "27-prod");
+}
+
+TEST_CASE("A change to the same unit with the same environment is refused, and a bad environment is refused",
+          "[header-history][environment]")
+{
+    Log log = make_log();
+    REQUIRE(change_header(log, HeaderField::UNIT_NUMBER, "27-prod", at(60), id(1)).has_value());
+    const auto same = change_header(log, HeaderField::UNIT_NUMBER, "27-prod", at(70), id(2));
+    REQUIRE_FALSE(same.has_value());
+    CHECK(same.error().m_Kind == HeaderError::Kind::UNCHANGED);
+
+    for (const char* text : {"27-Prod", "27-", "27-pro d", "27--prod"})
+    {
+        INFO(text);
+        const auto refused = change_header(log, HeaderField::UNIT_NUMBER, text, at(70), id(3));
+        REQUIRE_FALSE(refused.has_value());
+        CHECK(refused.error().m_Kind == HeaderError::Kind::INVALID_UNIT_NUMBER);
+        CHECK(refused.error().m_UnitNumber == UnitNumber::Error::BAD_ENVIRONMENT);
+    }
+    CHECK(log.entries().size() == 1);
+}
+
+TEST_CASE("Correct fixes the environment of the unit the log started with", "[header-history][environment]")
+{
+    Log log = make_log();
+    REQUIRE(correct_header(log, HeaderField::UNIT_NUMBER, "27-prod").has_value());
+    CHECK(log.entries().empty());
+    CHECK(log.initial_header().m_UnitNumber->environment() == "prod");
+    CHECK(header_field_text(log.initial_header(), HeaderField::UNIT_NUMBER) == "27-prod");
+    REQUIRE(correct_header(log, HeaderField::UNIT_NUMBER, "27").has_value());
+    CHECK(log.initial_header().m_UnitNumber->environment().empty());
+    CHECK(header_field_text(log.initial_header(), HeaderField::UNIT_NUMBER) == "27");
+}

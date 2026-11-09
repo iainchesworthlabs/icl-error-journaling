@@ -32,7 +32,7 @@ std::optional<std::string> header_field_text(const HeaderValues& header, HeaderF
     case HeaderField::UNIT_NUMBER:
         if (header.m_UnitNumber)
         {
-            return std::string(header.m_UnitNumber->digits());
+            return header.m_UnitNumber->stored();
         }
         break;
     case HeaderField::LOCATION:
@@ -64,7 +64,7 @@ Result<void, HeaderError> set_header_field(HeaderValues& header, HeaderField fie
     {
     case HeaderField::UNIT_NUMBER:
     {
-        auto parsed = UnitNumber::parse(text);
+        auto parsed = UnitNumber::parse_stored(text);
         if (!parsed)
         {
             return fail(unit_error(parsed.error()));

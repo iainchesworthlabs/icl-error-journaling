@@ -298,6 +298,16 @@ QString SettingsModel::unit_prefix() const
     return QString::fromStdString(view().m_UnitPrefix);
 }
 
+QStringList SettingsModel::unit_environments() const
+{
+    QStringList names;
+    for (const std::string& name : view().m_UnitEnvironments)
+    {
+        names.push_back(QString::fromStdString(name));
+    }
+    return names;
+}
+
 QString SettingsModel::time_style() const
 {
     return view().m_TimeFormat.m_Style == TimeStyle::H12 ? QStringLiteral("12h") : QStringLiteral("24h");

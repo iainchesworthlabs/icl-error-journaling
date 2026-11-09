@@ -730,10 +730,17 @@ void scene_new_day(Phone& phone)
 
 void scene_header(Phone& phone)
 {
-    // As the person fills it in, the unit number last, so that its field still has the focus.
+    // As the person fills it in, the unit number last, so that its field still has the focus. The version and the
+    // location are below the foot bar when the page is at rest (the Environment row is above them), so the page is
+    // scrolled to them, as a person scrolls, and back to rest for the picture.
     open_details(phone);
+    QQuickItem* scroller = phone.need(QStringLiteral("headerScroller"));
+    scroller->setProperty("contentY", scroller->property("contentHeight").toDouble() - scroller->height());
+    phone.play();
     phone.type_into(QStringLiteral("headerVersion"), QStringLiteral("1.4.2"));
     phone.tap_item(phone.nth(QStringLiteral("headerLocation"), 0));
+    phone.play();
+    scroller->setProperty("contentY", -scroller->property("topMargin").toDouble());
     phone.play();
     phone.type_into(QStringLiteral("headerUnit"), QStringLiteral("27"));
     phone.play();

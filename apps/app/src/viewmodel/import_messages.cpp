@@ -231,6 +231,51 @@ QString list_message(const ConfigError& error)
     return translate("%1 %2: the %3 is not valid.").arg(noun.m_One).arg(item).arg(field_name(error.m_Field));
 }
 
+/// A problem with the list of environments of a unit (PRF-11) or with one of its names; `m_Item` is 0 for the list.
+QString environments_message(const ConfigError& error)
+{
+    const qulonglong item = error.m_Item;
+    if (item == 0)
+    {
+        if (error.m_Problem == Problem::EMPTY)
+        {
+            return translate("The list of environments is empty. Name at least one, for example prod.");
+        }
+        if (error.m_Code == Code::WRONG_TYPE)
+        {
+            return translate("The environments are not written as a list of names.");
+        }
+        return translate("There are too many environments in the file (%1 at most).")
+            .arg(static_cast<int>(CONFIG_MAX_ENTRIES_PER_LIST));
+    }
+    switch (error.m_Problem)
+    {
+    case Problem::EMPTY:
+        return translate("Environment %1 has no name.").arg(item);
+    case Problem::TOO_LONG:
+        return translate("Environment %1 is longer than %2 characters.").arg(item).arg(error.m_Limit);
+    case Problem::NAME_TAKEN:
+    {
+        const qulonglong first = std::min<qulonglong>(error.m_Other, item);
+        const qulonglong second = std::max<qulonglong>(error.m_Other, item);
+        return translate("Environments %1 and %2 are both called %3.")
+            .arg(first)
+            .arg(second)
+            .arg(text_of(error.m_Value));
+    }
+    default:
+        break;
+    }
+    if (error.m_Code == Code::WRONG_TYPE)
+    {
+        return translate("Environment %1 is not written as text.").arg(item);
+    }
+    return translate(
+               "Environment %1 can use only lower-case letters, digits and dashes, and cannot start or end with a "
+               "dash.")
+        .arg(item);
+}
+
 QString preferences_message(const ConfigError& error)
 {
     const std::string& field = error.m_Field;
@@ -246,6 +291,10 @@ QString preferences_message(const ConfigError& error)
     {
         return translate("The preferences have a setting this app does not use: \xE2\x80\x9C%1\xE2\x80\x9D.")
             .arg(last_part(field));
+    }
+    if (field == "unit_environments")
+    {
+        return environments_message(error);
     }
     if (field == "facilitator" || field == "unit_prefix")
     {

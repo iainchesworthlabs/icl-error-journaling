@@ -259,6 +259,37 @@ TEMPLATE_LIST_TEST_CASE("A log with no unit, location or version keeps them empt
     CHECK(log.m_Log.initial_header().m_LocalDate == std::chrono::year{2026} / 11 / 8);
 }
 
+TEMPLATE_LIST_TEST_CASE("The environment of a unit is kept, changed by a correction and read back",
+                        "[contract][repository]", Fixtures)
+{
+    TestType f;
+    HeaderValues header = sample_header();
+    header.m_UnitNumber = UnitNumber::parse("27", "prod").value();
+    require_ok(f.repo().create_log(log_id(FIRST_LOG), header));
+    CHECK(f.repo().open_log().value()->m_Log.initial_header().m_UnitNumber->stored() == "27-prod");
+    CHECK(f.repo().list_logs().value().at(0).m_Header.m_UnitNumber->environment() == "prod");
+
+    // A correction with no change entry fixes the unit the log started with: the number, the environment, or both.
+    require_ok(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::UNIT_NUMBER, "31"));
+    StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(log.m_Log.initial_header().m_UnitNumber->digits() == "31");
+    CHECK(log.m_Log.initial_header().m_UnitNumber->environment().empty());
+    require_ok(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::UNIT_NUMBER, "32-dev"));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(log.m_Log.initial_header().m_UnitNumber->stored() == "32-dev");
+
+    // A value that is not a unit is refused, and the unit stays as it was.
+    CHECK(failure_of(f.repo().correct_header(log_id(FIRST_LOG), HeaderField::UNIT_NUMBER, "32-Dev")) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Log.initial_header().m_UnitNumber->stored() == "32-dev");
+
+    // A change entry carries the new unit in its stored form.
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_change(1, 10, HeaderField::UNIT_NUMBER, "32-qa")));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(std::get<HeaderChangeEntry>(log.m_Log.find(entry_id(1))->m_Body).m_NewValue == "32-qa");
+    CHECK(log.m_Log.initial_header().m_UnitNumber->stored() == "32-dev"); // the start did not move
+}
+
 TEMPLATE_LIST_TEST_CASE("Edit changes the content and records the edit time", "[contract][repository]", Fixtures)
 {
     TestType f;

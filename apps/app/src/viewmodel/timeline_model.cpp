@@ -779,7 +779,7 @@ QString TimelineModel::footnote_for(const Entry& entry, const QString& time_text
     {
         unit = m_Configuration.configured()
                    ? text_of(header.m_UnitNumber->format(m_Configuration.configuration().m_UnitPrefix))
-                   : text_of(std::string(header.m_UnitNumber->digits()));
+                   : text_of(header.m_UnitNumber->stored());
     }
     const QString version = header.m_SoftwareVersion ? text_of(header.m_SoftwareVersion->format()) : QString();
 

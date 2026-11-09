@@ -532,6 +532,40 @@ valid); `details.correct_first_fill` (filling an empty field calls `correctHeade
 change, shows the refusal for an unchanged value); `version.time_default` (the field starts at now and a time earlier than
 now is allowed); `details.keyboard` (the sheet lifts above the keyboard, the active field stays visible); cross-cutting.
 
+### 4.9a Unit environment (PRF-11, HDR-08)
+
+A change request after the visual pass, decided by the owner: the unit may carry an environment, `UNIT-27-prod`. The
+environment is optional (`UNIT-27` stays valid), picked from a list and never typed, with "None" as a choice and the default
+for a new log. The default list is `prod` and `dev`; the setup file can replace it with the optional preferences key
+`unit_environments`.
+
+Task breakdown:
+
+1. **Core.** `UnitNumber` gains an optional environment (lower-case letters, digits and dashes, 1 to 20, no dash at either
+   end) and the stored text `27-prod` (`parse_stored`, `stored`). The digits-only `parse` is unchanged, so what a person types
+   in the number field can never hold a dash. Header values, the journal record, the renderer and the SQLite repository read
+   and write the stored text; nothing in the schema or the journal version changes, and text from older builds (digits only)
+   reads as a unit without an environment. `Configuration::m_UnitEnvironments` (default `prod`, `dev`), read and written as
+   `preferences.unit_environments`, with `ConfigError` problems for an empty list, a bad name, a name that is too long, and a
+   repeated name. The export writes the key only when the list differs from the default.
+2. **View models.** `LogSession`: `unitEnvironment`, `validateUnit(digits, environment)` and `correctUnit(digits,
+   environment)` (the environment must be a choice, or the one already in force); `unitText` and the edit sheet's footnote
+   follow from the core. `SettingsModel::unitEnvironments`. `import_messages`: a plain sentence for each environment problem.
+3. **QML.** An "Environment" row under the unit field of Today's details (None, prod or dev, with a chevron) opens
+   `EnvironmentSheet`, a short `Sheet.Content` list with None first and the one in force ticked. The choice is saved with the
+   number; chosen before there is a valid number, it waits for it.
+4. **Design.** `Header.dc.html` and its dark variant show the row.
+5. **Carry-forward.** Checked: only the facilitator carries into a new log (HDR-05, DAY-02), and the unit prefix is a
+   preference rather than a part of a log, so the environment starts at None in every new log, like the number.
+
+Tests: `UnitNumber` parse, stored text and limits (`unit-number`, `environment`); the setup-file key (valid, replaced list,
+absent, round trip byte for byte, each invalid case with its structured problem); header history, the export header and a
+golden file for change lines; the journal record with and without an environment; the storage contract on both
+repositories, the SQLite column, a rebuild from the journal, damaged values, and rows written by an older build; the view
+models (`validateUnit`, `correctUnit`, the choices, a new log, the import sentences, the footnote, History); and the
+screen: `details.environment` (the row, the sheet's choices, choose prod, choose None, the number and the environment saved
+together, the setup file's list, VoiceOver names, large text, dark mode, a long list).
+
 ### 4.10 Review and Edit entry
 
 Review: the header block (monospaced-feeling, black and white), the timeline in export wording using `timeText` and

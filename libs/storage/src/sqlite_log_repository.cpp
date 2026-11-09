@@ -569,7 +569,7 @@ Result<HeaderValues, StorageError> read_header(const QSqlQuery& query, int first
     header.m_Facilitator = to_std(query.value(first + 1).toString());
     if (const auto unit = optional_text(query.value(first + 2)))
     {
-        auto parsed = UnitNumber::parse(*unit);
+        auto parsed = UnitNumber::parse_stored(*unit);
         if (!parsed)
         {
             return Failure(corrupt("a stored unit number is not valid"));
@@ -609,7 +609,7 @@ QVariantList header_values(const HeaderValues& header)
 {
     QVariantList values;
     values << to_qt(format_iso_date(header.m_LocalDate).value_or(std::string())) << to_qt(header.m_Facilitator);
-    values << (header.m_UnitNumber ? QVariant(to_qt(header.m_UnitNumber->digits())) : null_text());
+    values << (header.m_UnitNumber ? QVariant(to_qt(header.m_UnitNumber->stored())) : null_text());
     values << (header.m_Location && header.m_Location->m_Id ? QVariant(to_qt(header.m_Location->m_Id->format()))
                                                             : null_text());
     values << (header.m_Location ? QVariant(to_qt(header.m_Location->m_Text)) : null_text());

@@ -64,6 +64,8 @@ class SettingsModel : public QObject, public ConfigurationSource, public Configu
     Q_PROPERTY(bool saving READ saving NOTIFY savingChanged)
     Q_PROPERTY(QString facilitator READ facilitator NOTIFY configurationChanged) // PRF-01
     Q_PROPERTY(QString unitPrefix READ unit_prefix NOTIFY configurationChanged)  // PRF-02
+    // The choices of the environment picker on Today's details, in order, without "None" (PRF-11). Never empty.
+    Q_PROPERTY(QStringList unitEnvironments READ unit_environments NOTIFY configurationChanged)
     Q_PROPERTY(QString timeStyle READ time_style NOTIFY timeFormatChanged)       // PRF-07: "24h" or "12h"
     Q_PROPERTY(bool timeSeconds READ time_seconds NOTIFY timeFormatChanged)
     Q_PROPERTY(QString timeMeridiem READ time_meridiem NOTIFY timeFormatChanged) // "upper" or "lower"
@@ -108,6 +110,7 @@ public:
     }
     [[nodiscard]] QString facilitator() const;
     [[nodiscard]] QString unit_prefix() const;
+    [[nodiscard]] QStringList unit_environments() const;
     [[nodiscard]] QString time_style() const;
     [[nodiscard]] bool time_seconds() const;
     [[nodiscard]] QString time_meridiem() const;

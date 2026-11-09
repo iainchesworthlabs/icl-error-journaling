@@ -781,6 +781,26 @@ TEST_CASE("The row follows a correction of the header of the log under review", 
     CHECK(changed.at(0).at(2).value<QList<int>>() == QList<int>{HistoryModel::UNIT_TEXT});
 }
 
+TEST_CASE("The row shows the environment of the unit, and follows a correction of it",
+          "[viewmodel][history][unit][environment]")
+{
+    Fixture fixture;
+    fixture.load();
+    HistoryModel& history = fixture.history();
+    history.openLog(text_of(MORNING));
+    fixture.settle();
+    const int row = row_of(history, MORNING);
+
+    REQUIRE(history.review_document()->correct_header(HeaderField::UNIT_NUMBER, "27-prod", {}));
+    fixture.settle();
+    CHECK(cell(history, row, HistoryModel::UNIT_TEXT).toString() == "UNIT-27-prod");
+
+    REQUIRE(history.review_document()->correct_header(HeaderField::UNIT_NUMBER, "27", {}));
+    fixture.settle();
+    CHECK(cell(history, row, HistoryModel::UNIT_TEXT).toString() == "UNIT-27");
+    history.closeLog();
+}
+
 // ---------------------------------------------------------------------------------------------------------- delete
 
 TEST_CASE("The open log gets no delete token, nor does an id that is not listed", "[viewmodel][history][unit]")

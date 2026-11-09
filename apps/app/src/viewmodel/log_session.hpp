@@ -63,8 +63,10 @@ class LogSession : public QObject, public OpenLogSource
     // The header in force now (HeaderHistory::at(now)), for the header card. The export's header block is the start
     // values.
     Q_PROPERTY(QString facilitator READ facilitator NOTIFY headerChanged)
-    Q_PROPERTY(QString unitText READ unit_text NOTIFY headerChanged)         // "UNIT-27", or empty
+    Q_PROPERTY(QString unitText READ unit_text NOTIFY headerChanged)         // "UNIT-27" or "UNIT-27-prod", or empty
     Q_PROPERTY(QString unitDigits READ unit_digits NOTIFY headerChanged)     // "27", or empty: the number alone
+    // "prod", or empty when the unit has no environment (and when it has no number): the environment alone (PRF-11).
+    Q_PROPERTY(QString unitEnvironment READ unit_environment NOTIFY headerChanged)
     Q_PROPERTY(QString locationText READ location_text NOTIFY headerChanged) // the name, resolved from the id
     Q_PROPERTY(QString versionText READ version_text NOTIFY headerChanged)
     Q_PROPERTY(QString dateText READ date_text NOTIFY headerChanged) // "Sat 7 Nov"
@@ -121,6 +123,7 @@ public:
     [[nodiscard]] QString facilitator() const;
     [[nodiscard]] QString unit_text() const;
     [[nodiscard]] QString unit_digits() const;
+    [[nodiscard]] QString unit_environment() const;
     [[nodiscard]] bool unshared() const
     {
         return m_Unshared;
@@ -151,6 +154,15 @@ public:
     /// The inline check of HDR-04 and HDR-02, "" when the value is valid for the field. `fieldKey` is the core's
     /// `header_field_key`: `unit_number`, `location` or `software_version`.
     Q_INVOKABLE QString validateHeaderValue(const QString& fieldKey, const QString& text) const;
+
+    /// The inline check of the unit as the person builds it (HDR-02, PRF-11): `digits` as typed and `environment` as
+    /// picked, "" for none. "" when the pair is valid. The environment must be one of the configured choices or the one
+    /// in force already (a setup file that changes the list does not make a log's own environment invalid).
+    Q_INVOKABLE QString validateUnit(const QString& digits, const QString& environment) const;
+
+    /// A Correct (HDR-07) of the unit from its two parts: the same as `correctHeader("unit_number", ...)` with the
+    /// stored text "27-prod" or "27" put together here. False for a pair `validateUnit` refuses.
+    Q_INVOKABLE bool correctUnit(const QString& digits, const QString& environment);
 
     /// HDR-07 Correct: fixes the value in force and writes no entry. A first fill of an empty field is also a Correct.
     Q_INVOKABLE bool correctHeader(const QString& fieldKey, const QString& text);

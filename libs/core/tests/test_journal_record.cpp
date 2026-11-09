@@ -364,3 +364,57 @@ TEST_CASE("An entry or header with a bad part is reported, not guessed at", "[jo
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + fraction + "}"))
               .error() == DecodeError::MALFORMED);
 }
+
+TEST_CASE("A unit with an environment is stored as digits, a dash and the environment; one without is unchanged",
+          "[journal][environment]")
+{
+    // A log with no environment writes the same bytes as before environments existed: the digits alone.
+    const std::string plain = encoded(sample_record(1, CreateLogBody{sample_header(), sample_time(0), std::nullopt}));
+    CHECK(plain.find("\"unit\":\"27\"") != std::string::npos);
+
+    HeaderValues with_environment = sample_header();
+    with_environment.m_UnitNumber = UnitNumber::parse("27", "prod").value();
+    const std::string line = encoded(sample_record(1, CreateLogBody{with_environment, sample_time(0), std::nullopt}));
+    CHECK(line.find("\"unit\":\"27-prod\"") != std::string::npos);
+
+    const auto decoded = decode_record(line);
+    REQUIRE(decoded.has_value());
+    const auto& header = std::get<CreateLogBody>(decoded->m_Body).m_Header;
+    CHECK(header.m_UnitNumber->digits() == "27");
+    CHECK(header.m_UnitNumber->environment() == "prod");
+    CHECK(encoded(*decoded) == line);
+
+    // The line a build wrote before environments existed decodes to a unit without one.
+    const auto old = decode_record(plain);
+    REQUIRE(old.has_value());
+    const auto& old_header = std::get<CreateLogBody>(old->m_Body).m_Header;
+    CHECK(old_header.m_UnitNumber == UnitNumber::parse("27").value());
+    CHECK(old_header.m_UnitNumber->environment().empty());
+
+    // A change entry carries the stored text.
+    const auto change = decode_record(
+        encoded(sample_record(5, AddEntryBody{sample_change(5, 34, HeaderField::UNIT_NUMBER, "28-dev")})));
+    REQUIRE(change.has_value());
+    const auto& entry = std::get<AddEntryBody>(change->m_Body).m_Entry;
+    CHECK(std::get<HeaderChangeEntry>(entry.m_Body).m_NewValue == "28-dev");
+}
+
+TEST_CASE("A journal record whose unit has a damaged environment is refused", "[journal][environment]")
+{
+    HeaderValues with_environment = sample_header();
+    with_environment.m_UnitNumber = UnitNumber::parse("27", "prod").value();
+    const std::string line = encoded(sample_record(1, CreateLogBody{with_environment, sample_time(0), std::nullopt}));
+    // Rebuild the line with an environment that is not valid and the checksum of the new text.
+    std::string object = line.substr(0, line.size() - 18) + "}";
+    const auto at = object.find("27-prod");
+    REQUIRE(at != std::string::npos);
+    for (const char* bad : {"27-Prod", "27-", "27-pro d"})
+    {
+        INFO(bad);
+        std::string damaged = object;
+        damaged.replace(at, 7, bad);
+        const auto decoded = decode_record(with_crc(damaged));
+        REQUIRE_FALSE(decoded.has_value());
+        CHECK(decoded.error() == DecodeError::BAD_FIELD);
+    }
+}

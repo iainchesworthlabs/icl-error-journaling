@@ -272,9 +272,15 @@ QString LogSession::unit_text() const
     }
     if (!m_Configuration.configured())
     {
-        return to_qstring(std::string(header.m_UnitNumber->digits()));
+        return to_qstring(header.m_UnitNumber->stored());
     }
     return to_qstring(header.m_UnitNumber->format(m_Configuration.configuration().m_UnitPrefix));
+}
+
+QString LogSession::unit_environment() const
+{
+    const HeaderValues header = header_in_force();
+    return header.m_UnitNumber ? to_qstring(std::string(header.m_UnitNumber->environment())) : QString{};
 }
 
 QString LogSession::unit_digits() const
@@ -656,6 +662,8 @@ QString LogSession::header_message(const HeaderError& error) const
             return tr("A unit number does not start with 0.");
         case UnitNumber::Error::TOO_LONG:
             return tr("A unit number has at most 9 digits.");
+        case UnitNumber::Error::BAD_ENVIRONMENT:
+            return tr("An environment uses lower-case letters, digits and dashes.");
         }
         break;
     case Kind::INVALID_SOFTWARE_VERSION:
@@ -707,6 +715,40 @@ QString LogSession::validateHeaderValue(const QString& fieldKey, const QString& 
         }
     }
     return {};
+}
+
+QString LogSession::validateUnit(const QString& digits, const QString& environment) const
+{
+    const std::string number = to_utf8(digits.trimmed());
+    const std::string env = to_utf8(environment.trimmed());
+    if (const auto parsed = UnitNumber::parse(number, env); !parsed)
+    {
+        HeaderError error;
+        error.m_Kind = HeaderError::Kind::INVALID_UNIT_NUMBER;
+        error.m_UnitNumber = parsed.error();
+        return header_message(error);
+    }
+    if (!env.empty() && m_Configuration.configured())
+    {
+        const auto& choices = m_Configuration.configuration().m_UnitEnvironments;
+        const bool offered = std::ranges::find(choices, env) != choices.end();
+        if (!offered && to_utf8(unit_environment()) != env)
+        {
+            return tr("Choose an environment from the list.");
+        }
+    }
+    return {};
+}
+
+bool LogSession::correctUnit(const QString& digits, const QString& environment)
+{
+    if (!validateUnit(digits, environment).isEmpty())
+    {
+        return false;
+    }
+    const QString env = environment.trimmed();
+    return correctHeader(QStringLiteral("unit_number"),
+                         env.isEmpty() ? digits.trimmed() : digits.trimmed() + QLatin1Char('-') + env);
 }
 
 bool LogSession::correctHeader(const QString& fieldKey, const QString& text)
