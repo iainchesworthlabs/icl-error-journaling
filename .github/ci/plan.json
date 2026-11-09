@@ -24,6 +24,7 @@
     ".editorconfig",
     "LICENSES/**",
     "tools/tests/**",
+    "tools/visual/**",
     "store/**"
   ],
   "build": [
