@@ -39,7 +39,7 @@ def manifest(
     ]
     for name in permissions:
         lines += ["    E: uses-permission (line=9)", f'      A: {NS}:name(0x01010003)="{name}" (Raw: "{name}")']
-    activity = application_id + ".EjActivity"
+    activity = package.ACTIVITY_CLASS
     lines += [
         "    E: application (line=15)",
         f"      A: {NS}:allowBackup(0x01010280)={backup}",
@@ -95,6 +95,12 @@ class ManifestTest(unittest.TestCase):
         text = manifest().replace("=28", "=(type 0x10)0x1c").replace("=36", "=(type 0x10)0x24")
         self.assertEqual(package.manifest_problems(text), [])
 
+    def test_a_new_application_id_keeps_the_activity_class(self) -> None:
+        # The ID will change when the name is settled; the Java package of EjActivity does not.
+        text = manifest(application_id="com.example.newname")
+        self.assertEqual(package.manifest_problems(text, "com.example.newname"), [])
+        self.assertTrue(package.manifest_problems(text))  # against the default ID it is wrong
+
     def test_application_id_is_checked(self) -> None:
         problems = package.manifest_problems(manifest(application_id="org.qtproject.example"))
         self.assertTrue(any("application ID" in p for p in problems))
@@ -106,7 +112,7 @@ class ManifestTest(unittest.TestCase):
 
     def test_landscape_activity_is_refused(self) -> None:
         problems = package.manifest_problems(manifest(orientation=0))
-        self.assertEqual(problems, [f"{package.ACTIVITY} is not portrait"])
+        self.assertEqual(problems, [f"{package.ACTIVITY_CLASS} is not portrait"])
 
     def test_exported_receiver_is_refused(self) -> None:
         receiver = (
@@ -165,6 +171,13 @@ class ElfTest(unittest.TestCase):
             "GNU_RELRO      0x000680 0x0000000000004680 0x0000000000004680 0x0001d8 0x000980 R   0x1",
         )
         self.assertEqual(package.elf_problems("lib/x.so", text), [])
+
+    def test_four_kilobyte_alignment_is_allowed_on_32_bit(self) -> None:
+        text = headers("LOAD           0x000000 0x0000000000000000 0x0000000000000000 0x0680 0x0680 R E 0x1000")
+        self.assertEqual(package.elf_problems("lib/armeabi-v7a/x.so", text, require_16kb=False), [])
+
+    def test_a_32_bit_file_that_is_not_elf_is_still_reported(self) -> None:
+        self.assertEqual(len(package.elf_problems("lib/armeabi-v7a/x.so", "x", require_16kb=False)), 1)
 
     def test_no_load_segment_is_reported(self) -> None:
         self.assertEqual(len(package.elf_problems("lib/x.so", "not an ELF file")), 1)

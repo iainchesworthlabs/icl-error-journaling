@@ -13,7 +13,8 @@ For an APK it reads the merged manifest (`aapt2 dump xmltree`) and refuses:
   component exported without a permission guarding it, and backup turned off (Stage 2 decision 8: the store stays in
   the device backup).
 
-For an APK and a bundle it checks that every native library is aligned for 16 KB pages (`llvm-readelf`: each LOAD
+For an APK and a bundle it checks that every 64-bit native library (arm64-v8a, x86_64) is aligned for 16 KB pages
+(`llvm-readelf`: each LOAD
 segment aligned to at least 16 KB, and the end of GNU_RELRO on a 16 KB boundary unless nothing writable follows it in its
 segment), and for an APK that the libraries are 16 KB aligned in the zip (`zipalign -c -P 16 4`). Google Play requires
 both for targets of API 35 and up (docs/plan/stage-9.md, "Builds and toolchain"). It also checks that every library a
@@ -37,7 +38,11 @@ from pathlib import Path
 APPLICATION_ID = "com.iainchesworthlabs.errorjournaling"
 MIN_SDK = 28
 TARGET_SDK = 36
-ACTIVITY = APPLICATION_ID + ".EjActivity"
+# The Java class of the launcher activity. Its package is the one the Java sources are in, which stays as it is when the
+# application ID changes (the ID is set in CMake and need not equal the package of any class).
+ACTIVITY_CLASS = "com.iainchesworthlabs.errorjournaling.EjActivity"
+# The ABIs of 64-bit devices. Google Play asks for 16 KB page alignment on those only.
+SIXTY_FOUR_BIT = ("arm64-v8a", "x86_64")
 PAGE = 0x4000  # 16 KB
 
 # android:screenOrientation values as aapt2 prints them (the enum's integer); 1 is "portrait".
@@ -110,7 +115,7 @@ def manifest_problems(text: str, application_id: str = APPLICATION_ID) -> list[s
     if len(manifests) != 1:
         return ["the package has no manifest element"]
     manifest = manifests[0]
-    activity_id = application_id + ".EjActivity"
+    activity_id = ACTIVITY_CLASS
 
     package = manifest.attributes.get("package")
     if package != application_id:
@@ -204,12 +209,15 @@ def parse_segments(text: str) -> list[Segment]:
     return segments
 
 
-def elf_problems(library: str, text: str) -> list[str]:
-    """What stops one shared library from loading on a 16 KB device, from its program headers."""
+def elf_problems(library: str, text: str, require_16kb: bool = True) -> list[str]:
+    """What stops one shared library from loading on a 16 KB device, from its program headers. A 32-bit library
+    (require_16kb false) only has to be an ELF file: Google Play asks for 16 KB alignment on 64-bit devices."""
     segments = parse_segments(text)
     loads = [s for s in segments if s.type == "LOAD"]
     if not loads:
         return [f"{library}: no LOAD segment was read (is it an ELF file?)"]
+    if not require_16kb:
+        return []
     problems = [
         f"{library}: a LOAD segment is aligned to {hex(s.align)}, below 16 KB (0x4000)" for s in loads if s.align < PAGE
     ]
@@ -320,7 +328,7 @@ def check_package(package: Path, sdk: Path, ndk: Path, application_id: str) -> l
                 if result.returncode != 0:
                     problems.append(f"{name}: llvm-readelf failed: {result.stderr.strip()}")
                     continue
-                problems += elf_problems(name, result.stdout)
+                problems += elf_problems(name, result.stdout, abi_of(name) in SIXTY_FOUR_BIT)
                 needed[name] = parse_needed(result.stdout)
     system = set().union(*(system_libraries(ndk, abi) for abi in {abi_of(n) for n in libraries})) if libraries else set()
     if libraries and not system:

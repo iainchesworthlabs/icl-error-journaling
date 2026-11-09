@@ -200,12 +200,12 @@ private to the iOS directory (`top_view_controller`) is listed in the script and
 
 `android-build.yml` (Stage 9, package 9.1) runs on `ubuntu-24.04`. It installs:
 
-- Qt's Linux kit for the host tools, then the Android `arm64-v8a` kit (both through `setup-qt`, with the pinned
+- Qt's Linux kit for the host tools, then the Android `arm64-v8a` and `armeabi-v7a` kits (all through `setup-qt`, with the pinned
   aqtinstall source the iOS build uses, because aqtinstall 3.3.0 cannot read Qt 6.12's `all_os` repository);
 - NDK `27.2.12479018`, `platforms;android-37.0` and `build-tools;37.0.0` with the runner's `sdkmanager`, and the runner's
   JDK 21.
 
-It builds `android-release` and runs `tools/ci/check_android_package.py` on the APK and the bundle. The check fails when:
+It builds `android-release` (both ABIs, through Qt's multi-ABI build) and runs `tools/ci/check_android_package.py` on the APK and the bundle. The check fails when:
 
 - the merged manifest asks for any permission but the application's own (no `INTERNET`, no `AD_ID`);
 - the SDK range is not 28 to 36;
@@ -215,11 +215,11 @@ It builds `android-release` and runs `tools/ci/check_android_package.py` on the 
   sysroot), which would stop the app at launch with "dlopen failed";
 - the program, the Android platform plugin or the SQLite driver is missing (Qt packages plugins only for the Qt modules
   the application links itself, so `android.cmake` links Qt Sql);
-- a native library is not aligned for 16 KB pages, either in its ELF segments (`llvm-readelf`) or in the zip
+- a 64-bit native library is not aligned for 16 KB pages, either in its ELF segments (`llvm-readelf`) or in the zip
   (`zipalign -c -P 16 4`).
 
 Its unit tests are in `tools/tests/test_android_package.py`. The packages are uploaded as the `android-unsigned` artifact
-for 7 days. One cache entry is new: the Qt Android kit (one `setup-qt` entry per Qt version). No ccache
+for 7 days. Two cache entries are new: the Qt Android kits for `arm64-v8a` and `armeabi-v7a` (one `setup-qt` entry each per Qt version). No ccache
 or Gradle cache is saved, and the NDK is installed each run, outside the cache budget.
 
 ## Store graphics
