@@ -45,7 +45,7 @@ SYSTEM_PATH = re.compile(
     r"c:/windows/|/platforms/ios|iphoneos|iphonesimulator|\.sdk/"
 )
 STATIC_SUFFIXES = (".a", ".o", ".obj")
-DYNAMIC_SUFFIXES = (".dylib", ".so", ".dll", ".tbd", ".framework")
+DYNAMIC_SUFFIXES = (".dylib", ".so", ".dll", ".tbd")
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -102,11 +102,32 @@ def looks_like_library(lowered: str) -> bool:
 
 
 def linking_of(token: str) -> str:
+    """static, dynamic or unknown, from the name of a library and, when the name does not say, from the file itself.
+
+    `.a` and object files are static, `.dylib`, `.so` and `.dll` dynamic. A Qt framework on an iPhone is a file inside
+    `QtCore.framework` that is a static archive, so those are read: an archive (`!<arch>`) is static, a Mach-O dynamic library
+    (file type 6) is dynamic. A Windows `.lib` may be a static library or the import library of a DLL and is not guessed at.
+    """
     lowered = token.lower()
     if lowered.endswith(STATIC_SUFFIXES):
         return "static"
-    if lowered.endswith(DYNAMIC_SUFFIXES) or ".framework/" in lowered or ".so." in lowered:
+    if lowered.endswith(DYNAMIC_SUFFIXES) or ".so." in lowered.rsplit("/", 1)[-1] or ".dylib." in lowered.rsplit("/", 1)[-1]:
         return "dynamic"
+    if lowered.endswith(".lib"):
+        return "unknown"
+    try:
+        with open(token, "rb") as handle:
+            header = handle.read(16)
+    except OSError:
+        return "unknown"
+    if header.startswith(b"!<arch>\n"):
+        return "static"
+    if header[:4] in (bytes([0xCF, 0xFA, 0xED, 0xFE]), bytes([0xCE, 0xFA, 0xED, 0xFE])):
+        file_type = int.from_bytes(header[12:16], "little")
+        return "dynamic" if file_type == 6 else "static" if file_type == 1 else "unknown"
+    if header[:4] == bytes([0x7F, 0x45, 0x4C, 0x46]):
+        file_type = int.from_bytes(header[16:18], "little")
+        return "dynamic" if file_type == 3 else "static" if file_type == 1 else "unknown"
     return "unknown"
 
 
