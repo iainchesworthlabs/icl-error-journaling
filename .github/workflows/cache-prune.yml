@@ -1,0 +1,41 @@
+# Keeps the Actions cache inside its budget (docs/ci.md, "Actions cache"). It deletes the entries that nothing can
+# restore: those of a ref that is gone (a merged pull request, a merge-queue branch), and the older generations of each
+# family on a ref, newest kept. An entry read in the last 20 minutes stays, so a job mid-restore keeps its download. A
+# manual run takes a dry run or a key prefix to purge; the rules are in scripts/prune_actions_cache.sh of
+# icl-common-infra.
+
+name: Cache prune
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: List what would go and delete nothing
+        type: boolean
+        default: false
+      purge:
+        description: Also delete every entry whose key starts with this (empty for none)
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: cache-prune
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    name: Prune
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: write
+    steps:
+      - name: Prune the Actions cache
+        uses: iainchesworthlabs/icl-common-infra/actions/prune-actions-cache@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        with:
+          dry-run: ${{ inputs.dry-run && 'true' || 'false' }}
+          purge: ${{ inputs.purge }}

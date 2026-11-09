@@ -134,16 +134,16 @@ jobs:
 
       - name: Install GCC
         if: matrix.leg.compiler == 'gcc' || matrix.leg.compiler == 'clang'
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@62594bba592708100d459112523992fa2a736843 # v0.1.21
         with:
           export-compiler: ${{ matrix.leg.compiler == 'gcc' }}
 
       - name: Install Clang
         if: matrix.leg.compiler == 'clang'
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-llvm@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-llvm@62594bba592708100d459112523992fa2a736843 # v0.1.21
 
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@62594bba592708100d459112523992fa2a736843 # v0.1.21
 
       - name: Read toolchain versions
         id: versions
@@ -152,15 +152,15 @@ jobs:
           echo "qt=$(python3 -c "import json; print(json.load(open('.github/toolchain-versions.json')).get('qt',''))")" >> "$GITHUB_OUTPUT"
 
       - name: Install Qt
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@62594bba592708100d459112523992fa2a736843 # v0.1.21
         with:
           version: ${{ steps.versions.outputs.qt }}
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@62594bba592708100d459112523992fa2a736843 # v0.1.21
 
       - name: Set up ccache
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@62594bba592708100d459112523992fa2a736843 # v0.1.21
         with:
           key: ${{ matrix.leg.name }}-kill
 
@@ -213,8 +213,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+      # setup-ccache's cache-write policy: only a push to develop or a nightly run writes (docs/ci.md, "Actions cache").
       - name: Save ccache
-        if: always()
+        if: always() && env.CCACHE_SAVE == 'true'
         continue-on-error: true
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -224,7 +225,7 @@ jobs:
       - name: Save vcpkg caches
         if: always()
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@62594bba592708100d459112523992fa2a736843 # v0.1.21
 
   result:
     name: Result

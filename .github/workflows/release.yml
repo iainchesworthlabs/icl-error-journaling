@@ -47,7 +47,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
       - name: Check the release has notes
-        uses: iainchesworthlabs/icl-common-infra/actions/release-notes@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        uses: iainchesworthlabs/icl-common-infra/actions/release-notes@62594bba592708100d459112523992fa2a736843 # v0.1.21
         with:
           version: ${{ steps.tag.outputs.version }}
           prerelease: ${{ steps.tag.outputs.prerelease }}
@@ -112,7 +112,7 @@ jobs:
       # The shared action names the secret that is missing, before anything else is downloaded.
       - name: Import the certificate and the provisioning profile
         id: signing
-        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@62594bba592708100d459112523992fa2a736843 # v0.1.21
         with:
           certificate-base64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
           certificate-password: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
@@ -121,10 +121,10 @@ jobs:
           method: app-store
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@62594bba592708100d459112523992fa2a736843 # v0.1.21
 
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@62594bba592708100d459112523992fa2a736843 # v0.1.21
 
       # Qt's iOS kit, and the macOS kit that aqtinstall's --autodesktop installs beside it for the host tools a cross build
       # runs (moc, rcc, qmlcachegen, qsb). The version is the `qt` key of .github/toolchain-versions.json, as for every
@@ -187,7 +187,7 @@ jobs:
 
       - name: Archive and export the IPA
         id: export
-        uses: iainchesworthlabs/icl-common-infra/actions/export-ios-ipa@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        uses: iainchesworthlabs/icl-common-infra/actions/export-ios-ipa@62594bba592708100d459112523992fa2a736843 # v0.1.21
         with:
           project: ${{ steps.name.outputs.project }}
           scheme: ej_app
@@ -214,7 +214,7 @@ jobs:
       # Apple's own check of the icon, the property list, the signature and the privacy declarations; and, for a tag or a
       # manual run that asks, the upload to TestFlight.
       - name: Validate with Apple, and upload to TestFlight
-        uses: iainchesworthlabs/icl-common-infra/actions/upload-testflight@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        uses: iainchesworthlabs/icl-common-infra/actions/upload-testflight@62594bba592708100d459112523992fa2a736843 # v0.1.21
         with:
           ipa: ${{ steps.export.outputs.ipa }}
           key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
@@ -224,7 +224,7 @@ jobs:
 
       - name: Remove the signing keychain and profile
         if: always()
-        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@62594bba592708100d459112523992fa2a736843 # v0.1.21
         with:
           remove: "true"
 
@@ -260,7 +260,7 @@ jobs:
       contents: write
       id-token: write
       attestations: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/release-publish.yml@6881be87088dca1650cc047e6e3ca7ae0efb4b9c # v0.1.20
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/release-publish.yml@62594bba592708100d459112523992fa2a736843 # v0.1.21
     secrets:
       REPO_GPG_PRIVATE_KEY: ${{ secrets.REPO_GPG_PRIVATE_KEY }}
       REPO_GPG_PASSPHRASE: ${{ secrets.REPO_GPG_PASSPHRASE }}
