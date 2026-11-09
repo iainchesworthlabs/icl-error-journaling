@@ -75,6 +75,13 @@ identity is only needed to run from Xcode.
 `ej_dataset --out <directory>` writes a year of fictional data (about 80,000 entries) through the real repository. There is
 no way yet to put it on a phone without a Mac; see `docs/plan/stage-5.md`, "Timing marks".
 
+`ej_launch_image` draws the launch image of the iPhone app: the skeleton of the Log screen
+(`apps/app/qml/screens/launch/LaunchSkeleton.qml`) at 402 x 874 pt and 3x, in light and dark, into
+`apps/app/packaging/ios/Assets.xcassets/LaunchBoard.imageset`. Run it (no arguments) after a change to the Log screen's
+layout, the tab bar or the header card's shapes, and commit the two PNGs; `ctest -R launch.` fails until you do, and so does
+CI. `ej_launch_image --check` compares without writing. iOS caches launch screens: delete the app from the phone before
+judging a new image.
+
 ### Windows (developer machine)
 
 `cmake --preset windows-msvc-release` from a Visual Studio developer prompt builds the libraries, the application and

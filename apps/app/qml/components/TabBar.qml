@@ -105,7 +105,10 @@ Item {
                 readonly property color tint: tab.current ? Theme.colour.primaryText : Theme.colour.textSecondary
                 // The icon is 8 pt below the 1 pt border. Only when a large label would otherwise reach the inset does the
                 // padding give way, as far as it must.
-                readonly property real topPadding: Math.max(Theme.border.hairline, Math.min(Theme.border.hairline + Theme.space.tileGap, root.contentHeight - Theme.size.badge - labelGap - label.height))
+                readonly property real topPadding: Math.max(Theme.border.hairline, Math.min(Theme.border.hairline + Theme.space.tileGap, root.contentHeight - Theme.size.badge - labelGap - labelHeight))
+                // The height of the label's line. The skeleton takes the phone's nominal one and not the machine's font's, so
+                // that the launch image comes out the same on every machine.
+                readonly property real labelHeight: root.skeleton ? Theme.font.tabLabel.nominalPitch : label.height
                 // The gap between the icon and the label.
                 readonly property real labelGap: Theme.border.otherWidth * 2
 
