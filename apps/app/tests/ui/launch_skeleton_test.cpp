@@ -459,6 +459,12 @@ TEST_CASE("launch.same_in_any_font: the skeleton does not change with the font o
         QFont font(family);
         font.setPixelSize(13);
         const QFontMetricsF metrics(font);
+        // Text fonts only: a decorative or emoji font has a line two or three times its size, which no screen is drawn
+        // for.
+        if (metrics.height() > 1.5 * 13)
+        {
+            continue;
+        }
         if (metrics.height() < lowest)
         {
             lowest = metrics.height();

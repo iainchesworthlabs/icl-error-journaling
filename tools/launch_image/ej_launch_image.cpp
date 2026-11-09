@@ -89,7 +89,6 @@ void collect(QQuickItem* item, const QString& name, std::vector<QQuickItem*>& ou
 /// the software renderer draws it, so no graphics hardware is involved.
 [[nodiscard]] std::optional<Picture> render(const Appearance& appearance)
 {
-    QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
     QQmlEngine engine;
     QQuickWindow window;
     window.resize(FRAME_WIDTH, FRAME_HEIGHT);
@@ -344,6 +343,7 @@ int main(int argc, char* argv[])
     qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
 
     const QGuiApplication application(argc, argv);
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
     const QStringList arguments = QCoreApplication::arguments().mid(1);
 
     QString directory = QString::fromUtf8(EJ_LAUNCH_IMAGE_DIR);

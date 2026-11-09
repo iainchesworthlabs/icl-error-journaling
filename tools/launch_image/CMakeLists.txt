@@ -25,5 +25,10 @@ icl_relax_generated_warnings(ej_launch_image)
 # need the Qt DLLs on PATH (cmake/EjQtTestEnvironment.cmake).
 add_test(NAME launch.image_current COMMAND ej_launch_image --check)
 add_test(NAME launch.image_compare COMMAND ej_launch_image --self-test)
-set_tests_properties(launch.image_current launch.image_compare PROPERTIES LABELS ui TIMEOUT 120)
+# The prebuilt Qt libraries are not instrumented for ThreadSanitizer; the UI tests use the same suppressions.
+set(ej_launch_test_properties "")
+if(ICL_SANITIZERS MATCHES "thread")
+    set(ej_launch_test_properties ENVIRONMENT "TSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tools/sanitizers/tsan.supp")
+endif()
+set_tests_properties(launch.image_current launch.image_compare PROPERTIES LABELS ui TIMEOUT 120 ${ej_launch_test_properties})
 ej_qt_test_environment(launch.image_current launch.image_compare)
