@@ -92,7 +92,7 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
   src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
   qml/                the module ErrorJournalingApp (the URI differs from the executable name). Every .qml under it is
-                      found by a glob (qml/qml_files.cmake). theme/ holds the token singleton `Theme` and `SafeFrame`;
+                      found by a glob (qml/qml_files.cmake). theme/ holds the token singleton `Theme`, `SafeFrame` and the `Keyboard` singleton;
                       components/, screens/ and shell/ are Stage 4 (docs/plan/stage-4.md). Main.qml is the window and
                       shell/AppShell.qml is everything in it; platform/<ios|desktop>/ holds what differs by platform
   src/                main.cpp (builds the root and hands the models to QML), app_root.* (`ej_app_root`: the composition root,
@@ -199,7 +199,7 @@ initial properties of the engine. The engine is declared after the root and the 
 
 All QML is in the one module `ErrorJournalingApp`, in three folders (docs/plan/stage-4.md): `qml/theme/` (`Theme`, a
 `pragma Singleton` with every colour, size, radius, spacing, type role and motion value of `docs/design/tokens.json`, and
-`SafeFrame`, the only reader of the safe-area insets), `qml/components/` (one file for each component, which knows no view
+`SafeFrame`, the only reader of the safe-area insets, and `Keyboard`, the only reader of the on-screen keyboard), `qml/components/` (one file for each component, which knows no view
 model) and `qml/screens/<screen>/` (the only layer that knows the view models). A file in one folder uses a type from
 another after `import ErrorJournalingApp`, which a file of the module may do.
 

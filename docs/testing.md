@@ -87,7 +87,15 @@ indicator) in light and in dark, the 11 tile colours under the tile text, no red
 apart two tiles are for a person with deuteranopia. The approved light palette has four pairs under the rule (the Other
 tile border and the placeholder, on two backgrounds each); they are listed in `Theme` with the ratio they have, so that
 they cannot get worse. `theme_test.cpp` is `theme.matches_tokens` (every value of `docs/design/tokens.json` against the
-singleton, both ways) and `theme.dark_resolves`; `safe_frame_test.cpp` is `safe_frame.insets` and `safe_frame.override`.
+singleton, both ways) and `theme.dark_resolves`; `safe_frame_test.cpp` is `safe_frame.insets`, `safe_frame.override`, `safe_frame.keyboard` and `safe_frame.reveal`;
+`keyboard_test.cpp` is `keyboard.coverage`, `keyboard.is_text_input` and `keyboard.dismiss`.
+
+The keyboard tests model the phone's window: `UiRig::set_safe_area(62, 34)` gives every `SafeFrame` the insets of an iPhone 17
+under `Qt.ExpandedClientAreaHint` (the window is the whole screen), and `show_keyboard(h)` reports the rectangle as Qt's iOS
+plugin does, in window coordinates and docked at the bottom (`show_keyboard_starting` is the "will show" report, below the
+window). `Keyboard.hide()` takes the rig's keyboard down, so a test sees whether the app put it away. `app_flow_test.cpp` has
+the cases of each screen with a text field (`app.keyboard_details` to `app.keyboard_first_launch`) and of leaving one
+(`app.keyboard_back`, `app.keyboard_picker`, `app.keyboard_tabs`, `app.keyboard_sheets`).
 
 The core defines a name (`STRICT`) that the Windows headers behind Qt Quick define as a macro, so in a test file the
 project and Stage 3 headers come before any `<Q...>` header, which clang-format's include order gives. The headers of the

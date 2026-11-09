@@ -129,6 +129,14 @@ Item {
         });
     }
 
+    // The keyboard is up and no text field has the focus: it is put away. Pages and sheets that have just closed move the
+    // focus to a screen or to nothing, and the platform's keyboard does not always follow (it stayed over the Log screen after
+    // Today's details was left); this is the catch-all, and the PageStack, the Sheet and the tab bar dismiss it themselves.
+    function checkKeyboard(): void {
+        if (Keyboard.visible && Keyboard.focusedInput(root) === null)
+            Keyboard.hide();
+    }
+
     // The tab that was tapped again goes back to its first page.
     function popToRoot(tab: int): void {
         if (tab === logIndex)
@@ -148,6 +156,8 @@ Item {
     // History reads its list when its tab is shown, and lets the open log go when the tab is left. The first time, the
     // screen reads it itself when it has been made (`onLoaded` of its Loader).
     onCurrentTabChanged: {
+        // The field that was being typed in is on a tab that is no longer shown.
+        Keyboard.dismiss(root, null);
         const historyMade = historyScreen !== null;
         if (historyMade && previousTab === historyIndex)
             historyScreen.hidden();
@@ -172,6 +182,14 @@ Item {
         target: Theme
         property: "reduceMotion"
         value: root.bridge.reduceMotion
+    }
+
+    Connections {
+        function onActiveFocusItemChanged(): void {
+            Qt.callLater(root.checkKeyboard);
+        }
+
+        target: root.Window.window
     }
 
     Connections {

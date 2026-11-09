@@ -8,6 +8,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QtLogging>
+#include <chrono>
 
 using namespace ej::ui;
 
@@ -130,4 +131,119 @@ TEST_CASE("safe_frame.override: content in the frame passes the cross-cutting ch
             nullptr);
     expect_clean(check_safe_area(rig, 59, 34));
     expect_clean(check_everything(rig));
+}
+
+namespace
+{
+
+constexpr auto KEYBOARD_FRAME = R"(
+    import QtQuick
+    import ErrorJournalingApp
+    SafeFrame {
+        id: frame
+        objectName: "frame"
+        avoidKeyboard: true
+        Flickable {
+            objectName: "flick"
+            anchors.fill: parent
+            contentWidth: width
+            contentHeight: 1600
+            clip: true
+            Item {
+                width: parent.width
+                height: 1600
+                TextInput {
+                    objectName: "high"
+                    y: 100
+                    width: 300
+                    height: 40
+                    inputMethodHints: Qt.ImhDigitsOnly
+                }
+                TextInput {
+                    objectName: "low"
+                    y: 1200
+                    width: 300
+                    height: 40
+                }
+            }
+        }
+    })";
+
+} // namespace
+
+TEST_CASE("safe_frame.keyboard: on the full-screen window with its real insets the frame ends at the keyboard and the "
+          "top does not move",
+          "[ui][safe_frame]")
+{
+    constexpr double KEYBOARD = 301.0;
+    UiRig rig;
+    rig.set_safe_area(62, 34);
+    REQUIRE(rig.load_source(QByteArray(KEYBOARD_FRAME)) != nullptr);
+    QQuickItem* frame = rig.find(QStringLiteral("frame"));
+    QQuickItem* inner = rig.find(QStringLiteral("safeFrameInner"));
+    REQUIRE(frame != nullptr);
+    REQUIRE(inner != nullptr);
+    CHECK(frame->property("topInset").toDouble() == 62);
+    CHECK(frame->property("bottomInset").toDouble() == 34);
+    CHECK(rig.geometry(inner) == QRectF(0, 62, 402, 874 - 62 - 34));
+    CHECK(frame->property("keyboardInset").toDouble() == 0);
+
+    SECTION("it ends at the top of the keyboard, which replaces the home indicator inset")
+    {
+        rig.show_keyboard(KEYBOARD);
+        CHECK(frame->property("keyboardInset").toDouble() == KEYBOARD);
+        CHECK(rig.geometry(inner) == QRectF(0, 62, 402, 874 - KEYBOARD - 62));
+        // The status bar and the Dynamic Island stay clear, and the home indicator inset is back with the keyboard
+        // gone.
+        rig.hide_keyboard();
+        CHECK(rig.geometry(inner) == QRectF(0, 62, 402, 874 - 62 - 34));
+    }
+
+    SECTION("the start of the transition already ends the frame at the keyboard")
+    {
+        rig.show_keyboard_starting(KEYBOARD);
+        CHECK(rig.geometry(inner).bottom() == 874 - KEYBOARD);
+    }
+
+    SECTION("a keyboard that is lower than the home indicator inset leaves the frame where it is")
+    {
+        rig.show_keyboard(20);
+        CHECK(rig.geometry(inner).bottom() == 874 - 34);
+    }
+
+    SECTION("without avoidKeyboard the keyboard is ignored")
+    {
+        frame->setProperty("avoidKeyboard", false);
+        rig.show_keyboard(KEYBOARD);
+        CHECK(rig.geometry(inner) == QRectF(0, 62, 402, 874 - 62 - 34));
+    }
+}
+
+TEST_CASE(
+    "safe_frame.reveal: the field being typed in is scrolled into view in the Flickable that holds it, clear of the "
+    "keyboard and of the top inset",
+    "[ui][safe_frame]")
+{
+    constexpr double KEYBOARD = 301.0;
+    UiRig rig;
+    rig.set_safe_area(62, 34);
+    REQUIRE(rig.load_source(QByteArray(KEYBOARD_FRAME)) != nullptr);
+    QQuickItem* flick = rig.find(QStringLiteral("flick"));
+    QQuickItem* low = rig.find(QStringLiteral("low"));
+    QQuickItem* high = rig.find(QStringLiteral("high"));
+    REQUIRE(low != nullptr);
+    REQUIRE(high != nullptr);
+
+    low->forceActiveFocus();
+    rig.show_keyboard(KEYBOARD);
+    rig.advance(std::chrono::milliseconds(100));
+    CHECK(rig.geometry(flick).bottom() == 874 - KEYBOARD);
+    CHECK(rig.geometry(low).bottom() <= 874 - KEYBOARD);
+    CHECK(rig.geometry(low).top() >= 62);
+
+    // Back to a field at the top of the page: the page scrolls up to it, and does not leave it under the top inset.
+    high->forceActiveFocus();
+    rig.advance(std::chrono::milliseconds(100));
+    CHECK(rig.geometry(high).top() >= 62);
+    CHECK(rig.geometry(high).bottom() <= 874 - KEYBOARD);
 }

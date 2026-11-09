@@ -8,6 +8,9 @@ import ErrorJournalingApp
 // shows the Log screen. A refusal of either (an empty name, a prefix with a dash) is shown under its field, with a red
 // border, and the page stays.
 //
+// The page ends at the top of the keyboard (EditorPage's frame), so Continue and the line under it sit just above it, and the
+// field being typed in is scrolled into view in the page's Flickable.
+//
 // Required: `settings`, the SettingsModel. `backRequested` is "Back"; `completed` is emitted when both values were
 // accepted.
 EditorPage {
@@ -19,10 +22,6 @@ EditorPage {
     property string prefix: root.settings.unitPrefix
     property string facilitatorRefusal: ""
     property string prefixRefusal: ""
-
-    // The platform's keyboard, untyped because the QML type system sees it only as a QObject.
-    readonly property var inputMethod: Qt.inputMethod
-    readonly property real keyboardHeight: inputMethod.visible ? inputMethod.keyboardRectangle.height : 0
 
     signal backRequested
     signal completed
@@ -109,7 +108,6 @@ EditorPage {
         anchors.bottom: parent.bottom
         anchors.leftMargin: Theme.space.screenMargin
         anchors.rightMargin: Theme.space.screenMargin
-        anchors.bottomMargin: root.keyboardHeight
         // The button and the line under it are 10 pt apart, and the line ends at the bottom of the safe area.
         spacing: Theme.space.tileGap + Theme.border.hairline * 2
 

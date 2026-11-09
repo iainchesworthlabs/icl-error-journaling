@@ -205,7 +205,13 @@ Item {
 
         enabled: root.tappable
 
-        onTapped: root.activated()
+        onTapped: {
+            // A tap on a row ends the typing in a field beside it: the row takes the focus, the field saves what is typed
+            // and the keyboard goes, before the row opens a sheet or a page. A sheet then gives the focus back to the row
+            // and not to the field.
+            root.forceActiveFocus(Qt.MouseFocusReason);
+            root.activated();
+        }
     }
 
     Keys.onReturnPressed: {

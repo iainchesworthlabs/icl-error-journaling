@@ -39,57 +39,65 @@ Rectangle {
 
     color: Theme.colour.background
 
-    Flickable {
-        id: flick
-
-        objectName: "settingsFlickable"
+    // The page's own spacer keeps the content under the top inset, so this frame takes no inset: it is here for the keyboard,
+    // which ends the page at its top and scrolls the field being typed in into view.
+    SafeFrame {
         anchors.fill: parent
-        contentWidth: width
-        contentHeight: column.height + Theme.space.screenMargin
-        interactive: root.scrollable
-        boundsBehavior: Flickable.StopAtBounds
-        clip: true
+        overrideInsets: true
+        avoidKeyboard: true
 
-        Column {
-            id: column
+        Flickable {
+            id: flick
 
-            width: flick.width
-
-            // The content starts below the inset and scrolls under it; a spacer and not a margin of the Flickable, so that
-            // an inset that arrives late moves the content and not the scroll position.
-            Item {
-                objectName: "settingsTopInset"
-                width: parent.width
-                height: root.topInset
-            }
-
-            Item {
-                objectName: "settingsTitleGap"
-                width: parent.width
-                height: root.topGap
-            }
-
-            NavBar {
-                objectName: "settingsNavBar"
-                width: parent.width
-                title: root.title
-                large: true
-                leadingText: root.leadingText.length > 0 && Theme.clampedScale > root.compactScale ? qsTr("Back") : root.leadingText
-                leadingAccessibleName: qsTr("Back to %1").arg(root.leadingText)
-                leadingBack: root.leadingText.length > 0
-                trailingText: root.trailingText
-                trailingEnabled: root.trailingEnabled
-                onLeadingTriggered: root.leadingTriggered()
-                onTrailingTriggered: root.trailingTriggered()
-            }
+            objectName: "settingsFlickable"
+            anchors.fill: parent
+            contentWidth: width
+            contentHeight: column.height + Theme.space.screenMargin
+            interactive: root.scrollable
+            boundsBehavior: Flickable.StopAtBounds
+            clip: true
 
             Column {
-                id: body
+                id: column
 
-                x: Theme.space.screenMargin
-                width: parent.width - 2 * Theme.space.screenMargin
-                topPadding: root.bodyGap
-                spacing: root.bodySpacing
+                width: flick.width
+
+                // The content starts below the inset and scrolls under it; a spacer and not a margin of the Flickable, so that
+                // an inset that arrives late moves the content and not the scroll position.
+                Item {
+                    objectName: "settingsTopInset"
+                    width: parent.width
+                    height: root.topInset
+                }
+
+                Item {
+                    objectName: "settingsTitleGap"
+                    width: parent.width
+                    height: root.topGap
+                }
+
+                NavBar {
+                    objectName: "settingsNavBar"
+                    width: parent.width
+                    title: root.title
+                    large: true
+                    leadingText: root.leadingText.length > 0 && Theme.clampedScale > root.compactScale ? qsTr("Back") : root.leadingText
+                    leadingAccessibleName: qsTr("Back to %1").arg(root.leadingText)
+                    leadingBack: root.leadingText.length > 0
+                    trailingText: root.trailingText
+                    trailingEnabled: root.trailingEnabled
+                    onLeadingTriggered: root.leadingTriggered()
+                    onTrailingTriggered: root.trailingTriggered()
+                }
+
+                Column {
+                    id: body
+
+                    x: Theme.space.screenMargin
+                    width: parent.width - 2 * Theme.space.screenMargin
+                    topPadding: root.bodyGap
+                    spacing: root.bodySpacing
+                }
             }
         }
     }

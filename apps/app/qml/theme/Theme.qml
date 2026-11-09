@@ -26,6 +26,12 @@ QtObject {
     // The Dynamic Type multiplier from the bridge. It is clamped to the range of the iOS content size categories.
     property real textScale: 1.0
     property bool reduceMotion: false
+    // Test inputs: the safe area of the window that the rig simulates, offscreen, where the platform has none. SafeFrame
+    // takes the part of it that its own item touches, as the platform's SafeArea does. The iPhone 17 under the full-screen
+    // window has 62 at the top and 34 at the bottom. The app never sets them.
+    property bool overrideSafeArea: false
+    property real overrideSafeTop: 0
+    property real overrideSafeBottom: 0
 
     readonly property bool dark: colourScheme === Qt.Dark
     readonly property real clampedScale: Math.max(size.textScaleMin, Math.min(size.textScaleMax, textScale))

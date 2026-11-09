@@ -740,39 +740,63 @@ TEST_CASE("details.footer: once the page has scrolled the line goes and the butt
     CHECK(rig.geometry(note).bottom() == 874.0 - 34.0);
 }
 
-TEST_CASE("details.keyboard: the foot bar steps aside and the field being typed in stays in view",
+TEST_CASE("details.keyboard: on the full-screen window the page ends at the keyboard, the foot bar steps aside and the "
+          "field being typed in stays in view, for every field and from every scroll position",
           "[ui][header_screen]")
 {
+    // The window of the phone: it covers the screen, under the status bar and the home indicator, so the insets are
+    // real (iPhone 17: 62 and 34), and iOS reports the keyboard rectangle in the window's own coordinates.
+    constexpr double TOP = 62.0;
+    constexpr double BOTTOM = 34.0;
+    constexpr double KEYBOARD = 301.0;
     HeaderWorld world;
     UiRig rig;
+    rig.set_safe_area(TOP, BOTTOM);
     QQuickItem* screen = load_screen(rig, world);
     QQuickItem* scroller = need(rig, QStringLiteral("headerScroller"));
-    QQuickItem* version = need(rig, QStringLiteral("headerVersion"));
+    QQuickItem* nav = need(rig, QStringLiteral("headerNav"));
     QQuickItem* start = need(rig, QStringLiteral("headerStart"));
     REQUIRE(scroller != nullptr);
-    REQUIRE(version != nullptr);
-    REQUIRE(start != nullptr);
     CHECK(start->isVisible());
     const double window_height = rig.window().height();
+    const double keyboard_top = window_height - KEYBOARD;
+    const double nav_top = rig.geometry(nav).top();
+    CHECK(nav_top == TOP);
 
-    // The version field is under the foot bar while the page is at rest (the Environment row is above it): the person
-    // scrolls to it first.
-    scroller->setProperty("contentY", scroller->property("contentHeight").toDouble() - scroller->height());
-    play(rig, 64);
-    rig.tap(input_of(rig, version));
-    screen->setProperty("keyboardHeight", 336.0);
-    play(rig, 64);
+    for (const char* name : {"headerUnit", "headerVersion", "headerCommit"})
+    {
+        CAPTURE(name);
+        QQuickItem* field = need(rig, QString::fromLatin1(name));
+        for (const double scrolled : {0.0, 0.5, 1.0})
+        {
+            CAPTURE(scrolled);
+            const double most = scroller->property("contentHeight").toDouble() - scroller->height();
+            scroller->setProperty("contentY", -scroller->property("topMargin").toDouble() + scrolled * most);
+            play(rig, 64);
+            QMetaObject::invokeMethod(input_of(rig, field), "forceActiveFocus");
+            // The notification of the start of the transition, and then the end of it.
+            rig.show_keyboard_starting(KEYBOARD);
+            play(rig, 64);
+            rig.show_keyboard(KEYBOARD);
+            play(rig, 200);
 
-    const QRectF area = rig.geometry(scroller);
-    const QRectF field = rig.geometry(version);
-    CHECK(area.bottom() <= window_height - 336.0 + 0.5);
-    CHECK_FALSE(start->isVisible());
-    CHECK(field.top() >= area.top() - 0.5);
-    CHECK(field.bottom() <= area.bottom() + 0.5);
+            const QRectF area = rig.geometry(scroller);
+            const QRectF shown = rig.geometry(field);
+            // The page fills the space down to the keyboard, and not a point less.
+            CHECK(area.bottom() == keyboard_top);
+            CHECK(shown.bottom() <= keyboard_top);
+            CHECK(shown.top() >= area.top() + rig.geometry(nav).height() - 0.5);
+            CHECK_FALSE(start->isVisible());
+            // The bar stays where it was and nothing reaches above the safe area.
+            CHECK(rig.geometry(nav).top() == nav_top);
+            CHECK(area.top() >= TOP);
 
-    screen->setProperty("keyboardHeight", 0.0);
-    play(rig, 64);
-    CHECK(start->isVisible());
+            rig.hide_keyboard();
+            play(rig, 64);
+            CHECK(start->isVisible());
+            QMetaObject::invokeMethod(screen, "forceActiveFocus");
+        }
+    }
 }
 
 TEST_CASE("details.a11y: on the phone's window the names, targets and large text hold, and the page scrolls",
