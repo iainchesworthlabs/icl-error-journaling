@@ -9,7 +9,7 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Event | Jobs |
 |---|---|
 | Draft pull request | Policy, Plan, Reuse, workflow analysis, dependency scan |
-| Ready pull request | Above, plus Linux release and ASan/UBSan builds and coverage |
+| Ready pull request | Above, plus Linux release and ASan/UBSan builds. Coverage runs too when the pull request carries `deep`; otherwise the merge queue runs it |
 | Merge queue | Above, plus Linux debug and TSan, and the kill harness at 100 random kills on four legs (below). The macOS builds run too when the entry touches Apple paths or its pull request carries `deep` (below) |
 | Push to `develop` | Everything: the groups above, the macOS desktop builds (debug and release, with the tests), Xcode 27 as a leg that cannot fail the run, and the kill harness. Then Report red and Mark green |
 | Change to what the iOS build reads, or a manual run | iOS compile check for a device (`ios-build.yml`, not required). A pull request runs it only for Apple paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
@@ -17,6 +17,7 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Change to the documentation site (`docs/`, `mkdocs.yml`, `tools/docs/`, `config/sample-config.json`) | The site build (`docs.yml`). The push to `main` publishes it. The hook `tools/docs/demo_setup_hook.py` adds `demo/demo-setup.ejconfig`, a copy of the sample setup, for App Review (Stage 11, 11.3) |
 | Nightly | CodeQL; the kill harness at 1,000 random kills (`kill-nightly.yml`); the weekly CI metrics (`ci-metrics.yml`, Mondays 06:00 UTC) |
 | Hourly | The Actions cache prune (`cache-prune.yml`, below) |
+| Every 15 minutes | Cancel the runs of merge-queue entries that are gone (`cancel-orphan-queue-runs.yml`, below) |
 | Manual run of the Stage 2 exit gate | The kill harness at 10,000 random kills on Linux and macOS (`kill-gate.yml`) |
 | Tag `v*` | Release: the source archive, and the signed iOS build for TestFlight |
 
@@ -92,6 +93,39 @@ What to look at after a run:
 
 Run the exit gate with `gh workflow run kill-gate.yml -f seed=0x... [-f iterations=10000] [-f shards=10] [-f systems=both]`. The
 workflow runs from the default branch; its result and seed are recorded in `docs/plan/stage-2.md`, section 8.
+
+## Where the time goes, and the limits
+
+Measured on 10 November 2026 over the last 40 merge-queue and 40 pull request runs of `ci.yml`.
+The repository is public and its jobs run on GitHub-hosted runners (`ubuntu-26.04`, `ubuntu-24.04`, `macos-26`);
+the organisation is on the Free plan, which allows 20 jobs at once (5 on macOS). The self-hosted `tf-gh-*` pool is not
+in this repository's runner groups. When a dozen sessions push, the 20 slots are full and even the 10-second jobs wait
+10 to 50 minutes for one, so the queue's wall time is mostly waiting.
+
+| Run | Runner-minutes (median, max) | Where it goes |
+|---|---|---|
+| Pull request | 46, 77 | Linux release 22, ASan/UBSan 9 (26 with a cold ccache), coverage 15 |
+| Queue entry, code change | 104, 304; about 170 with the macOS and screenshot legs | Linux release 23, debug 19, TSan 15, ASan/UBSan 9, coverage 20, kill harness 4 legs 22 |
+| Queue entry, documents only | about 1 | the static jobs; every build is skipped by the plan |
+
+A code-change queue entry therefore holds about 170 of the 20 x 60 = 1,200 runner-minutes an hour, nearly 15 percent of
+the pool, and every pull request push adds about a quarter of that again. A pull request run used to repeat the coverage job that the
+queue entry runs on the merged tree; coverage now runs on a pull request only with the `deep` label.
+
+**Job limits.** Healthy Linux build legs ran up to 30 minutes (release 30.0, ASan/UBSan 28.6, TSan 28.7 on a cold
+cache), so the old limit of 30 cancelled good jobs. The Linux legs now have 60 minutes. Coverage (45, slowest 27), the
+kill harness (90, slowest 11) and the macOS legs (30, slowest 15) keep their limits. The merge queue's own
+`check_response_timeout_minutes` is a ruleset setting; it must exceed the time a healthy entry takes under load (the
+longest successful entries took 93 and 113 minutes), so it is set to 120.
+
+## Orphaned queue runs
+
+When a queue entry is ejected, GitHub deletes its `gh-readonly-queue/...` branch, but its workflow runs carry on and
+hold runners; the entry is then re-queued and starts another run. `cancel-orphan-queue-runs.yml` runs every 15 minutes
+(`tools/ci/cancel_orphan_queue_runs.py`). It cancels a queued or running `merge_group` run only when the run is over
+ten minutes old and GitHub answers 404 for its branch on two lookups 20 seconds apart. Any other answer, including an
+error or a rate limit, keeps the run. A live entry's branch exists for as long as its runs do, so it is never cancelled.
+A manual run defaults to a dry run: `gh workflow run cancel-orphan-queue-runs.yml -f dry-run=true`.
 
 ## Required checks
 

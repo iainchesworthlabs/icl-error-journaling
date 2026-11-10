@@ -1,7 +1,7 @@
 name: CI
 
 # The pull request gate. Pull requests (drafts included) run the static checks. Ready pull
-# requests and merge-queue entries also build. Linux debug and TSan run in the merge queue. The
+# requests also build (Linux release and ASan/UBSan; coverage with the `deep` label). Merge-queue entries build everything. Linux debug and TSan run in the merge queue. The
 # macOS builds run after the merge, on the push to develop, unless the queue entry touches Apple
 # paths or its pull request carries the `deep` label (docs/ci.md).
 #
@@ -155,8 +155,8 @@ jobs:
       # and `null != false` is false in a workflow expression), although its header says the default is to test.
       legs: >-
         [
-          {"name": "linux-gcc-release", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-release", "qt": true, "tests": true, "timeout_minutes": 30},
-          {"name": "linux-clang-asan-ubsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-asan-ubsan", "qt": true, "tests": true, "timeout_minutes": 30}
+          {"name": "linux-gcc-release", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-release", "qt": true, "tests": true, "timeout_minutes": 60},
+          {"name": "linux-clang-asan-ubsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-asan-ubsan", "qt": true, "tests": true, "timeout_minutes": 60}
         ]
 
   build-linux-full:
@@ -169,8 +169,8 @@ jobs:
     with:
       legs: >-
         [
-          {"name": "linux-gcc-debug", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-debug", "qt": true, "tests": true, "vcpkg_features": "profiling", "timeout_minutes": 30},
-          {"name": "linux-clang-tsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-tsan", "qt": true, "tests": true, "timeout_minutes": 30}
+          {"name": "linux-gcc-debug", "runner": ["ubuntu-26.04"], "compiler": "gcc", "preset": "linux-debug", "qt": true, "tests": true, "vcpkg_features": "profiling", "timeout_minutes": 60},
+          {"name": "linux-clang-tsan", "runner": ["ubuntu-26.04"], "compiler": "clang", "preset": "linux-tsan", "qt": true, "tests": true, "timeout_minutes": 60}
         ]
 
   build-macos:
@@ -226,10 +226,12 @@ jobs:
           {"name": "macos-debug", "runner": ["macos-26"], "preset": "macos-debug"}
         ]
 
+  # Coverage runs in the merge queue and on a push; a pull request runs it only with the `deep` label (docs/ci.md,
+  # "Where the time goes"), because the queue entry repeats it on the merged tree.
   coverage:
     name: Coverage
     needs: plan
-    if: needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
+    if: needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'deep')))
     runs-on: ubuntu-26.04
     timeout-minutes: 45
     permissions:
@@ -362,7 +364,7 @@ jobs:
           expected: >-
             {
               "build-fast": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }},
-              "coverage": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }},
+              "coverage": ${{ needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'deep'))) }},
               "build-linux-full": ${{ needs.plan.outputs.build == 'true' && github.event_name != 'pull_request' }},
               "build-macos": ${{ needs.plan.outputs.macos == 'true' }},
               "macos-xcode27": ${{ needs.plan.outputs.build == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }},
