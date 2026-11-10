@@ -63,6 +63,13 @@ kit's. The application is portrait only (`Info.plist.in`).
   application uses no encryption beyond the system's. Change it only if that stops being true. The check refuses usage
   text for a permission the application does not ask for. Safe areas are the application's: it reads `SafeArea.margins`
   (Qt 6.9 or later).
+- **Privacy manifest.** `apps/app/packaging/ios/PrivacyInfo.xcprivacy`, copied to the top of the bundle by `ios.cmake`,
+  declares no tracking, no tracking domains and no collected data, and gives a reason for each required-reason API the
+  executable calls (Qt is static, so the reasons for Qt's calls are the application's). `tools/ci/check_ios_plist.py`
+  checks the keys and the reason codes. `verify_app.sh` scans the built executable's imports and names, fails when it
+  calls an API of a category the manifest does not declare, or carries the Tracy profiler. Qt QML links Qt Network, so
+  the executable carries network code the application never calls; `verify_app.sh` reports it, and
+  `tools/ci/check_no_network.py` keeps the application's own code free of network use and remote URLs (Stage 11, 11.2).
 - **The setup file type.** The property list exports one type of its own, `com.iainchesworthlabs.errorjournaling.config`
   (extension `ejconfig`, conforming to `public.json`), names it in `CFBundleDocumentTypes` with the handler rank Owner,
   and registers `public.json` as an alternate, so a setup file that was not renamed still offers the application.

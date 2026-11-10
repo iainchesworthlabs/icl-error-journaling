@@ -14,6 +14,7 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Push to `develop` | Everything: the groups above, the macOS desktop builds (debug and release, with the tests), Xcode 27 as a leg that cannot fail the run, and the kill harness. Then Report red and Mark green |
 | Change to what the iOS build reads, or a manual run | iOS compile check for a device (`ios-build.yml`, not required). A pull request runs it only for Apple paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
 | Change to what the Android build reads, or a manual run | Android build (`android-build.yml`, not required): the unsigned APK and bundle of `android-release`, checked by `tools/ci/check_android_package.py`. A pull request runs it for the Android paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
+| Change to the documentation site (`docs/`, `mkdocs.yml`, `tools/docs/`, `config/sample-config.json`) | The site build (`docs.yml`). The push to `main` publishes it. The hook `tools/docs/demo_setup_hook.py` adds `demo/demo-setup.ejconfig`, a copy of the sample setup, for App Review (Stage 11, 11.3) |
 | Nightly | CodeQL; the kill harness at 1,000 random kills (`kill-nightly.yml`); the weekly CI metrics (`ci-metrics.yml`, Mondays 06:00 UTC) |
 | Hourly | The Actions cache prune (`cache-prune.yml`, below) |
 | Manual run of the Stage 2 exit gate | The kill harness at 10,000 random kills on Linux and macOS (`kill-gate.yml`) |
@@ -236,8 +237,15 @@ placeholders stubbed). It fails when the exported type's identifier, description
 in `libs/ios_bridge/include/error_journaling/document_types.hpp`, when the document types do not name the exported
 type (role Viewer, rank Owner) and `public.json` (rank Alternate), when `LSSupportsOpeningDocumentsInPlace` is not
 false, when `UIFileSharingEnabled` is on, when `CADisableMinimumFrameDurationOnPhone` is not true (a ProMotion phone
-would run the app at 60 Hz, U7), or when a usage-description key appears. Its unit tests are in
-`tools/tests/test_ios_plist.py`. `verify_app.sh` repeats the type, the document type, the two flags and the 120 Hz key on the built
+would run the app at 60 Hz, U7), or when a usage-description key appears. It also reads the privacy manifest,
+`apps/app/packaging/ios/PrivacyInfo.xcprivacy`, and fails unless tracking is false, the tracking domains and collected
+data types are empty, and each accessed API category is one of Apple's with an application's reason code for it. Its unit
+tests are in `tools/tests/test_ios_plist.py`. On the built bundle `verify_app.sh` checks that the manifest is there and
+declares each required-reason category the executable calls and carries no Tracy profiler, and reports the network code
+that Qt QML links (Qt Network) without refusing it. The **Plan** job also runs `tools/ci/check_no_network.py`, which fails
+when the application's code in `apps/` or `libs/` (tests aside) uses a network API (Qt Network, `NSURLSession`,
+`CFNetwork`, `Network.framework`, BSD sockets), links `Qt6::Network`, or names a remote URL other than the project's own
+pages, which only ever open in the browser. Its unit tests are in `tools/tests/test_no_network.py` (Stage 11, 11.2). `verify_app.sh` repeats the type, the document type, the two flags and the 120 Hz key on the built
 bundle. It also checks the launch screen (Stage 5, 5.8): `UILaunchScreen` names a colour and an image that exist in the asset
 catalogue, each with a light and a dark entry; the image ignores the safe area (`UIImageRespectsSafeAreaInsets` false); the
 two PNGs are 1206 x 2622 px (402 x 874 pt at 3x) and opaque; and the colour is the `background` token in both modes.

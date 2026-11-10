@@ -17,6 +17,10 @@ Parses apps/app/packaging/ios/Info.plist.in with the CMake placeholders stubbed 
     a dark variant, the image ignores the safe area, the PNGs are 1206 x 2622 px (402 x 874 pt at 3x) and opaque, and the
     colour is the `background` token in both modes.
 
+It also checks the privacy manifest, apps/app/packaging/ios/PrivacyInfo.xcprivacy (docs/plan/stage-11.md, task 11.2):
+no tracking, no tracking domains, no collected data types, and each accessed API category one of Apple's with reason
+codes of that category. packaging/ios/verify_app.sh checks the built executable's symbols against it.
+
 A later package adds the entitlements. docs/plan/stage-5.md, "CI changes outside the test suites".
 """
 
@@ -31,6 +35,16 @@ import sys
 from pathlib import Path
 
 PLIST = Path("apps/app/packaging/ios/Info.plist.in")
+PRIVACY_MANIFEST = Path("apps/app/packaging/ios/PrivacyInfo.xcprivacy")
+# Apple's required-reason API categories and the reason codes an application (not a third-party SDK) may give for each.
+# 0A2A.1 and the other wrapper reasons are for an SDK's own manifest; Qt is static here, so the application is the caller.
+PRIVACY_REASONS = {
+    "NSPrivacyAccessedAPICategoryFileTimestamp": {"DDA9.1", "C617.1", "3B52.1"},
+    "NSPrivacyAccessedAPICategorySystemBootTime": {"35F9.1", "8FFB.1", "3D61.1"},
+    "NSPrivacyAccessedAPICategoryDiskSpace": {"85F4.1", "E174.1", "7D9E.1", "B728.1"},
+    "NSPrivacyAccessedAPICategoryActiveKeyboards": {"3EC4.1", "54BD.1"},
+    "NSPrivacyAccessedAPICategoryUserDefaults": {"CA92.1", "1C8F.1", "AC6B.1"},
+}
 CATALOGUE = Path("apps/app/packaging/ios/Assets.xcassets")
 TOKENS = Path("docs/design/tokens.json")
 LAUNCH_IMAGE_SIZE = (1206, 2622)
@@ -232,6 +246,36 @@ def check_launch_screen(plist: dict, catalogue: Path, tokens: dict) -> list[str]
     return problems
 
 
+def check_privacy_manifest(manifest: dict) -> list[str]:
+    """The manifest declares no tracking and no collection, and gives valid reasons for each accessed API category."""
+    problems = []
+    if manifest.get("NSPrivacyTracking") is not False:
+        problems.append("PrivacyInfo.xcprivacy: NSPrivacyTracking must be false (the application tracks no one)")
+    if manifest.get("NSPrivacyTrackingDomains", []) != []:
+        problems.append("PrivacyInfo.xcprivacy: NSPrivacyTrackingDomains must be empty (the application has no network access)")
+    if manifest.get("NSPrivacyCollectedDataTypes", []) != []:
+        problems.append("PrivacyInfo.xcprivacy: NSPrivacyCollectedDataTypes must be empty (the application collects no data)")
+    for key in ("NSPrivacyTracking", "NSPrivacyTrackingDomains", "NSPrivacyCollectedDataTypes", "NSPrivacyAccessedAPITypes"):
+        if key not in manifest:
+            problems.append(f"PrivacyInfo.xcprivacy: {key} is missing")
+    seen = set()
+    for entry in manifest.get("NSPrivacyAccessedAPITypes", []):
+        category = entry.get("NSPrivacyAccessedAPIType")
+        reasons = entry.get("NSPrivacyAccessedAPITypeReasons", [])
+        if category not in PRIVACY_REASONS:
+            problems.append(f"PrivacyInfo.xcprivacy: {category!r} is not a required-reason API category")
+            continue
+        if category in seen:
+            problems.append(f"PrivacyInfo.xcprivacy: {category} is declared twice")
+        seen.add(category)
+        if not reasons:
+            problems.append(f"PrivacyInfo.xcprivacy: {category} gives no reason")
+        for reason in reasons:
+            if reason not in PRIVACY_REASONS[category]:
+                problems.append(f"PrivacyInfo.xcprivacy: {reason!r} is not an application's reason for {category}")
+    return problems
+
+
 def run(root: Path) -> list[str]:
     plist_path = root / PLIST
     header_path = root / CONSTANTS
@@ -243,6 +287,14 @@ def run(root: Path) -> list[str]:
     except Exception as error:  # a malformed template is a finding, not a crash
         return [f"{PLIST} is not a valid property list: {error}"]
     problems = check(plist, read_constants(header_path.read_text(encoding="utf-8")))
+    manifest_path = root / PRIVACY_MANIFEST
+    if not manifest_path.is_file():
+        problems.append(f"{manifest_path} not found")
+    else:
+        try:
+            problems += check_privacy_manifest(plistlib.loads(manifest_path.read_bytes()))
+        except Exception as error:  # a malformed manifest is a finding, not a crash
+            problems.append(f"{PRIVACY_MANIFEST} is not a valid property list: {error}")
     tokens_path = root / TOKENS
     if not tokens_path.is_file():
         return problems + [f"{tokens_path} not found"]

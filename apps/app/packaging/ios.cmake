@@ -87,6 +87,11 @@ function(ej_configure_ios_app target)
     # A source path ending in .xcassets is what tells the Xcode generator to compile the catalogue, not copy it.
     target_sources(${target} PRIVATE "${assets}")
     set_source_files_properties("${assets}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    # The privacy manifest, copied to the top of the bundle (an iOS bundle is flat, so Resources is its root). Qt is static
+    # here, so the application's manifest declares what Qt calls too (the file says what and why).
+    set(privacy_manifest "${ERROR_JOURNALING_PACKAGING_DIR}/ios/PrivacyInfo.xcprivacy")
+    target_sources(${target} PRIVATE "${privacy_manifest}")
+    set_source_files_properties("${privacy_manifest}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     ej_ios_default_plugins()
 
     # Signing, for a build that is signed. They sign the application target alone: signing every Xcode target forces Xcode

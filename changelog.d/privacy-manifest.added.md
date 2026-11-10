@@ -1,0 +1,1 @@
+**Privacy manifest.** The iOS app now carries Apple's privacy manifest. It declares no tracking and no collected data, and gives a reason for each system API that needs one. Every iOS build checks the manifest against the executable, and checks that the app has no network code. Not yet run on a device.

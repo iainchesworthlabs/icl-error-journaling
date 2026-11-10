@@ -102,20 +102,20 @@ wide in portrait. It puts every iPad in landscape in `Wide`. A half-screen Split
 The height condition keeps a short, wide window (a desktop window, or Stage Manager) out of the side-by-side layout. At
 640 pt the board would have tiles shorter than the 88 pt minimum, so such a window uses the column instead.
 
-A new QML singleton, `Layout` (`apps/app/qml/theme/Layout.qml`), holds:
+A new QML singleton, `WindowLayout` (`apps/app/qml/theme/WindowLayout.qml`), holds:
 - the class;
 - the derived sizes from the table below;
 - the window size it was computed from.
 
-`AppShell` binds `Layout.windowWidth` and `Layout.windowHeight` to its own size, in the same way it binds
+`AppShell` binds `WindowLayout.windowWidth` and `WindowLayout.windowHeight` to its own size, in the same way it binds
 `Theme.textScale` to the bridge. On a phone the values in `Compact` are exactly today's `Theme` values. That is how the
-phone layout stays unchanged: a component reads `Layout.screenMargin` where it reads `Theme.space.screenMargin` today, and
-in `Compact` the two are the same number. The theme literal check (`check_qml_literals.py`) applies to `Layout.qml` as it
-does to `Theme.qml`.
+phone layout stays unchanged: a component reads `WindowLayout.screenMargin` where it reads `Theme.space.screenMargin` today, and
+in `Compact` the two are the same number. The rules themselves are in `tokens.json` under `layout` and in `Theme.layout`, so `WindowLayout.qml` writes no
+number. It is not called `Layout`, so that it cannot clash with the attached `Layout` of Qt Quick Layouts.
 
 ### Layout rules
 
-The mock-up script uses these numbers, and so will `Layout.qml`. `Compact` is today's phone value.
+The mock-up script uses these numbers, and so will `WindowLayout.qml`. `Compact` is today's phone value.
 
 | Rule | Compact | Regular | Wide |
 |---|---|---|---|
@@ -150,18 +150,18 @@ with it over the board. The composer stays over the board, because hold-to-log-w
 
 | Item | Change |
 |---|---|
-| `theme/Layout.qml` (new) | The class and the sizes above, from the window's size. |
-| `shell/AppShell.qml` | Binds `Layout` to its size. Gives each tab its column. The tab bar's tabs sit in the log column. The Review toast is placed by class. |
+| `theme/WindowLayout.qml` (new) | The class and the sizes above, from the window's size. |
+| `shell/AppShell.qml` | Binds `WindowLayout` to its size. Gives each tab its column. The tab bar's tabs sit in the log column. The Review toast is placed by class. |
 | `Main.qml` | No change to the window. Its starting size stays the phone frame. The platform sets the real size on iOS, and the desktop window can be resized (Stage 12 decides its minimum). |
-| `components/BoardGrid.qml`, `Tile.qml` | Tile height, gap, label size and badge come from `Layout`. The board's `implicitWidth` comes from its column, not `Theme.frame`. |
-| `screens/log/LogScreen.qml` | One screen with two arrangements, chosen by `Layout.wide`: the column (Compact and Regular), or the board pane and the log pane. The items are moved, not made again, so a rotation keeps the draft note, the focus, the toast and its undo, a held tile, and an open sheet. |
+| `components/BoardGrid.qml`, `Tile.qml` | Tile height, gap, label size and badge come from `WindowLayout`. The board's `implicitWidth` comes from its column, not `Theme.frame`. |
+| `screens/log/LogScreen.qml` | One screen with two arrangements, chosen by `WindowLayout.wide`: the column (Compact and Regular), or the board pane and the log pane. The items are moved, not made again, so a rotation keeps the draft note, the focus, the toast and its undo, a held tile, and an open sheet. |
 | `screens/log/private/LogPane.qml` (new) | The log pane: the header card, the title row with the entry count and Copy, the rows of today's log in Review's wording and black and white, and Share log. It binds to the same `timeline` model as Review and reuses Review's row (swipe for Copy and Delete, tap for Edit entry). It scrolls to the newest entry when one is added. |
-| `components/Sheet.qml`, `SheetHost.qml` | A form-sheet mode when `Layout.compact` is false: centred, 560 wide, four rounded corners, no grabber or detents, and the same scrim. A sheet that is open during a rotation moves to its new place. |
+| `components/Sheet.qml`, `SheetHost.qml` | A form-sheet mode when `WindowLayout.compact` is false: centred, 560 wide, four rounded corners, no grabber or detents, and the same scrim. A sheet that is open during a rotation moves to its new place. |
 | `components/UndoToast.qml` | Its width and anchor come from the screen that holds it, not from `Theme.frame`. |
 | Pages (`NavBar`, `PageStack` pages, `GroupedList`, `FormField`, `MiniBoard`, editors, History, Review) | Content goes in the form or reading column. The nav bar stays full width, with its title centred on the column. |
 | `screens/setup/FirstLaunch*.qml` | The 480 column, centred vertically. |
 | `screens/launch/LaunchSkeleton.qml` | Unchanged. The launch image is phone only (see [Launch screen](#launch-screen-on-ipad)). |
-| `Theme.frame` | Stays as the phone's design frame, for the phone tests and the launch image. There are 37 uses of `Theme.frame` in 27 QML files, mostly implicit sizes. 8.1 checks each one and moves those that are really "the window's size" to `Layout`. |
+| `Theme.frame` | Stays as the phone's design frame, for the phone tests and the launch image. There are 37 uses of `Theme.frame` in 27 QML files, mostly implicit sizes. 8.1 checks each one and moves those that are really "the window's size" to `WindowLayout`. |
 
 All of this is QML. The only native code is two small bridge changes, each in `src/platform/ios/` with an empty
 desktop version: the minimum window size ([Multitasking](#multitasking-split-view-and-stage-manager)) and the anchor of the
@@ -273,9 +273,9 @@ values.
 
 | # | Package | Contents | Tests |
 |---|---|---|---|
-| 8.1 | Layout classes | `Layout.qml`, bound by `AppShell`. The audit of `Theme.frame` uses. The UI rig gains a window size and safe-area insets (left, right, top, bottom) for each test. `ej_ui_tests` capture at iPad sizes. There is no visible change. | T8-1, T8-2 |
+| 8.1 | Layout classes | `WindowLayout.qml`, bound by `AppShell`. The audit of `Theme.frame` uses. The UI rig gains a window size and safe-area insets (left, right, top, bottom) for each test. `ej_ui_tests` capture at iPad sizes. There is no visible change. | T8-1, T8-2 |
 | 8.2 | Regular: columns | The log, form, reading and first-launch columns. The tab bar in the column. Margins. | T8-3, T8-4, T8-9 |
-| 8.3 | Regular: board | Tile size, gap, label and badge from `Layout`. The toast under the board. Shorter tiles in a short `Compact` window. | T8-3, T8-6, T8-7 |
+| 8.3 | Regular: board | Tile size, gap, label and badge from `WindowLayout`. The toast under the board. Shorter tiles in a short `Compact` window. | T8-3, T8-6, T8-7 |
 | 8.4 | Form sheets and alerts | `Sheet` and `SheetHost` form-sheet mode. Alerts centred. The keyboard with a form sheet. | T8-8 |
 | 8.5 | Wide: side by side | `LogScreen`'s second arrangement and `LogPane`. The Last bar hidden. The toast in the log pane. Rows open Edit entry. The share popover's anchor (A3). | T8-3, T8-10, T8-11 |
 | 8.6 | Resizing | State kept across a change of size or class. Keyboard and sheet placement after a rotation. The minimum window size through the bridge. | T8-5, T8-12 |
@@ -297,7 +297,7 @@ The labels are as in `docs/testing.md`. Every UI test runs in the offscreen app 
 | ID | Test | Label | What it proves |
 |---|---|---|---|
 | T8-1 | `layout.classes` | unit | The class at each size in the tables above, including the edges (599, 600, 1099, 1100 wide; 639 and 640 high). In `Compact`, every derived value equals today's `Theme` value. |
-| T8-2 | `layout.no_platform` | unit | `check_qml_platform.py` passes. `Layout.qml` reads no `Qt.platform` and nothing of the device. |
+| T8-2 | `layout.no_platform` | unit | `check_qml_platform.py` passes. `WindowLayout.qml` reads no `Qt.platform` and nothing of the device. |
 | T8-3 | `ipad.screens_fit` | ui | At every iPad size and class, each tab's root screen: nothing is outside the window or under the safe area; no text is cut off (the `a11y.text_scale` check); every touch target is at least 44 pt; the board's 12 tiles are visible without scrolling. |
 | T8-4 | `ipad.compact_is_phone` | ui | At 507 × 1180, the geometry of the Log screen's header card, composer, Last bar, tiles and tab bar matches the phone's, relative to the window. At 507 × 744 and 375 × 720, the 12 tiles are visible above the tab bar and at least 88 pt high. |
 | T8-5 | `ipad.resize_keeps_state` | ui | With a draft note, focus in the composer, a toast with Undo, an open Other sheet, and Review scrolled half way: resize through Regular, Wide, Compact and back. Each piece of state is still there, Undo still undoes, and no entry is added or lost (count before equals count after). |
