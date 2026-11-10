@@ -1,0 +1,1 @@
+**The iPad window cannot be made smaller than a phone.** In Stage Manager the window stops at 375 by 720 points, the smallest the screens are laid out for. The window's own minimum size is also kept on a desktop. Not yet run on an iPad.

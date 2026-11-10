@@ -304,6 +304,17 @@ TEST_CASE("The factory makes every capability", "[unit][share]")
     const bridge::PlatformServices services = bridge::make_platform_services();
     CHECK(services.m_Share != nullptr);
     CHECK(services.m_Haptics != nullptr);
+    CHECK(services.m_WindowLimits != nullptr);
+}
+
+TEST_CASE("window_limits.stub: the desktop version takes any size and does nothing", "[unit][window]")
+{
+    const auto limits = bridge::make_window_limits();
+    REQUIRE(limits != nullptr);
+    limits->set_minimum_size(375.0, 720.0);
+    limits->set_minimum_size(0.0, 0.0);
+    limits->set_minimum_size(375.0, 720.0); // as often as is wanted
+    SUCCEED();
 }
 
 TEST_CASE("share.wrapper: the stub gives 'unavailable' on a queued call", "[unit][share]")

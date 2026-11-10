@@ -1827,6 +1827,123 @@ TEST_CASE("ipad.wide_is_not_phone: the phone and the Regular class have no log p
     CHECK(app.ui.find_item(QStringLiteral("logPaneCard")) == nullptr);
 }
 
+TEST_CASE("ipad.keyboard_rotation: with the keyboard up over the composer, a change of window keeps the field focused "
+          "and above the keyboard",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 3);
+    struct Step
+    {
+        QSize m_Size;
+        double m_Keyboard;
+    };
+    // The iPad's keyboard is taller in landscape (398 pt) than in portrait (313 pt); the system sends the new rectangle
+    // when the window turns.
+    const Step steps[] = {{QSize(1180, 820), 398.0},
+                          {QSize(820, 1180), 313.0},
+                          {QSize(1133, 744), 398.0},
+                          {QSize(744, 1133), 313.0},
+                          {QSize(402, 874), 301.0}};
+    app.ui.set_window_size(steps[0].m_Size);
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    app.ui.tap(app.need(QStringLiteral("noteInput")));
+    app.ui.show_keyboard(steps[0].m_Keyboard);
+    app.ui.settle();
+    QQuickItem* input = app.ui.focused_input();
+    REQUIRE(input != nullptr);
+    app.ui.type(QStringLiteral("Caller asked"));
+    app.ui.advance(16ms);
+
+    for (const Step& step : steps)
+    {
+        CAPTURE(step.m_Size.width(), step.m_Size.height(), step.m_Keyboard);
+        app.ui.set_window_size(step.m_Size);
+        const bool tablet = step.m_Size.width() > 600;
+        app.ui.set_safe_area(tablet ? IPAD_TOP : 59.0, tablet ? IPAD_BOTTOM : 34.0);
+        app.ui.show_keyboard(step.m_Keyboard);
+        app.ui.settle();
+        app.ui.advance(100ms);
+        CHECK(app.ui.keyboard_up());
+        CHECK(app.ui.focused_input() == input);
+        CHECK(app.services.session().draft() == QStringLiteral("Caller asked"));
+        const QRectF field = app.ui.geometry(input);
+        CHECK(field.bottom() <= step.m_Size.height() - step.m_Keyboard);
+        CHECK(field.top() >= (tablet ? IPAD_TOP : 59.0));
+    }
+}
+
+TEST_CASE("ipad.resize_review: Review keeps its place in the log across a change of window", "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 40);
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.choose_tab(REVIEW_TAB);
+    app.ui.layout();
+    QQuickItem* list = app.need(QStringLiteral("reviewList"));
+    // Half way down the log.
+    list->setProperty("contentY", (list->property("contentHeight").toDouble() - list->height()) / 2);
+    app.ui.layout();
+    const auto top_row = [&list]
+    {
+        int row = -1;
+        REQUIRE(QMetaObject::invokeMethod(list, "indexAt", Q_RETURN_ARG(int, row), Q_ARG(double, 10.0),
+                                          Q_ARG(double, list->property("contentY").toDouble() + 10.0)));
+        return row;
+    };
+    const int before = top_row();
+    REQUIRE(before > 5);
+
+    for (const QSize size : {QSize(1180, 820), QSize(402, 874), QSize(820, 1180), QSize(507, 744)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(size.width() > 600 ? IPAD_TOP : 59.0, size.width() > 600 ? IPAD_BOTTOM : 34.0);
+        app.ui.layout();
+        CHECK(app.current_tab() == REVIEW_TAB);
+        CHECK(std::abs(top_row() - before) <= 2);
+    }
+}
+
+TEST_CASE(
+    "ipad.sheet_across_classes: a sheet that is open turns into a bottom sheet in a Compact window and back into a "
+    "card",
+    "[ui][app][ipad]")
+{
+    App app;
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    QQuickItem* picker = app.need(QStringLiteral("otherPicker"));
+    REQUIRE(QMetaObject::invokeMethod(picker, "open"));
+    app.play();
+    check_centred(app.ui, open_panel(app, QStringLiteral("otherPicker")), 820, 560.0);
+
+    // Split View makes the window narrow: the same sheet is the phone's bottom sheet, the full width, with its grabber.
+    app.ui.set_window_size(QSize(507, 1180));
+    app.ui.layout();
+    REQUIRE(picker->property("isOpen").toBool());
+    const QRectF narrow = app.ui.geometry(open_panel(app, QStringLiteral("otherPicker")));
+    CHECK(narrow.left() == 0);
+    CHECK(narrow.width() == 507);
+    CHECK(narrow.bottom() >= 1180);
+    CHECK(app.need(QStringLiteral("sheetGrabber"))->isVisible());
+
+    // And wide again: a card in the middle.
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.layout();
+    REQUIRE(picker->property("isOpen").toBool());
+    check_centred(app.ui, open_panel(app, QStringLiteral("otherPicker")), 1180, 560.0);
+    CHECK_FALSE(app.need(QStringLiteral("sheetGrabber"))->isVisible());
+    REQUIRE(QMetaObject::invokeMethod(picker, "close"));
+    app.play();
+    CHECK(app.need(QStringLiteral("shellTabs"))->isEnabled());
+}
+
 #include "app_flow_test.moc"
 
 // ---- the keyboard on the phone's window (the bugs of TestFlight build 9) ----

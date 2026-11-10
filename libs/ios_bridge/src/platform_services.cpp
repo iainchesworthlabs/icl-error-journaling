@@ -13,6 +13,7 @@ PlatformServices make_platform_services()
     services.m_Accessibility = make_accessibility_settings();
     services.m_DocumentPicker = make_document_picker();
     services.m_BackgroundTasks = make_background_tasks();
+    services.m_WindowLimits = make_window_limits();
     return services;
 }
 

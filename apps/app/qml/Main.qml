@@ -31,6 +31,10 @@ Window {
 
     width: Theme.frame.width
     height: Theme.frame.height
+    // The smallest window the layout is laid out and tested for (Stage 8): a desktop honours it, and main.cpp tells iPadOS
+    // (Stage Manager can make a window smaller than any phone).
+    minimumWidth: Theme.layout.minimumWindowWidth
+    minimumHeight: Theme.layout.minimumWindowHeight
     visible: true
     // The window reaches under the status bar and the home indicator, and SafeFrame keeps the content clear of them. Without
     // the hint, iOS gives the window only the safe area and draws black above and below it, and the tab bar ends above

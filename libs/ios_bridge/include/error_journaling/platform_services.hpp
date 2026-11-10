@@ -7,6 +7,7 @@
 #include "error_journaling/haptics.hpp"
 #include "error_journaling/perf_marks.hpp"
 #include "error_journaling/share.hpp"
+#include "error_journaling/window_limits.hpp"
 
 #include <memory>
 
@@ -23,6 +24,7 @@ struct PlatformServices
     std::unique_ptr<AccessibilitySettings> m_Accessibility;
     std::unique_ptr<DocumentPicker> m_DocumentPicker;
     std::unique_ptr<BackgroundTasks> m_BackgroundTasks;
+    std::unique_ptr<WindowLimits> m_WindowLimits;
 };
 
 /// The implementations for the platform CMake linked.
