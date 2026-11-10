@@ -83,11 +83,11 @@ EditorPage {
 
             FormField {
                 objectName: "prefixField"
-                label: qsTr("UNIT prefix")
+                label: qsTr("Unit prefix")
                 compact: true
                 border: true
                 text: root.prefix
-                placeholderText: qsTr("UNIT")
+                placeholderText: qsTr("For example UNIT")
                 hint: root.settings.unitPrefixHint
                 errorText: root.prefixRefusal
                 inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
