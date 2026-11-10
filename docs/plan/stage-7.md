@@ -8,8 +8,8 @@ accessibility audit and the `ej_screenshots` tool ([stage-4.md](stage-4.md#416-d
 so; every finding fixed or deferred by the owner; the `ej_screenshots` artifact is produced on `develop` and the owner
 has compared it with the mock-ups.
 
-**Status:** draft for owner review. The first pass of findings is below. No fix is written until the owner approves this
-page and the findings list.
+**Status:** approved by the owner (PR #137, 9 Nov 2026). The owner's decisions on F3, F19, F20 and F21 are recorded in
+[Owner decisions](#owner-decisions-10-nov-2026).
 
 Stages 8 (iPad), 10 (documentation) and 11 (store release) build on the screens this stage settles, so the findings are
 also written for them: a finding that only matters to one of them says so in the "Feeds" column.
@@ -114,27 +114,27 @@ Severity: **high** blocks a v1 requirement or loses information; **medium** a re
 
 | ID | Flow | Screen | Finding | Check | Severity | Feeds | Issue |
 |---|---|---|---|---|---|---|---|
-| F1 | W5 | Log | At text scales of 1.76 and above, the header card, the template chips and the composer grow, and rows 3 and 4 of the board fall under the tab bar. The Log screen does not scroll, so those tiles cannot be reached. NFR-02 and V4 ask for all 12 tiles at every text size. | Large text | high | 8 | |
-| F2 | W5 | LogBanner | At the default text size, with the "Not filled in yet" banner shown, the bottom row of tiles is cut by the tab bar. The mock-up has the same fault. | Mock-up, clarity | high | 8 | |
-| F3 | W5, W4 | LogBanner | The banner lists Commit as not filled in, but the commit is optional (HDR-09: "Leave it empty if you can't get it"). Someone who cannot get the commit has the banner, and F2, all day. Decision: drop Commit from the banner, or keep it. | Clarity | medium, decision | | |
-| F4 | W10 | Settings | The unit prefix and the "Include a totals line" switch are on the page behind the Facilitator row, and no row in Settings names them. Nobody looking for the unit prefix would open Facilitator. Needs a mock-up: a "Unit prefix" row and an "Export" (totals) row, or a renamed "You and your log" row. | Discoverability | medium | 10 | |
-| F5 | W2 | About you | The field label is the literal text "UNIT prefix", and the field shows a grey placeholder "UNIT", where the mock-up shows the value "UNIT-". A public user does not know what "UNIT" means. Label it "Unit prefix" and show the example as an example ("For example UNIT"). | Wording, mock-up | medium | 10, 11 | |
-| F6 | W5, W11 | TemplateValue, ImportErrors | 4.13a replaced `{value}` with "[answer]" in the editor, but two places still show `{value}`: the footnote of the template question sheet ("as "Played {value}"") and the import error "the line in the log has no {value} where the answer goes". | Wording | medium | 10 | |
-| F7 | W6, W4, W7 | Software version, Today's details, Edit entry | Content that scrolls under a pinned button is cut by it with no space below: the last line of the Software version sheet ("Entries after it use …") is half hidden, a check mark of Today's details shows below Start logging, and at large text the "In the shared log" heading of Edit entry is under Delete entry. | Mock-up, large text | medium | | |
-| F8 | W7, W9 | Review, History | At text scale 3.1 the swipe actions (Copy, Delete, Share) show as coloured blocks with no words. | Large text | medium | | |
-| F9 | W5 | Log | At large text the undo toast grows to cover most of the board (all of it at 3.1) for 5 seconds, so the next tap cannot be made. The toast text needs a cap or a one-line layout. | Large text | medium | | |
-| F10 | W5 | Other | "Add a new error type" comes after every type on the board, so with a full board it is off the screen; the mock-up has it under a short list. It should be findable without scrolling (at the top, as in BoardTypePicker's "New error type…", or as a "No match? Add …" row while searching). | Discoverability, mock-up | medium | 10 | |
-| F11 | W3 | BoardTypePicker, ErrorTypeNewOnBoard | In the capture the tab bar is drawn over the lower part of the Settings sheets. This may be the capture's own repaint of the tab bar (`UiRig::repaint_over`) and not the app; to confirm on the phone before anything is changed. | Mock-up | medium, to confirm | | |
-| F12 | W7 | Review | Nothing says the rows can be tapped or swiped, and the copy button at the top is an icon with no word. Low because Edit entry also holds Copy and Delete; a first-use hint or a "Copy log" label would help. | Discoverability | low | 10 | |
-| F13 | W6 | Software version | At 3.1 the Commit label and its value run into each other and the value loses its first characters. | Large text | low | | |
-| F14 | W8 | NewDay | At 3.1 the alert's buttons are below the fold of the alert; it scrolls, but nothing shows that it does. | Large text | low | | |
-| F15 | W3, W10 | Error types, Locations | Wording: the list heading "On your board and in Other · 11" is hard to read; the Locations footnote starts "The Today's details list shows these …". | Wording | low | | |
-| F16 | W11 | ImportExport | The exported file is called `error-journaling-setup.json`, the app's old name. The note says "Files or AirDrop", which is iPhone only. | Wording | low | 9, 11 | |
-| F17 | all sheets | Other, Edit entry, Software version, NewDay | In light mode the scrim behind sheets and alerts is a light grey; the mock-ups use a dark slate. Dark mode matches. | Mock-up | low | | |
-| F18 | W5 | LogEmptyBoard | The Last bar says "No entries yet" with no count; the mock-up shows "0 today". | Mock-up | low | | |
-| F19 | W1, W2 | FirstLaunch | For a public release most people have no setup file, but "Import a setup file" is the main button and nothing says where a file comes from. Decision: keep the order, swap it, or add a line ("Someone in your team may have one"). | Clarity | decision | 10, 11 | |
-| F20 | W5, W7 | Log, Review | The export's `T|` marker is shown on the Last bar and every Review row with no explanation. It is in the approved mock-ups. Decision: keep (it is what the downstream ticket indexer reads, and Review shows the export as it is, REV-01), or hide it on the Log screen. | Clarity | decision | 10 | |
-| F21 | W10 | Settings | Unit environments (PRF-11) can only be changed through a setup file; there is no editor. PRF-11 allows this. Decision: add an editor, or leave it to the file and the guide. | Discoverability | decision | 10 | |
+| F1 | W5 | Log | At text scales of 1.76 and above, the header card, the template chips and the composer grow, and rows 3 and 4 of the board fall under the tab bar. The Log screen does not scroll, so those tiles cannot be reached. NFR-02 and V4 ask for all 12 tiles at every text size. | Large text | high | 8 | [#154](https://github.com/iainchesworthlabs/icl-error-journaling/issues/154) |
+| F2 | W5 | LogBanner | At the default text size, with the "Not filled in yet" banner shown, the bottom row of tiles is cut by the tab bar. The mock-up has the same fault. | Mock-up, clarity | high | 8 | [#155](https://github.com/iainchesworthlabs/icl-error-journaling/issues/155) |
+| F3 | W5, W4 | LogBanner | The banner lists Commit as not filled in, but the commit is optional (HDR-09: "Leave it empty if you can't get it"). Someone who cannot get the commit has the banner, and F2, all day. Decision: drop Commit from the banner, or keep it. | Clarity | decided: no change | | none (no change) |
+| F4 | W10 | Settings | The unit prefix and the "Include a totals line" switch are on the page behind the Facilitator row, and no row in Settings names them. Nobody looking for the unit prefix would open Facilitator. Needs a mock-up: a "Unit prefix" row and an "Export" (totals) row, or a renamed "You and your log" row. | Discoverability | medium | 10 | [#156](https://github.com/iainchesworthlabs/icl-error-journaling/issues/156) |
+| F5 | W2 | About you | The field label is the literal text "UNIT prefix", and the field shows a grey placeholder "UNIT", where the mock-up shows the value "UNIT-". A public user does not know what "UNIT" means. Label it "Unit prefix" and show the example as an example ("For example UNIT"). | Wording, mock-up | medium | 10, 11 | [#157](https://github.com/iainchesworthlabs/icl-error-journaling/issues/157) |
+| F6 | W5, W11 | TemplateValue, ImportErrors | 4.13a replaced `{value}` with "[answer]" in the editor, but two places still show `{value}`: the footnote of the template question sheet ("as "Played {value}"") and the import error "the line in the log has no {value} where the answer goes". | Wording | medium | 10 | [#158](https://github.com/iainchesworthlabs/icl-error-journaling/issues/158) |
+| F7 | W6, W4, W7 | Software version, Today's details, Edit entry | Content that scrolls under a pinned button is cut by it with no space below: the last line of the Software version sheet ("Entries after it use …") is half hidden, a check mark of Today's details shows below Start logging, and at large text the "In the shared log" heading of Edit entry is under Delete entry. | Mock-up, large text | medium | | [#159](https://github.com/iainchesworthlabs/icl-error-journaling/issues/159) |
+| F8 | W7, W9 | Review, History | At text scale 3.1 the swipe actions (Copy, Delete, Share) show as coloured blocks with no words. | Large text | medium | | [#160](https://github.com/iainchesworthlabs/icl-error-journaling/issues/160) |
+| F9 | W5 | Log | At large text the undo toast grows to cover most of the board (all of it at 3.1) for 5 seconds, so the next tap cannot be made. The toast text needs a cap or a one-line layout. | Large text | medium | | [#161](https://github.com/iainchesworthlabs/icl-error-journaling/issues/161) |
+| F10 | W5 | Other | "Add a new error type" comes after every type on the board, so with a full board it is off the screen; the mock-up has it under a short list. It should be findable without scrolling (at the top, as in BoardTypePicker's "New error type…", or as a "No match? Add …" row while searching). | Discoverability, mock-up | medium | 10 | [#162](https://github.com/iainchesworthlabs/icl-error-journaling/issues/162) |
+| F11 | W3 | BoardTypePicker, ErrorTypeNewOnBoard | In the capture the tab bar is drawn over the lower part of the Settings sheets. This may be the capture's own repaint of the tab bar (`UiRig::repaint_over`) and not the app; to confirm on the phone before anything is changed. | Mock-up | medium, to confirm | | [#163](https://github.com/iainchesworthlabs/icl-error-journaling/issues/163) |
+| F12 | W7 | Review | Nothing says the rows can be tapped or swiped, and the copy button at the top is an icon with no word. Low because Edit entry also holds Copy and Delete; a first-use hint or a "Copy log" label would help. | Discoverability | low | 10 | [#164](https://github.com/iainchesworthlabs/icl-error-journaling/issues/164) |
+| F13 | W6 | Software version | At 3.1 the Commit label and its value run into each other and the value loses its first characters. | Large text | low | | [#165](https://github.com/iainchesworthlabs/icl-error-journaling/issues/165) |
+| F14 | W8 | NewDay | At 3.1 the alert's buttons are below the fold of the alert; it scrolls, but nothing shows that it does. | Large text | low | | [#166](https://github.com/iainchesworthlabs/icl-error-journaling/issues/166) |
+| F15 | W3, W10 | Error types, Locations | Wording: the list heading "On your board and in Other · 11" is hard to read; the Locations footnote starts "The Today's details list shows these …". | Wording | low | | [#167](https://github.com/iainchesworthlabs/icl-error-journaling/issues/167) |
+| F16 | W11 | ImportExport | The exported file is called `error-journaling-setup.json`, the app's old name. The note says "Files or AirDrop", which is iPhone only. | Wording | low | 9, 11 | [#168](https://github.com/iainchesworthlabs/icl-error-journaling/issues/168) |
+| F17 | all sheets | Other, Edit entry, Software version, NewDay | In light mode the scrim behind sheets and alerts is a light grey; the mock-ups use a dark slate. Dark mode matches. | Mock-up | low | | [#169](https://github.com/iainchesworthlabs/icl-error-journaling/issues/169) |
+| F18 | W5 | LogEmptyBoard | The Last bar says "No entries yet" with no count; the mock-up shows "0 today". | Mock-up | low | | [#170](https://github.com/iainchesworthlabs/icl-error-journaling/issues/170) |
+| F19 | W1, W2 | FirstLaunch | For a public release most people have no setup file, but "Import a setup file" is the main button and nothing says where a file comes from. Decision: keep the order, swap it, or add a line ("Someone in your team may have one"). | Clarity | decided: swap, 7.7 | 10, 11 | [#171](https://github.com/iainchesworthlabs/icl-error-journaling/issues/171) |
+| F20 | W5, W7 | Log, Review | The export's `T|` marker is shown on the Last bar and every Review row with no explanation. It is in the approved mock-ups. Decision: keep (it is what the downstream ticket indexer reads, and Review shows the export as it is, REV-01), or hide it on the Log screen. | Clarity | decided: keep, add a preference, 7.10 | 10 | [#172](https://github.com/iainchesworthlabs/icl-error-journaling/issues/172) |
+| F21 | W10 | Settings | Unit environments (PRF-11) can only be changed through a setup file; there is no editor. PRF-11 allows this. Decision: add an editor, or leave it to the file and the guide. | Discoverability | decided: add the editor, 7.11 | 10 | [#173](https://github.com/iainchesworthlabs/icl-error-journaling/issues/173) |
 
 Already known and not repeated here: the mock-up's Date line on Today's details has the year and the app's does not; the
 mock-ups use two different Settings icons; the app's version line under Settings, which the About page (#130) replaces.
@@ -151,8 +151,10 @@ Each package is one pull request into `develop`, squash merged once its checks p
 | 7.4 | Pinned footers and large-text clipping; `layout.footer_clear`, `large.no_lost_labels` | F7, F8, F13, F14 | — |
 | 7.5 | Wording: `[answer]` everywhere, the unit prefix label, the Error types heading, the Locations footnote, the export file name | F5, F6, F15, F16 | — |
 | 7.6 | Settings and Other discoverability: unit prefix and totals rows, "Add a new error type" placement | F4, F10 | Mock-ups (`BoardSettings`, `Other`) |
-| 7.7 | The owner's decisions on F3, F19, F20, F21, and F12, F17, F18 if accepted | as decided | Decisions |
+| 7.7 | First launch: "Set up by hand" becomes the main button at the top and "Import a setup file" moves to the bottom; and F12, F17, F18 | F19, F12, F17, F18 | Mock-up (`FirstLaunch`, light and dark) |
 | 7.8 | Second pass: the double-tap tiles, the hold sheet, the About page, and the screens with no capture state | new rows | double-tap and #130 merged |
+| 7.10 | The error prefix preference (below) | F20 | PRD change in this page's pull request; mock-up of the Settings row and its page |
+| 7.11 | The unit environments editor (below) | F21 | Mock-up of the editor |
 | 7.9 | Device walk with the owner and the gate record at the end of this page | phone rows | A TestFlight build with 7.3 to 7.8 |
 
 7.1 and 7.2 come first, so that every later package can show its screens. 7.3 to 7.6 can run in parallel; they touch
@@ -173,11 +175,60 @@ On an iPhone 17 with the TestFlight build. For each flow W1 to W12: light, dark,
 | G6 | F11 checked: the tab bar is not over the Settings sheets | W3 |
 | G7 | The share sheet and AirDrop of a setup file, start to end | W8, W11 |
 
-## Owner decisions needed
+## Owner decisions (10 Nov 2026)
 
-1. Approve this page and the findings list (which become issues).
-2. F3, F19, F20, F21 (above).
-3. The large mode of `ej_screenshots`: one size (3.1, the largest) as proposed, or two (1.76 and 3.1).
+The owner approved this page and the findings by merging PR #137, and decided:
+
+- **F3: no change.** The banner keeps listing Commit while it is empty. F2 (the banner pushing the board under the tab bar)
+  is still fixed in 7.3, so the banner costs no tiles.
+- **F19: swap the order.** On the first-launch screen, "Set up by hand" is the main button at the top and "Import a setup
+  file" goes to the bottom. The mock-up `FirstLaunch` changes first (7.7).
+- **F20: keep `T|` on the Log screen, and make it a preference.** The Last bar and Review show the line as the export
+  writes it (REV-01), so they follow the preference. See [The error prefix](#the-error-prefix-710).
+- **F21: add the editor.** See [The unit environments editor](#the-unit-environments-editor-711).
+- **The large mode of `ej_screenshots`** was not decided; it uses one size, 3.1, as proposed, and a second size can be
+  added to `screens.json` later without code.
+
+### The error prefix (7.10)
+
+A new preference, PRF-13 in the PRD (changed in the pull request that records these decisions). Proposed details, for the
+owner to correct in review:
+
+- **What it is.** The text in front of the error type name on each error line of the export: `10:05 T| Wrong Response`.
+  The default is `T|`. The space after it is part of the line format, not of the preference.
+- **Rules.** At most 12 characters, no line break and no tab; leading and trailing spaces are trimmed. It may be empty, and
+  then an error line is `10:05 Wrong Response`.
+- **Where it applies.** Every error line the renderer writes: the export, the share, Copy line and Copy whole log, the Last
+  bar, Review, PastLogReview, the line previews of Edit entry, and past logs, which re-render as PRF-07 already does for the
+  time format. Notes, templated notes and header change lines have no prefix, as now.
+- **Settings.** A row "Error prefix" with the current value, on the same page as the totals line (F4 decides where that
+  page is). The page says what the prefix is for and shows an example line; a Reset button puts `T|` back. A note on the
+  page says that a tool that reads the shared log (the downstream ticket indexer) may need the default.
+- **Setup file.** An optional key `error_prefix` under `preferences`. A file without it keeps the default; the export
+  writes it only when it differs from the default (as `unit_environments`). A file with the key is refused by a build
+  that does not know it (the configuration reader rejects unknown keys), which is acceptable because every user updates
+  through the store.
+- **Code.** `ERROR_MARKER` in `libs/core/include/error_journaling/export_format.hpp` stops being a constant: the renderer
+  takes the prefix from the preferences, and `TimelineModel` uses the same value wherever it splits a line for display.
+- **Tests.** Renderer goldens with the default, an empty prefix and a custom one; configuration import and export round
+  trip, refusal of a too-long or multi-line value; `SettingsModel` set and reset; a QML test of the page; past logs
+  re-rendered after a change.
+- **Changelog.** A fragment, `error-prefix.added.md`.
+
+### The unit environments editor (7.11)
+
+PRF-11 changes from "the setup file can replace the list" to "the list is edited in Settings and the setup file can
+replace it". Proposed:
+
+- **Where.** A row "Unit environments" in Settings, next to the unit prefix row of F4, showing the count ("2").
+- **Editor.** The pattern of the Locations editor: a field and Add at the top, the list with drag handles, Move up and
+  Move down for VoiceOver, and remove. The rules are PRF-11's: lower-case letters, digits and dashes, at most 20
+  characters, not starting or ending with a dash, none repeated, at least one in the list. Upper case is lowered as it is
+  typed; anything else is refused with a plain message under the field.
+- **Removing one in use.** A log whose unit already has that environment keeps it; the picker no longer offers it.
+- **Tests.** `SettingsModel` add, rename, reorder, remove and the refusals; the editor's QML test with the accessibility
+  walker; export of a changed list.
+- **Mock-ups first:** `UnitEnvironments` (light and dark) and the Settings rows.
 
 ## What cannot be verified here
 
