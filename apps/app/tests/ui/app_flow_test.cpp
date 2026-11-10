@@ -1231,9 +1231,18 @@ TEST_CASE(
             CHECK(tile.height() < 104);
             CHECK(tile.bottom() <= tab_bar_top);
         }
-        // Even 88 pt tiles do not fit under the Last bar here, so it gives way and the board moves up under the
-        // composer.
-        CHECK_FALSE(app.need(QStringLiteral("logLastBar"))->isVisible());
+        // At 375 x 720 even 88 pt tiles do not fit under the Last bar (whatever the font), so it gives way and the
+        // board moves up under the composer. At 507 x 744 it depends on the composer's height, which depends on the
+        // font: then either it is hidden, or it is shown and the board starts under it.
+        QQuickItem* last_bar = app.need(QStringLiteral("logLastBar"));
+        if (size.height() == 720)
+        {
+            CHECK_FALSE(last_bar->isVisible());
+        }
+        else if (last_bar->isVisible())
+        {
+            CHECK(app.ui.geometry(app.need(QStringLiteral("logBoard"))).top() >= app.ui.geometry(last_bar).bottom());
+        }
         expect_clean(check_text_scale(app.ui));
         expect_clean(check_reading_order(app.ui));
     }
