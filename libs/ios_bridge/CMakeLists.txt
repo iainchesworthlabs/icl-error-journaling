@@ -16,6 +16,7 @@ file(GLOB bridge_sources CONFIGURE_DEPENDS
 
 add_library(ej_ios_bridge
     src/accessibility_settings.cpp
+    src/android_haptics_plan.cpp
     src/android_share_plan.cpp
     src/haptic_policy.cpp
     src/launch_tracker.cpp

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/accessibility_settings.hpp"
+#include "error_journaling/android_haptics_plan.hpp"
 #include "error_journaling/android_share_plan.hpp"
 #include "error_journaling/config_exporter.hpp"
 #include "error_journaling/config_importer.hpp"
@@ -295,6 +296,33 @@ TEST_CASE("share.stub: the desktop stub reports UNAVAILABLE and calls back once"
     CHECK(calls == 1);
     CHECK(seen.m_Outcome == bridge::ShareOutcome::UNAVAILABLE);
     CHECK(seen.m_ActivityType.empty());
+}
+
+TEST_CASE("haptics.android_constants: IMPACT is VIRTUAL_KEY, SUCCESS is CONFIRM from API 30", "[unit][haptics]")
+{
+    using bridge::HapticKind;
+    // Android's own numbers: HapticFeedbackConstants.VIRTUAL_KEY is 1 and CONFIRM is 16 (API 30).
+    CHECK(bridge::android_haptic_virtual_key == 1);
+    CHECK(bridge::android_haptic_confirm == 16);
+
+    for (const int api : {28, 29, 30, 31, 34, 36})
+    {
+        CHECK(bridge::android_haptic_constant(HapticKind::IMPACT, api) == 1);
+    }
+    CHECK(bridge::android_haptic_constant(HapticKind::SUCCESS, 28) == 1);
+    CHECK(bridge::android_haptic_constant(HapticKind::SUCCESS, 29) == 1);
+    CHECK(bridge::android_haptic_constant(HapticKind::SUCCESS, 30) == 16);
+    CHECK(bridge::android_haptic_constant(HapticKind::SUCCESS, 36) == 16);
+}
+
+TEST_CASE("haptics.android_constants: the two kinds feel different where CONFIRM exists", "[unit][haptics]")
+{
+    using bridge::HapticKind;
+    CHECK(bridge::android_haptic_constant(HapticKind::IMPACT, 36) !=
+          bridge::android_haptic_constant(HapticKind::SUCCESS, 36));
+    // Before API 30 there is one constant for both, and the code still gives a valid one.
+    CHECK(bridge::android_haptic_constant(HapticKind::IMPACT, 28) ==
+          bridge::android_haptic_constant(HapticKind::SUCCESS, 28));
 }
 
 TEST_CASE("haptics.stub: the desktop stub does nothing for either kind", "[unit][haptics]")

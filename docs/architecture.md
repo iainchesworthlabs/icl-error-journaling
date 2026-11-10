@@ -64,6 +64,7 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
     share_presenter.hpp              SharePresenter: the portable decisions around a Share (exactly one of text and file,
                                      valid UTF-8, one sheet at a time, a temporary file deleted on every outcome, unless the Share
                                      retains shared files, as on Android) and purge_directory for the launch purge
+    android_haptics_plan.hpp         the HapticFeedbackConstants value of each HapticKind by API level, portable and tested
     android_share_plan.hpp           the Android share decisions (inline text or a file above 256 KB, how the chooser's end
                                      maps to a ShareOutcome), portable and tested on the desktop
     accessibility_settings.hpp       AccessibilitySettings (Stage 4, 4.3): text scale from the content size category,
@@ -91,8 +92,8 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
     qml_bridge.hpp                   QmlBridge, the QObject QML sees, over the capabilities (ej_qml_bridge)
   src/platform/ios/      Objective-C++ (.mm, -fobjc-arc), built for iOS: share.mm, haptics.mm, perf_marks.mm, accessibility_settings.mm, document_picker.mm, background_tasks.mm and the internal
                          top_view_controller.mm shared by the presenters
-  src/platform/android/  C++ with JNI (QJniObject) and the Java in apps/app/packaging/android/src: share.cpp so far, and
-                         copies of the desktop stubs for the capabilities packages 9.3 to 9.6 add
+  src/platform/android/  C++ with JNI (QJniObject) and the Java in apps/app/packaging/android/src: share.cpp, haptics.cpp, and
+                         copies of the desktop stubs for the capabilities packages 9.4 to 9.6 add
   src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
   qml/                the module ErrorJournalingApp (the URI differs from the executable name). Every .qml under it is
