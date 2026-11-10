@@ -137,6 +137,9 @@ Item {
     function startShare(): void {
         noticeTitle = "";
         shareStarted = true;
+        // The iPad's popover points at the button; a phone ignores it.
+        const at = shareButton.mapToItem(null, 0, 0);
+        share.setAnchor(at.x, at.y, shareButton.width, shareButton.height);
         if (pastLog)
             share.shareLog(logId);
         else

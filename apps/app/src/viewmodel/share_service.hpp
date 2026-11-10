@@ -15,6 +15,7 @@
 #include <QObject>
 #include <QString>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace ej::viewmodel
@@ -74,6 +75,11 @@ public:
     /// with `shareFinished` "failed" and no sheet, as does text that cannot be rendered.
     Q_INVOKABLE bool shareLog(const QString& logId);
 
+    /// Says where the next share's popover points (an iPad shows the share sheet as a popover): the control that is
+    /// about to ask for the share, as a rectangle in points in the window. It applies to the next `shareOpenLog` or
+    /// `shareLog` only, whatever its outcome, so a share that does not set it never points at an old control.
+    Q_INVOKABLE void setAnchor(qreal x, qreal y, qreal width, qreal height);
+
 signals:
     void sharingChanged();
 
@@ -91,7 +97,7 @@ signals:
 private:
     using Loaded = Result<std::shared_ptr<LogDocument>, StorageError>;
 
-    bool begin(LogId id);
+    bool begin(LogId id, std::optional<ej::bridge::ShareAnchor> anchor);
     void acquired(LogId id, Loaded loaded);
     void sheet_ended(LogId id, const ej::bridge::ShareResult& result);
     void end(LogId id, const QString& outcome);
@@ -107,6 +113,10 @@ private:
     ej::bridge::Share& m_Share;
     bool m_Available;
     bool m_Sharing = false;
+    /// Set by `setAnchor`, taken by the next share.
+    std::optional<ej::bridge::ShareAnchor> m_Anchor;
+    /// The anchor of the share under way, until its sheet is presented.
+    std::optional<ej::bridge::ShareAnchor> m_RequestAnchor;
 
     /// The document whose text is on the sheet, from the render to the end of the sheet.
     std::shared_ptr<LogDocument> m_Shown;

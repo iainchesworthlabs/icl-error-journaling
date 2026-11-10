@@ -49,8 +49,15 @@ ShareService::ShareService(const Environment& environment, OpenLogSource& open_l
 
 ShareService::~ShareService() = default;
 
+void ShareService::setAnchor(qreal x, qreal y, qreal width, qreal height)
+{
+    m_Anchor = bridge::ShareAnchor{x, y, width, height};
+}
+
 bool ShareService::shareOpenLog()
 {
+    // The anchor is for this call only, taken whatever happens to it.
+    const std::optional<bridge::ShareAnchor> anchor = std::exchange(m_Anchor, std::nullopt);
     if (m_Sharing)
     {
         return false;
@@ -61,11 +68,12 @@ bool ShareService::shareOpenLog()
         emit shareFinished(QString(), QStringLiteral("failed"));
         return false;
     }
-    return begin(open->id());
+    return begin(open->id(), anchor);
 }
 
 bool ShareService::shareLog(const QString& logId)
 {
+    const std::optional<bridge::ShareAnchor> anchor = std::exchange(m_Anchor, std::nullopt);
     if (m_Sharing)
     {
         return false;
@@ -76,11 +84,12 @@ bool ShareService::shareLog(const QString& logId)
         emit shareFinished(logId, QStringLiteral("failed"));
         return false;
     }
-    return begin(LogId(*parsed));
+    return begin(LogId(*parsed), anchor);
 }
 
-bool ShareService::begin(LogId id)
+bool ShareService::begin(LogId id, std::optional<bridge::ShareAnchor> anchor)
 {
+    m_RequestAnchor = anchor;
     m_Sharing = true;
     emit sharingChanged();
     // A live document (the open log, or a past log someone holds) is delivered before acquire returns; otherwise the
@@ -118,6 +127,7 @@ void ShareService::acquired(LogId id, Loaded loaded)
     // The completion may run before this call returns (the desktop stub) or later (a phone): the state is set above.
     bridge::ShareRequest request;
     request.m_Text = *text;
+    request.m_Anchor = std::exchange(m_RequestAnchor, std::nullopt);
     m_Share.present(std::move(request),
                     [self = QPointer<ShareService>(this), id](const bridge::ShareResult& result)
                     {

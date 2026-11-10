@@ -1424,6 +1424,383 @@ TEST_CASE("ipad.phone_sheet: in a Compact window a sheet is still a bottom sheet
     CHECK(app.need(QStringLiteral("sheetGrabber"))->isVisible());
 }
 
+namespace
+{
+
+/// The iPads in landscape (the iPad mini, the 11-inch and the 13-inch): the Wide class, the board and the log side by
+/// side.
+const QSize IPAD_WIDE_SIZES[] = {QSize(1133, 744), QSize(1180, 820), QSize(1376, 1032)};
+constexpr double PANE_GAP = 20.0;
+constexpr double BOARD_SHARE = 0.58;
+
+/// The two panes of a Wide window `window` wide, as docs/plan/stage-8.md ("Layout rules") has them.
+struct Panes
+{
+    double m_BoardX;
+    double m_BoardWidth;
+    double m_LogX;
+    double m_LogWidth;
+};
+
+Panes panes_of(double window)
+{
+    const double inner = window - 2 * REGULAR_MARGIN - PANE_GAP;
+    const double board = std::round(inner * BOARD_SHARE);
+    return {REGULAR_MARGIN, board, REGULAR_MARGIN + board + PANE_GAP, inner - board};
+}
+
+/// Logs `count` errors on the board, a minute apart, and lets the toast go.
+void log_entries(App& app, int count)
+{
+    for (int i = 0; i < count; ++i)
+    {
+        app.services.go_to(7, 9, 40 + i, 0);
+        REQUIRE(app.services.tap(role_of(*app.services.root().board(), i % 11, "typeId").toString()));
+        app.ui.settle();
+    }
+    app.services.advance(6s);
+    app.ui.advance(300ms);
+}
+
+/// The log pane, which is made when the window is Wide.
+QQuickItem* log_pane(App& app)
+{
+    auto* pane = app.need(QStringLiteral("logPaneLoader"))->property("item").value<QQuickItem*>();
+    REQUIRE(pane != nullptr);
+    return pane;
+}
+
+void check_at(UiRig& ui, QQuickItem* item, double x, double width)
+{
+    const QRectF r = ui.geometry(item);
+    INFO(item->objectName().toStdString()
+         << " at " << r.x() << ", " << r.width() << " wide; wanted " << x << ", " << width);
+    CHECK(std::abs(r.x() - x) <= 1.0);
+    CHECK(std::abs(r.width() - width) <= 1.0);
+}
+
+} // namespace
+
+TEST_CASE(
+    "ipad.wide_screens_fit: on every iPad in landscape the board and the log are side by side, inside the safe area, "
+    "named and large enough",
+    "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 7);
+    const auto minimum = [](const Node& node)
+    { return node.m_ObjectName.startsWith(QStringLiteral("tile")) ? 88.0 : 44.0; };
+
+    for (const QSize size : IPAD_WIDE_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.choose_tab(LOG_TAB);
+        app.ui.layout();
+        REQUIRE(app.ui.window_layout()->property("wide").toBool());
+        const Panes p = panes_of(size.width());
+
+        // Two panes: the composer and the board on the left, the header card and the log on the right. No Last bar.
+        CHECK_FALSE(app.need(QStringLiteral("logLastBar"))->isVisible());
+        check_at(app.ui, app.need(QStringLiteral("logComposer")), p.m_BoardX, p.m_BoardWidth);
+        check_at(app.ui, app.need(QStringLiteral("logBoard")), p.m_BoardX, p.m_BoardWidth);
+        check_at(app.ui, app.need(QStringLiteral("logHeaderCard")), p.m_LogX, p.m_LogWidth);
+        check_at(app.ui, app.need(QStringLiteral("logPaneCard")), p.m_LogX, p.m_LogWidth);
+        // Both panes start a screen margin (16 pt) under the status bar.
+        const double top = IPAD_TOP + 16.0;
+        CHECK(std::abs(app.ui.geometry(app.need(QStringLiteral("logComposer"))).top() - top) <= 1.0);
+        CHECK(std::abs(app.ui.geometry(app.need(QStringLiteral("logHeaderCard"))).top() - top) <= 1.0);
+
+        // The board fills its pane: the bottom row ends a screen margin above the tab bar; the tiles are in the phone's
+        // places.
+        const double tab_bar_top = app.ui.geometry(app.need(QStringLiteral("shellTabBar"))).top();
+        const QRectF board = app.ui.geometry(app.need(QStringLiteral("logBoard")));
+        const double tile_width = (p.m_BoardWidth - 2 * 12.0) / 3;
+        const double tile_height = app.ui.geometry(app.need(QStringLiteral("tile0"))).height();
+        CHECK(tile_height >= 88);
+        for (int i = 0; i < 12; ++i)
+        {
+            CAPTURE(i);
+            const QRectF tile = app.ui.geometry(app.need(QStringLiteral("tile%1").arg(i)));
+            CHECK(tile.height() == tile_height);
+            CHECK(std::abs(tile.width() - tile_width) <= 0.5);
+            CHECK(std::abs(tile.left() - (board.left() + (i % 3) * (tile_width + 12.0))) <= 0.5);
+            CHECK(std::abs(tile.top() - (board.top() + (i / 3) * (tile_height + 12.0))) <= 0.5);
+        }
+        CHECK(std::abs(app.ui.geometry(app.need(QStringLiteral("tile11"))).bottom() - (tab_bar_top - 16.0)) <= 4.0);
+
+        // The log pane: under the header card, to the same foot as the board, with Share log inside it.
+        const QRectF card = app.ui.geometry(app.need(QStringLiteral("logPaneCard")));
+        const QRectF header = app.ui.geometry(app.need(QStringLiteral("logHeaderCard")));
+        CHECK(std::abs(card.top() - (header.bottom() + 12.0)) <= 1.0);
+        CHECK(std::abs(card.bottom() - (tab_bar_top - 16.0)) <= 1.0);
+        const QRectF share = app.ui.geometry(app.need(QStringLiteral("logPaneShare")));
+        CHECK(card.contains(share));
+        CHECK(app.need(QStringLiteral("logPaneList"))->property("count").toInt() == 7);
+
+        for (const double scale : {1.0, 1.3})
+        {
+            CAPTURE(scale);
+            app.ui.set_text_scale(scale);
+            app.ui.layout();
+            expect_clean(check_names(app.ui));
+            expect_clean(check_targets(app.ui, minimum));
+            expect_clean(check_text_scale(app.ui));
+        }
+        app.ui.set_text_scale(1.0);
+        app.ui.layout();
+        expect_clean(check_safe_area(app.ui, IPAD_TOP, IPAD_BOTTOM));
+    }
+}
+
+TEST_CASE("ipad.log_pane: the log pane lists the log, shows the newest entry, and opens, copies, deletes and shares",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    log_entries(app, 3);
+    app.ui.layout();
+    QQuickItem* pane = log_pane(app);
+    QQuickItem* list = app.need(QStringLiteral("logPaneList"));
+    CHECK(list->property("count").toInt() == 3);
+    CHECK(app.need(QStringLiteral("logPaneCount"))->property("text").toString() == QStringLiteral("3 entries"));
+
+    // The rows are in time order, and the prefix of a line is in the secondary colour, as on Review.
+    const std::vector<QQuickItem*> rows = app.ui.find_items(QStringLiteral("logPaneRow"));
+    REQUIRE(rows.size() == 3);
+    CHECK(app.ui.geometry(rows[0]).top() < app.ui.geometry(rows[1]).top());
+    QQuickItem* first_line = app.ui.find_item(QStringLiteral("logPaneLine"), rows[0]);
+    REQUIRE(first_line != nullptr);
+    CHECK(first_line->property("text").toString().contains(QStringLiteral("T|")));
+    CHECK(first_line->property("textFormat").toInt() == 4); // Text.StyledText
+
+    // More entries than fit: the newest is in view.
+    log_entries(app, 20);
+    app.ui.layout();
+    CHECK(list->property("count").toInt() == 23);
+    CHECK(list->property("atYEnd").toBool());
+    CHECK(app.need(QStringLiteral("logPaneCount"))->property("text").toString() == QStringLiteral("23 entries"));
+
+    // A tap on a row opens Edit entry on it, over the window; Cancel leaves the log as it was.
+    const std::vector<QQuickItem*> visible_rows = app.ui.find_items(QStringLiteral("logPaneSwipe"));
+    REQUIRE_FALSE(visible_rows.empty());
+    app.ui.tap(visible_rows.back());
+    app.play();
+    QQuickItem* editor = app.need(QStringLiteral("editSheet"));
+    CHECK(editor->property("isOpen").toBool());
+    REQUIRE(QMetaObject::invokeMethod(editor, "close"));
+    app.play();
+    CHECK(list->property("count").toInt() == 23);
+
+    // Copy-all confirms itself.
+    app.tap(QStringLiteral("logPaneCopyAll"));
+    app.ui.advance(16ms);
+    CHECK_FALSE(pane->property("copiedText").toString().isEmpty());
+
+    // Delete on a swipe removes the row, and the toast's Undo, which is in the pane, brings it back.
+    QQuickItem* swipe = app.ui.find_items(QStringLiteral("logPaneSwipe")).back();
+    const QRectF s = app.ui.geometry(swipe);
+    app.ui.swipe(swipe, QPointF(s.width() - 8, s.height() / 2), QPointF(8, s.height() / 2));
+    app.ui.advance(300ms);
+    QQuickItem* delete_action = app.ui.find_item(QStringLiteral("deleteAction"), swipe);
+    REQUIRE(delete_action != nullptr);
+    app.ui.tap(delete_action);
+    app.ui.settle();
+    app.play();
+    CHECK(list->property("count").toInt() == 22);
+    app.tap(QStringLiteral("toastUndo"));
+    app.ui.settle();
+    app.play();
+    CHECK(list->property("count").toInt() == 23);
+
+    // Share log shares the open log, and the popover points at the button.
+    const QRectF share = app.ui.geometry(app.need(QStringLiteral("logPaneShare")));
+    app.tap(QStringLiteral("logPaneShare"));
+    app.ui.settle();
+    REQUIRE(app.services.platform().sheets_presented() == 1);
+    REQUIRE(app.services.platform().anchors().size() == 1);
+    REQUIRE(app.services.platform().anchors()[0].has_value());
+    const ej::bridge::ShareAnchor anchor = *app.services.platform().anchors()[0];
+    CHECK(std::abs(anchor.m_X - share.x()) <= 1.0);
+    CHECK(std::abs(anchor.m_Y - share.y()) <= 1.0);
+    CHECK(std::abs(anchor.m_Width - share.width()) <= 1.0);
+    CHECK(std::abs(anchor.m_Height - share.height()) <= 1.0);
+}
+
+TEST_CASE("ipad.log_pane_empty: a log with no entries says so, and has nothing to copy or share", "[ui][app][ipad]")
+{
+    App app;
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    CHECK(app.need(QStringLiteral("logPaneEmpty"))->isVisible());
+    CHECK_FALSE(app.need(QStringLiteral("logPaneCopyAll"))->isEnabled());
+    CHECK_FALSE(app.need(QStringLiteral("logPaneShare"))->isEnabled());
+}
+
+TEST_CASE(
+    "ipad.wide_toast_clear: in landscape the undo toast is in the log pane, over its foot, and covers no tile and "
+    "no row",
+    "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 30);
+    for (const QSize size : IPAD_WIDE_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.choose_tab(LOG_TAB);
+        app.ui.layout();
+        REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+        app.ui.settle();
+        app.ui.advance(300ms);
+        QQuickItem* toast = app.need(QStringLiteral("logToast"));
+        REQUIRE(toast->property("present").toBool());
+        const QRectF t = app.ui.geometry(toast);
+        const QRectF card = app.ui.geometry(app.need(QStringLiteral("logPaneCard")));
+        const QRectF list = app.ui.geometry(app.need(QStringLiteral("logPaneList")));
+        const QRectF share = app.ui.geometry(app.need(QStringLiteral("logPaneShare")));
+        // In the pane, between the list and the Share button.
+        CHECK(t.left() >= card.left());
+        CHECK(t.right() <= card.right());
+        CHECK(t.top() >= list.bottom() - 0.5);
+        CHECK(t.bottom() <= share.top() + 0.5);
+        // No tile is under it, and no row of the list.
+        for (int i = 0; i < 12; ++i)
+        {
+            CAPTURE(i);
+            CHECK_FALSE(t.intersects(app.ui.geometry(app.need(QStringLiteral("tile%1").arg(i)))));
+        }
+        for (QQuickItem* row : app.ui.find_items(QStringLiteral("logPaneRow")))
+        {
+            if (row->isVisible())
+            {
+                CHECK_FALSE(t.intersects(app.ui.geometry(row)));
+            }
+        }
+        app.services.advance(6s);
+        app.ui.advance(300ms);
+    }
+}
+
+TEST_CASE("ipad.rotation_keeps_state: a draft, the focus, a toast with Undo and an open sheet survive a change of size",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 3);
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+
+    // A draft in the composer, with the focus there, and a toast with Undo.
+    app.ui.tap(app.need(QStringLiteral("noteInput")));
+    app.ui.type(QStringLiteral("Caller asked for the next song"));
+    app.ui.advance(16ms);
+    QQuickItem* input = app.ui.focused_input();
+    REQUIRE(input != nullptr);
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 1, "typeId").toString()));
+    app.ui.settle();
+    app.ui.advance(100ms);
+    REQUIRE(app.need(QStringLiteral("logToast"))->property("present").toBool());
+    const int entries = app.services.root().timeline()->rowCount();
+
+    for (const QSize size : {QSize(1180, 820), QSize(820, 1180), QSize(402, 874), QSize(1133, 744)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(size.width() > 600 ? IPAD_TOP : 59.0, size.width() > 600 ? IPAD_BOTTOM : 34.0);
+        app.ui.layout();
+        CHECK(app.services.session().draft() == QStringLiteral("Caller asked for the next song"));
+        CHECK(app.ui.focused_input() == input);
+        CHECK(app.need(QStringLiteral("logToast"))->property("present").toBool());
+        CHECK(app.services.root().timeline()->rowCount() == entries);
+    }
+
+    // The toast's Undo still undoes the entry.
+    app.tap(QStringLiteral("toastUndo"));
+    app.ui.settle();
+    app.play();
+    CHECK(app.services.root().timeline()->rowCount() == entries - 1);
+
+    // A sheet that is open follows the window: it is still open, and in the middle of the new one.
+    QQuickItem* picker = app.need(QStringLiteral("otherPicker"));
+    REQUIRE(QMetaObject::invokeMethod(picker, "open"));
+    app.play();
+    for (const QSize size : {QSize(1180, 820), QSize(820, 1180)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.ui.layout();
+        CHECK(picker->property("isOpen").toBool());
+        check_centred(app.ui, open_panel(app, QStringLiteral("otherPicker")), size.width(), 560.0);
+    }
+    REQUIRE(QMetaObject::invokeMethod(picker, "close"));
+    app.play();
+}
+
+TEST_CASE(
+    "ipad.wide_reading_order: a screen reader reads the header card, the composer and the board, then the log and "
+    "Share log, then the tabs",
+    "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 3);
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+
+    std::vector<QString> order;
+    for (const Node& node : app.ui.accessible_tree())
+    {
+        if (node.m_Visible && !node.m_ObjectName.isEmpty())
+        {
+            order.push_back(node.m_ObjectName);
+        }
+    }
+    const auto index = [&order](const QString& name)
+    {
+        const auto found = std::find(order.begin(), order.end(), name);
+        INFO(name.toStdString());
+        REQUIRE(found != order.end());
+        return std::distance(order.begin(), found);
+    };
+    const std::vector<QString> expected{QStringLiteral("logHeaderCard"), QStringLiteral("tile0"),
+                                        QStringLiteral("tile11"),        QStringLiteral("logPaneCopyAll"),
+                                        QStringLiteral("logPaneRow"),    QStringLiteral("logPaneShare"),
+                                        QStringLiteral("tabLog")};
+    for (std::size_t i = 1; i < expected.size(); ++i)
+    {
+        CAPTURE(expected[i - 1].toStdString(), expected[i].toStdString());
+        CHECK(index(expected[i - 1]) < index(expected[i]));
+    }
+}
+
+TEST_CASE("ipad.wide_is_not_phone: the phone and the Regular class have no log pane", "[ui][app][ipad]")
+{
+    App app;
+    CHECK(app.ui.find_item(QStringLiteral("logPaneCard")) == nullptr);
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    CHECK(app.ui.find_item(QStringLiteral("logPaneCard")) == nullptr);
+    CHECK(app.need(QStringLiteral("logLastBar"))->isVisible());
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.layout();
+    CHECK(app.ui.find_item(QStringLiteral("logPaneCard")) != nullptr);
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.layout();
+    CHECK(app.ui.find_item(QStringLiteral("logPaneCard")) == nullptr);
+}
+
 #include "app_flow_test.moc"
 
 // ---- the keyboard on the phone's window (the bugs of TestFlight build 9) ----
