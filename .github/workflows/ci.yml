@@ -36,7 +36,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/policy.yml@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/policy.yml@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
 
   plan:
     name: Plan
@@ -56,7 +56,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Check out the shared scripts
-        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Check the vendored CMake modules
         run: python3 tools/ci/sync_cmake.py --check --infra .icl-infra
       - name: Check the platform layout
@@ -138,7 +138,7 @@ jobs:
           persist-credentials: false
       - name: Look for reusable results
         id: find
-        uses: iainchesworthlabs/icl-common-infra/actions/find-proof@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/find-proof@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
         with:
           mode: ${{ vars.CI_REUSE_MODE }}
           base-sha: ${{ github.event_name == 'push' && github.event.before || '' }}
@@ -149,7 +149,7 @@ jobs:
     if: needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
     with:
       # "tests": true is written on every leg: build.yml skips its Test step when the key is absent (an absent key is null,
       # and `null != false` is false in a workflow expression), although its header says the default is to test.
@@ -165,7 +165,7 @@ jobs:
     if: needs.plan.outputs.build == 'true' && github.event_name != 'pull_request'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
     with:
       legs: >-
         [
@@ -179,7 +179,7 @@ jobs:
     if: needs.plan.outputs.macos == 'true'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
     with:
       legs: >-
         [
@@ -195,7 +195,7 @@ jobs:
     if: needs.plan.outputs.build == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/build.yml@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
     with:
       legs: >-
         [
@@ -242,17 +242,17 @@ jobs:
         with:
           persist-credentials: false
       - name: Check out the shared scripts
-        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Install GCC
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Set up Qt
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Set up ccache
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
         with:
           key: coverage
       - name: Configure and build
@@ -260,7 +260,7 @@ jobs:
           cmake --preset linux-coverage
           cmake --build --preset linux-coverage
       - name: Test
-        uses: iainchesworthlabs/icl-common-infra/actions/run-ctest@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/run-ctest@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
         with:
           build-dir: build/linux-coverage
       - name: Report and gate
@@ -273,7 +273,7 @@ jobs:
       - name: Save caches
         if: always()
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
 
   # Every screen in light, dark and large text (tools/ej_screenshots, docs/plan/stage-7.md 7.1), uploaded for the owner to
   # read. The pictures are not compared: the build legs run the same case as the ui test screenshots.render, which is the
@@ -293,17 +293,17 @@ jobs:
         with:
           persist-credentials: false
       - name: Check out the shared scripts
-        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Install GCC
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Set up Qt
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Set up ccache
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
         with:
           key: screenshots
       - name: Build the UI tests
@@ -326,7 +326,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/zizmor.yml@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/zizmor.yml@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
 
   dependency-scan:
     name: Scan dependency diff
@@ -343,7 +343,7 @@ jobs:
           persist-credentials: false
       - name: Dependency review
         if: github.event_name == 'pull_request'
-        uses: iainchesworthlabs/icl-common-infra/actions/dependency-review@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/dependency-review@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
 
   confidentiality:
     name: Confidentiality
@@ -402,7 +402,7 @@ jobs:
       contents: read
     steps:
       - name: Aggregate
-        uses: iainchesworthlabs/icl-common-infra/actions/ci-status@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/ci-status@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
         with:
           needs: ${{ toJSON(needs) }}
           # Shadow mode: the reuse job's `reused` output is empty, so nothing counts as reused and every group must have run.
@@ -428,7 +428,7 @@ jobs:
       - name: Record the proof
         if: always()
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/record-proof@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/record-proof@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
         with:
           needs: ${{ toJSON(needs) }}
           reused: ${{ needs.reuse.outputs.reused }}
@@ -454,7 +454,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Report
-        uses: iainchesworthlabs/icl-common-infra/actions/report-red@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/report-red@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
         with:
           needs: ${{ toJSON(needs) }}
           reused: ${{ needs.reuse.outputs.reused }}
@@ -474,7 +474,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Mark
-        uses: iainchesworthlabs/icl-common-infra/actions/mark-green@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+        uses: iainchesworthlabs/icl-common-infra/actions/mark-green@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
         with:
           needs: ${{ toJSON(needs) }}
           reused: ${{ needs.reuse.outputs.reused }}

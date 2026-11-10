@@ -15,14 +15,14 @@ jobs:
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
 
   publish:
     name: Build site for Pages
     if: github.event_name == 'push'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
     with:
       upload: true
 
@@ -33,4 +33,4 @@ jobs:
     permissions:
       pages: write
       id-token: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy.yml@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy.yml@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
