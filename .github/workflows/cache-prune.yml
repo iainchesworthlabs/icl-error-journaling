@@ -35,7 +35,7 @@ jobs:
       actions: write
     steps:
       - name: Prune the Actions cache
-        uses: iainchesworthlabs/icl-common-infra/actions/prune-actions-cache@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/prune-actions-cache@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
         with:
           dry-run: ${{ inputs.dry-run && 'true' || 'false' }}
           purge: ${{ inputs.purge }}

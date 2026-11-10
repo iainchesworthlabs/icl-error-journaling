@@ -63,14 +63,14 @@ jobs:
           persist-credentials: false
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
 
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
 
       # The desktop kit first: Qt's Android build runs its host tools (moc, qmlcachegen, androiddeployqt).
       - name: Install Qt (Linux host kit)
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
 
       - name: Remember the host kit
         shell: bash
@@ -83,7 +83,7 @@ jobs:
 
       # aqtinstall 3.3.0 cannot read Qt 6.12's all_os Android repository, so the same pinned source as the iOS build.
       - name: Install Qt (Android arm64-v8a kit)
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
         with:
           version: ${{ steps.qt.outputs.version }}
           target: android

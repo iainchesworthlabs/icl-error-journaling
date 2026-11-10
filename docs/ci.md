@@ -118,6 +118,8 @@ kill harness (90, slowest 11) and the macOS legs (30, slowest 15) keep their lim
 `check_response_timeout_minutes` is a ruleset setting; it must exceed the time a healthy entry takes under load (the
 longest successful entries took 93 and 113 minutes), so it is set to 120.
 
+**Package cache.** From infra v0.1.22 the GCC and LLVM installs read their `.deb` files from an Actions cache (`apt-debs-...`, one entry each, saved only by a push to `develop` or a manual run) and run no `apt-get update` when it hits. A cold or failed restore uses the network with four attempts and waits of 20, 60 and 120 seconds, on the runner image's mirror. A manual `gh workflow run ci.yml --ref develop` after a toolchain pin or runner image change warms it.
+
 ## Orphaned queue runs
 
 When a queue entry is ejected, GitHub deletes its `gh-readonly-queue/...` branch, but its workflow runs carry on and
