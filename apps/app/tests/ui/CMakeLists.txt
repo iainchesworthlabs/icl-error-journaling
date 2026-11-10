@@ -47,7 +47,9 @@ qt_add_qml_module(ej_ui_tests
 target_compile_definitions(ej_ui_tests PRIVATE
     EJ_TOKENS_JSON="${PROJECT_SOURCE_DIR}/docs/design/tokens.json"
     EJ_PERF_BUDGET="${CMAKE_CURRENT_SOURCE_DIR}/perf-budget.json"
-    EJ_SAMPLE_CONFIG="${PROJECT_SOURCE_DIR}/config/sample-config.json")
+    EJ_SAMPLE_CONFIG="${PROJECT_SOURCE_DIR}/config/sample-config.json"
+    EJ_SCREENS_JSON="${PROJECT_SOURCE_DIR}/tools/ej_screenshots/screens.json"
+    EJ_QML_SCREENS_DIR="${PROJECT_SOURCE_DIR}/apps/app/qml/screens")
 target_link_libraries(ej_ui_tests PRIVATE ej_ui_test_support Qt6::Quick Qt6::Test Catch2::Catch2 icl::warnings icl::coverage)
 icl_relax_generated_warnings(ej_ui_tests)
 
@@ -57,10 +59,15 @@ set(ej_ui_test_properties "")
 if(ICL_SANITIZERS MATCHES "thread")
     set(ej_ui_test_properties ENVIRONMENT "TSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tools/sanitizers/tsan.supp")
 endif()
-# Cases tagged [perf] have the label perf and run in the last phase; the others are ui.
+# Cases tagged [perf] have the label perf and run in the last phase; the others are ui. screenshots.render renders every
+# screen in every mode (tools/ej_screenshots), which takes longer than one case is given, so it has a timeout of its own.
 ej_discover_tests(ej_ui_tests
-    TEST_SPEC "~[perf]"
+    TEST_SPEC "~[perf]~[screenshots]"
     PROPERTIES LABELS ui TIMEOUT 120 ${ej_ui_test_properties})
+ej_discover_tests(ej_ui_tests
+    TEST_SPEC "[screenshots]"
+    TEST_SUFFIX " (screenshots)"
+    PROPERTIES LABELS ui TIMEOUT 900 ${ej_ui_test_properties})
 ej_discover_tests(ej_ui_tests
     TEST_SPEC "[perf]"
     TEST_SUFFIX " (perf)"

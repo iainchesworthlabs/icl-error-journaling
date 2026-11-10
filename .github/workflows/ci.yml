@@ -275,6 +275,52 @@ jobs:
         continue-on-error: true
         uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@eefe9b6b38220ab4086bfb227eafbf0d87e36189 # v0.1.22
 
+  # Every screen in light, dark and large text (tools/ej_screenshots, docs/plan/stage-7.md 7.1), uploaded for the owner to
+  # read. The pictures are not compared: the build legs run the same case as the ui test screenshots.render, which is the
+  # check. This job only keeps the pictures, so it is not in CI Status and cannot fail the run.
+  screenshots:
+    name: Screenshots
+    needs: plan
+    if: needs.plan.outputs.build == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check out the shared scripts
+        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@62594bba592708100d459112523992fa2a736843 # v0.1.21
+      - name: Install GCC
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@62594bba592708100d459112523992fa2a736843 # v0.1.21
+      - name: Set up Qt
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@62594bba592708100d459112523992fa2a736843 # v0.1.21
+      - name: Set up CMake
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@62594bba592708100d459112523992fa2a736843 # v0.1.21
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@62594bba592708100d459112523992fa2a736843 # v0.1.21
+      - name: Set up ccache
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        with:
+          key: screenshots
+      - name: Build the UI tests
+        run: |
+          cmake --preset linux-release
+          cmake --build --preset linux-release --target ej_ui_tests
+      - name: Render the screens
+        run: python3 tools/ej_screenshots/ej_screenshots.py --out screenshots --exe build/linux-release/apps/app/tests/ui/ej_ui_tests
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screenshots
+          path: screenshots/
+          if-no-files-found: warn
+          retention-days: 14
+
   zizmor:
     name: Workflow analysis
     permissions:
