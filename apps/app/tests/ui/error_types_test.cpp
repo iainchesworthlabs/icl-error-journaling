@@ -54,6 +54,9 @@ TEST_CASE("editor.error_types: the types are listed in board order, one line eac
     CHECK(first->property("draggable").toBool());
     CHECK(child(first, QStringLiteral("editorHandle"))->isVisible());
     CHECK(item(world, QStringLiteral("otherGroup"))->isVisible() == false);
+    // The headings say what the Other picker says: on the board, or not.
+    CHECK(item(world, QStringLiteral("boardGroup"))->property("title").toString() ==
+          QStringLiteral("On your board · 11"));
 
     // A twelfth type is on no tile: it is listed under its own heading, after the board's.
     REQUIRE(world.model().addErrorType(QStringLiteral("Echo Delay")).isEmpty());
@@ -62,6 +65,8 @@ TEST_CASE("editor.error_types: the types are listed in board order, one line eac
     CHECK(names(world).size() == 12);
     CHECK(names(world).back() == QStringLiteral("Echo Delay"));
     CHECK(item(world, QStringLiteral("otherGroup"))->isVisible());
+    CHECK(item(world, QStringLiteral("otherGroup"))->property("title").toString() ==
+          QStringLiteral("Not on your board · 1"));
     QQuickItem* twelfth = row_with(world, TYPES, QStringLiteral("Echo Delay"));
     REQUIRE(twelfth != nullptr);
     CHECK(twelfth->property("detail").toString().isEmpty());

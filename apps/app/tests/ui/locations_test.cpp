@@ -52,6 +52,9 @@ TEST_CASE("editor.locations: the locations are listed in order, with a field to 
     CHECK(item(world, QStringLiteral("locationGroup"))->property("title").toString() ==
           QStringLiteral("Locations · 2"));
     CHECK(field_text(world, QStringLiteral("newLocationField")).isEmpty());
+    CHECK(item(world, QStringLiteral("locationGroup"))->property("footer").toString() ==
+          QStringLiteral("Today’s details lists these in this order, then “Other…”. Removing one doesn’t change "
+                         "past logs."));
 }
 
 TEST_CASE("editor.locations: adding a location puts it last and clears the field", "[ui][editor]")

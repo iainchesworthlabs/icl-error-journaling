@@ -624,7 +624,8 @@ Item {
         parent: root.sheetLayer
         templateName: root.activeTemplate ? root.activeTemplate.name : ""
         valuePrompt: root.activeTemplate ? root.activeTemplate.valuePrompt : ""
-        outputPattern: root.activeTemplate ? root.activeTemplate.outputPattern : ""
+        // The line as the editor shows it ("Played [answer]"); the stored pattern's {value} is not for people.
+        outputPattern: root.activeTemplate ? root.settings.patternToField(root.activeTemplate.outputPattern) : ""
         previewText: root.activeTemplate ? root.settings.previewTemplateLine(root.activeTemplate.outputPattern, templateSheet.value) : ""
         onAddRequested: value => root.addTemplated(value)
     }

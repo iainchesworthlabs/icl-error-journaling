@@ -111,7 +111,7 @@ private:
 };
 
 /// The part of the settings model the screen calls, with the names of `SettingsModel`: the templates for the chips, the
-/// unit prefix of the card and `previewTemplateLine`, which writes the line as the renderer does for a value (the sample
+/// unit prefix of the card, `patternToField` and `previewTemplateLine`, which writes the line as the renderer does for a value (the sample
 /// "Morning Medley" while it is blank, at the sample time 10:30).
 class FakeSettings : public QObject
 {
@@ -135,6 +135,14 @@ public:
         QString line = pattern;
         line.replace(QStringLiteral("{value}"), value.trimmed().isEmpty() ? QStringLiteral("Morning Medley") : value.trimmed());
         return QStringLiteral("10:30 (Free Text) ") + line;
+    }
+
+    /// How the template editor writes a stored pattern: the answer slot is "[answer]".
+    Q_INVOKABLE QString patternToField(const QString& pattern) const
+    {
+        QString shown = pattern;
+        shown.replace(QStringLiteral("{value}"), QStringLiteral("[answer]"));
+        return shown;
     }
 
 private:
@@ -834,6 +842,9 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     // The line the note will have, as the settings model writes it, with the sample value while the field is blank.
     CHECK(screen.text_of(QStringLiteral("templateValuePreviewText")) ==
           QStringLiteral("10:30 (Free Text) Played Morning Medley"));
+    // The footnote names the line as the template editor writes it: [answer], not the stored {value}.
+    CHECK(screen.named(QStringLiteral("templateValuePreview"))->property("footer").toString() ==
+          QStringLiteral("Saved with the template “Played song”, as “Played [answer]”."));
 
     // Add with nothing typed: refused, the sheet stays, nothing is recorded.
     screen.rig.tap(screen.named(QStringLiteral("navTrailing")));

@@ -140,7 +140,10 @@ TEST_CASE("setup.voiceover: the fields and Continue are named and the page passe
     CHECK(name_of(find_item(item(world, QStringLiteral("facilitatorField")), QStringLiteral("formInput"))) ==
           QStringLiteral("Facilitator"));
     CHECK(name_of(find_item(item(world, QStringLiteral("prefixField")), QStringLiteral("formInput"))) ==
-          QStringLiteral("UNIT prefix"));
+          QStringLiteral("Unit prefix"));
+    // The grey text is an example, not a value that looks as if it were typed.
+    CHECK(item(world, QStringLiteral("prefixField"))->property("placeholderText").toString() ==
+          QStringLiteral("For example UNIT"));
     CHECK(name_of(item(world, QStringLiteral("continueButton"))) == QStringLiteral("Continue"));
     CHECK(name_of(find_item(page, QStringLiteral("navLeading"))) == QStringLiteral("Back"));
 

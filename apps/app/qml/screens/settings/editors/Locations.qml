@@ -216,7 +216,7 @@ SheetHost {
                     width: parent.width
                     visible: repeater.count > 0
                     title: qsTr("Locations · %1").arg(repeater.count)
-                    footer: qsTr("The Today’s details list shows these in this order, then “Other…”. Removing one doesn’t change past logs.")
+                    footer: qsTr("Today’s details lists these in this order, then “Other…”. Removing one doesn’t change past logs.")
 
                     Repeater {
                         id: repeater

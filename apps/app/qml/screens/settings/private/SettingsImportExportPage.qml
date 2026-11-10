@@ -43,7 +43,7 @@ SettingsPage {
 
     GroupedList {
         width: parent.width
-        footer: qsTr("A setup file holds error types, locations, note templates and preferences. It does not contain any logs. Import and export use Files or AirDrop.")
+        footer: qsTr("A setup file holds error types, locations, note templates and preferences. It does not contain any logs. You export and import it through your device’s file picker.")
 
         ListRow {
             objectName: "settingsImport"

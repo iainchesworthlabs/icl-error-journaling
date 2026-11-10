@@ -781,6 +781,9 @@ TEST_CASE("settings.export: the rows emit the requests and the result of an expo
     fixture.open_page(QStringLiteral("settingsImportExport"));
     CHECK(fixture.shown(QStringLiteral("settingsExportResult")) == nullptr);
     CHECK(fixture.shows(QStringLiteral("does not contain any logs")));
+    // The note is not about one platform: no AirDrop, which Android has not got.
+    CHECK(fixture.shows(QStringLiteral("through your device’s file picker")));
+    CHECK_FALSE(fixture.shows(QStringLiteral("AirDrop")));
 
     fixture.tap(QStringLiteral("settingsExport"));
     CHECK(exports.count() == 1);

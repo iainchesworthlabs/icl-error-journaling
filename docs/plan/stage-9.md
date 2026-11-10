@@ -82,7 +82,7 @@ Android TV, Wear OS, Chromebooks and the desktop build (Stage 12).
 | NDK | r27c, `27.2.12479018` | The version Qt built the kit with. Qt recommends matching it |
 | JDK | 21 | Qt 6.12 lists JDK 21. The JDK 25 on this machine is not used for Android |
 | Gradle, AGP | 9.5.1, 9.2.1 | What the kit's templates name |
-| ABIs | `arm64-v8a` in the release bundle; `x86_64` only for the emulator | [Decision 3](#decisions-for-the-owner) |
+| ABIs | `arm64-v8a` and `armeabi-v7a` in the release bundle; `x86_64` only for the emulator | [Decision 3](#decisions-for-the-owner): 32-bit phones are supported (package 9.1b) |
 | vcpkg triplets | `arm64-android`, `x64-android` | vcpkg's own triplets. The manifest already leaves Catch2 out on Android, so vcpkg installs nothing for a release build. Tracy is installed only with the `profiling` feature |
 | Package | Android App Bundle (`.aab`) for Play; APK for CI and the emulator | Play takes bundles |
 | Application ID | `com.iainchesworthlabs.errorjournaling` | The iOS bundle identifier. It cannot be changed after the first Play upload ([decision 1](#decisions-for-the-owner)) |
@@ -92,7 +92,7 @@ Android TV, Wear OS, Chromebooks and the desktop build (Stage 12).
 `VCPKG_CHAINLOAD_TOOLCHAIN_FILE` set to the Qt kit's `qt.toolchain.cmake`, plus `QT_HOST_PATH`, `ANDROID_SDK_ROOT` and
 `ANDROID_NDK_ROOT`. Two presets build on it:
 
-- `android-release`: `arm64-v8a`, Release, an unsigned `.aab` and `.apk`;
+- `android-release`: `arm64-v8a`, Release, an unsigned `.aab` and `.apk`; package 9.1b adds `armeabi-v7a` (decision 3) and works out how the two go into one bundle (Qt's multi-ABI build, or one build per ABI merged);
 - `android-emulator`: `x86_64`, RelWithDebInfo, an APK for the smoke test.
 
 No tests are built in either preset. `docs/building.md` gets an Android section, which `AGENTS.md` requires for a new
@@ -392,6 +392,10 @@ That adds about 1.2 GB per generation, for 3.6 GB. Three pushes in an hour then 
 ceiling, but it uses most of the headroom kept for a Qt upgrade. If the measured figure is higher, the `x86_64` kit and
 its ccache are saved only by the manual emulator run.
 
+The 32-bit kit (decision 3) adds about 0.2 GB per generation: 1.4 GB, 3.8 GB per generation, and a peak of about 7.6 GB
+for three pushes in an hour, under the 8 GB ceiling with 0.4 GB to spare. 9.1b measures it, and moves the `armeabi-v7a`
+ccache to the manual runs if it is over.
+
 ## Signing and release
 
 **Keys.** Google Play App Signing is required for new apps.
@@ -450,6 +454,7 @@ touches only the Android directories or adds a CMake choice that iOS does not ta
 |---|---|---|---|
 | 9.1 | Android build skeleton | Presets, `android.cmake`, the manifest, `EjActivity` (empty), the storage `android/` files, the bridge CMake three-way choice with desktop stubs for Android, the `qml_files.cmake` mapping, the layout-check extension, `verify_package.sh`, the `android-build` job, the C++23 libc++ list, and the `docs/building.md` and `docs/ci.md` updates | Owner approval of this page |
 | 9.1a | `icl-common-infra`: `setup-android` | The reusable action, then a re-pin here | 9.1 (to know the steps) |
+| 9.1b | 32-bit ABI | `armeabi-v7a`: Qt's `android_armv7` kit, a preset, the vcpkg triplet `arm-android`, one bundle with both ABIs, the package check per ABI, the CI job; the application ID separated from the Java package in the check | 9.1 |
 | 9.2 | Share | `android/share.cpp`, `EjShare`, the `FileProvider`, the portable outcome and threshold | 9.1 |
 | 9.3 | Haptics | `android/haptics.cpp` and the constant table | 9.1 |
 | 9.4 | File picker and open-with | `android/document_picker.cpp`, `EjDocuments`, the intent filters, the native open-event hook | 9.1 |
@@ -597,26 +602,18 @@ templates):
 
 ## Decisions for the owner
 
-1. **Application ID.** Keep `com.iainchesworthlabs.errorjournaling`, which matches iOS. It is permanent once uploaded.
-2. **Large screens.** With target API 36, Android 16 ignores the portrait lock on tablets and unfolded foldables. The
-   options:
-   - (a) Exclude tablets in Play Console's device catalogue for v1, and set the temporary opt-out property for foldables.
-     This is the recommendation. It keeps v1 to phones, as the scope says.
-   - (b) Use Stage 8's iPad landscape layout on Android tablets as well.
-   - (c) Let the phone layout stretch.
+Answered on 10 November 2026. The answers were dictated, and two are interpreted below (2 and 7): say if one is wrong.
 
-   The opt-out stops working when Play requires target 37. That is expected about August 2027, and by then (b) is
-   needed.
-3. **ABIs.** Ship `arm64-v8a` only, which is recommended: every phone that runs API 28 or later and is sold with Play is
-   very likely 64-bit capable. Or also add `armeabi-v7a` for 32-bit-only low-end phones, which costs a second Qt kit and
-   a second build.
-4. **Launch screen.** The Android convention is the icon on the token colour. The iOS skeleton image cannot be the
-   splash on Android 12 and later.
-5. **Backup.** Include the store in Android Auto Backup and device transfer, to match iOS (recommended), or exclude it.
-6. **Shared export file.** Accept that on Android the temporary `.ejconfig` is removed at the next export or launch, not
-   at once.
-7. **Play authentication.** Workload Identity Federation (recommended) or a service-account JSON key.
-8. **Emulator job blocking.** Keep it non-blocking for two weeks, then make it required if it is stable.
+| # | Decision | Answer | What follows |
+|---|---|---|---|
+| 1 | Application ID | It will change when the name is settled | Nothing is uploaded to Play until then (O5 waits for the name), because the ID is permanent once uploaded. The ID is one CMake variable (`ERROR_JOURNALING_APPLICATION_ID`), the `APPLICATION_ID` of `android-build.yml` and the default of the package check. The Java package of `EjActivity` is separate, so a change touches no Java. 9.1b makes the check take the activity's Java package from its own constant, because it derives it from the application ID today |
+| 2 | Large screens | (b): Android tablets and unfolded foldables use Stage 8's layout. Interpreted from "give the Android tablets the iPad layout" | No Play device exclusion and no opt-out property. 9.7 chooses portrait on phones and unspecified orientation on screens of 600 dp or more at run time (the rule Stage 13 proposes), and waits for Stage 8's `Layout` singleton (8.1). The package check's portrait test changes with 9.7. Android tablet screenshots join Stage 11's list |
+| 3 | ABIs | Both: `arm64-v8a` and `armeabi-v7a` | Package 9.1b. Play asks for 16 KB page alignment on 64-bit devices only, so the alignment check stays on `arm64-v8a` and `x86_64`, while every ABI gets the dependency check. A 32-bit build cannot run on the emulator images here, so the exit gate needs a phone that runs it (O8) |
+| 4 | Launch screen | The app icon on the token colour | 9.7 |
+| 5 | Backup | Include the store, as on iOS | 9.5 adds the data extraction rules and `fullBackupContent` that include `files/` and exclude `cache/` |
+| 6 | Shared export file | Accepted: removed at the next export or launch | 9.2 |
+| 7 | Play authentication | The owner will set up the connection. The method is not chosen yet; the default is Workload Identity Federation. Interpreted from "I'll need to set up something to talk with CI to Play" | 9.9 writes the steps of O6 for whichever method the owner picks. Nothing before 9.9 needs it |
+| 8 | Emulator job | Accepted: non-blocking for two weeks, then required if stable | 9.8 |
 
 ## Owner actions
 
@@ -631,7 +628,7 @@ Only the owner can do these. Nothing in 9.9 can upload until O1 to O6 are done. 
 | O5 | Enrol in Play App Signing, and upload the first `.aab` by hand to internal testing | Use the artifact of a `release.yml` dry run. Let Google generate the app signing key |
 | O6 | Give CI access to the Play Developer API | A Google Cloud project with the API enabled, and a service account invited in Play Console with release rights to this app only. Then either Workload Identity Federation for this repository (variables `PLAY_WIF_PROVIDER` and `PLAY_SERVICE_ACCOUNT`) or the secret `PLAY_SERVICE_ACCOUNT_JSON` |
 | O7 | Add the internal testers | An email list in Play Console (up to 100 testers), and share the opt-in link |
-| O8 | Name the Android phone or phones for the exit gate | A real phone, preferably on Android 16, plus one older phone on Android 9 to 12 if one is available |
+| O8 | Name the Android phone or phones for the exit gate | A real phone, preferably on Android 16, plus one older phone on Android 9 to 12 if one is available, and a phone that runs the 32-bit build (decision 3): the emulator images here run `x86_64` and `arm64-v8a` only |
 | O9 | Approve the local SDK download | See below |
 | O10 | Answer the [decisions](#decisions-for-the-owner) | Before 9.7 (decisions 2 and 4) and 9.9 (decision 7) |
 | O11 | Take licence advice | See [Licence facts](#licence-facts) |
