@@ -1,0 +1,365 @@
+{
+  "_comment": "The screens that ej_screenshots renders (docs/plan/stage-7.md, 7.1). Each state names the scene of apps/app/tests/ui/visual_capture_test.cpp that builds it; 'files' names the screen files under apps/app/qml/screens/ that it shows, and every screen file there (other than private/ and launch/) must be named once. screenshots.render checks both. A mode is rendered for every state.",
+  "modes": [
+    {
+      "name": "light",
+      "dark": false,
+      "text_scale": 1.0
+    },
+    {
+      "name": "dark",
+      "dark": true,
+      "text_scale": 1.0
+    },
+    {
+      "name": "large",
+      "dark": false,
+      "text_scale": 3.1
+    }
+  ],
+  "not_screens": {
+    "setup/SetupFile.qml": "The setup file's name and file types for the chooser; it draws nothing."
+  },
+  "flows": [
+    {
+      "id": "W1",
+      "title": "First launch, import",
+      "states": [
+        {
+          "name": "FirstLaunch",
+          "files": [
+            "setup/FirstLaunch.qml"
+          ]
+        },
+        {
+          "name": "ImportConfirm",
+          "files": [
+            "setup/ImportConfirm.qml",
+            "setup/ImportFlow.qml"
+          ]
+        },
+        {
+          "name": "ImportErrors",
+          "files": [
+            "setup/ImportErrors.qml"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "W2",
+      "title": "First launch, by hand",
+      "states": [
+        {
+          "name": "FirstLaunchManual",
+          "files": [
+            "setup/FirstLaunchManual.qml"
+          ]
+        },
+        {
+          "name": "LogEmptyBoard"
+        }
+      ]
+    },
+    {
+      "id": "W3",
+      "title": "Board setup",
+      "states": [
+        {
+          "name": "BoardSettings",
+          "files": [
+            "settings/SettingsScreen.qml"
+          ]
+        },
+        {
+          "name": "BoardSettingsEmpty"
+        },
+        {
+          "name": "BoardTypePicker"
+        },
+        {
+          "name": "ErrorTypeNewOnBoard"
+        },
+        {
+          "name": "BoardLayoutSelected"
+        },
+        {
+          "name": "ErrorTypes",
+          "files": [
+            "settings/editors/ErrorTypes.qml"
+          ]
+        },
+        {
+          "name": "ErrorTypesAdded"
+        },
+        {
+          "name": "ErrorTypeEdit",
+          "files": [
+            "settings/editors/ErrorTypeEdit.qml"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "W4",
+      "title": "Today's details",
+      "states": [
+        {
+          "name": "Header",
+          "files": [
+            "header/HeaderScreen.qml"
+          ]
+        },
+        {
+          "name": "EnvironmentSheet",
+          "files": [
+            "header/EnvironmentSheet.qml"
+          ]
+        },
+        {
+          "name": "HeaderNewLogRow"
+        },
+        {
+          "name": "StartNewLogConfirm"
+        }
+      ]
+    },
+    {
+      "id": "W5",
+      "title": "A day of logging",
+      "states": [
+        {
+          "name": "Main",
+          "files": [
+            "log/LogScreen.qml"
+          ]
+        },
+        {
+          "name": "TapHint"
+        },
+        {
+          "name": "HoldNote"
+        },
+        {
+          "name": "Other",
+          "files": [
+            "other/OtherPicker.qml"
+          ]
+        },
+        {
+          "name": "OtherSearch"
+        },
+        {
+          "name": "OtherNoMatch"
+        },
+        {
+          "name": "TemplateValue"
+        },
+        {
+          "name": "TileLabels"
+        },
+        {
+          "name": "TileLabelsLarge"
+        },
+        {
+          "name": "LogBanner"
+        },
+        {
+          "name": "WriteFailed"
+        },
+        {
+          "name": "Recovery"
+        }
+      ]
+    },
+    {
+      "id": "W6",
+      "title": "Version change",
+      "states": [
+        {
+          "name": "ChangeVersion",
+          "files": [
+            "header/VersionSheet.qml"
+          ]
+        },
+        {
+          "name": "VersionTime",
+          "files": [
+            "header/VersionTimeSheet.qml"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "W7",
+      "title": "Review",
+      "states": [
+        {
+          "name": "Review",
+          "files": [
+            "review/Review.qml"
+          ]
+        },
+        {
+          "name": "EditEntry",
+          "files": [
+            "review/EditEntry.qml"
+          ]
+        },
+        {
+          "name": "TimeTumbler"
+        },
+        {
+          "name": "TimeTumbler12"
+        }
+      ]
+    },
+    {
+      "id": "W8",
+      "title": "Share, then the next day",
+      "states": [
+        {
+          "name": "NewDay",
+          "files": [
+            "newday/NewDay.qml"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "W9",
+      "title": "History",
+      "states": [
+        {
+          "name": "History",
+          "files": [
+            "history/History.qml"
+          ]
+        },
+        {
+          "name": "HistoryEmpty"
+        },
+        {
+          "name": "PastLogReview"
+        },
+        {
+          "name": "DeleteLog"
+        }
+      ]
+    },
+    {
+      "id": "W10",
+      "title": "Settings and its editors",
+      "states": [
+        {
+          "name": "Facilitator"
+        },
+        {
+          "name": "TimeFormat"
+        },
+        {
+          "name": "Locations",
+          "files": [
+            "settings/editors/Locations.qml"
+          ]
+        },
+        {
+          "name": "Templates",
+          "files": [
+            "settings/editors/Templates.qml"
+          ]
+        },
+        {
+          "name": "TemplateEdit",
+          "files": [
+            "settings/editors/TemplateEdit.qml"
+          ]
+        },
+        {
+          "name": "TemplateEditInvalid"
+        }
+      ]
+    },
+    {
+      "id": "W11",
+      "title": "Import and export from Settings",
+      "states": [
+        {
+          "name": "ImportExport"
+        }
+      ]
+    },
+    {
+      "id": "W12",
+      "title": "About",
+      "states": [
+        {
+          "name": "About"
+        },
+        {
+          "name": "AboutLicence"
+        }
+      ]
+    },
+    {
+      "id": "iPad",
+      "title": "iPad, portrait and landscape (Stage 8)",
+      "states": [
+        {
+          "name": "Main.ipad-portrait"
+        },
+        {
+          "name": "Main.ipad-landscape"
+        },
+        {
+          "name": "Review.ipad-portrait"
+        },
+        {
+          "name": "Review.ipad-landscape"
+        },
+        {
+          "name": "Header.ipad-portrait"
+        },
+        {
+          "name": "Header.ipad-landscape"
+        },
+        {
+          "name": "BoardSettings.ipad-portrait"
+        },
+        {
+          "name": "BoardSettings.ipad-landscape"
+        },
+        {
+          "name": "History.ipad-portrait"
+        },
+        {
+          "name": "History.ipad-landscape"
+        },
+        {
+          "name": "Other.ipad-portrait"
+        },
+        {
+          "name": "Other.ipad-landscape"
+        },
+        {
+          "name": "EditEntry.ipad-portrait"
+        },
+        {
+          "name": "EditEntry.ipad-landscape"
+        },
+        {
+          "name": "NewDay.ipad-portrait"
+        },
+        {
+          "name": "NewDay.ipad-landscape"
+        },
+        {
+          "name": "FirstLaunch.ipad-portrait"
+        },
+        {
+          "name": "FirstLaunch.ipad-landscape"
+        }
+      ]
+    }
+  ]
+}

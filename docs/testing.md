@@ -139,6 +139,23 @@ binds to its size. A test picks a class by giving the rig a size: `UiRig(QSize)`
 the window and the loaded item as a rotation does. `UiRig::set_safe_area_sides` adds left and right insets to those of
 `set_safe_area`. The cases `layout.*` (`window_layout_test.cpp`) check the classes and their sizes.
 
+## Screenshots of every screen
+
+`tools/ej_screenshots/ej_screenshots.py` renders every screen in light, dark and large text (Stage 7, 7.1;
+`docs/plan/stage-7.md`). The screens are the states of `tools/ej_screenshots/screens.json`, grouped by flow: the scenes of
+the visual capture (the mock-up states, phone and iPad) and the states the design package did not draw (`extra_scenes()` in
+`visual_capture_test.cpp`: the tap hint, the hold sheet, the Other search, the environment and version-time sheets, and
+the Facilitator and Time format pages). The modes are in the same file: `light`, `dark`, and `large` (light at a text
+scale of 3.1, the largest iOS size); a mode is added there without code.
+
+The pictures come from the `ui` case `screenshots.render`, which ctest runs on every build leg (with its own timeout of
+900 seconds, `[screenshots]`). Without `EJ_SCREENSHOT_DIR` it renders into a folder it throws away, so the run checks that
+every state renders; with it, it writes `<State>.<mode>.png` and `screenshots.json` there. `EJ_SCREENSHOT_ONLY` narrows it to
+a comma separated list of states. The same case fails when a state of `screens.json` has no scene, a scene is not listed,
+or a `.qml` file under `apps/app/qml/screens/` (other than `private/` and `launch/`) is not named by any state's `files`
+(or by `not_screens`): a new screen needs a state before it can merge. The script runs the case with the folder set and
+writes `index.html`. The pictures are not golden files and are not compared; CI uploads them (`docs/ci.md`).
+
 ## Golden tests and fixtures
 
 The export format is pinned by golden files: `libs/core/tests/golden/<name>.txt` holds the exact bytes an export must
