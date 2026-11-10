@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/accessibility_settings.hpp"
 #include "error_journaling/android_haptics_plan.hpp"
+#include "error_journaling/android_import_plan.hpp"
 #include "error_journaling/android_share_plan.hpp"
 #include "error_journaling/config_exporter.hpp"
 #include "error_journaling/config_importer.hpp"
@@ -1299,6 +1300,57 @@ TEST_CASE("importer.purge: stale files in the Inbox and the export folder go, an
     // Nothing there at all is not an error.
     CHECK(bridge::purge_import_leftovers(qt_path(directory.path() / "none"), qt_path(directory.path() / "nada")) == 0);
     CHECK(bridge::purge_import_leftovers(QString(), QString()) == 0);
+}
+
+TEST_CASE("importer.purge: the Android import directory is emptied at launch too", "[integration][import]")
+{
+    TempDirectory directory;
+    const fs::path temporary = directory.path() / "tmp";
+    const QString imports = bridge::import_directory(qt_path(temporary));
+    const fs::path import_dir = fs::path(imports.toStdU16String());
+    CHECK(import_dir.filename() == std::string(bridge::android_import_directory_name));
+    CHECK(import_dir.parent_path() == temporary);
+
+    fs::create_directories(import_dir);
+    write_file(import_dir / "setup-1.ejconfig", "{}");
+    write_file(import_dir / "setup-2.ejconfig", "{}");
+    write_file(temporary / "keep.txt", "x"); // beside the directory, not in it
+
+    CHECK(bridge::purge_import_leftovers(QString(), qt_path(temporary)) == 2);
+    CHECK_FALSE(fs::exists(import_dir / "setup-1.ejconfig"));
+    CHECK_FALSE(fs::exists(import_dir / "setup-2.ejconfig"));
+    CHECK(fs::exists(temporary / "keep.txt"));
+}
+
+TEST_CASE("importer.android_plan: the copy is capped one byte above what the importer accepts", "[unit][import]")
+{
+    // A file of exactly the limit is a setup file; one byte more is refused by the importer as too large. The copy keeps
+    // that one byte, so the refusal is the importer's own and a stream that never ends cannot fill the storage.
+    CHECK(bridge::android_import_copy_cap_bytes == bridge::CONFIG_MAX_BYTES + 1);
+    CHECK(bridge::android_import_copy_cap_bytes > bridge::CONFIG_MAX_BYTES);
+}
+
+TEST_CASE("importer.android_plan: the picker offers JSON, octet-stream and text, and never everything", "[unit][import]")
+{
+    const auto& types = bridge::android_picker_mime_types;
+    CHECK(std::find(types.begin(), types.end(), "application/json") != types.end());
+    CHECK(std::find(types.begin(), types.end(), "application/octet-stream") != types.end());
+    CHECK(std::find(types.begin(), types.end(), "text/plain") != types.end());
+    for (const auto type : types)
+    {
+        CHECK(type.find('*') == std::string_view::npos);
+    }
+}
+
+TEST_CASE("importer.android_plan: the codes EjDocuments.java sends", "[unit][import]")
+{
+    CHECK(bridge::android_pick_outcome_from_code(0) == bridge::PickOutcome::PICKED);
+    CHECK(bridge::android_pick_outcome_from_code(1) == bridge::PickOutcome::CANCELLED);
+    CHECK(bridge::android_pick_outcome_from_code(2) == bridge::PickOutcome::FAILED);
+    // Anything else is a failure, never a success.
+    CHECK(bridge::android_pick_outcome_from_code(-1) == bridge::PickOutcome::FAILED);
+    CHECK(bridge::android_pick_outcome_from_code(3) == bridge::PickOutcome::FAILED);
+    CHECK(bridge::android_pick_outcome_from_code(1000) == bridge::PickOutcome::FAILED);
 }
 
 TEST_CASE("importer.picker: PICKED is imported and deleted, CANCELLED is silent, FAILED gives one message",

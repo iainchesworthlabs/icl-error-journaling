@@ -26,6 +26,7 @@ def manifest(
     backup: str = "(type 0x12)0xffffffff",
     orientation: int = 1,
     extra: str = "",
+    filters: str = "",
 ) -> str:
     """aapt2 dump xmltree output in the shape aapt2 prints it."""
     lines = [
@@ -52,6 +53,7 @@ def manifest(
         f'            A: {NS}:name(0x01010003)="android.intent.action.MAIN" (Raw: "android.intent.action.MAIN")',
         "          E: category (line=31)",
         f'            A: {NS}:name(0x01010003)="android.intent.category.LAUNCHER" (Raw: "android.intent.category.LAUNCHER")',
+        *(filters.splitlines() if filters else []),
         "      E: provider (line=44)",
         f'        A: {NS}:name(0x01010003)="androidx.core.content.FileProvider" (Raw: "androidx.core.content.FileProvider")',
         f"        A: {NS}:exported(0x01010010)=(type 0x12)0x0",
@@ -126,6 +128,30 @@ class ManifestTest(unittest.TestCase):
             f'        A: {NS}:permission(0x01010006)="android.permission.DUMP" (Raw: "android.permission.DUMP")\n'
         )
         self.assertEqual(package.manifest_problems(manifest(extra=receiver)), [])
+
+    @staticmethod
+    def view_filter(mime: str) -> str:
+        return "\n".join(
+            [
+                "        E: intent-filter (line=33)",
+                "          E: action (line=34)",
+                f'            A: {NS}:name(0x01010003)="android.intent.action.VIEW" (Raw: "android.intent.action.VIEW")',
+                "          E: data (line=35)",
+                f'            A: {NS}:scheme(0x01010027)="content" (Raw: "content")',
+                "          E: data (line=36)",
+                f'            A: {NS}:mimeType(0x01010026)="{mime}" (Raw: "{mime}")',
+            ]
+        )
+
+    def test_the_setup_file_types_are_allowed(self) -> None:
+        for mime in ("application/json", "application/octet-stream"):
+            self.assertEqual(package.manifest_problems(manifest(filters=self.view_filter(mime))), [])
+
+    def test_an_intent_filter_for_every_type_is_refused(self) -> None:
+        for mime in ("*/*", "*", "application/*"):
+            problems = package.manifest_problems(manifest(filters=self.view_filter(mime)))
+            self.assertEqual(len(problems), 1, mime)
+            self.assertIn(mime, problems[0])
 
     def test_missing_manifest_is_reported(self) -> None:
         self.assertEqual(package.manifest_problems(""), ["the package has no manifest element"])

@@ -9,7 +9,7 @@ For an APK it reads the merged manifest (`aapt2 dump xmltree`) and refuses:
 - any permission except the application's own (NFR-09: no network, so no INTERNET, and no AD_ID; androidx declares one
   signature permission named after the application for its unexported receivers);
 - a minimum SDK other than 28 or a target SDK other than 36 (Google Play's requirement from 31 August 2026);
-- another application ID, a launcher activity other than EjActivity, an activity that is not portrait, another
+- an intent filter that takes every type (`*/*`), another application ID, a launcher activity other than EjActivity, an activity that is not portrait, another
   component exported without a permission guarding it, and backup turned off (Stage 2 decision 8: the store stays in
   the device backup).
 
@@ -157,6 +157,14 @@ def manifest_problems(text: str, application_id: str = APPLICATION_ID) -> list[s
         name = activity.attributes.get("name", "")
         if name == activity_id and as_int(activity.attributes.get("screenOrientation")) != PORTRAIT:
             problems.append(f"{name} is not portrait")
+
+    # Only the setup file's types (application/json, application/octet-stream), never every type: the application would
+    # be offered for any file (Stage 9, "File picker and open-with").
+    for component in (c for tag in COMPONENTS for c in application.all(tag)):
+        for data in component.all("data"):
+            mime = data.attributes.get("mimeType", "")
+            if "*" in mime:
+                problems.append(f"an intent filter of {component.attributes.get('name', '')} takes the type '{mime}'")
 
     for tag in COMPONENTS:
         for component in application.all(tag):

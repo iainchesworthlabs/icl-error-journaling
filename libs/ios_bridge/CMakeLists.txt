@@ -17,6 +17,7 @@ file(GLOB bridge_sources CONFIGURE_DEPENDS
 add_library(ej_ios_bridge
     src/accessibility_settings.cpp
     src/android_haptics_plan.cpp
+    src/android_import_plan.cpp
     src/android_share_plan.cpp
     src/haptic_policy.cpp
     src/launch_tracker.cpp
@@ -40,8 +41,9 @@ endif()
 
 if(ANDROID)
     # The Android implementations call Java through JNI (QJniObject), which is Qt Core.
-    find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
-    target_link_libraries(ej_ios_bridge PRIVATE Qt6::Core)
+    # Gui: a file another app sends is posted as a QFileOpenEvent, as Qt's iOS plugin does for AirDrop.
+    find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui)
+    target_link_libraries(ej_ios_bridge PRIVATE Qt6::Core Qt6::Gui)
 endif()
 
 # What QML sees of the bridge: a QObject over the interface, so the interface itself needs no Qt.

@@ -211,6 +211,8 @@ It builds `android-release` and runs `tools/ci/check_android_package.py` on the 
 - the SDK range is not 28 to 36;
 - the application ID, the launcher activity (`EjActivity`, portrait) or `allowBackup` differ;
 - a component other than the activity is exported without a permission guarding it;
+- an intent filter takes every type (`*/*`, or any type with a `*`): only the setup file's types, JSON and octet-stream,
+  are allowed, so that the application is not offered for every file;
 - a packaged library links a library that is neither in the package nor provided by Android at API 28 (the NDK's
   sysroot), which would stop the app at launch with "dlopen failed";
 - the program, the Android platform plugin or the SQLite driver is missing (Qt packages plugins only for the Qt modules
