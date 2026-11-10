@@ -9,7 +9,7 @@ For an APK it reads the merged manifest (`aapt2 dump xmltree`) and refuses:
 - any permission except the application's own (NFR-09: no network, so no INTERNET, and no AD_ID; androidx declares one
   signature permission named after the application for its unexported receivers);
 - a minimum SDK other than 28 or a target SDK other than 36 (Google Play's requirement from 31 August 2026);
-- another application ID, a launcher activity other than EjActivity, an activity that is not portrait, another
+- an intent filter that takes every type (`*/*`), another application ID, a launcher activity other than EjActivity, an activity that is not portrait, another
   component exported without a permission guarding it, and backup turned off (Stage 2 decision 8: the store stays in
   the device backup).
 
@@ -139,6 +139,15 @@ def manifest_problems(text: str, application_id: str = APPLICATION_ID) -> list[s
     backup = application.attributes.get("allowBackup")
     if backup is not None and not is_true(backup):
         problems.append(f"allowBackup is {backup}, expected true (Stage 2 decision 8)")
+    # The rules that say what is copied (the files directory only; tools/tests/test_android_backup_rules.py checks their
+    # content in the sources, where the resource names are still readable), one for Android 12 and later and one before.
+    for rules in ("dataExtractionRules", "fullBackupContent"):
+        if rules not in application.attributes:
+            problems.append(f"the application has no {rules} (Stage 9 decision 5)")
+    # Never direct-boot aware: the application would run before the first unlock, with its store still locked.
+    for component in [application, *(c for tag in COMPONENTS for c in application.all(tag))]:
+        if is_true(component.attributes.get("directBootAware")):
+            problems.append(f"{component.attributes.get('name', 'the application')} is direct-boot aware")
 
     launchers = [
         activity
@@ -157,6 +166,14 @@ def manifest_problems(text: str, application_id: str = APPLICATION_ID) -> list[s
         name = activity.attributes.get("name", "")
         if name == activity_id and as_int(activity.attributes.get("screenOrientation")) != PORTRAIT:
             problems.append(f"{name} is not portrait")
+
+    # Only the setup file's types (application/json, application/octet-stream), never every type: the application would
+    # be offered for any file (Stage 9, "File picker and open-with").
+    for component in (c for tag in COMPONENTS for c in application.all(tag)):
+        for data in component.all("data"):
+            mime = data.attributes.get("mimeType", "")
+            if "*" in mime:
+                problems.append(f"an intent filter of {component.attributes.get('name', '')} takes the type '{mime}'")
 
     for tag in COMPONENTS:
         for component in application.all(tag):

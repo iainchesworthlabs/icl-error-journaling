@@ -26,6 +26,29 @@ void remove_quietly(const std::filesystem::path& file) noexcept
     std::filesystem::remove(file, ignored);
 }
 
+// Every regular file beside `keep` in its directory: what an earlier export left for a receiving app to read.
+void remove_older_exports(const std::filesystem::path& keep) noexcept
+{
+    std::error_code error;
+    std::filesystem::directory_iterator it(keep.parent_path(), error);
+    if (error)
+    {
+        return;
+    }
+    for (const std::filesystem::directory_iterator end; it != end; it.increment(error))
+    {
+        if (error)
+        {
+            break;
+        }
+        std::error_code status_error;
+        if (it->path() != keep && it->is_regular_file(status_error))
+        {
+            remove_quietly(it->path());
+        }
+    }
+}
+
 } // namespace
 
 bool is_valid_utf8(std::string_view text) noexcept
@@ -127,10 +150,20 @@ void SharePresenter::present_temporary_file(const std::filesystem::path& file, S
 {
     ShareRequest request;
     request.m_File = file;
+    const bool retains = m_Share.retains_shared_files();
+    // Not while another sheet is open: that sheet's file is among them.
+    if (retains && !m_State->m_InFlight)
+    {
+        remove_older_exports(file);
+    }
     present(std::move(request),
-            [file, done = std::move(done)](const ShareResult& result)
+            [file, retains, done = std::move(done)](const ShareResult& result)
             {
-                remove_quietly(file);
+                // A retained file stays for the receiving app, unless nobody was shown the sheet.
+                if (!retains || result.m_Outcome == ShareOutcome::FAILED)
+                {
+                    remove_quietly(file);
+                }
                 if (done)
                 {
                     done(result);

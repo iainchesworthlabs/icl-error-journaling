@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- The files EjFileProvider may serve: what the application shares, in the ej-share directory of its cache (the
+     temporary directory of QStandardPaths). Nothing else of the cache or of the data directory is reachable. -->
+<paths>
+    <cache-path name="ej_share" path="ej-share/" />
+</paths>

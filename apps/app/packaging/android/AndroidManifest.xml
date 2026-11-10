@@ -15,13 +15,17 @@
         android:largeScreens="true"
         android:normalScreens="true"
         android:smallScreens="true" />
-    <!-- allowBackup: the store stays in the device backup, as on iOS (Stage 2 decision 8; Stage 9 decision 5, package
-         9.5 adds the rules). -->
+    <!-- allowBackup: the store stays in the device backup, as on iOS (Stage 2 decision 8; Stage 9 decision 5). The rules
+         copy the files directory (the store) and nothing else: res/xml/ej_data_extraction_rules.xml from Android 12,
+         ej_backup_rules.xml before. The application is not direct-boot aware (no android:directBootAware), so it never
+         runs, or meets its store, before the person has unlocked the phone once. -->
     <application
         android:name="org.qtproject.qt.android.bindings.QtApplication"
         android:hardwareAccelerated="true"
         android:label="-- %%INSERT_APP_NAME%% --"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/ej_data_extraction_rules"
+        android:fullBackupContent="@xml/ej_backup_rules"
         android:enableOnBackInvokedCallback="true">
         <!-- Phone portrait (the v1 scope). Android 16 ignores the orientation on screens at least 600 dp wide; what v1
              does there is Stage 9 decision 2 (package 9.7). -->
@@ -37,6 +41,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- "Open with" from Files, Mail and Slack, and "Share to": a setup file (.ejconfig). It has no registered type;
+                 document providers report it as octet-stream or JSON. Only these types, never */*, so the application is not
+                 offered for every file. The content is checked by the importer, not the type (docs/plan/stage-9.md). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="-- %%INSERT_APP_LIB_NAME%% --" />
@@ -45,6 +66,18 @@
                 android:name="android.app.arguments"
                 android:value="-- %%INSERT_APP_ARGUMENTS%% --" />
         </activity>
+
+        <!-- What the application shares (the configuration export, a long text) is served to the receiving app through this
+             provider: a content:// URI with read permission for that share (res/xml/ej_file_paths.xml). -->
+        <provider
+            android:name="com.iainchesworthlabs.errorjournaling.EjFileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/ej_file_paths" />
+        </provider>
 
         <!-- Qt's own file provider, as in its template. -->
         <provider

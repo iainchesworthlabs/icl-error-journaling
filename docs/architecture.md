@@ -37,9 +37,11 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
   src/                       one file per component; quarantine (where recovery puts what it replaces), journal_seed
                              (a journal written again from a log)
   src/platform/              the pieces that differ by operating system, with one directory per system (linux, macos,
-                             ios, windows) defining the same functions from the same headers: durable_sync (`fsync`,
-                             `F_FULLFSYNC`, `FlushFileBuffers`), file_lock (an exclusive lock that refuses a second
-                             writer), file_protection (data protection on iOS, a stub
+                             ios, android, windows) defining the same functions from the same headers: durable_sync
+                             (`fsync`, `F_FULLFSYNC`, `FlushFileBuffers`), file_lock (an exclusive lock that refuses a
+                             second writer), file_protection (data protection on iOS; on Android it applies nothing,
+                             because the app's internal storage is credential-encrypted, and reads back the class from
+                             the path with `android_protection.hpp`, which is portable and tested everywhere; a stub
                              elsewhere; `protect.hpp` decides which paths get it). CMake picks the directory
   tests/                     contract_cases.hpp: one typed suite for `LogRepository`, instantiated by
                              test_contract_memory.cpp (`unit`) and test_contract_sqlite.cpp (`integration`);
@@ -62,8 +64,15 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
     platform_services.hpp            PlatformServices: a struct of unique_ptr to the capabilities, and
                                      make_platform_services(), one line per capability
     share_presenter.hpp              SharePresenter: the portable decisions around a Share (exactly one of text and file,
-                                     valid UTF-8, one sheet at a time, a temporary file deleted on every outcome) and
-                                     purge_directory for the launch purge
+                                     valid UTF-8, one sheet at a time, a temporary file deleted on every outcome, unless the Share
+                                     retains shared files, as on Android) and purge_directory for the launch purge
+    android_haptics_plan.hpp         the HapticFeedbackConstants value of each HapticKind by API level, portable and tested
+    android_system_plan.hpp          the names of the timing marks, the process start time from /proc/self/stat, the text scale
+                                     of Android's fontScale (the iOS range) and what counts as Reduce Motion, portable and tested
+    android_import_plan.hpp          the Android setup-file decisions (the private copy directory `ej-import`, the copy cap one
+                                     byte above the importer's limit, the picker's types, the picker's result codes)
+    android_share_plan.hpp           the Android share decisions (inline text or a file above 256 KB, how the chooser's end
+                                     maps to a ShareOutcome), portable and tested on the desktop
     accessibility_settings.hpp       AccessibilitySettings (Stage 4, 4.3): text scale from the content size category,
                                      Reduce Motion, VoiceOver, and a change notice; the category-to-scale table is portable
     document_types.hpp               the setup file's type identifier, extension, description and size limit, one
@@ -89,6 +98,11 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
     qml_bridge.hpp                   QmlBridge, the QObject QML sees, over the capabilities (ej_qml_bridge)
   src/platform/ios/      Objective-C++ (.mm, -fobjc-arc), built for iOS: share.mm, haptics.mm, perf_marks.mm, accessibility_settings.mm, document_picker.mm, background_tasks.mm and the internal
                          top_view_controller.mm shared by the presenters
+  src/platform/android/  C++ with JNI (QJniObject) and the Java in apps/app/packaging/android/src: share.cpp, haptics.cpp,
+                         document_picker.cpp (the picker, and a file another app opens or sends, posted as a QFileOpenEvent),
+                         perf_marks.cpp (ATrace and logcat), accessibility_settings.cpp (font size, Remove animations,
+                         TalkBack), and background_tasks.cpp, which is the desktop implementation on purpose: Android has
+                         no grace period to ask for, and the portable LifecycleCoordinator flushes on going inactive
   src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
   qml/                the module ErrorJournalingApp (the URI differs from the executable name). Every .qml under it is

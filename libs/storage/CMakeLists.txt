@@ -15,6 +15,7 @@ add_library(ej_storage
     src/journal_writer.cpp
     src/memory_log_repository.cpp
     src/migrator.cpp
+    src/platform/android_protection.cpp
     src/protect.cpp
     src/quarantine.cpp
     src/recovery.cpp
