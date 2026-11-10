@@ -71,10 +71,10 @@ jobs:
       # The vcpkg toolchain is the toolchain file of every preset, iOS's included (it chains to Qt's). The manifest has no
       # dependency for a device (the tests are not built there).
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
 
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
 
       # Qt's iOS kit, and the macOS kit that aqtinstall's --autodesktop installs beside it for the host tools a cross build
       # runs (moc, rcc, qmlcachegen, qsb). The version is the `qt` key of .github/toolchain-versions.json, as for every

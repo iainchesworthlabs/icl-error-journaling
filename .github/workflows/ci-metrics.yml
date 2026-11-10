@@ -26,7 +26,7 @@ jobs:
       actions: read
     steps:
       - name: Check out icl-common-infra
-        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@ac3ee29b71f27ff63b1e0db61cb335764ed56940 # v0.1.23
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
