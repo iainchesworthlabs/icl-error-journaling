@@ -170,7 +170,7 @@ def write_index(directory: Path, rows: list[dict]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--dir", type=Path, default=ROOT / "out")
+    parser.add_argument("--dir", type=Path, default=ROOT / "screenshots" / "pairs")
     args = parser.parse_args(argv)
     try:
         import PIL  # noqa: F401
