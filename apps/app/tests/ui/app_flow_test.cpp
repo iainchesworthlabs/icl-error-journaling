@@ -1471,6 +1471,22 @@ void log_entries(App& app, int count)
     app.ui.advance(300ms);
 }
 
+/// The last row of the list that is shown whole inside it: the list reuses its delegates, so the items that exist
+/// include ones that are pooled or partly clipped, which a touch would not reach.
+QQuickItem* last_row_in_view(App& app, QQuickItem* list)
+{
+    const QRectF area = app.ui.geometry(list);
+    QQuickItem* found = nullptr;
+    for (QQuickItem* row : app.ui.find_items(QStringLiteral("logPaneSwipe")))
+    {
+        if (row->isVisible() && area.contains(app.ui.geometry(row)))
+        {
+            found = row;
+        }
+    }
+    return found;
+}
+
 /// The log pane, which is made when the window is Wide.
 QQuickItem* log_pane(App& app)
 {
@@ -1595,9 +1611,9 @@ TEST_CASE("ipad.log_pane: the log pane lists the log, shows the newest entry, an
     CHECK(app.need(QStringLiteral("logPaneCount"))->property("text").toString() == QStringLiteral("23 entries"));
 
     // A tap on a row opens Edit entry on it, over the window; Cancel leaves the log as it was.
-    const std::vector<QQuickItem*> visible_rows = app.ui.find_items(QStringLiteral("logPaneSwipe"));
-    REQUIRE_FALSE(visible_rows.empty());
-    app.ui.tap(visible_rows.back());
+    QQuickItem* row_in_view = last_row_in_view(app, list);
+    REQUIRE(row_in_view != nullptr);
+    app.ui.tap(row_in_view);
     app.play();
     QQuickItem* editor = app.need(QStringLiteral("editSheet"));
     CHECK(editor->property("isOpen").toBool());
@@ -1611,7 +1627,8 @@ TEST_CASE("ipad.log_pane: the log pane lists the log, shows the newest entry, an
     CHECK_FALSE(pane->property("copiedText").toString().isEmpty());
 
     // Delete on a swipe removes the row, and the toast's Undo, which is in the pane, brings it back.
-    QQuickItem* swipe = app.ui.find_items(QStringLiteral("logPaneSwipe")).back();
+    QQuickItem* swipe = last_row_in_view(app, list);
+    REQUIRE(swipe != nullptr);
     const QRectF s = app.ui.geometry(swipe);
     app.ui.swipe(swipe, QPointF(s.width() - 8, s.height() / 2), QPointF(8, s.height() / 2));
     app.ui.advance(300ms);
