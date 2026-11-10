@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Stage 9: until package 9.6 has an Android implementation of this capability it is the desktop stub (a copy of
-// ../desktop/background_tasks.cpp). check_platform_layout.py wants one file per capability in every platform directory.
+// Android has no grace period to ask for: an application that has stopped keeps running until the system needs its memory,
+// so this is the desktop implementation (a copy of ../desktop/background_tasks.cpp, which check_platform_layout.py wants in
+// every platform directory): it hands out tokens and does nothing else. The flush on going inactive is the portable
+// LifecycleCoordinator's, and the recovery of Stage 2 is the backstop for a process the system ends
+// (docs/plan/stage-9.md, "Lifecycle").
 #include "error_journaling/background_tasks.hpp"
 
 namespace ej::bridge

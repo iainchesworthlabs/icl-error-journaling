@@ -3,6 +3,7 @@
 #include "error_journaling/android_haptics_plan.hpp"
 #include "error_journaling/android_import_plan.hpp"
 #include "error_journaling/android_share_plan.hpp"
+#include "error_journaling/android_system_plan.hpp"
 #include "error_journaling/config_exporter.hpp"
 #include "error_journaling/config_importer.hpp"
 #include "error_journaling/document_picker.hpp"
@@ -34,9 +35,11 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <random>
 #include <sstream>
 #include <string>
@@ -297,6 +300,97 @@ TEST_CASE("share.stub: the desktop stub reports UNAVAILABLE and calls back once"
     CHECK(calls == 1);
     CHECK(seen.m_Outcome == bridge::ShareOutcome::UNAVAILABLE);
     CHECK(seen.m_ActivityType.empty());
+}
+
+TEST_CASE("marks.android_names: every mark has its own non-empty name", "[unit][marks]")
+{
+    using bridge::Mark;
+    std::vector<std::string> names;
+    for (const Mark mark : {Mark::PROCESS_START, Mark::STORAGE_READY, Mark::QML_LOADED, Mark::FIRST_FRAME,
+                            Mark::BOARD_USABLE, Mark::TAP_TO_HAPTIC, Mark::TOUCH_AGE, Mark::TAP_TO_COMMIT})
+    {
+        const std::string name = bridge::android_mark_name(mark);
+        CHECK_FALSE(name.empty());
+        CHECK(name != "Unknown");
+        names.push_back(name);
+    }
+    std::sort(names.begin(), names.end());
+    CHECK(std::adjacent_find(names.begin(), names.end()) == names.end()); // all different
+    CHECK(std::string(bridge::android_mark_name(Mark::BOARD_USABLE)) == "BoardUsable"); // as iOS's signpost
+}
+
+TEST_CASE("marks.android_start: the start time is field 22 of /proc/self/stat", "[unit][marks]")
+{
+    // pid (name) state ppid pgrp session tty_nr tpgid flags minflt cminflt majflt cmajflt utime stime cutime cstime priority
+    // nice num_threads itrealvalue starttime vsize ...
+    const std::string typical =
+        "10543 (errorjournaling) S 1067 1067 0 0 -1 4194624 41375 0 120 0 85 31 0 0 20 0 28 0 3846127 6841311232 "
+        "114506 18446744073709551615 1 1 0 0 0 0 4612 0 1073775864 0 0 0 17 5 0 0 0 0 0\n";
+    CHECK(bridge::proc_stat_start_ticks(typical) == 3846127ULL);
+
+    // The name is any text, parentheses and spaces included: the fields are counted from the last ')'.
+    const std::string odd_name =
+        "77 (Binder:77_3 (x) y) R 1 1 0 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 42 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n";
+    CHECK(bridge::proc_stat_start_ticks(odd_name) == 42ULL);
+
+    // The same line without the trailing newline.
+    CHECK(bridge::proc_stat_start_ticks("1 (a) S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 0 1 0 99") == 99ULL);
+}
+
+TEST_CASE("marks.android_start: a line that is not a stat line gives nothing", "[unit][marks]")
+{
+    CHECK_FALSE(bridge::proc_stat_start_ticks("").has_value());
+    CHECK_FALSE(bridge::proc_stat_start_ticks("no parenthesis at all").has_value());
+    CHECK_FALSE(bridge::proc_stat_start_ticks("1 (a)").has_value());                         // nothing after the name
+    CHECK_FALSE(bridge::proc_stat_start_ticks("1 (a) S 0 0 0 0 0 0 0 0 0 0").has_value());   // too few fields
+    CHECK_FALSE(bridge::proc_stat_start_ticks("1 (a) S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 0 1 0 x12").has_value()); // not a number
+    CHECK_FALSE(bridge::proc_stat_start_ticks("1 (a) S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 0 1 0 12x").has_value());
+    CHECK_FALSE(bridge::proc_stat_start_ticks("1 (a) S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 0 1 0 -5").has_value());
+}
+
+TEST_CASE("accessibility.android_scale: the font scale is the iOS range, rounded", "[unit][accessibility]")
+{
+    using Catch::Approx;
+    CHECK(bridge::android_text_scale(1.0) == Approx(1.0));  // the default size is the default on both phones
+    CHECK(bridge::android_text_scale(0.85) == Approx(0.85)); // Android's "Small"
+    CHECK(bridge::android_text_scale(1.15) == Approx(1.15));
+    CHECK(bridge::android_text_scale(1.3) == Approx(1.3));
+    CHECK(bridge::android_text_scale(2.0) == Approx(2.0));
+    // Outside the range the layout is made for: clamped to the iOS table's ends.
+    CHECK(bridge::android_text_scale(0.5) == Approx(0.82));
+    CHECK(bridge::android_text_scale(4.0) == Approx(3.12));
+    // A float's noise is not a change.
+    CHECK(bridge::android_text_scale(static_cast<double>(1.1499999f)) == Approx(1.15));
+    CHECK(bridge::android_text_scale(static_cast<double>(1.3000001f)) == Approx(1.3));
+    // Not a positive number: the default.
+    CHECK(bridge::android_text_scale(0.0) == Approx(1.0));
+    CHECK(bridge::android_text_scale(-1.0) == Approx(1.0));
+    CHECK(bridge::android_text_scale(std::nan("")) == Approx(1.0));
+    CHECK(bridge::android_text_scale(std::numeric_limits<double>::infinity()) == Approx(1.0));
+}
+
+TEST_CASE("accessibility.android_scale: the range is rising and agrees with the iOS table's ends", "[unit][accessibility]")
+{
+    // The scales the interface is laid out for, from the iOS table: the smallest and the largest of its categories.
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryXS") == Catch::Approx(0.82).margin(0.005));
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryAccessibilityXXXL") == Catch::Approx(3.12).margin(0.005));
+    double previous = 0.0;
+    for (const double font_scale : {0.5, 0.85, 1.0, 1.15, 1.3, 1.5, 2.0, 3.0, 4.0})
+    {
+        const double scale = bridge::android_text_scale(font_scale);
+        CHECK(scale >= previous);
+        previous = scale;
+    }
+}
+
+TEST_CASE("accessibility.android_motion: only an animator scale of zero is Reduce Motion", "[unit][accessibility]")
+{
+    CHECK(bridge::android_reduce_motion(0.0));
+    CHECK(bridge::android_reduce_motion(-1.0));
+    CHECK(bridge::android_reduce_motion(std::nan("")));
+    CHECK_FALSE(bridge::android_reduce_motion(1.0));  // the default
+    CHECK_FALSE(bridge::android_reduce_motion(0.5));  // shorter animations are still animations
+    CHECK_FALSE(bridge::android_reduce_motion(10.0));
 }
 
 TEST_CASE("haptics.android_constants: IMPACT is VIRTUAL_KEY, SUCCESS is CONFIRM from API 30", "[unit][haptics]")

@@ -67,6 +67,8 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
                                      valid UTF-8, one sheet at a time, a temporary file deleted on every outcome, unless the Share
                                      retains shared files, as on Android) and purge_directory for the launch purge
     android_haptics_plan.hpp         the HapticFeedbackConstants value of each HapticKind by API level, portable and tested
+    android_system_plan.hpp          the names of the timing marks, the process start time from /proc/self/stat, the text scale
+                                     of Android's fontScale (the iOS range) and what counts as Reduce Motion, portable and tested
     android_import_plan.hpp          the Android setup-file decisions (the private copy directory `ej-import`, the copy cap one
                                      byte above the importer's limit, the picker's types, the picker's result codes)
     android_share_plan.hpp           the Android share decisions (inline text or a file above 256 KB, how the chooser's end
@@ -98,7 +100,9 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
                          top_view_controller.mm shared by the presenters
   src/platform/android/  C++ with JNI (QJniObject) and the Java in apps/app/packaging/android/src: share.cpp, haptics.cpp,
                          document_picker.cpp (the picker, and a file another app opens or sends, posted as a QFileOpenEvent),
-                         and copies of the desktop stubs for the capabilities packages 9.5 and 9.6 add
+                         perf_marks.cpp (ATrace and logcat), accessibility_settings.cpp (font size, Remove animations,
+                         TalkBack), and background_tasks.cpp, which is the desktop implementation on purpose: Android has
+                         no grace period to ask for, and the portable LifecycleCoordinator flushes on going inactive
   src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
   qml/                the module ErrorJournalingApp (the URI differs from the executable name). Every .qml under it is
