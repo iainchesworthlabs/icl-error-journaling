@@ -31,11 +31,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SCREENS = Path(__file__).resolve().parent / "screens.json"
 FETCH_INTER = ROOT / "tools" / "visual" / "fetch_inter.py"
+PRESETS = ["windows-msvc-release", "linux-release", "linux-debug", "macos-release", "macos-debug"]
+# Windows puts the program in apps/app, the other systems in apps/app/tests/ui, beside its test sources.
 CANDIDATES = [
-    ROOT / "build" / "windows-msvc-release" / "apps" / "app" / "ej_ui_tests.exe",
-    ROOT / "build" / "linux-release" / "apps" / "app" / "ej_ui_tests",
-    ROOT / "build" / "linux-debug" / "apps" / "app" / "ej_ui_tests",
-    ROOT / "build" / "macos-release" / "apps" / "app" / "ej_ui_tests",
+    ROOT / "build" / preset / "apps" / "app" / folder / name
+    for preset in PRESETS
+    for folder in ("", "tests/ui")
+    for name in ("ej_ui_tests.exe", "ej_ui_tests")
 ]
 DEFAULT_QT = os.environ.get("ICL_QT_ROOT", "")
 
