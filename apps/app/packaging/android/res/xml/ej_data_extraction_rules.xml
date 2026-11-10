@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- What Android copies to the person's Google account and to a new phone, from Android 12 (docs/plan/stage-9.md, "File
+     protection and storage location", decision 5): the store, as on iOS, which keeps it in the device backup. With an
+     <include>, only what is included is copied. domain "file" is the app's files directory, where the store (ej.db, the
+     journals, the quarantine and the configuration file) is. The cache directory (the share and import copies) and
+     everything else are left out. A backup that caught the store mid-write is the same case as a kill, which recovery
+     handles. tools/tests/test_android_backup_rules.py keeps this file and ej_backup_rules.xml in step. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="." />
+    </device-transfer>
+</data-extraction-rules>

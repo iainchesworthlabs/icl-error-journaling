@@ -139,6 +139,15 @@ def manifest_problems(text: str, application_id: str = APPLICATION_ID) -> list[s
     backup = application.attributes.get("allowBackup")
     if backup is not None and not is_true(backup):
         problems.append(f"allowBackup is {backup}, expected true (Stage 2 decision 8)")
+    # The rules that say what is copied (the files directory only; tools/tests/test_android_backup_rules.py checks their
+    # content in the sources, where the resource names are still readable), one for Android 12 and later and one before.
+    for rules in ("dataExtractionRules", "fullBackupContent"):
+        if rules not in application.attributes:
+            problems.append(f"the application has no {rules} (Stage 9 decision 5)")
+    # Never direct-boot aware: the application would run before the first unlock, with its store still locked.
+    for component in [application, *(c for tag in COMPONENTS for c in application.all(tag))]:
+        if is_true(component.attributes.get("directBootAware")):
+            problems.append(f"{component.attributes.get('name', 'the application')} is direct-boot aware")
 
     launchers = [
         activity

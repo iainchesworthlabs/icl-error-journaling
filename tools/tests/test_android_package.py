@@ -27,6 +27,8 @@ def manifest(
     orientation: int = 1,
     extra: str = "",
     filters: str = "",
+    rules: tuple[str, ...] = ("dataExtractionRules", "fullBackupContent"),
+    direct_boot: bool = False,
 ) -> str:
     """aapt2 dump xmltree output in the shape aapt2 prints it."""
     lines = [
@@ -44,9 +46,11 @@ def manifest(
     lines += [
         "    E: application (line=15)",
         f"      A: {NS}:allowBackup(0x01010280)={backup}",
+        *(f"      A: {NS}:{name}(0x0101fe00)=@0x7f0e0001" for name in rules),
         "      E: activity (line=22)",
         f'        A: {NS}:name(0x01010003)="{activity}" (Raw: "{activity}")',
         f"        A: {NS}:exported(0x01010010)=(type 0x12)0xffffffff",
+        *([f"        A: {NS}:directBootAware(0x01010505)=(type 0x12)0xffffffff"] if direct_boot else []),
         f"        A: {NS}:screenOrientation(0x0101001e)={orientation}",
         "        E: intent-filter (line=29)",
         "          E: action (line=30)",
@@ -105,6 +109,18 @@ class ManifestTest(unittest.TestCase):
         problems = package.manifest_problems(manifest(backup="(type 0x12)0x0"))
         self.assertEqual(len(problems), 1)
         self.assertIn("allowBackup", problems[0])
+
+    def test_both_backup_rule_attributes_are_required(self) -> None:
+        for missing in ("dataExtractionRules", "fullBackupContent"):
+            kept = tuple(r for r in ("dataExtractionRules", "fullBackupContent") if r != missing)
+            problems = package.manifest_problems(manifest(rules=kept))
+            self.assertEqual(len(problems), 1, missing)
+            self.assertIn(missing, problems[0])
+
+    def test_a_direct_boot_aware_activity_is_refused(self) -> None:
+        problems = package.manifest_problems(manifest(direct_boot=True))
+        self.assertEqual(len(problems), 1)
+        self.assertIn("direct-boot aware", problems[0])
 
     def test_landscape_activity_is_refused(self) -> None:
         problems = package.manifest_problems(manifest(orientation=0))

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- The same rule for Android 11 and earlier (android:fullBackupContent): the files directory, which holds the store, and
+     nothing else. See ej_data_extraction_rules.xml. -->
+<full-backup-content>
+    <include domain="file" path="." />
+</full-backup-content>
