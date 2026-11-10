@@ -14,6 +14,7 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Push to `develop` | Everything: the groups above, the macOS desktop builds (debug and release, with the tests), Xcode 27 as a leg that cannot fail the run, and the kill harness. Then Report red and Mark green |
 | Change to what the iOS build reads, or a manual run | iOS compile check for a device (`ios-build.yml`, not required). A pull request runs it only for Apple paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
 | Change to what the Android build reads, or a manual run | Android build (`android-build.yml`, not required): the unsigned APK and bundle of `android-release`, checked by `tools/ci/check_android_package.py`. A pull request runs it for the Android paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
+| Push to `develop`, a manual run, or a pull request with the label `android-emulator` | Android emulator smoke test (`android-emulator.yml`, not required, below): the x86_64 build starts on an API 36 emulator and survives Home and a return |
 | Change to the documentation site (`docs/`, `mkdocs.yml`, `tools/docs/`, `config/sample-config.json`) | The site build (`docs.yml`). The push to `main` publishes it. The hook `tools/docs/demo_setup_hook.py` adds `demo/demo-setup.ejconfig`, a copy of the sample setup, for App Review (Stage 11, 11.3) |
 | Nightly | CodeQL; the kill harness at 1,000 random kills (`kill-nightly.yml`); the weekly CI metrics (`ci-metrics.yml`, Mondays 06:00 UTC) |
 | Hourly | The Actions cache prune (`cache-prune.yml`, below) |
@@ -221,6 +222,38 @@ It builds `android-release` and runs `tools/ci/check_android_package.py` on the 
 Its unit tests are in `tools/tests/test_android_package.py`. The packages are uploaded as the `android-unsigned` artifact
 for 7 days. One cache entry is new: the Qt Android kit (one `setup-qt` entry per Qt version). No ccache
 or Gradle cache is saved, and the NDK is installed each run, outside the cache budget.
+
+## Android emulator smoke test
+
+`android-emulator.yml` (Stage 9, package 9.8) is the one job that runs the Android build, which the build job cannot do.
+It runs on a push to `develop`, by hand, and on a pull request that carries the label `android-emulator`; it is not a
+required check. The owner's decision 8 (10 November 2026) is that it stays non-blocking for two weeks and is made required
+if it is stable, so the pass rate of its runs is written here when that is decided.
+
+It installs the same Qt host kit and NDK as the build job, and the Qt `x86_64` Android kit (one more `setup-qt` cache entry,
+about 200 MB, an estimate until the first `develop` run measures it). It builds the `android-emulator` preset (x86_64,
+RelWithDebInfo), signs the APK with a key made for the run (neither a secret nor the upload key), runs
+`check_android_package.py` on it, allows KVM, and starts an API 36 `google_apis` `x86_64` emulator with
+`reactivecircus/android-emulator-runner` (pinned to a commit). The emulator's system image, about 1.5 GB, is downloaded each
+run and is not cached.
+
+Then `tools/ci/android_smoke.py` drives the application from outside. A Qt release build takes no start-up arguments, so
+there is no smoke-test flag: what the application says is read from logcat, where the bridge writes the lifecycle lines under
+the tag `ej`. It fails when:
+
+- the package does not install;
+- Package Manager does not offer the application for "Open with" of a `content://` octet-stream file or for "Share to" of
+  JSON, or does offer it for an image;
+- the application does not reach `lifecycle: active` within 90 s, which is the whole of start-up working (the native
+  libraries, the store, the bridge);
+- going Home does not give `lifecycle: inactive`, coming back does not give a second `lifecycle: active`, or the process
+  changed in between;
+- the application's own log has a crash, a missing native library (`dlopen failed`) or a missing Java method;
+- the package lacks the backup flag.
+
+The log and a picture of the screen are uploaded as the `android-smoke` artifact for 7 days. The tool's decisions are in
+`Smoke`, which `tools/tests/test_android_smoke.py` runs against a fake device, so they are tested on every pull request
+without an emulator. The label `android-emulator` is defined in `.github/labels.json`; the owner applies that file.
 
 ## Store graphics
 
