@@ -376,3 +376,33 @@ TEST_CASE("toast.shield: a touch on the toast never reaches the tile under it, a
     CHECK(pressed.count() == 1); // the second tap of a double-tap
     CHECK(tapped.count() == 2);
 }
+
+TEST_CASE("toast.large: at the largest text size Undo goes under the line, which is whole, in a card under 40% of the window (F9)",
+          "[ui][toast][large]")
+{
+    UiRig rig;
+    const QString line = QStringLiteral("Wrong Response logged ×3 at 10:20");
+    QQuickItem* toast = load_toast(rig, toast_properties(true, line, 1));
+    QQuickItem* row = rig.find(QStringLiteral("toastRow"), toast);
+    QQuickItem* text = rig.find(QStringLiteral("toastText"), toast);
+    QQuickItem* undo = rig.find(QStringLiteral("toastUndo"), toast);
+    REQUIRE(row != nullptr);
+    REQUIRE(text != nullptr);
+    REQUIRE(undo != nullptr);
+
+    // At the usual size they are side by side.
+    CHECK_FALSE(row->property("stacked").toBool());
+    CHECK(rig.geometry(undo).left() >= rig.geometry(text).right() - 0.5);
+
+    rig.set_text_scale(3.1);
+    rig.settle();
+    CHECK(row->property("stacked").toBool());
+    // The line has the whole width, under no ellipsis, and Undo is under it and in the card.
+    CHECK_FALSE(text->property("truncated").toBool());
+    CHECK(rig.geometry(undo).top() >= rig.geometry(text).bottom() - 0.5);
+    QQuickItem* card = rig.find(QStringLiteral("toastCard"), toast);
+    REQUIRE(card != nullptr);
+    CHECK(rig.geometry(undo).bottom() <= rig.geometry(card).bottom() + 0.5);
+    CHECK(rig.geometry(card).height() <= 874.0 * 0.4);
+    rig.set_text_scale(1.0);
+}

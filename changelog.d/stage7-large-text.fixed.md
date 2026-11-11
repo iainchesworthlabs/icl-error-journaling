@@ -1,0 +1,1 @@
+**Large text no longer hides controls.** At the largest text size the Commit label sits above its value (the value was cut off), the buttons of an alert stay in view under a scrolling message, the Copy and Delete labels of a tall row stay in sight, and the undo toast is two lines at most instead of covering the board.

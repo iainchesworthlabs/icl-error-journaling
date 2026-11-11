@@ -54,7 +54,9 @@ Sheet {
     presentation: Sheet.Centre
     dismissible: false
     scrimColour: Theme.colour.alertScrim
-    contentImplicitHeight: column.implicitHeight
+    contentImplicitHeight: head.implicitHeight + gap + buttons.implicitHeight
+    // The space between the message and the buttons, and between the icon, the title and the message.
+    readonly property real gap: Theme.space.tileGap + Theme.border.hairline * 2
 
     // One button of the card.
     component AlertButton: Item {
@@ -109,19 +111,24 @@ Sheet {
         }
     }
 
+    // The icon, the title and the message scroll when the card is shorter than they are (at the largest text sizes); the
+    // buttons stay under them, so a button is never out of reach (Stage 7, F14).
     Flickable {
-        anchors.fill: parent
+        id: body
+
+        width: parent.width
+        height: Math.max(0, parent.height - buttons.height - root.gap)
         clip: true
         contentWidth: width
-        contentHeight: column.implicitHeight
+        contentHeight: head.implicitHeight
         interactive: contentHeight > height
         boundsBehavior: Flickable.StopAtBounds
 
         Column {
-            id: column
+            id: head
 
             width: parent.width
-            spacing: Theme.space.tileGap + Theme.border.hairline * 2
+            spacing: root.gap
 
             Rectangle {
                 objectName: "alertIcon"
@@ -165,52 +172,55 @@ Sheet {
                 text: root.message
                 Accessible.ignored: true
             }
+        }
+    }
 
-            // The buttons, 10 pt further down than the column's gap.
-            Column {
-                objectName: "alertButtons"
-                width: parent.width
-                topPadding: Theme.space.tileGap + Theme.border.hairline * 2
-                spacing: Theme.space.tileGap
+    // The buttons, 10 pt further down than the gap.
+    Column {
+        id: buttons
 
-                AlertButton {
-                    id: confirmButton
+        objectName: "alertButtons"
+        y: parent.height - height
+        width: parent.width
+        topPadding: Theme.space.tileGap + Theme.border.hairline * 2
+        spacing: Theme.space.tileGap
 
-                    objectName: "alertConfirm"
-                    visible: root.confirmText.length > 0
-                    label: root.confirmText
-                    fill: root.destructive ? Theme.colour.destructiveFill : confirmButton.pressed ? Theme.colour.primaryPressed : Theme.colour.primary
-                    labelColour: root.destructive ? Theme.colour.textOnDestructive : Theme.colour.textOnPrimary
-                    emphasised: true
-                    isDefault: !root.destructive
-                    onTriggered: {
-                        root.close();
-                        root.confirmed();
-                    }
-                }
+        AlertButton {
+            id: confirmButton
 
-                AlertButton {
-                    objectName: "alertAlternate"
-                    visible: root.alternateText.length > 0
-                    label: root.alternateText
-                    fill: Theme.colour.primaryTint
-                    emphasised: true
-                    onTriggered: {
-                        root.close();
-                        root.alternated();
-                    }
-                }
+            objectName: "alertConfirm"
+            visible: root.confirmText.length > 0
+            label: root.confirmText
+            fill: root.destructive ? Theme.colour.destructiveFill : confirmButton.pressed ? Theme.colour.primaryPressed : Theme.colour.primary
+            labelColour: root.destructive ? Theme.colour.textOnDestructive : Theme.colour.textOnPrimary
+            emphasised: true
+            isDefault: !root.destructive
+            onTriggered: {
+                root.close();
+                root.confirmed();
+            }
+        }
 
-                AlertButton {
-                    objectName: "alertCancel"
-                    visible: root.cancelText.length > 0
-                    label: root.cancelText
-                    buttonHeight: Theme.size.alertCancelHeight
-                    onTriggered: {
-                        root.close();
-                        root.cancelled();
-                    }
-                }
+        AlertButton {
+            objectName: "alertAlternate"
+            visible: root.alternateText.length > 0
+            label: root.alternateText
+            fill: Theme.colour.primaryTint
+            emphasised: true
+            onTriggered: {
+                root.close();
+                root.alternated();
+            }
+        }
+
+        AlertButton {
+            objectName: "alertCancel"
+            visible: root.cancelText.length > 0
+            label: root.cancelText
+            buttonHeight: Theme.size.alertCancelHeight
+            onTriggered: {
+                root.close();
+                root.cancelled();
             }
         }
     }

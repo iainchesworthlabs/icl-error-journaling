@@ -98,10 +98,14 @@ Item {
         Text {
             id: labelText
 
-            anchors.fill: parent
-            anchors.margins: Theme.space.tileGap / 2
+            objectName: "swipeActionLabel"
+
+            // Centred in the row, but never more than a touch target down: a tall row (large text) is partly under a
+            // pinned button, and a label further down than that is out of sight (Stage 7, F8).
+            x: Theme.space.tileGap / 2
+            y: Math.min((parent.height - height) / 2, Theme.size.minTouchTarget)
+            width: parent.width - Theme.space.tileGap
             horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
             color: action.labelColour
             font: Theme.font.actionLabel.font
             text: action.label

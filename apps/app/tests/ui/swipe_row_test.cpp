@@ -10,6 +10,7 @@
 #include <QQuickItem>
 #include <QSignalSpy>
 #include <chrono>
+#include <cmath>
 
 using namespace ej::ui;
 using namespace ej::ui::input;
@@ -370,4 +371,38 @@ TEST_CASE("swipe_row.cross_cutting: names, targets, order and text scale, in lig
     expect_clean(check_everything(rig));
     rig.set_reduce_motion(true);
     expect_clean(check_motion_reduced(rig));
+}
+
+TEST_CASE("swipe_row.labels: in a tall row the action labels stay within a touch target of the top (F8)",
+          "[ui][swipe_row][large]")
+{
+    UiRig rig;
+    // A row as tall as three lines of the largest text size, partly under a pinned button.
+    REQUIRE(load_host(rig, QStringLiteral(R"(
+        SwipeRow {
+            objectName: "tall"
+            accessibleName: "10:20 Mute Delay"
+            minimumHeight: 240
+            Text { width: parent.width; text: "Mute Delay" }
+        })")) != nullptr);
+    QQuickItem* row = rig.find(QStringLiteral("tall"));
+    REQUIRE(row != nullptr);
+    QQuickItem* label = rig.find(QStringLiteral("swipeActionLabel"), row);
+    REQUIRE(label != nullptr);
+    CHECK(rig.geometry(label).top() - rig.geometry(row).top() <= 44.0 + 0.5);
+
+    // A normal row keeps the label in the middle.
+    UiRig normal;
+    REQUIRE(load_host(normal, QStringLiteral(R"(
+        SwipeRow {
+            objectName: "short"
+            accessibleName: "10:20 Mute Delay"
+            Text { width: parent.width; text: "Mute Delay" }
+        })")) != nullptr);
+    QQuickItem* short_row = normal.find(QStringLiteral("short"));
+    QQuickItem* short_label = normal.find(QStringLiteral("swipeActionLabel"), short_row);
+    REQUIRE(short_label != nullptr);
+    const QRectF row_rect = normal.geometry(short_row);
+    const QRectF label_rect = normal.geometry(short_label);
+    CHECK(std::abs(label_rect.center().y() - row_rect.center().y()) <= 1.0);
 }
