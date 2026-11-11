@@ -981,13 +981,6 @@ void scene_board_layout_selected(Phone& phone)
     phone.play();
 }
 
-void open_settings_page(Phone& phone, const QString& row)
-{
-    phone.choose_tab(SETTINGS_TAB);
-    phone.tap(row);
-    phone.play();
-}
-
 /// Scrolls the page that is in view until the item is, as the person does, and returns it.
 QQuickItem* reveal(Phone& phone, QQuickItem* item)
 {
@@ -999,6 +992,14 @@ QQuickItem* reveal(Phone& phone, QQuickItem* item)
     flickable->setProperty("contentY", std::clamp(top - flickable->height() / 3, 0.0, most));
     phone.ui.layout();
     return item;
+}
+
+void open_settings_page(Phone& phone, const QString& row)
+{
+    phone.choose_tab(SETTINGS_TAB);
+    // The list is longer than the screen, so a row far down is scrolled to first.
+    phone.tap_item(reveal(phone, phone.need(row)));
+    phone.play();
 }
 
 void scene_about(Phone& phone)
