@@ -9,7 +9,7 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Event | Jobs |
 |---|---|
 | Draft pull request | Policy, Plan, Reuse, workflow analysis, dependency scan |
-| Ready pull request | Above, plus Linux release and ASan/UBSan builds, and the screenshots of every screen (the `screenshots` artifact, 14 days; `tools/ej_screenshots`, `docs/testing.md`). The Screenshots job is not in CI Status and cannot fail the run. Coverage runs too when the pull request carries `deep`; otherwise the merge queue runs it |
+| Ready pull request | Above, plus Linux release and ASan/UBSan builds, and the screenshots of every screen and the store screenshots at the stores' exact sizes (the `screenshots` artifact, 14 days, with the store sets in `store/`; `tools/ej_screenshots`, `docs/testing.md`). The Screenshots job is not in CI Status and cannot fail the run. Coverage runs too when the pull request carries `deep`; otherwise the merge queue runs it |
 | Merge queue | Above, plus Linux debug and TSan, and the kill harness at 100 random kills on four legs (below). The macOS builds run too when the entry touches Apple paths or its pull request carries `deep` (below) |
 | Push to `develop` | Everything: the groups above, the macOS desktop builds (debug and release, with the tests), Xcode 27 as a leg that cannot fail the run, and the kill harness. Then Report red and Mark green |
 | Change to what the iOS build reads, or a manual run | iOS compile check for a device (`ios-build.yml`, not required). A pull request runs it only for Apple paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
