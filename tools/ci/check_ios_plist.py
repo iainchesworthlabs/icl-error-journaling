@@ -21,6 +21,10 @@ It also checks the privacy manifest, apps/app/packaging/ios/PrivacyInfo.xcprivac
 no tracking, no tracking domains, no collected data types, and each accessed API category one of Apple's with reason
 codes of that category. packaging/ios/verify_app.sh checks the built executable's symbols against it.
 
+It also checks the orientations (docs/plan/stage-8.md, "Info.plist and packaging"): the iPhone is portrait only, the iPad
+has all four, there is no UIRequiresFullScreen, and multiple scenes are not turned on; and that the launch image is an
+iPhone image (an iPad shows the background colour alone).
+
 A later package adds the entitlements. docs/plan/stage-5.md, "CI changes outside the test suites".
 """
 
@@ -53,6 +57,13 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 OPAQUE_COLOUR_TYPES = (0, 2, 3)
 CONSTANTS = Path("libs/ios_bridge/include/error_journaling/document_types.hpp")
 FRAME_RATE_KEY = "CADisableMinimumFrameDurationOnPhone"
+PORTRAIT = "UIInterfaceOrientationPortrait"
+IPAD_ORIENTATIONS = {
+    PORTRAIT,
+    "UIInterfaceOrientationPortraitUpsideDown",
+    "UIInterfaceOrientationLandscapeLeft",
+    "UIInterfaceOrientationLandscapeRight",
+}
 CONSTANT_NAMES = ("CONFIG_TYPE_IDENTIFIER", "CONFIG_TYPE_DESCRIPTION", "CONFIG_EXTENSION")
 
 
@@ -122,6 +133,22 @@ def check(plist: dict, constants: dict[str, str]) -> list[str]:
     for key in sorted(plist):
         if key.endswith("UsageDescription"):
             problems.append(f"{key} is set: the application asks for no permission")
+    return problems
+
+
+def check_orientations(plist: dict) -> list[str]:
+    """The iPhone is portrait only; the iPad turns to all four orientations, is not full screen only and has one scene."""
+    problems = []
+    phone = plist.get("UISupportedInterfaceOrientations")
+    if phone != [PORTRAIT]:
+        problems.append(f"UISupportedInterfaceOrientations is {phone}, expected [{PORTRAIT!r}] (the phone is portrait only)")
+    tablet = plist.get("UISupportedInterfaceOrientations~ipad")
+    if not isinstance(tablet, list) or len(tablet) != 4 or set(tablet) != IPAD_ORIENTATIONS:
+        problems.append("UISupportedInterfaceOrientations~ipad must list all four orientations once each (App Store Connect asks for them)")
+    if "UIRequiresFullScreen" in plist or "UIRequiresFullScreen~ipad" in plist:
+        problems.append("UIRequiresFullScreen must be absent: the iPad application runs in Split View, Slide Over and Stage Manager")
+    if plist.get("UIApplicationSupportsMultipleScenes") not in (None, False):
+        problems.append("UIApplicationSupportsMultipleScenes must be absent or false: the application has one window")
     return problems
 
 
@@ -204,6 +231,11 @@ def check_image_set(catalogue: Path, name: str) -> list[str]:
     problems: list[str] = []
     entries = json.loads(path.read_text(encoding="utf-8")).get("images", [])
     light, dark = split_appearances(entries, f"{name}.imageset", problems)
+    for entry in entries:
+        # The picture is the phone's Log screen; one picture cannot fit the iPad's two orientations and its window sizes, so
+        # an iPad launches on the background colour alone (docs/plan/stage-8.md, "Launch screen on iPad").
+        if entry.get("idiom") != "iphone":
+            problems.append(f"{name}.imageset has an image with the idiom '{entry.get('idiom')}', every one must be 'iphone'")
     for entry, mode in ((light, "light"), (dark, "dark")):
         if entry is None:
             continue
@@ -286,7 +318,7 @@ def run(root: Path) -> list[str]:
         plist = parse_plist(plist_path.read_text(encoding="utf-8"))
     except Exception as error:  # a malformed template is a finding, not a crash
         return [f"{PLIST} is not a valid property list: {error}"]
-    problems = check(plist, read_constants(header_path.read_text(encoding="utf-8")))
+    problems = check(plist, read_constants(header_path.read_text(encoding="utf-8"))) + check_orientations(plist)
     manifest_path = root / PRIVACY_MANIFEST
     if not manifest_path.is_file():
         problems.append(f"{manifest_path} not found")

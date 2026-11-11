@@ -57,7 +57,7 @@ public one. So the template ships the TestFlight way only.
 to TestFlight (compile, sign, check, validate with Apple, upload) is `apps/app/packaging/ios.cmake` and
 `apps/app/packaging/ios/`, the `ios` job of `release.yml` and `ios-build.yml`. Both workflows install Qt's iOS kit and
 the macOS host kit at the version in `.github/toolchain-versions.json`, and the presets chain vcpkg's toolchain to the
-kit's. The application is portrait only (`Info.plist.in`).
+kit's. The iPhone is portrait only and the iPad turns to all four orientations and runs in Split View, Slide Over and Stage Manager windows (`Info.plist.in`; `check_ios_plist.py` and `verify_app.sh` keep it so).
 
 - **`ios-build.yml`** compiles the application unsigned on every change that the iOS build reads, and looks inside the
   bundle with `apps/app/packaging/ios/verify_app.sh`. It needs no secret. It is not a required check (see `docs/ci.md`).

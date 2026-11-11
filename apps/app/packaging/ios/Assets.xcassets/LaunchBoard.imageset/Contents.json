@@ -2,7 +2,7 @@
   "images": [
     {
       "filename": "launch-light.png",
-      "idiom": "universal",
+      "idiom": "iphone",
       "scale": "3x"
     },
     {
@@ -10,7 +10,7 @@
         { "appearance": "luminosity", "value": "dark" }
       ],
       "filename": "launch-dark.png",
-      "idiom": "universal",
+      "idiom": "iphone",
       "scale": "3x"
     }
   ],

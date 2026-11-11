@@ -314,7 +314,7 @@ The labels are as in `docs/testing.md`. Every UI test runs in the offscreen app 
 | T8-11 | `ipad.toast_clear`, `ipad.wide_toast_clear` | ui | In Regular the toast is under the board; in Wide it is in the log pane, between the list and Share log; it covers no tile and no row. |
 | T8-12 | `ipad.keyboard_rotation` | ui | With the keyboard up over the composer, a change from Wide to Regular keeps the field visible and focused. (Built with 8.6, which owns the keyboard and rotation.) |
 | T8-13 | `plist.orientations` | unit | `check_ios_plist.py`: the iPhone is portrait only, the iPad has four orientations, there is no `UIRequiresFullScreen` (unless the owner keeps it), and multiple scenes are off. |
-| T8-14 | `launch.ipad_plain` | unit | The launch image set is `iphone` only. `launch.image_current` and `launch.matches_screen` are unchanged and pass. |
+| T8-14 | `launch.ipad_plain` | unit | The launch image set is `iphone` only. `launch.image_current` and `launch.matches_screen` are unchanged and pass. Built as two cases in `tools/tests/test_ios_plist.py` (`test_launch_image_is_for_the_iphone_only` and the repository one) with the rule in `check_ios_plist.py`; `plist.orientations` (T8-13) is `OrientationCheckTest` there. `verify_app.sh` checks the same in the built bundle. |
 | T8-15 | Visual pass | none (tool) | `tools/visual/run_capture.py --only Main.ipad-landscape ...` pairs each iPad mock-up with the app in the same state. The differences are reviewed in 8.8. It is not a pass or fail test, the same as for the phone. |
 
 The phone suites run unchanged in every package. A package that changes a phone test's expected value is wrong, unless

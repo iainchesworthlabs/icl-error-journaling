@@ -1,0 +1,1 @@
+**The iPad app runs in portrait and landscape, and in Split View, Slide Over and Stage Manager windows.** The iPhone stays portrait only. On an iPad the launch screen shows the background colour only. Not yet run on an iPad.

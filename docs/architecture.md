@@ -149,7 +149,7 @@ succeeded.
 
 Each library has tests with the `unit` label; the application has two `ui` tests (`app.smoke` starts it, with a data folder of its own,
 without a display and waits for the first frame, `app.version` answers `--version`). The application is the iPhone
-application on iOS (portrait only, laid out inside `SafeArea.margins`) and a desktop program on macOS and Linux, built
+application on iOS (portrait only on the phone, any orientation and window size on an iPad, laid out inside `SafeArea.margins`) and a desktop program on macOS and Linux, built
 to iterate on the user interface and to be tested in CI; no desktop package is released.
 
 ## Composition
