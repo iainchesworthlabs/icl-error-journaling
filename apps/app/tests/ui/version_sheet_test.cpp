@@ -7,6 +7,7 @@
 #include "rig/ui_rig.hpp"
 #include "support/recording_repository.hpp"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <QAccessible>
@@ -631,4 +632,20 @@ TEST_CASE("version.commit: at the largest text size the label is above the value
     CHECK(input->property("topPadding").toDouble() > 14.0);
     CHECK(rig.geometry(commit).height() > rig.geometry(need(rig, QStringLiteral("versionTo"))).height() - 0.5);
     rig.set_text_scale(1.0);
+}
+
+TEST_CASE("version.footer_clear: the scrolled part runs down to the button, with no strip of hidden content above it (F7)",
+          "[ui][version_sheet]")
+{
+    HeaderWorld world(true);
+    UiRig rig;
+    open_sheet(rig, world);
+    retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
+    rig.settle();
+
+    QQuickItem* scroller = need(rig, QStringLiteral("versionScroller"));
+    QQuickItem* save = need(rig, QStringLiteral("versionSave"));
+    // The last line of the sheet is cut by the scroller's edge at rest when the content is taller; that edge is the
+    // button, not a margin above it, so a line that fits the mock-up (its 12 pt more than the button needs) is whole.
+    CHECK(rig.geometry(scroller).bottom() == Catch::Approx(rig.geometry(save).top()).margin(0.5));
 }
