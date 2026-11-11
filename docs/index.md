@@ -1,16 +1,20 @@
 # CS Bingo Board
 
-An iPhone app for logging robot session errors through the day and sharing the log. It builds, tests and releases with the shared infrastructure in
-[icl-common-infra](https://github.com/iainchesworthlabs/icl-common-infra).
+CS Bingo Board is an app for logging robot errors during a session. You tap a tile each time an error happens, add a note
+when it helps, and share the day's log when you finish. Everything stays on your phone or tablet until you share it.
 
-| Page | Covers |
+## Start here
+
+| If you want to | Go to |
 |---|---|
-| [Requirements](prd.md) | The PRD, with requirement IDs |
-| [Implementation plan](implementation-plan.md) | Stages 0 to 6 and their exit gates |
-| [Design](design/README.md) | Approved screens and design tokens |
-| [Bootstrap plan](design/bootstrap-plan.md) | How the repository was set up, owner actions |
-| [Building](building.md) | Prerequisites, shared roots, presets |
-| [Architecture](architecture.md) | Layout, platform sources, naming |
-| [Testing](testing.md) | Test kinds, labels, coverage floors |
-| [Continuous integration](ci.md) | What runs when, required checks |
-| [Releasing](releasing.md) | Changelog, tags, signing, publishing |
+| Get help or report a problem | [Support](support.md) |
+| Know what the app stores and where it goes | [Privacy](privacy.md) |
+| Try the app with the sample setup | [Download the sample setup file](https://iainchesworthlabs.github.io/icl-error-journaling/demo/demo-setup.ejconfig) |
+
+The step-by-step guide (getting started, setting up the board, a day of logging, sharing, history, the setup file, the
+FAQ and troubleshooting) is being written and will appear here.
+
+## About the site
+
+This site is also the project's documentation. The pages for people who work on the app are under
+[For developers](developers.md).
