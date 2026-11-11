@@ -91,6 +91,17 @@ done
 [ "$(key CADisableMinimumFrameDurationOnPhone)" = "true" ] || fail "CADisableMinimumFrameDurationOnPhone is '$(key CADisableMinimumFrameDurationOnPhone)', expected true: a ProMotion phone would run the application at 60 Hz"
 [ "$(key UIFileSharingEnabled)" != "true" ] || fail "UIFileSharingEnabled is true: the Documents folder would be listed in Files"
 [ -n "$(key UILaunchScreen)" ] || fail "Info.plist has no UILaunchScreen (iOS would run the program in a legacy window)"
+# Orientations (docs/plan/stage-8.md): the phone is portrait only, the iPad has all four and is not full screen only, and the
+# application has one window.
+[ "$(key UISupportedInterfaceOrientations:0)" = "UIInterfaceOrientationPortrait" ] && [ -z "$(key UISupportedInterfaceOrientations:1)" ] || fail "UISupportedInterfaceOrientations is not portrait only"
+ipad_orientations=""
+for index in 0 1 2 3; do ipad_orientations="$ipad_orientations $(key "UISupportedInterfaceOrientations~ipad:$index")"; done
+[ -z "$(key "UISupportedInterfaceOrientations~ipad:4")" ] || fail "UISupportedInterfaceOrientations~ipad lists more than four orientations"
+for orientation in UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight; do
+  case "$ipad_orientations " in *" $orientation "*) ;; *) fail "UISupportedInterfaceOrientations~ipad does not list $orientation (App Store Connect asks for all four)" ;; esac
+done
+[ -z "$(key UIRequiresFullScreen)" ] || fail "Info.plist has UIRequiresFullScreen: the iPad application runs in Split View and Stage Manager windows"
+[ "$(key UIApplicationSupportsMultipleScenes)" != "true" ] || fail "UIApplicationSupportsMultipleScenes is true: the application has one window"
 [ "$(key DTPlatformName)" = "iphoneos" ] || fail "DTPlatformName is '$(key DTPlatformName)'; this is not a device build"
 [ -n "$(key MinimumOSVersion)" ] || fail "Info.plist has no MinimumOSVersion"
 if [ -n "$version" ]; then

@@ -106,7 +106,8 @@
     <!-- The launch screen, in the property list so that no storyboard is needed: without one iOS runs the program in a legacy
          320 x 480 window and scales it up. Both are in Assets.xcassets. LaunchBackground is the colour of the board's
          background (light and dark), and LaunchBoard is the picture of the Log screen's skeleton, 402 x 874 points at 3x,
-         drawn from the application's own QML by tools/launch_image (the tests launch.image_current and
+         for the iPhone only (an iPad shows the colour alone: no one picture fits both of its orientations and every window
+         size), drawn from the application's own QML by tools/launch_image (the tests launch.image_current and
          launch.matches_screen keep it true). The image fills the screen under the status bar and the home indicator, as
          the application's window does, so it ignores the safe area. -->
     <key>UILaunchScreen</key>
@@ -119,18 +120,23 @@
         <false/>
     </dict>
 
-    <!-- Portrait only: the board is three across and four down in portrait (docs/design). The application takes the whole
-         screen on an iPad, with no split view or slide over, which is what TestFlight asks of an iPad application that is
-         not available in every orientation. -->
+    <!-- Orientations. The phone is portrait only: the board is three across and four down in portrait (docs/design). The
+         iPad turns to all four, and has no UIRequiresFullScreen, so that the system may run the application in Split View,
+         Slide Over and Stage Manager windows (docs/plan/stage-8.md, "Multitasking"). Apple asks for all four orientations
+         of an iPad application that is not full screen only (ITMS-90474), and the layout follows the window's size, not
+         the device (apps/app/qml/theme/WindowLayout.qml). UIApplicationSupportsMultipleScenes is left out on purpose: the
+         application has one window, and two windows would open the same log twice. tools/ci/check_ios_plist.py and
+         packaging/ios/verify_app.sh keep these true. -->
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
     </array>
-    <key>UIRequiresFullScreen</key>
-    <true/>
     <key>UISupportedInterfaceOrientations~ipad</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
 
     <!-- ProMotion phones run an application at 60 Hz unless this is true. With it the render loop follows the display,

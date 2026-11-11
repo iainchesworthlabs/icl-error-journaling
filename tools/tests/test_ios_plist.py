@@ -53,6 +53,52 @@ def broken(change) -> list[str]:
     return plist_check.check(plist, CONSTANTS)
 
 
+PHONE_ONLY = ["UIInterfaceOrientationPortrait"]
+ALL_FOUR = [
+    "UIInterfaceOrientationPortrait",
+    "UIInterfaceOrientationPortraitUpsideDown",
+    "UIInterfaceOrientationLandscapeLeft",
+    "UIInterfaceOrientationLandscapeRight",
+]
+
+
+class OrientationCheckTest(unittest.TestCase):
+    """plist.orientations: the phone is portrait only, the iPad has four, and it is not full screen only."""
+
+    def plist(self, **changes) -> dict:
+        plist = {"UISupportedInterfaceOrientations": list(PHONE_ONLY), "UISupportedInterfaceOrientations~ipad": list(ALL_FOUR)}
+        plist.update(changes)
+        return plist
+
+    def test_good_orientations_pass(self) -> None:
+        self.assertEqual(plist_check.check_orientations(self.plist()), [])
+
+    def test_a_phone_that_turns_fails(self) -> None:
+        self.assertTrue(plist_check.check_orientations(self.plist(UISupportedInterfaceOrientations=ALL_FOUR)))
+
+    def test_an_ipad_in_portrait_only_fails(self) -> None:
+        self.assertTrue(plist_check.check_orientations(self.plist(**{"UISupportedInterfaceOrientations~ipad": PHONE_ONLY})))
+
+    def test_an_ipad_with_three_orientations_fails(self) -> None:
+        self.assertTrue(plist_check.check_orientations(self.plist(**{"UISupportedInterfaceOrientations~ipad": ALL_FOUR[:3]})))
+
+    def test_an_ipad_with_an_orientation_twice_fails(self) -> None:
+        listed = ALL_FOUR[:3] + [ALL_FOUR[0]]
+        self.assertTrue(plist_check.check_orientations(self.plist(**{"UISupportedInterfaceOrientations~ipad": listed})))
+
+    def test_requiring_full_screen_fails(self) -> None:
+        self.assertTrue(plist_check.check_orientations(self.plist(UIRequiresFullScreen=True)))
+        self.assertTrue(plist_check.check_orientations(self.plist(UIRequiresFullScreen=False)))
+
+    def test_multiple_scenes_fail(self) -> None:
+        self.assertTrue(plist_check.check_orientations(self.plist(UIApplicationSupportsMultipleScenes=True)))
+        self.assertEqual(plist_check.check_orientations(self.plist(UIApplicationSupportsMultipleScenes=False)), [])
+
+    def test_this_repository_passes(self) -> None:
+        template = (ROOT / plist_check.PLIST).read_text(encoding="utf-8")
+        self.assertEqual(plist_check.check_orientations(plist_check.parse_plist(template)), [])
+
+
 class PlistCheckTest(unittest.TestCase):
     def test_good_plist_passes(self) -> None:
         self.assertEqual(plist_check.check(GOOD, CONSTANTS), [])
@@ -139,7 +185,7 @@ def colour_entry(red: str, green: str, blue: str, dark: bool = False) -> dict:
 
 
 def image_entry(filename: str, dark: bool = False, scale: str = "3x") -> dict:
-    entry = {"filename": filename, "idiom": "universal", "scale": scale}
+    entry = {"filename": filename, "idiom": "iphone", "scale": scale}
     if dark:
         entry["appearances"] = [{"appearance": "luminosity", "value": "dark"}]
     return entry
@@ -229,6 +275,16 @@ class LaunchScreenCheckTest(unittest.TestCase):
     def test_file_that_is_not_a_png_fails(self) -> None:
         self.files["dark.png"] = b"not a picture at all, but long enough to be read"
         self.assertTrue(any("not a PNG" in p for p in self.problems()))
+
+    def test_launch_image_is_for_the_iphone_only(self) -> None:
+        """launch.ipad_plain: an iPad has no launch picture, only the background colour."""
+        for idiom in ("universal", "ipad"):
+            self.images = [dict(entry, idiom=idiom) for entry in self.images]
+            self.assertTrue(any("idiom" in problem for problem in self.problems()), idiom)
+
+    def test_the_repository_launch_image_is_for_the_iphone_only(self) -> None:
+        contents = json.loads((ROOT / plist_check.CATALOGUE / "LaunchBoard.imageset" / "Contents.json").read_text(encoding="utf-8"))
+        self.assertEqual({entry["idiom"] for entry in contents["images"]}, {"iphone"})
 
     def test_image_must_be_the_3x_one(self) -> None:
         self.images[0] = image_entry("light.png", scale="2x")
