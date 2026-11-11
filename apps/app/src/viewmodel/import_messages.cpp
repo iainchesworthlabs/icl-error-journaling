@@ -315,6 +315,18 @@ QString preferences_message(const ConfigError& error)
         }
         return translate("The %1 is not valid.").arg(name);
     }
+    if (field == "error_prefix")
+    {
+        if (error.m_Problem == Problem::TOO_LONG)
+        {
+            return translate("The error prefix is longer than %1 characters.").arg(error.m_Limit);
+        }
+        if (error.m_Code == Code::WRONG_TYPE)
+        {
+            return translate("The error prefix must be text.");
+        }
+        return translate("The error prefix must be on one line, with no tab or line break.");
+    }
     if (field == "time_format/style")
     {
         return translate("The clock style must be 24h or 12h.");

@@ -23,6 +23,7 @@
 #include <Qt>
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 namespace ej::viewmodel
@@ -225,7 +226,7 @@ private:
     void stop_following();
 
     // Rows
-    static void split_marker(const Entry& entry, Row& row);
+    static void split_marker(const Entry& entry, Row& row, std::string_view error_prefix);
     [[nodiscard]] Row make_row(const Log& log, const Entry& entry, const ExportContext& context) const;
     [[nodiscard]] std::vector<Row> make_rows(const ExportContext& context) const;
     [[nodiscard]] int find_row(EntryId id) const;

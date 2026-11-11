@@ -605,3 +605,79 @@ TEST_CASE("Every problem of the environments is reported, and the rest of the fi
     CHECK(has(errors_of(edited(sample(), PREFIX_LINE, PREFIX_LINE + "\n    \"unit_environment\": [\"prod\"],")),
               Code::UNKNOWN_FIELD, "/preferences/unit_environment"));
 }
+
+// ---------------------------------------------------------------------------------------------------------------- error
+// prefix (PRF-13): the optional `error_prefix` key of the preferences.
+
+namespace
+{
+
+/// The sample with an `error_prefix` value written after the unit prefix, as the export writes it.
+std::string with_error_prefix(const std::string& value)
+{
+    return edited(sample(), PREFIX_LINE, PREFIX_LINE + "\n    \"error_prefix\": " + value + ",");
+}
+
+} // namespace
+
+TEST_CASE("Without the error_prefix key the default T| stays and the file round-trips byte for byte",
+          "[config][error_prefix]")
+{
+    const auto text = sample();
+    REQUIRE(text.find("error_prefix") == std::string::npos);
+    const auto configuration = imported(text);
+    CHECK(configuration.m_ErrorPrefix == "T|");
+    CHECK(ej::export_configuration(configuration) == text);
+    CHECK(Configuration{}.m_ErrorPrefix == "T|");
+}
+
+TEST_CASE("A file may set the error prefix, also to nothing; the export writes the key only when it differs",
+          "[config][error_prefix]")
+{
+    const auto custom = imported(with_error_prefix("\"ERR:\""));
+    CHECK(custom.m_ErrorPrefix == "ERR:");
+    const auto text = ej::export_configuration(custom);
+    CHECK(text.find("\"error_prefix\": \"ERR:\"") != std::string::npos);
+    CHECK(imported(text).m_ErrorPrefix == "ERR:");
+
+    const auto empty = imported(with_error_prefix("\"\""));
+    CHECK(empty.m_ErrorPrefix.empty());
+    const auto empty_text = ej::export_configuration(empty);
+    CHECK(empty_text.find("\"error_prefix\": \"\"") != std::string::npos);
+    CHECK(imported(empty_text).m_ErrorPrefix.empty());
+
+    // Spaces at either end are dropped; an explicit T| is the default and is not written back.
+    CHECK(imported(with_error_prefix("\"  >>  \"")).m_ErrorPrefix == ">>");
+    CHECK(ej::export_configuration(imported(with_error_prefix("\"T|\""))).find("error_prefix") == std::string::npos);
+}
+
+TEST_CASE("The error prefix is refused when it is too long, has a line break or a tab, or is not text",
+          "[config][error_prefix]")
+{
+    // 12 characters are allowed, 13 are not; characters are counted, not bytes.
+    CHECK(imported(with_error_prefix("\"123456789012\"")).m_ErrorPrefix == "123456789012");
+    const auto too_long = errors_of(with_error_prefix("\"1234567890123\""));
+    CHECK(has(too_long, Code::OUT_OF_RANGE, "/preferences/error_prefix"));
+    CHECK(too_long.front().m_Problem == ConfigError::Problem::TOO_LONG);
+    CHECK(too_long.front().m_Limit == 12);
+    CHECK(imported(with_error_prefix("\"\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\""))
+              .m_ErrorPrefix.size() == 24);
+
+    CHECK(has(errors_of(with_error_prefix("\"a\\nb\"")), Code::OUT_OF_RANGE, "/preferences/error_prefix"));
+    CHECK(has(errors_of(with_error_prefix("\"a\\tb\"")), Code::OUT_OF_RANGE, "/preferences/error_prefix"));
+    CHECK(has(errors_of(with_error_prefix("\"a\\u2028b\"")), Code::OUT_OF_RANGE, "/preferences/error_prefix"));
+    CHECK(has(errors_of(with_error_prefix("5")), Code::WRONG_TYPE, "/preferences/error_prefix"));
+}
+
+TEST_CASE("The error prefix helpers trim spaces and judge the text", "[config][error_prefix]")
+{
+    CHECK(ej::trim_error_prefix("  T|  ") == "T|");
+    CHECK(ej::trim_error_prefix("   ").empty());
+    CHECK(ej::trim_error_prefix("a b") == "a b");
+    CHECK(ej::error_prefix_problem("") == ej::ErrorPrefixProblem::NONE);
+    CHECK(ej::error_prefix_problem("T|") == ej::ErrorPrefixProblem::NONE);
+    CHECK(ej::error_prefix_problem("1234567890123") == ej::ErrorPrefixProblem::TOO_LONG);
+    CHECK(ej::error_prefix_problem("a\tb") == ej::ErrorPrefixProblem::CONTROL_CHARACTER);
+    CHECK(ej::error_prefix_problem("a\nb") == ej::ErrorPrefixProblem::CONTROL_CHARACTER);
+    CHECK(ej::error_prefix_problem("a\xC2\x85" "b") == ej::ErrorPrefixProblem::CONTROL_CHARACTER);
+}

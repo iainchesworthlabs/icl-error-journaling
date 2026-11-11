@@ -27,6 +27,7 @@ SettingsPage {
     signal templatesRequested
     signal locationsRequested
     signal facilitatorRequested
+    signal errorPrefixRequested
     signal timeFormatRequested
     signal importExportRequested
     signal aboutRequested
@@ -224,6 +225,15 @@ SettingsPage {
                 minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.timeFormatRequested()
+            }
+
+            ListRow {
+                objectName: "settingsErrorPrefixRow"
+                text: qsTr("Error prefix")
+                value: root.settings.errorPrefix.length > 0 ? root.settings.errorPrefix : qsTr("None")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.errorPrefixRequested()
             }
 
             ListRow {

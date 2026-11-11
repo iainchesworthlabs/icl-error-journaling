@@ -67,14 +67,12 @@ QString kind_text(const Entry& entry)
 }
 
 /// The marker an error line or a note line starts with, without the space after it ("T|", "(Free Text)"); empty for
-/// a change of the header.
-std::string_view line_marker(const Entry& entry)
+/// a change of the header, and for an error line when the error prefix is empty (PRF-13).
+std::string_view line_marker(const Entry& entry, std::string_view error_prefix)
 {
     if (std::holds_alternative<ErrorEntry>(entry.m_Body))
     {
-        std::string_view marker = export_format::ERROR_MARKER;
-        marker.remove_suffix(1); // the space
-        return marker;
+        return error_prefix;
     }
     if (std::holds_alternative<NoteEntry>(entry.m_Body))
     {
@@ -386,9 +384,9 @@ QHash<int, QByteArray> TimelineModel::roleNames() const
 }
 
 /// Splits `row.m_Line` into the marker and the rest.
-void TimelineModel::split_marker(const Entry& entry, Row& row)
+void TimelineModel::split_marker(const Entry& entry, Row& row, std::string_view error_prefix)
 {
-    const std::string_view marker = line_marker(entry);
+    const std::string_view marker = line_marker(entry, error_prefix);
     const std::string line = row.m_Line.toStdString();
     if (!marker.empty() && line.starts_with(marker))
     {
@@ -424,7 +422,7 @@ TimelineModel::Row TimelineModel::make_row(const Log& log, const Entry& entry, c
             row.m_Time = text_of(time);
             row.m_Line = text_of(line->substr(prefix.size()));
             row.m_Full = text_of(*line);
-            split_marker(entry, row);
+            split_marker(entry, row, context.m_ErrorPrefix);
             return row;
         }
     }

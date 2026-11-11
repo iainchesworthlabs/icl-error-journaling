@@ -419,6 +419,53 @@ TEST_CASE("settings.prefix: Save asks the model once and a refusal shows inline"
     CHECK(fixture.require(QStringLiteral("settingsUnitPrefix"))->property("value").toString() == "CELL");
 }
 
+TEST_CASE("settings.error_prefix: a row on the list opens a page with a field, an example line and Reset (PRF-13)",
+          "[ui][settings_screen][error_prefix]")
+{
+    Fixture fixture;
+    CHECK(fixture.require(QStringLiteral("settingsErrorPrefixRow"))->property("value").toString() == "T|");
+    fixture.open_page(QStringLiteral("settingsErrorPrefixRow"));
+    CHECK(fixture.depth() == 2);
+    CHECK(fixture.require(QStringLiteral("formInput"))->property("text").toString() == "T|");
+    QQuickItem* example = fixture.require(QStringLiteral("errorPrefixExample"));
+    CHECK(example->property("text").toString() == "10:05 T| Wrong Response");
+
+    // The example follows what is typed, before it is saved.
+    replace_text(fixture, QStringLiteral("ERR:"));
+    CHECK(example->property("text").toString() == "10:05 ERR: Wrong Response");
+
+    // A prefix of more than 12 characters is refused inline and nothing is saved.
+    const std::size_t before = fixture.saves();
+    replace_text(fixture, QStringLiteral("1234567890123"));
+    fixture.tap(QStringLiteral("navTrailing"));
+    fixture.m_Ui.settle();
+    CHECK(fixture.depth() == 2);
+    CHECK(fixture.saves() == before);
+    CHECK(fixture.settings().error_prefix() == "T|");
+    CHECK(fixture.require(QStringLiteral("errorPrefixField"))->property("invalid").toBool());
+
+    replace_text(fixture, QStringLiteral("ERR:"));
+    fixture.tap(QStringLiteral("navTrailing"));
+    fixture.m_Ui.advance(400ms);
+    fixture.m_Ui.settle();
+    CHECK(fixture.depth() == 1);
+    CHECK(fixture.saves() == before + 1);
+    CHECK(fixture.settings().error_prefix() == "ERR:");
+    CHECK(fixture.require(QStringLiteral("settingsErrorPrefixRow"))->property("value").toString() == "ERR:");
+
+    // Reset puts T| back.
+    fixture.open_page(QStringLiteral("settingsErrorPrefixRow"));
+    fixture.tap(QStringLiteral("errorPrefixReset"));
+    fixture.m_Ui.settle();
+    CHECK(fixture.settings().error_prefix() == "T|");
+    CHECK(fixture.require(QStringLiteral("formInput"))->property("text").toString() == "T|");
+
+    // No prefix at all is allowed, and the list says None.
+    CHECK(fixture.settings().setErrorPrefix("").isEmpty());
+    fixture.m_Ui.settle();
+    CHECK(fixture.require(QStringLiteral("errorPrefixExample"))->property("text").toString() == "10:05 Wrong Response");
+}
+
 TEST_CASE("settings.time_format: each choice calls setTimeFormat once and the sample time follows",
           "[ui][settings_screen]")
 {

@@ -352,6 +352,45 @@ TEST_CASE("The totals option is saved and reaches the configuration", "[viewmode
     CHECK(rig.m_Settings.configuration().m_IncludeTotals);
 }
 
+TEST_CASE("The error prefix is T| at first, can be set and emptied, is trimmed, and can be reset (PRF-13)",
+          "[viewmodel][settings][error_prefix]")
+{
+    SettingsRig rig;
+    rig.load_sample();
+    CHECK(rig.m_Settings.error_prefix() == "T|");
+
+    CHECK(rig.m_Settings.setErrorPrefix("  ERR:  ").isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.error_prefix() == "ERR:");
+    CHECK(rig.m_Settings.configuration().m_ErrorPrefix == "ERR:");
+
+    // Nothing is a prefix too.
+    CHECK(rig.m_Settings.setErrorPrefix("").isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.error_prefix().isEmpty());
+    CHECK(rig.m_Settings.configuration().m_ErrorPrefix.empty());
+
+    CHECK(rig.m_Settings.resetErrorPrefix().isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.error_prefix() == "T|");
+}
+
+TEST_CASE("The error prefix is refused when it is too long or has a line break or a tab, and stays as it was",
+          "[viewmodel][settings][error_prefix]")
+{
+    SettingsRig rig;
+    rig.load_sample();
+
+    CHECK_FALSE(rig.m_Settings.setErrorPrefix("1234567890123").isEmpty());
+    CHECK_FALSE(rig.m_Settings.setErrorPrefix("a\nb").isEmpty());
+    CHECK_FALSE(rig.m_Settings.setErrorPrefix("a\tb").isEmpty());
+    // Nothing was written, and the prefix is as it was.
+    CHECK(rig.m_Gateway.pending() == 0);
+    CHECK(rig.m_Settings.error_prefix() == "T|");
+    // 12 characters are fine.
+    CHECK(rig.m_Settings.setErrorPrefix("123456789012").isEmpty());
+}
+
 // ----------------------------------------------------------------------------------------------------- first launch
 
 TEST_CASE("A manual setup is held until it has a facilitator and a prefix, then saved as one", "[viewmodel][settings]")

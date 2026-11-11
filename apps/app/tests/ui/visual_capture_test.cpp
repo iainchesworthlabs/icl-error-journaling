@@ -1305,6 +1305,9 @@ std::vector<Scene> extra_scenes()
         {QStringLiteral("TimeFormat"), TODAY,
          [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsTimeFormat")); },
          QStringLiteral("Settings, Time format.")},
+        {QStringLiteral("ErrorPrefix"), TODAY,
+         [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsErrorPrefixRow")); },
+         QStringLiteral("Settings, Error prefix (the field, the example line, Reset).")},
     };
 }
 

@@ -139,10 +139,21 @@ Item {
             onFacilitatorRequested: stack.push(textPage, {
                 "kind": "facilitator"
             })
+            onErrorPrefixRequested: stack.push(errorPrefixPage)
             onTimeFormatRequested: stack.push(timeFormatPage)
             onImportExportRequested: stack.push(importExportPage)
             onAboutRequested: stack.push(aboutPage)
             onReplaceRequested: (position, typeId) => picker.openFor(position, typeId)
+        }
+    }
+
+    Component {
+        id: errorPrefixPage
+
+        SettingsErrorPrefixPage {
+            settings: root.settings
+            topInset: frame.topInset
+            onCloseRequested: stack.pop()
         }
     }
 
