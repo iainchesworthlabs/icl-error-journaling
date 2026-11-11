@@ -142,6 +142,8 @@ the window and the loaded item as a rotation does. `UiRig::set_safe_area_sides` 
 
 ## Screenshots of every screen
 
+All screenshot output goes under `screenshots/`, which git ignores: `screenshots/screens/` for the pictures of every screen (this section) and `screenshots/pairs/` for the mock-up and app pairs of the visual capture (above). The scripts default to those folders; CI uploads `screenshots/screens/` as the `screenshots` artifact.
+
 `tools/ej_screenshots/ej_screenshots.py` renders every screen in light, dark and large text (Stage 7, 7.1;
 `docs/plan/stage-7.md`). The screens are the states of `tools/ej_screenshots/screens.json`, grouped by flow: the scenes of
 the visual capture (the mock-up states, phone and iPad) and the states the design package did not draw (`extra_scenes()` in

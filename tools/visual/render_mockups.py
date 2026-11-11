@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Render the design mock-ups (docs/design/screens/*.dc.html) to PNG with headless Edge.
 
-    python tools/visual/render_mockups.py [--out out] [--only Main Review ...] [--scale 2] [--jobs 4]
+    python tools/visual/render_mockups.py [--out screenshots/pairs] [--only Main Review ...] [--scale 2] [--jobs 4]
 
 Writes `<Name>.mock.png` (light) and `<Name>.dark.mock.png` (dark), each at the size the page gives in its `$preview`
 (402 x 874 logical pixels for the phone, 820 x 1180 and 1180 x 820 for the iPad pages of Stage 8) at --scale (2 by default,
@@ -192,7 +192,7 @@ def mockup_names() -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--out", type=Path, default=ROOT / "out")
+    parser.add_argument("--out", type=Path, default=ROOT / "screenshots" / "pairs")
     parser.add_argument("--only", nargs="*", default=[], help="mock-up names, such as Main Review")
     parser.add_argument("--scale", type=float, default=2.0)
     parser.add_argument("--jobs", type=int, default=4)

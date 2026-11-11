@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Make the pairs of mock-up and app for the visual pass: every screen of docs/design/screens, light and dark.
 
-    python tools/visual/run_capture.py [--out out] [--only Main Review ...] [--exe PATH] [--qt DIR] [--scale 2]
+    python tools/visual/run_capture.py [--out screenshots/pairs] [--only Main Review ...] [--exe PATH] [--qt DIR] [--scale 2]
                                        [--skip-app] [--skip-mockups]
 
 It runs, in order, and each step can be run on its own:
@@ -41,7 +41,7 @@ def run(command: list[str], env: dict[str, str] | None = None) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--out", type=Path, default=ROOT / "out")
+    parser.add_argument("--out", type=Path, default=ROOT / "screenshots" / "pairs")
     parser.add_argument("--only", nargs="*", default=[], help="mock-up names, such as Main Review")
     parser.add_argument("--exe", type=Path, default=DEFAULT_EXE, help="ej_ui_tests")
     parser.add_argument("--qt", type=Path, default=DEFAULT_QT, help="the Qt kit, whose bin directory goes on PATH")
