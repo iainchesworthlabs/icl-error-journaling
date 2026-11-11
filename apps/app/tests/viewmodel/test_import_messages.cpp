@@ -324,6 +324,15 @@ TEST_CASE("The preferences are refused in sentences about the setting", "[viewmo
         set_preference(root, "unit_prefix", 5);
         CHECK(messages_of(root) == QStringList{"The unit prefix is not valid."});
     }
+    SECTION("an error prefix that is too long, has a line break, or is not text")
+    {
+        set_preference(root, "error_prefix", QString(13, 'x'));
+        CHECK(messages_of(root) == QStringList{"The error prefix is longer than 12 characters."});
+        set_preference(root, "error_prefix", "a\nb");
+        CHECK(messages_of(root) == QStringList{"The error prefix must be on one line, with no tab or line break."});
+        set_preference(root, "error_prefix", 5);
+        CHECK(messages_of(root) == QStringList{"The error prefix must be text."});
+    }
     SECTION("a clock style and an AM and PM style that are not known")
     {
         set_time_format(root, "style", "13h");

@@ -318,3 +318,22 @@ TEST_CASE("Rendering is deterministic, leaves the log alone and uses only printa
         }
     }
 }
+
+TEST_CASE("PRF-13: the error prefix is in front of the error name; empty means no prefix and no extra space",
+          "[export][prefix]")
+{
+    auto scenario = blank_scenario();
+    must_add(scenario.m_Log, error_entry(1, on_day(10, 5), ERROR_WRONG_RESPONSE));
+    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_MUTE_DELAY, "asked for Evening Song"));
+    const std::string header = std::string(HEADER) + "\n\n";
+
+    // The default is T|.
+    CHECK(scenario.m_Context.m_ErrorPrefix == "T|");
+    CHECK(render(scenario) == header + "10:05 T| Wrong Response\n10:06 T| Mute Delay " + DASH + " asked for Evening Song");
+
+    scenario.m_Context.m_ErrorPrefix = "ERR:";
+    CHECK(render(scenario) == header + "10:05 ERR: Wrong Response\n10:06 ERR: Mute Delay " + DASH + " asked for Evening Song");
+
+    scenario.m_Context.m_ErrorPrefix = "";
+    CHECK(render(scenario) == header + "10:05 Wrong Response\n10:06 Mute Delay " + DASH + " asked for Evening Song");
+}

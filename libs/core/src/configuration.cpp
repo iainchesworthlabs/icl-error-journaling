@@ -527,6 +527,44 @@ void read_unit_environments(Reader& r, const QJsonObject& preferences, Configura
     }
 }
 
+/// The optional `error_prefix` (PRF-13): text, which may be empty, of at most 12 characters on one line. Spaces at either
+/// end are dropped. A file without the key keeps the default.
+void read_error_prefix(Reader& r, const QJsonObject& object, Configuration& out)
+{
+    const std::string path = "/preferences";
+    const auto value = r.field(object, "error_prefix", path, false);
+    if (!value)
+    {
+        return;
+    }
+    const auto here = child(path, "error_prefix");
+    if (!value->isString())
+    {
+        r.add(Code::WRONG_TYPE, here, "this must be text.");
+        return;
+    }
+    const std::string text = trim_error_prefix(value->toString().toStdString());
+    switch (error_prefix_problem(text))
+    {
+    case ErrorPrefixProblem::NONE:
+        out.m_ErrorPrefix = text;
+        break;
+    case ErrorPrefixProblem::TOO_LONG:
+    {
+        Detail detail = problem_detail(ConfigError::Problem::TOO_LONG);
+        detail.m_Limit = export_format::MAX_ERROR_PREFIX_CHARACTERS;
+        r.add(Code::OUT_OF_RANGE, here,
+              "this is longer than " + std::to_string(export_format::MAX_ERROR_PREFIX_CHARACTERS) +
+                  " characters. Shorten it.",
+              std::move(detail));
+        break;
+    }
+    case ErrorPrefixProblem::CONTROL_CHARACTER:
+        r.add(Code::OUT_OF_RANGE, here, "this has a line break or a tab in it. Write it on one line.");
+        break;
+    }
+}
+
 void read_preferences(Reader& r, const QJsonObject& root, Configuration& out)
 {
     const auto value = r.field(root, "preferences", "", true);
@@ -566,8 +604,9 @@ void read_preferences(Reader& r, const QJsonObject& root, Configuration& out)
     {
         out.m_IncludeTotals = *totals;
     }
+    read_error_prefix(r, object, out);
     r.reject_unknown(object, path,
-                     {"facilitator", "unit_prefix", "unit_environments", "time_format", "include_totals"});
+                     {"facilitator", "unit_prefix", "unit_environments", "time_format", "include_totals", "error_prefix"});
 }
 
 void read_error_types(Reader& r, const QJsonObject& root, Configuration& out)
@@ -968,6 +1007,11 @@ std::string export_configuration(const Configuration& configuration)
         }
         out += "\n    ]";
     }
+    if (configuration.m_ErrorPrefix != export_format::DEFAULT_ERROR_PREFIX)
+    {
+        out += ",\n    \"error_prefix\": ";
+        write_string(out, configuration.m_ErrorPrefix);
+    }
     out += ",\n    \"time_format\": {\n";
     out += std::string("      \"style\": ") +
            (configuration.m_TimeFormat.m_Style == TimeStyle::H12 ? "\"12h\"" : "\"24h\"") + ",\n";
@@ -1031,6 +1075,42 @@ std::string export_configuration(const Configuration& configuration)
     out += configuration.m_Templates.empty() ? "]\n" : "\n  ]\n";
     out += "}\n";
     return out;
+}
+
+std::string trim_error_prefix(std::string_view text)
+{
+    const auto first = text.find_first_not_of(' ');
+    if (first == std::string_view::npos)
+    {
+        return {};
+    }
+    const auto last = text.find_last_not_of(' ');
+    return std::string(text.substr(first, last - first + 1));
+}
+
+ErrorPrefixProblem error_prefix_problem(std::string_view trimmed)
+{
+    int characters = 0;
+    for (std::size_t i = 0; i < trimmed.size(); ++i)
+    {
+        const auto byte = static_cast<unsigned char>(trimmed[i]);
+        if (byte < 0x20 || byte == 0x7F)
+        {
+            return ErrorPrefixProblem::CONTROL_CHARACTER;
+        }
+        // U+0085, U+2028 and U+2029 are line breaks too.
+        if (trimmed.substr(i, 2) == "\xC2\x85" || trimmed.substr(i, 3) == "\xE2\x80\xA8" ||
+            trimmed.substr(i, 3) == "\xE2\x80\xA9")
+        {
+            return ErrorPrefixProblem::CONTROL_CHARACTER;
+        }
+        if ((byte & 0xC0) != 0x80) // not a continuation byte: a new character
+        {
+            ++characters;
+        }
+    }
+    return characters > export_format::MAX_ERROR_PREFIX_CHARACTERS ? ErrorPrefixProblem::TOO_LONG
+                                                                    : ErrorPrefixProblem::NONE;
 }
 
 }  // namespace ej

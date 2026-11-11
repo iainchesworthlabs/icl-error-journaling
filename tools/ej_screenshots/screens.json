@@ -258,6 +258,9 @@
           "name": "TimeFormat"
         },
         {
+          "name": "ErrorPrefix"
+        },
+        {
           "name": "Locations",
           "files": [
             "settings/editors/Locations.qml"

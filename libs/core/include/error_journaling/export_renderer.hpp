@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#include "error_journaling/export_format.hpp"
 #include "error_journaling/ids.hpp"
 #include "error_journaling/log.hpp"
 #include "error_journaling/note_template.hpp"
@@ -21,6 +22,8 @@ namespace ej
 struct ExportContext
 {
     std::string_view m_UnitPrefix;
+    /// The text before the error name on an error line (PRF-13). May be empty, and then there is no space for it either.
+    std::string_view m_ErrorPrefix = export_format::DEFAULT_ERROR_PREFIX;
     TimeFormat m_TimeFormat;
     bool m_IncludeTotals = false;
     const TimeZoneProvider* m_Zones = nullptr;

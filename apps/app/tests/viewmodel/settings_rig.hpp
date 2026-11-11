@@ -135,6 +135,7 @@ struct SettingsRig
 {
     ExportContext context;
     context.m_UnitPrefix = configuration.m_UnitPrefix;
+    context.m_ErrorPrefix = configuration.m_ErrorPrefix;
     context.m_TimeFormat = configuration.m_TimeFormat;
     context.m_IncludeTotals = configuration.m_IncludeTotals;
     context.m_Zones = &zones;

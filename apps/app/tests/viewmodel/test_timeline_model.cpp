@@ -1173,6 +1173,27 @@ TEST_CASE("A change of the time format is one dataChanged, and a change that add
         CHECK(summary.count() == 1);
     }
 
+    SECTION("the error prefix is in every error row, is one dataChanged when it changes, and may be empty (PRF-13)")
+    {
+        Configuration configuration = sample_configuration();
+        configuration.m_ErrorPrefix = "ERR:";
+        rig.config().set(configuration);
+
+        REQUIRE(changed.count() == 1);
+        CHECK(reset.count() == 0);
+        CHECK(full_line(rig.model(), 0) == "11:10 ERR: A");
+        CHECK(rig.model().last_line() == "11:30 ERR: C");
+        // The two columns of the design: the prefix, and the rest without it.
+        CHECK(rig.model().data(rig.model().index(0), TimelineModel::PREFIX_TEXT).toString() == "ERR:");
+        CHECK(rig.model().data(rig.model().index(0), TimelineModel::REST_TEXT).toString() == "A");
+
+        configuration.m_ErrorPrefix = "";
+        rig.config().set(configuration);
+        CHECK(full_line(rig.model(), 0) == "11:10 A");
+        CHECK(rig.model().data(rig.model().index(0), TimelineModel::PREFIX_TEXT).toString().isEmpty());
+        CHECK(rig.model().data(rig.model().index(0), TimelineModel::REST_TEXT).toString() == "A");
+    }
+
     SECTION("a change that touches nothing the model shows")
     {
         Configuration configuration = sample_configuration();

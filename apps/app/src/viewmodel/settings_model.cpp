@@ -42,6 +42,7 @@ const QString OP_FACILITATOR = QStringLiteral("facilitator");
 const QString OP_PREFIX = QStringLiteral("unit prefix");
 const QString OP_TIME_FORMAT = QStringLiteral("time format");
 const QString OP_TOTALS = QStringLiteral("totals");
+const QString OP_ERROR_PREFIX = QStringLiteral("error prefix");
 const QString OP_LOCATION = QStringLiteral("location");
 const QString OP_ERROR_TYPE = QStringLiteral("error type");
 const QString OP_BOARD = QStringLiteral("board");
@@ -349,6 +350,11 @@ bool SettingsModel::include_totals() const
     return view().m_IncludeTotals;
 }
 
+QString SettingsModel::error_prefix() const
+{
+    return QString::fromStdString(view().m_ErrorPrefix);
+}
+
 QAbstractItemModel* SettingsModel::error_types() const
 {
     return m_ErrorTypes;
@@ -648,6 +654,33 @@ QString SettingsModel::setIncludeTotals(bool include)
                               configuration.m_IncludeTotals = include;
                               return changed;
                           });
+}
+
+QString SettingsModel::setErrorPrefix(const QString& prefix)
+{
+    const std::string text = trim_error_prefix(prefix.toStdString());
+    switch (error_prefix_problem(text))
+    {
+    case ErrorPrefixProblem::NONE:
+        break;
+    case ErrorPrefixProblem::TOO_LONG:
+        return tr("Use at most %1 characters.").arg(export_format::MAX_ERROR_PREFIX_CHARACTERS);
+    case ErrorPrefixProblem::CONTROL_CHARACTER:
+        return tr("Write the prefix on one line, with no tab or line break.");
+    }
+    return change_message(OP_ERROR_PREFIX,
+                          [value = text](Configuration& configuration) -> EditResult
+                          {
+                              const bool changed = configuration.m_ErrorPrefix != value;
+                              configuration.m_ErrorPrefix = value;
+                              return changed;
+                          });
+}
+
+QString SettingsModel::resetErrorPrefix()
+{
+    return setErrorPrefix(QString::fromUtf8(export_format::DEFAULT_ERROR_PREFIX.data(),
+                                            static_cast<qsizetype>(export_format::DEFAULT_ERROR_PREFIX.size())));
 }
 
 QString SettingsModel::addLocation(const QString& name)
