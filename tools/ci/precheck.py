@@ -10,6 +10,8 @@ its scripts/precheck.py with the same arguments. These are the checks the Policy
 Then it runs this repository's checks of the QML that need no Qt (tools/ci/check_qml_*.py: the platform, the literals, the
 strings, the test files and the animators; docs/ci.md). CI runs them as the tests qml.platform, theme.no_literals,
 i18n.strings, qml.tests and motion.animators, and qml.format and qml.lint with a Qt kit.
+
+And check_setup_doc.py, which holds the setup-file page of the guide to the reader in libs/core (docs/ci.md).
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 QML_CHECKS = ["check_qml_platform.py", "check_qml_literals.py", "check_qml_strings.py", "check_qml_tests.py", "check_qml_motion.py"]
+DOC_CHECKS = ["check_setup_doc.py"]
 
 
 def find_infra() -> Path | None:
@@ -49,6 +52,11 @@ def main() -> int:
     print()
     print("QML checks")
     for script in QML_CHECKS:
+        if subprocess.call([sys.executable, str(HERE / script), "--root", str(root)]) != 0:
+            status = 1
+    print()
+    print("Guide checks")
+    for script in DOC_CHECKS:
         if subprocess.call([sys.executable, str(HERE / script), "--root", str(root)]) != 0:
             status = 1
     return status

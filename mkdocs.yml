@@ -35,6 +35,7 @@ nav:
       - Stage 12 (desktop, v2): plan/stage-12.md
       - Stage 13 (foldables): plan/stage-13.md
       - About page: plan/about-page.md
+  - The setup file: guide/setup-file.md
   - Design: design/README.md
   - Building: building.md
   - Architecture: architecture.md
