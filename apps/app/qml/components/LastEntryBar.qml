@@ -119,7 +119,6 @@ Item {
             y: root.stacked ? (root.firstRowHeight - implicitHeight) / 2 : (content.height - implicitHeight) / 2
             wrapMode: Text.Wrap
             horizontalAlignment: Text.AlignRight
-            visible: root.hasEntries
             text: qsTr("%n today", "", root.entryCount)
             color: Theme.colour.textSecondary
             font: Theme.font.caption.font

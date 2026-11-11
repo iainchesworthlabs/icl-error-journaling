@@ -1,0 +1,1 @@
+**First launch starts with "Set up by hand".** Most people have no setup file, so setting up by hand is now the main button and "Import a setup file" is the second one under it. The Last bar on an empty Log shows "0 today" beside "No entries yet", as the design has it.
