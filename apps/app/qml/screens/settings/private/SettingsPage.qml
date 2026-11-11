@@ -83,6 +83,7 @@ Rectangle {
                 NavBar {
                     objectName: "settingsNavBar"
                     width: parent.width
+                    sideInset: root.side
                     title: root.title
                     large: true
                     leadingText: root.leadingText.length > 0 && Theme.clampedScale > root.compactScale ? qsTr("Back") : root.leadingText

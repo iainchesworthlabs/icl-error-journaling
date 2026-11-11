@@ -42,6 +42,9 @@ Item {
     property bool large: false
     // The compact bar of a sheet, with the padding of the design around its row.
     property bool inSheet: false
+    // How far in from each side the actions and the title start: the phone's screen margin, or a page's own margin when it
+    // keeps its content in a centred column on a larger window (Stage 8), so the title lines up with what is under it.
+    property real sideInset: Theme.space.screenMargin
     // How far the content under a large bar has scrolled; past 0 the bar collapses to its compact form.
     property real scrollPosition: 0
 
@@ -54,7 +57,7 @@ Item {
     // The widest action, which the centred title keeps clear of on both sides so that it stays centred.
     readonly property real actionWidth: Math.max(leadingItem.visible ? leadingItem.width : 0, trailingItem.visible ? trailingItem.width : 0)
     // The room between the actions for a centred title.
-    readonly property real inlineRoom: root.width - 2 * (Theme.space.screenMargin + actionWidth + Theme.space.sectionGap)
+    readonly property real inlineRoom: root.width - 2 * (root.sideInset + actionWidth + Theme.space.sectionGap)
     // The width of the title on one line, rounded up, so that a title that fits is never wrapped by a fraction.
     readonly property real titleWidth: Math.ceil(titleMetrics.advanceWidth) + Theme.border.hairline
     // A compact title that does not fit between the actions goes on its own line.
@@ -85,7 +88,7 @@ Item {
 
         objectName: "navLeading"
         visible: root.leadingText.length > 0
-        x: Theme.space.screenMargin
+        x: root.sideInset
         y: root.rowTop + (root.rowHeight - height) / 2
         width: Math.max(Theme.size.minTouchTarget, leadingRow.width)
         height: Math.max(Theme.size.minTouchTarget, leadingRow.height)
@@ -160,7 +163,7 @@ Item {
         objectName: "navTrailing"
         visible: root.trailingText.length > 0
         enabled: root.trailingEnabled
-        x: root.width - width - Theme.space.screenMargin
+        x: root.width - width - root.sideInset
         y: root.rowTop + (root.rowHeight - height) / 2
         width: Math.max(Theme.size.minTouchTarget, trailingLabel.implicitWidth)
         height: Math.max(Theme.size.minTouchTarget, trailingLabel.implicitHeight)
@@ -193,9 +196,9 @@ Item {
 
         objectName: "navTitleBelow"
         visible: root.titleBelow && !root.collapsed
-        x: Theme.space.screenMargin
+        x: root.sideInset
         y: root.rowTop + root.rowHeight + root.titleGapAbove
-        width: root.width - 2 * Theme.space.screenMargin
+        width: root.width - 2 * root.sideInset
         horizontalAlignment: root.large ? Text.AlignLeft : Text.AlignHCenter
         wrapMode: Text.WordWrap
         color: Theme.colour.textPrimary
@@ -210,9 +213,9 @@ Item {
     Rectangle {
         objectName: "navDivider"
         visible: root.collapsed
-        x: Theme.space.screenMargin
+        x: root.sideInset
         y: root.rowTop + root.rowHeight + root.rowBottom
-        width: root.width - 2 * Theme.space.screenMargin
+        width: root.width - 2 * root.sideInset
         height: Theme.border.hairline
         color: Theme.colour.divider
         Accessible.ignored: true
