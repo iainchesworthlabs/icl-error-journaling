@@ -3,4 +3,4 @@
 # The application is built with CMake; nothing here takes part in the build.
 source "https://rubygems.org"
 
-gem "fastlane", "2.241.1"
+gem "fastlane", "2.241.2"
