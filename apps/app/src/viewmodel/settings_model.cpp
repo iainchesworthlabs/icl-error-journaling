@@ -6,6 +6,7 @@
 #include "error_journaling/log.hpp"
 #include "error_journaling/note_template.hpp"
 #include "error_journaling/time_format.hpp"
+#include "error_journaling/unit_number.hpp"
 #include "error_journaling/uuid.hpp"
 #include "viewmodel/board_layout_model.hpp"
 #include "viewmodel/board_model.hpp"
@@ -44,6 +45,7 @@ const QString OP_TIME_FORMAT = QStringLiteral("time format");
 const QString OP_TOTALS = QStringLiteral("totals");
 const QString OP_ERROR_PREFIX = QStringLiteral("error prefix");
 const QString OP_LOCATION = QStringLiteral("location");
+const QString OP_ENVIRONMENT = QStringLiteral("unit environment");
 const QString OP_ERROR_TYPE = QStringLiteral("error type");
 const QString OP_BOARD = QStringLiteral("board");
 const QString OP_TEMPLATE = QStringLiteral("template");
@@ -78,6 +80,33 @@ std::optional<Id> parse_id(const QString& text)
         return std::nullopt;
     }
     return Id{*parsed};
+}
+
+/// An environment name as the view model takes it: spaces dropped, upper case lowered, and then judged by the core's own
+/// rule for the names of a setup file.
+std::expected<std::string, QString> checked_environment(const QString& raw)
+{
+    const QString text = raw.trimmed().toLower();
+    if (text.isEmpty())
+    {
+        return std::unexpected(SettingsModel::tr("Enter a name, for example prod."));
+    }
+    if (static_cast<std::size_t>(text.size()) > UnitNumber::MAX_ENVIRONMENT_LENGTH)
+    {
+        return std::unexpected(SettingsModel::tr("Use %1 characters or fewer.").arg(UnitNumber::MAX_ENVIRONMENT_LENGTH));
+    }
+    const std::string name = text.toStdString();
+    if (!UnitNumber::is_valid_environment(name))
+    {
+        return std::unexpected(SettingsModel::tr("Use lower-case letters, digits and dashes, for example prod. It cannot "
+                                                 "start or end with a dash."));
+    }
+    return name;
+}
+
+QString environment_taken(const std::string& name)
+{
+    return SettingsModel::tr("\xE2\x80\x9C%1\xE2\x80\x9D is already in the list.").arg(QString::fromStdString(name));
 }
 
 QString no_such_item()
@@ -806,6 +835,104 @@ QString SettingsModel::removeLocation(const QString& id)
                                   return std::unexpected(no_such_item());
                               }
                               found->m_Retired = true;
+                              return true;
+                          });
+}
+
+QString SettingsModel::addUnitEnvironment(const QString& name)
+{
+    const auto text = checked_environment(name);
+    if (!text)
+    {
+        return text.error();
+    }
+    return change_message(OP_ENVIRONMENT,
+                          [value = *text](Configuration& configuration) -> EditResult
+                          {
+                              auto& list = configuration.m_UnitEnvironments;
+                              if (list.size() >= CONFIG_MAX_ENTRIES_PER_LIST)
+                              {
+                                  return std::unexpected(list_full());
+                              }
+                              if (std::ranges::find(list, value) != list.end())
+                              {
+                                  return std::unexpected(environment_taken(value));
+                              }
+                              list.push_back(value);
+                              return true;
+                          });
+}
+
+QString SettingsModel::renameUnitEnvironment(const QString& from, const QString& to)
+{
+    const auto text = checked_environment(to);
+    if (!text)
+    {
+        return text.error();
+    }
+    return change_message(OP_ENVIRONMENT,
+                          [old_name = from.toStdString(), value = *text](Configuration& configuration) -> EditResult
+                          {
+                              auto& list = configuration.m_UnitEnvironments;
+                              const auto found = std::ranges::find(list, old_name);
+                              if (found == list.end())
+                              {
+                                  return std::unexpected(no_such_item());
+                              }
+                              if (value != old_name && std::ranges::find(list, value) != list.end())
+                              {
+                                  return std::unexpected(environment_taken(value));
+                              }
+                              const bool changed = *found != value;
+                              *found = value;
+                              return changed;
+                          });
+}
+
+QString SettingsModel::moveUnitEnvironment(int from, int to)
+{
+    return change_message(OP_ENVIRONMENT,
+                          [from, to](Configuration& configuration) -> EditResult
+                          {
+                              auto& list = configuration.m_UnitEnvironments;
+                              const auto count = static_cast<int>(list.size());
+                              if (from < 0 || from >= count || to < 0 || to >= count)
+                              {
+                                  return std::unexpected(SettingsModel::tr("That place in the list does not exist."));
+                              }
+                              if (from == to)
+                              {
+                                  return false;
+                              }
+                              const auto at = [&list](int place) { return list.begin() + place; };
+                              if (from < to)
+                              {
+                                  std::rotate(at(from), at(from + 1), at(to + 1));
+                              }
+                              else
+                              {
+                                  std::rotate(at(to), at(from), at(from + 1));
+                              }
+                              return true;
+                          });
+}
+
+QString SettingsModel::removeUnitEnvironment(const QString& name)
+{
+    return change_message(OP_ENVIRONMENT,
+                          [target = name.toStdString()](Configuration& configuration) -> EditResult
+                          {
+                              auto& list = configuration.m_UnitEnvironments;
+                              const auto found = std::ranges::find(list, target);
+                              if (found == list.end())
+                              {
+                                  return std::unexpected(no_such_item());
+                              }
+                              if (list.size() == 1)
+                              {
+                                  return std::unexpected(SettingsModel::tr("Keep at least one environment."));
+                              }
+                              list.erase(found);
                               return true;
                           });
 }

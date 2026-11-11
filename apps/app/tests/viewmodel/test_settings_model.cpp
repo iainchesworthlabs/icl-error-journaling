@@ -905,3 +905,85 @@ TEST_CASE("The first load announces the time format of the saved file", "[viewmo
     CHECK(format_changed.count() == 1);
     CHECK(rig.m_Settings.time_style() == "12h");
 }
+
+// ------------------------------------------------------------------------------------------------ unit environments
+
+TEST_CASE("Environments are added last, lowered, and written to the configuration (PRF-11)",
+          "[viewmodel][settings][environment]")
+{
+    SettingsRig rig;
+    rig.load_sample();
+    CHECK(rig.m_Settings.unit_environments() == QStringList{"prod", "dev"});
+
+    CHECK(rig.m_Settings.addUnitEnvironment("  Staging ").isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.unit_environments() == QStringList{"prod", "dev", "staging"});
+    CHECK(rig.m_Settings.configuration().m_UnitEnvironments ==
+          std::vector<std::string>{"prod", "dev", "staging"});
+    // The setup file carries the changed list, and reads back as it was.
+    const std::string exported = export_configuration(rig.m_Settings.configuration());
+    CHECK(exported.find("\"unit_environments\"") != std::string::npos);
+    const auto reread = import_configuration(exported);
+    REQUIRE(reread.has_value());
+    CHECK(reread->m_UnitEnvironments == std::vector<std::string>{"prod", "dev", "staging"});
+}
+
+TEST_CASE("An environment name that is not allowed, is empty, too long or repeated is refused",
+          "[viewmodel][settings][environment]")
+{
+    SettingsRig rig;
+    rig.load_sample();
+
+    CHECK_FALSE(rig.m_Settings.addUnitEnvironment("").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addUnitEnvironment("   ").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addUnitEnvironment("pre prod").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addUnitEnvironment("pre_prod").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addUnitEnvironment("-prod").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addUnitEnvironment("prod-").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addUnitEnvironment("caf\xC3\xA9").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addUnitEnvironment("PROD").isEmpty()); // lowered, then it is there already
+    CHECK_FALSE(rig.m_Settings.addUnitEnvironment(QString(21, 'a')).isEmpty());
+    CHECK(rig.m_Gateway.pending() == 0);
+    CHECK(rig.m_Settings.unit_environments() == QStringList{"prod", "dev"});
+
+    // 20 characters, digits and inner dashes are fine.
+    CHECK(rig.m_Settings.addUnitEnvironment(QString(20, 'a')).isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.addUnitEnvironment("pre-prod-2").isEmpty());
+}
+
+TEST_CASE("An environment can be renamed in place, moved, and removed, but the last one stays",
+          "[viewmodel][settings][environment]")
+{
+    SettingsRig rig;
+    rig.load_sample();
+
+    CHECK(rig.m_Settings.renameUnitEnvironment("dev", "Test").isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.unit_environments() == QStringList{"prod", "test"});
+    // A name that is in the list already, and one that is not.
+    CHECK_FALSE(rig.m_Settings.renameUnitEnvironment("test", "prod").isEmpty());
+    CHECK_FALSE(rig.m_Settings.renameUnitEnvironment("nothing", "x").isEmpty());
+    // The same name again is not a change.
+    CHECK(rig.m_Settings.renameUnitEnvironment("test", "test").isEmpty());
+
+    CHECK(rig.m_Settings.addUnitEnvironment("staging").isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.moveUnitEnvironment(2, 0).isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.unit_environments() == QStringList{"staging", "prod", "test"});
+    CHECK(rig.m_Settings.moveUnitEnvironment(0, 2).isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.unit_environments() == QStringList{"prod", "test", "staging"});
+    CHECK_FALSE(rig.m_Settings.moveUnitEnvironment(0, 3).isEmpty());
+    CHECK_FALSE(rig.m_Settings.moveUnitEnvironment(-1, 0).isEmpty());
+
+    CHECK(rig.m_Settings.removeUnitEnvironment("test").isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.removeUnitEnvironment("staging").isEmpty());
+    rig.commit();
+    CHECK(rig.m_Settings.unit_environments() == QStringList{"prod"});
+    CHECK_FALSE(rig.m_Settings.removeUnitEnvironment("prod").isEmpty());
+    CHECK_FALSE(rig.m_Settings.removeUnitEnvironment("nothing").isEmpty());
+    CHECK(rig.m_Settings.unit_environments() == QStringList{"prod"});
+}

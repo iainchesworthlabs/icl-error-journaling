@@ -26,6 +26,7 @@ SettingsPage {
     signal errorTypesRequested
     signal templatesRequested
     signal locationsRequested
+    signal unitEnvironmentsRequested
     signal facilitatorRequested
     signal unitPrefixRequested
     signal errorPrefixRequested
@@ -208,6 +209,15 @@ SettingsPage {
                 minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.locationsRequested()
+            }
+
+            ListRow {
+                objectName: "settingsUnitEnvironments"
+                text: qsTr("Unit environments")
+                value: root.settings.unitEnvironments.length
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.unitEnvironmentsRequested()
             }
 
             ListRow {

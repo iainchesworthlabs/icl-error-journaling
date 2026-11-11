@@ -30,6 +30,7 @@
 #include <QStyleHints>
 #include <QTest>
 #include <QVariant>
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 
@@ -105,10 +106,22 @@ public:
         return item;
     }
 
-    /// A tap, and the layout that follows it.
+    /// A tap, and the layout that follows it. A row far down the list is scrolled to first, as the person does.
     void tap(const QString& name)
     {
-        m_Ui.tap(require(name));
+        QQuickItem* item = require(name);
+        if (QQuickItem* flickable = shown(QStringLiteral("settingsFlickable")))
+        {
+            auto* content = flickable->property("contentItem").value<QQuickItem*>();
+            if (content != nullptr && content->isAncestorOf(item))
+            {
+                const double top = item->mapToItem(content, QPointF(0, 0)).y();
+                const double most = std::max(0.0, flickable->property("contentHeight").toDouble() - flickable->height());
+                flickable->setProperty("contentY", std::clamp(top - flickable->height() / 3, 0.0, most));
+                m_Ui.layout();
+            }
+        }
+        m_Ui.tap(item);
         m_Ui.layout();
     }
 
@@ -1426,4 +1439,23 @@ TEST_CASE("settings.list_rows: the unit prefix and the totals line are on the li
     CHECK(fixture.require(QStringLiteral("formInput"))->property("text").toString() == "UNIT");
     // Back leads to the list it was opened from, and says so.
     CHECK(fixture.require(QStringLiteral("navLeadingLabel"))->property("text").toString() == "Settings");
+}
+
+TEST_CASE("settings.environments_row: the list has a Unit environments row with the count, which opens the editor "
+          "(F21)",
+          "[ui][settings_screen]")
+{
+    Fixture fixture;
+    QSignalSpy environments(fixture.m_Screen, SIGNAL(unitEnvironmentsRequested()));
+    QQuickItem* row = fixture.require(QStringLiteral("settingsUnitEnvironments"));
+    CHECK(row->property("text").toString() == QStringLiteral("Unit environments"));
+    CHECK(row->property("value").toString() == QStringLiteral("2"));
+    CHECK(fixture.m_Ui.geometry(row).height() == 44.0);
+    // Under Locations, which is the list it is most like.
+    CHECK(fixture.m_Ui.geometry(row).top() >=
+          fixture.m_Ui.geometry(fixture.require(QStringLiteral("settingsLocations"))).bottom() - 0.5);
+
+    fixture.tap(QStringLiteral("settingsUnitEnvironments"));
+    CHECK(environments.count() == 1);
+    CHECK(fixture.depth() == 1);
 }

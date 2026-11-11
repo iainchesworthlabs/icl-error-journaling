@@ -267,6 +267,12 @@
           ]
         },
         {
+          "name": "UnitEnvironments",
+          "files": [
+            "settings/editors/UnitEnvironments.qml"
+          ]
+        },
+        {
           "name": "Templates",
           "files": [
             "settings/editors/Templates.qml"
