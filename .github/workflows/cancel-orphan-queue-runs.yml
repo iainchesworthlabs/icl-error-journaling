@@ -1,0 +1,42 @@
+# Stops merge-queue runs whose queue entry is gone. An ejected entry (checks_timed_out, a dequeue) loses its
+# gh-readonly-queue branch, but its workflow run keeps going and holds runners (docs/ci.md, "Orphaned queue runs").
+# A run is cancelled only when GitHub answers 404 for its branch twice; a live entry's branch exists, so it is never
+# cancelled. A manual run takes a dry run.
+
+name: Cancel orphaned queue runs
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: List what would be cancelled and cancel nothing
+        type: boolean
+        default: true
+
+permissions: {}
+
+concurrency:
+  group: cancel-orphan-queue-runs
+  cancel-in-progress: false
+
+jobs:
+  cancel:
+    name: Cancel
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Cancel the orphans
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run && '--dry-run' || '' }}
+        run: python3 tools/ci/cancel_orphan_queue_runs.py --repo "$REPO" $DRY_RUN

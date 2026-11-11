@@ -1,0 +1,1 @@
+**CI is cheaper and stops stale queue runs.** A pull request no longer runs coverage unless it carries the `deep` label (the merge queue still does), the Linux build jobs may run 60 minutes, runs of ejected merge-queue entries are cancelled, and the toolchain and Qt packages install from a cache.
