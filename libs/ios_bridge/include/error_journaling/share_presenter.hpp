@@ -21,7 +21,9 @@ namespace ej::bridge
 ///   (before `present` returns) and the Share is not called.
 /// - One sheet at a time: while one is in flight, another request gets FAILED the same way and the Share is not called.
 ///   The flag clears when the first completes, whatever its outcome.
-/// - A temporary file is deleted on every outcome, including a request that was refused.
+/// - A temporary file is deleted on every outcome, including a request that was refused, unless the Share retains
+///   shared files (Android): then it stays after SHARED and CANCELLED, and the older files in its directory go when the
+///   next one is shared.
 ///
 /// A completion that arrives after the presenter is gone does nothing harmful. Main thread only.
 class SharePresenter

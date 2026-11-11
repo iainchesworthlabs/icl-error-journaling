@@ -1,0 +1,1 @@
+**Android app.** The app now builds for Android, for 64-bit and 32-bit phones and tablets (Android 9 and later), with the share sheet, haptics, "Open with" and "Share to" for the setup file, the same file protection and backup as on iOS, and the lifecycle and accessibility signals. It has run on an emulator only, not on a device, and it is not published anywhere yet.

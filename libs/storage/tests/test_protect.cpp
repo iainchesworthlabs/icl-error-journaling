@@ -3,6 +3,7 @@
 // File protection (work package 5.4 of docs/plan/stage-5.md): every file and folder the store creates is handed to the
 // protection setter, and a setter that fails never stops the store from opening or working. The setter is a fake that
 // records its calls, so this runs on every platform; the iOS call itself is checked on a device. All data is synthetic.
+#include "platform/android_protection.hpp"
 #include "protect.hpp"
 #include "recovery_fixture.hpp"
 
@@ -205,4 +206,59 @@ TEST_CASE("The desktop stub applies nothing and reads back UNSUPPORTED", "[prote
     const auto found = system.read_back(dir.path());
     REQUIRE(found.has_value());
     CHECK(*found == ProtectionClass::UNSUPPORTED);
+}
+
+TEST_CASE("Android: the credential-encrypted storage of an app is complete-until-first-unlock", "[protect][android]")
+{
+    using platform::ProtectionClass;
+    const auto cls = [](const char* path) { return platform::android_protection_class(path); };
+    constexpr auto first_unlock = ProtectionClass::COMPLETE_UNTIL_FIRST_USER_AUTHENTICATION;
+
+    // Where the store (files/) and the share and import copies (cache/) are, under both names Android gives the path.
+    CHECK(cls("/data/user/0/com.example.app/files") == first_unlock);
+    CHECK(cls("/data/user/0/com.example.app/files/ej.db") == first_unlock);
+    CHECK(cls("/data/user/0/com.example.app/files/journal/archive/2026-11-09.jsonl") == first_unlock);
+    CHECK(cls("/data/user/0/com.example.app/cache/ej-share/setup.ejconfig") == first_unlock);
+    CHECK(cls("/data/user/10/com.example.app/files/ej.db") == first_unlock); // a secondary user
+    CHECK(cls("/data/data/com.example.app/files/ej.db") == first_unlock);
+    CHECK(cls("/data/user/0/com.example.app/files/./journal//x") == first_unlock); // spelled oddly, normalised
+}
+
+TEST_CASE("Android: device-encrypted storage is NONE and everything else is OTHER", "[protect][android]")
+{
+    using platform::ProtectionClass;
+    const auto cls = [](const char* path) { return platform::android_protection_class(path); };
+
+    // Readable before the first unlock: the application does not use it.
+    CHECK(cls("/data/user_de/0/com.example.app/files/x") == ProtectionClass::NONE);
+
+    CHECK(cls("/storage/emulated/0/Download/setup.ejconfig") == ProtectionClass::OTHER);
+    CHECK(cls("/sdcard/setup.ejconfig") == ProtectionClass::OTHER);
+    CHECK(cls("/tmp/x") == ProtectionClass::OTHER);
+    CHECK(cls("files/ej.db") == ProtectionClass::OTHER); // relative
+    CHECK(cls("") == ProtectionClass::OTHER);
+    CHECK(cls("/") == ProtectionClass::OTHER);
+    // The package itself and the bare prefixes are not a file inside it.
+    CHECK(cls("/data/user/0/com.example.app") == ProtectionClass::OTHER);
+    CHECK(cls("/data/user/0") == ProtectionClass::OTHER);
+    CHECK(cls("/data/user") == ProtectionClass::OTHER);
+    CHECK(cls("/data/data/com.example.app") == ProtectionClass::OTHER);
+    // A user number must be a number.
+    CHECK(cls("/data/user/abc/com.example.app/files/x") == ProtectionClass::OTHER);
+    CHECK(cls("/data/user//com.example.app/files/x") == ProtectionClass::OTHER);
+}
+
+TEST_CASE("Android: a path that climbs out of the app's storage is not trusted", "[protect][android]")
+{
+    using platform::ProtectionClass;
+    const auto cls = [](const char* path) { return platform::android_protection_class(path); };
+    // Four ".." from files/ land in /data, which is no app's storage.
+    CHECK(cls("/data/user/0/com.example.app/files/../../../../sdcard/x") == ProtectionClass::OTHER);
+    // One that stays inside normalises to a place that is inside.
+    CHECK(cls("/data/user/0/com.example.app/files/../cache/x") ==
+          ProtectionClass::COMPLETE_UNTIL_FIRST_USER_AUTHENTICATION);
+    // "/.." is "/" to the file system as well, so this is the same place. A name that merely contains ".." is refused: the
+    // answer for an odd spelling is the cautious one.
+    CHECK(cls("/../data/user/0/com.example.app/files/x") == ProtectionClass::COMPLETE_UNTIL_FIRST_USER_AUTHENTICATION);
+    CHECK(cls("/data/user/0/com.example.app/files/a..b") == ProtectionClass::OTHER);
 }

@@ -1349,8 +1349,8 @@ Result<std::vector<LogSummary>, StorageError> SqliteLogRepository::list_logs()
         }
         summary.m_Archived = rows->value(3).toInt() != 0;
         summary.m_ChangedSinceShare = rows->value(12).toInt() != 0;
-        summary.m_TotalEntryCount = rows->value(4).toULongLong();
-        summary.m_LiveEntryCount = rows->value(5).toULongLong();
+        summary.m_TotalEntryCount = static_cast<std::size_t>(rows->value(4).toULongLong());
+        summary.m_LiveEntryCount = static_cast<std::size_t>(rows->value(5).toULongLong());
         result.push_back(std::move(summary));
     }
     return result;

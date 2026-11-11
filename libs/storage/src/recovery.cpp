@@ -263,7 +263,7 @@ bool RecoveryRun::tail_agrees_with(const JournalInfo& info, std::uint64_t applie
         tail.assign(static_cast<std::size_t>(window), '\0');
         in.clear();
         in.seekg(size - window);
-        in.read(tail.data(), window);
+        in.read(tail.data(), static_cast<std::streamsize>(window)); // at most 4096
         if (!in || tail.back() != '\n')
         {
             return false;

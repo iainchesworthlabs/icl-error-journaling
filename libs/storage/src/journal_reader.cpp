@@ -139,7 +139,8 @@ private:
         else if (record->m_Seq < expected_seq)
         {
             // A copy of a record already accepted is harmless; a different record with the same number is not.
-            if (m_Checksums[record->m_Seq - 1] == crc32(m_Line))
+            // A number below the next expected one names a record already read, so it is an index of m_Checksums.
+            if (m_Checksums[static_cast<std::size_t>(record->m_Seq - 1)] == crc32(m_Line))
             {
                 ++m_Scan.m_DuplicateRecords;
             }

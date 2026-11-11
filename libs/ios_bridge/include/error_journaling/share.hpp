@@ -68,6 +68,15 @@ public:
     /// returned; the desktop stub calls it before. The request is valid (see SharePresenter): the implementation does
     /// not check it again.
     virtual void present(ShareRequest request, ShareCallback done) = 0;
+
+    /// True where the app that receives a file may read it after the sheet has closed (Android: a mail draft attaches
+    /// it when it is sent). SharePresenter then keeps a shared file until the next export, or the launch purge, and
+    /// removes it at once only when the sheet could not be shown. False on iOS and the desktop: the file is removed as
+    /// soon as the sheet ends.
+    [[nodiscard]] virtual bool retains_shared_files() const noexcept
+    {
+        return false;
+    }
 };
 
 /// ios/share.mm or desktop/share.cpp.

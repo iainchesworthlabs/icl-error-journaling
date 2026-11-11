@@ -26,6 +26,9 @@ def manifest(
     backup: str = "(type 0x12)0xffffffff",
     orientation: int = 1,
     extra: str = "",
+    filters: str = "",
+    rules: tuple[str, ...] = ("dataExtractionRules", "fullBackupContent"),
+    direct_boot: bool = False,
 ) -> str:
     """aapt2 dump xmltree output in the shape aapt2 prints it."""
     lines = [
@@ -39,19 +42,22 @@ def manifest(
     ]
     for name in permissions:
         lines += ["    E: uses-permission (line=9)", f'      A: {NS}:name(0x01010003)="{name}" (Raw: "{name}")']
-    activity = application_id + ".EjActivity"
+    activity = package.ACTIVITY_CLASS
     lines += [
         "    E: application (line=15)",
         f"      A: {NS}:allowBackup(0x01010280)={backup}",
+        *(f"      A: {NS}:{name}(0x0101fe00)=@0x7f0e0001" for name in rules),
         "      E: activity (line=22)",
         f'        A: {NS}:name(0x01010003)="{activity}" (Raw: "{activity}")',
         f"        A: {NS}:exported(0x01010010)=(type 0x12)0xffffffff",
+        *([f"        A: {NS}:directBootAware(0x01010505)=(type 0x12)0xffffffff"] if direct_boot else []),
         f"        A: {NS}:screenOrientation(0x0101001e)={orientation}",
         "        E: intent-filter (line=29)",
         "          E: action (line=30)",
         f'            A: {NS}:name(0x01010003)="android.intent.action.MAIN" (Raw: "android.intent.action.MAIN")',
         "          E: category (line=31)",
         f'            A: {NS}:name(0x01010003)="android.intent.category.LAUNCHER" (Raw: "android.intent.category.LAUNCHER")',
+        *(filters.splitlines() if filters else []),
         "      E: provider (line=44)",
         f'        A: {NS}:name(0x01010003)="androidx.core.content.FileProvider" (Raw: "androidx.core.content.FileProvider")',
         f"        A: {NS}:exported(0x01010010)=(type 0x12)0x0",
@@ -95,6 +101,12 @@ class ManifestTest(unittest.TestCase):
         text = manifest().replace("=28", "=(type 0x10)0x1c").replace("=36", "=(type 0x10)0x24")
         self.assertEqual(package.manifest_problems(text), [])
 
+    def test_a_new_application_id_keeps_the_activity_class(self) -> None:
+        # The ID will change when the name is settled; the Java package of EjActivity does not.
+        text = manifest(application_id="com.example.newname")
+        self.assertEqual(package.manifest_problems(text, "com.example.newname"), [])
+        self.assertTrue(package.manifest_problems(text))  # against the default ID it is wrong
+
     def test_application_id_is_checked(self) -> None:
         problems = package.manifest_problems(manifest(application_id="org.qtproject.example"))
         self.assertTrue(any("application ID" in p for p in problems))
@@ -104,9 +116,21 @@ class ManifestTest(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("allowBackup", problems[0])
 
+    def test_both_backup_rule_attributes_are_required(self) -> None:
+        for missing in ("dataExtractionRules", "fullBackupContent"):
+            kept = tuple(r for r in ("dataExtractionRules", "fullBackupContent") if r != missing)
+            problems = package.manifest_problems(manifest(rules=kept))
+            self.assertEqual(len(problems), 1, missing)
+            self.assertIn(missing, problems[0])
+
+    def test_a_direct_boot_aware_activity_is_refused(self) -> None:
+        problems = package.manifest_problems(manifest(direct_boot=True))
+        self.assertEqual(len(problems), 1)
+        self.assertIn("direct-boot aware", problems[0])
+
     def test_landscape_activity_is_refused(self) -> None:
         problems = package.manifest_problems(manifest(orientation=0))
-        self.assertEqual(problems, [f"{package.ACTIVITY} is not portrait"])
+        self.assertEqual(problems, [f"{package.ACTIVITY_CLASS} is not portrait"])
 
     def test_exported_receiver_is_refused(self) -> None:
         receiver = (
@@ -126,6 +150,30 @@ class ManifestTest(unittest.TestCase):
             f'        A: {NS}:permission(0x01010006)="android.permission.DUMP" (Raw: "android.permission.DUMP")\n'
         )
         self.assertEqual(package.manifest_problems(manifest(extra=receiver)), [])
+
+    @staticmethod
+    def view_filter(mime: str) -> str:
+        return "\n".join(
+            [
+                "        E: intent-filter (line=33)",
+                "          E: action (line=34)",
+                f'            A: {NS}:name(0x01010003)="android.intent.action.VIEW" (Raw: "android.intent.action.VIEW")',
+                "          E: data (line=35)",
+                f'            A: {NS}:scheme(0x01010027)="content" (Raw: "content")',
+                "          E: data (line=36)",
+                f'            A: {NS}:mimeType(0x01010026)="{mime}" (Raw: "{mime}")',
+            ]
+        )
+
+    def test_the_setup_file_types_are_allowed(self) -> None:
+        for mime in ("application/json", "application/octet-stream"):
+            self.assertEqual(package.manifest_problems(manifest(filters=self.view_filter(mime))), [])
+
+    def test_an_intent_filter_for_every_type_is_refused(self) -> None:
+        for mime in ("*/*", "*", "application/*"):
+            problems = package.manifest_problems(manifest(filters=self.view_filter(mime)))
+            self.assertEqual(len(problems), 1, mime)
+            self.assertIn(mime, problems[0])
 
     def test_missing_manifest_is_reported(self) -> None:
         self.assertEqual(package.manifest_problems(""), ["the package has no manifest element"])
@@ -165,6 +213,13 @@ class ElfTest(unittest.TestCase):
             "GNU_RELRO      0x000680 0x0000000000004680 0x0000000000004680 0x0001d8 0x000980 R   0x1",
         )
         self.assertEqual(package.elf_problems("lib/x.so", text), [])
+
+    def test_four_kilobyte_alignment_is_allowed_on_32_bit(self) -> None:
+        text = headers("LOAD           0x000000 0x0000000000000000 0x0000000000000000 0x0680 0x0680 R E 0x1000")
+        self.assertEqual(package.elf_problems("lib/armeabi-v7a/x.so", text, require_16kb=False), [])
+
+    def test_a_32_bit_file_that_is_not_elf_is_still_reported(self) -> None:
+        self.assertEqual(len(package.elf_problems("lib/armeabi-v7a/x.so", "x", require_16kb=False)), 1)
 
     def test_no_load_segment_is_reported(self) -> None:
         self.assertEqual(len(package.elf_problems("lib/x.so", "not an ELF file")), 1)
