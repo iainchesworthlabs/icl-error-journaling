@@ -238,13 +238,15 @@ Item {
         id: strip
 
         objectName: "headerStrip"
-        // The row of the strip: 30 pt at least, between 4 pt above and 6 pt below, under the divider.
-        readonly property real rowTop: Theme.border.hairline + Theme.border.hairline * 4
-        readonly property real rowHeight: Math.max(Theme.size.badge + Theme.border.hairline * 6, stripText.implicitHeight)
+        // The row of the strip: 30 pt at least, between 4 pt above and 6 pt below, under the divider. At a large text size it is
+        // one line with a hairline or two around it, so that the board keeps all twelve tiles above the tab bar whatever the
+        // font's line height is (Stage 7, F1).
+        readonly property real rowTop: Theme.border.hairline + Theme.border.hairline * (root.reduced ? 1 : 4)
+        readonly property real rowHeight: Math.max(Theme.size.badge + (root.reduced ? 0 : Theme.border.hairline * 6), stripText.implicitHeight)
 
         y: main.height
         width: parent.width
-        height: rowTop + rowHeight + Theme.border.hairline * 6
+        height: rowTop + rowHeight + Theme.border.hairline * (root.reduced ? 2 : 6)
         visible: root.missingCount > 0 && !root.skeleton
 
         Rectangle {
