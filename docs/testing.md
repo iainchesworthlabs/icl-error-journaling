@@ -159,6 +159,19 @@ or a `.qml` file under `apps/app/qml/screens/` (other than `private/` and `launc
 (or by `not_screens`): a new screen needs a state before it can merge. The script runs the case with the folder set and
 writes `index.html`. The pictures are not golden files and are not compared; CI uploads them (`docs/ci.md`).
 
+### Store screenshots
+
+`tools/ej_screenshots/store_screenshots.py` makes the App Store and Google Play screenshots (Stage 11, 11.4,
+`docs/plan/stage-11.md`). `tools/ej_screenshots/store_shots.json` is the fixed shot list: the sets (iPhone 6.9", iPad 13" in
+portrait and in landscape, Play phone, Play large screen in portrait and in landscape), their exact pixel sizes, and for each
+shot the state of `screens.json`, the mode and the file name. The script renders those states (the phone at a scale of 3,
+the iPad at 2), draws a neutral status bar (9:41, signal, battery) in the safe-area band, fits the picture to the canvas with
+the screen's own colour in any margin, and writes RGB PNGs with no alpha and no metadata to
+`<out>/store/<store>/<set>/<file>.png`, with `manifest.json` (size and SHA-256 of each). It adds no caption. `--check` reads
+the list only. `tools/tests/test_store_screenshots.py` (`unit`) checks that every state and mode is in `screens.json`, that
+the counts and shapes are what the stores take, that every picture has its set's exact size, and that two runs give the same
+bytes. The Screenshots job of CI makes the sets for every ready pull request. They are not committed.
+
 ## Golden tests and fixtures
 
 The export format is pinned by golden files: `libs/core/tests/golden/<name>.txt` holds the exact bytes an export must
