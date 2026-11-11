@@ -608,3 +608,27 @@ TEST_CASE("version.commit: names, targets, order and text scale, in light and da
         expect_clean(check_everything(rig));
     }
 }
+
+TEST_CASE("version.commit: at the largest text size the label is above the value, which has the whole row (F13)",
+          "[ui][version_sheet][commit][large]")
+{
+    HeaderWorld world(true);
+    UiRig rig;
+    QQuickItem* sheet = open_sheet(rig, world);
+    REQUIRE(sheet != nullptr);
+    QQuickItem* commit = need(rig, QStringLiteral("versionCommit"));
+    retype(rig, commit, QStringLiteral("e4f5a6b"));
+
+    // At the normal size the label and the value share the row.
+    CHECK_FALSE(commit->property("stacked").toBool());
+
+    rig.set_text_scale(3.1);
+    rig.settle();
+    CHECK(commit->property("stacked").toBool());
+    QQuickItem* input = input_of(rig, commit);
+    // The value starts at the left edge of the row, under the label, and not after it.
+    CHECK(input->property("leftPadding").toDouble() <= 14.5);
+    CHECK(input->property("topPadding").toDouble() > 14.0);
+    CHECK(rig.geometry(commit).height() > rig.geometry(need(rig, QStringLiteral("versionTo"))).height() - 0.5);
+    rig.set_text_scale(1.0);
+}

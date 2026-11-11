@@ -115,21 +115,29 @@ Item {
             Accessible.ignored: true
         }
 
-        Row {
+        // The tick, the line and the Undo button. Side by side at the usual sizes; at the largest text sizes the Undo
+        // button takes too much of the card for the line to have room beside it, so it goes under the line, which then has the
+        // whole width and is not cut off (Stage 7, F9).
+        Item {
             id: row
+
+            objectName: "toastRow"
+            readonly property bool stacked: undoButton.width > width * 0.33
+            readonly property real spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             anchors.leftMargin: Theme.space.rowPadding
             anchors.rightMargin: Theme.space.tileGap
-            spacing: Theme.space.tileGap + Theme.border.hairline * 2
+            implicitHeight: stacked ? line.height + spacing + undoButton.height : Math.max(tick.height, line.height, undoButton.height)
+            height: implicitHeight
 
             Icon {
                 id: tick
 
                 objectName: "toastTick"
-                anchors.verticalCenter: parent.verticalCenter
+                y: row.stacked ? Math.max(0, (Theme.font.messageText.size - height) / 2) : (row.height - height) / 2
                 size: root.iconSize
                 kind: "check"
                 colour: Theme.colour.toastAccent
@@ -139,8 +147,9 @@ Item {
                 id: line
 
                 objectName: "toastText"
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(0, row.width - tick.width - undoButton.width - 2 * row.spacing)
+                x: tick.width + row.spacing
+                y: row.stacked ? 0 : (row.height - height) / 2
+                width: Math.max(0, row.width - x - (row.stacked ? 0 : undoButton.width + row.spacing))
                 text: root.text
                 color: Theme.colour.toastText
                 font: Theme.font.messageText.font
@@ -152,7 +161,8 @@ Item {
                 id: undoButton
 
                 objectName: "toastUndo"
-                anchors.verticalCenter: parent.verticalCenter
+                x: row.width - width
+                y: row.stacked ? line.height + row.spacing : (row.height - height) / 2
                 width: Math.max(Theme.size.minTouchTarget, undoLabel.implicitWidth + 2 * Theme.space.rowPadding)
                 // 40 pt drawn; the tap handler's margin makes the touch area 44.
                 height: Math.max(Theme.size.minTouchTarget - Theme.border.hairline * 4, undoLabel.implicitHeight + Theme.space.tileGap)

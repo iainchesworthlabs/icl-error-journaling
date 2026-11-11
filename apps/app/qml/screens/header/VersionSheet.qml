@@ -104,6 +104,9 @@ Sheet {
         property int inputMethodHints: Qt.ImhFormattedNumbersOnly
         readonly property bool hasFocus: input.activeFocus
         readonly property bool isLast: Positioner.isLastItem
+        // At the largest text sizes the label takes too much of the row for the value to sit beside it (the value lost its
+        // first characters, Stage 7 F13): the label goes above the field, which then has the whole row.
+        readonly property bool stacked: Math.ceil(labelMetrics.advanceWidth) > width * 0.4
 
         signal textEdited(string text)
 
@@ -113,7 +116,7 @@ Sheet {
 
         width: parent ? parent.width : implicitWidth
         implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
-        implicitHeight: Math.max(Theme.size.rowHeightForm, toLabel.height + Theme.space.sectionGap, input.implicitHeight)
+        implicitHeight: Math.max(Theme.size.rowHeightForm, stacked ? input.implicitHeight : toLabel.height + Theme.space.sectionGap, input.implicitHeight)
         onTextChanged: {
             if (input.text !== text)
                 input.text = text;
@@ -134,11 +137,11 @@ Sheet {
 
             objectName: "formInput"
             anchors.fill: parent
-            leftPadding: toLabel.x + toLabel.width + Theme.space.tileGap
+            leftPadding: toRow.stacked ? Theme.space.rowPadding : toLabel.x + toLabel.width + Theme.space.tileGap
             rightPadding: Theme.space.rowPadding
-            topPadding: Theme.space.tileGap
+            topPadding: toRow.stacked ? toLabel.y + toLabel.height : Theme.space.tileGap
             bottomPadding: Theme.space.tileGap
-            horizontalAlignment: TextInput.AlignRight
+            horizontalAlignment: toRow.stacked ? TextInput.AlignLeft : TextInput.AlignRight
             verticalAlignment: TextInput.AlignVCenter
             color: Theme.colour.textPrimary
             font: Theme.font.fieldValue.font
@@ -160,8 +163,8 @@ Sheet {
             id: toLabel
 
             x: Theme.space.rowPadding
-            y: (parent.height - height) / 2
-            width: Math.min(Math.ceil(labelMetrics.advanceWidth) + Theme.border.hairline, toRow.width / 2 - Theme.space.rowPadding)
+            y: toRow.stacked ? Theme.space.tileGap : (parent.height - height) / 2
+            width: toRow.stacked ? toRow.width - 2 * Theme.space.rowPadding : Math.min(Math.ceil(labelMetrics.advanceWidth) + Theme.border.hairline, toRow.width / 2 - Theme.space.rowPadding)
             color: Theme.colour.textPrimary
             font: Theme.font.body.font
             text: toRow.label

@@ -326,6 +326,16 @@ TEST_CASE("alert.modal: a card taller than the window scrolls instead of leaving
     QQuickItem* confirm = f.button("alertConfirm");
     REQUIRE(confirm != nullptr);
     CHECK(f.m_Rig.geometry(confirm).height() >= 54);
+    // The buttons stay inside the card, under the message, which is what scrolls (F14); none needs a scroll to be reached.
+    for (const char* name : {"alertConfirm", "alertAlternate", "alertCancel"})
+    {
+        QQuickItem* each = f.button(name);
+        REQUIRE(each != nullptr);
+        CAPTURE(name);
+        CHECK(f.m_Rig.geometry(each).bottom() <= card.bottom() + 0.5);
+        CHECK(f.m_Rig.geometry(each).top() >= card.top());
+    }
+    CHECK(f.m_Rig.geometry(f.button("alertCancel")).top() > f.m_Rig.geometry(f.m_Rig.find(QStringLiteral("alertMessage"))).top());
     expect_clean(check_text_scale(f.m_Rig));
 }
 
