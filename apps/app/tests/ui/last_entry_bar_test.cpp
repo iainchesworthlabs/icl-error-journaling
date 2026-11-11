@@ -79,7 +79,9 @@ TEST_CASE("last_bar.line: with no entry it says so", "[ui][last_bar]")
     UiRig rig;
     QQuickItem* bar = load_bar(rig, QString(), 0);
     CHECK(text_of(rig, "lastBarLine") == QStringLiteral("No entries yet"));
-    CHECK_FALSE(require_item(rig, QStringLiteral("lastBarCount"))->isVisible());
+    // The count is shown at zero too, as the LogEmptyBoard mock-up has it.
+    CHECK(text_of(rig, "lastBarCount") == QStringLiteral("0 today"));
+    CHECK(require_item(rig, QStringLiteral("lastBarCount"))->isVisible());
 
     bool named = false;
     for (const Node& node : rig.accessible_tree())

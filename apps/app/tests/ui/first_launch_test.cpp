@@ -49,12 +49,13 @@ TEST_CASE("setup.first_launch: the screen is titled CS Bingo Board and offers tw
     CHECK(button_text(world, QStringLiteral("importCard")) == QStringLiteral("Import a setup file"));
     CHECK(button_text(world, QStringLiteral("manualCard")) == QStringLiteral("Set up by hand"));
 
-    // The design's two buttons: the import is the primary one, with the file icon, and setting up by hand is the
-    // secondary one; a line under them says what a setup file holds. The icon of the app is the list.
-    CHECK(card(world, QStringLiteral("importCard"))->property("variant").toInt() == 0);
-    CHECK(card(world, QStringLiteral("importCard"))->property("iconKind").toString() == QStringLiteral("file"));
-    CHECK(card(world, QStringLiteral("manualCard"))->property("variant").toInt() == 1);
+    // The design's two buttons (F19): setting up by hand is the main one, at the top, and the import is the second one
+    // under it, with the file icon; a line under them says what a setup file holds. The icon of the app is the list.
+    CHECK(card(world, QStringLiteral("manualCard"))->property("variant").toInt() == 0);
     CHECK(card(world, QStringLiteral("manualCard"))->property("iconKind").toString().isEmpty());
+    CHECK(card(world, QStringLiteral("importCard"))->property("variant").toInt() == 1);
+    CHECK(card(world, QStringLiteral("importCard"))->property("iconKind").toString() == QStringLiteral("file"));
+    CHECK(card(world, QStringLiteral("manualCard"))->y() < card(world, QStringLiteral("importCard"))->y());
     CHECK(card(world, QStringLiteral("importCard"))->height() >= 54);
     CHECK(card(world, QStringLiteral("manualCard"))->height() >= 54);
     CHECK(item(world, QStringLiteral("setupFileNote"))->property("text").toString() ==

@@ -6,10 +6,10 @@ import ErrorJournalingApp
 // The first-launch screen (docs/design/screens/FirstLaunch.dc.html, PRF-09), shown while `settings.configured` is false and
 // the settings have finished loading. It names the app, CS Bingo Board, and offers two plain choices:
 //
-//   Import a setup file    emits `importRequested()`. The shell opens the platform's file dialog and, with the chosen file,
-//                          calls ImportFlow.begin(); that shows the confirmation or the problems with the file.
-//   Set up by hand         opens FirstLaunchManual, which asks for the facilitator and the UNIT prefix. The view model
-//                          holds them in memory until both are set, then saves and `configured` becomes true.
+//   Set up by hand         the main button. Opens FirstLaunchManual, which asks for the facilitator and the unit prefix. The
+//                          view model holds them in memory until both are set, then saves and `configured` becomes true.
+//   Import a setup file    the second button. Emits `importRequested()`. The shell opens the platform's file dialog and, with
+//                          the chosen file, calls ImportFlow.begin(); that shows the confirmation or the problems with the file.
 //
 // When the saved settings could not be used at launch (`settings.loadProblem`: an app that is too old for the file, a
 // damaged file) the reason is a banner above the choices; the file is kept.
@@ -169,20 +169,22 @@ Item {
                                 Accessible.name: qsTr("How do you want to start?")
                             }
 
-                            PrimaryButton {
-                                objectName: "importCard"
-                                width: parent.width
-                                iconKind: "file"
-                                text: qsTr("Import a setup file")
-                                onClicked: root.importRequested()
-                            }
-
+                            // Most people have no setup file, so setting up by hand is the main button and the import is
+                            // under it (Stage 7, F19).
                             PrimaryButton {
                                 objectName: "manualCard"
                                 width: parent.width
-                                variant: PrimaryButton.Secondary
                                 text: qsTr("Set up by hand")
                                 onClicked: stack.push(manualPage)
+                            }
+
+                            PrimaryButton {
+                                objectName: "importCard"
+                                width: parent.width
+                                variant: PrimaryButton.Secondary
+                                iconKind: "file"
+                                text: qsTr("Import a setup file")
+                                onClicked: root.importRequested()
                             }
 
                             Text {
