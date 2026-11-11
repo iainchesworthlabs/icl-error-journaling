@@ -87,13 +87,28 @@ Item {
         width: parent.width - 2 * Theme.space.sectionGap
         spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
-        // The chips wrap onto more rows when there is no room (a long name, or a large text size).
+        // The chips wrap onto more rows when there is no room (a long name). From a text scale of 1.2 up they are one row that
+        // scrolls sideways, so that the board keeps its height (Stage 7, F1).
+        Flickable {
+            id: chipScroll
+
+            readonly property bool oneRow: Theme.clampedScale > 1.2
+
+            width: parent.width
+            height: chipRow.height
+            clip: oneRow
+            contentWidth: oneRow ? chipRow.childrenRect.width : width
+            contentHeight: chipRow.height
+            flickableDirection: Flickable.HorizontalFlick
+            interactive: oneRow && contentWidth > width
+            boundsBehavior: Flickable.StopAtBounds
+            visible: root.skeleton || chipRepeater.count > 0
+
         Flow {
             id: chipRow
 
-            width: parent.width
+            width: chipScroll.oneRow ? 100000 : chipScroll.width // literal-ok: wider than any row of chips, so that the chips do not wrap
             spacing: Theme.space.tileGap
-            visible: root.skeleton || chipRepeater.count > 0
 
             Repeater {
                 id: chipRepeater
@@ -107,7 +122,7 @@ Item {
                     objectName: "chip"
                     text: name
                     iconKind: root.chipIcons[templateId] !== undefined ? root.chipIcons[templateId] : ""
-                    maxWidth: chipRow.width
+                    maxWidth: chipScroll.oneRow ? 0 : chipRow.width
                     onClicked: root.chipChosen(templateId)
                 }
             }
@@ -123,6 +138,7 @@ Item {
                     color: Theme.colour.border
                 }
             }
+        }
         }
 
         Row {
