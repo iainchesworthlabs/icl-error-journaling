@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Render every screen of the app in light, dark and large text, and write an index to look through them.
 
-    python tools/ej_screenshots/ej_screenshots.py [--out screenshots] [--exe PATH] [--qt DIR] [--only Main Review ...]
+    python tools/ej_screenshots/ej_screenshots.py [--out screenshots/screens] [--exe PATH] [--qt DIR] [--only Main Review ...]
                                                   [--no-fonts] [--index-only]
 
 Stage 7, package 7.1 (docs/plan/stage-7.md). The screens are the states of `tools/ej_screenshots/screens.json`, grouped by
@@ -97,7 +97,7 @@ def write_index(out: Path) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--out", type=Path, default=ROOT / "screenshots")
+    parser.add_argument("--out", type=Path, default=ROOT / "screenshots" / "screens")
     parser.add_argument("--exe", type=Path, default=None, help="ej_ui_tests; the first build found by default")
     parser.add_argument("--qt", default=DEFAULT_QT, help="the Qt kit whose bin directory goes on PATH (Windows)")
     parser.add_argument("--only", nargs="*", default=[], help="state names, such as Main Review")

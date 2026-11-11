@@ -8,7 +8,7 @@
 // no `capture.` case) and the case skips itself unless EJ_CAPTURE_DIR is set. Run it with tools/visual/run_capture.py,
 // or
 //
-//     EJ_CAPTURE_DIR=out EJ_CAPTURE_FONTS=build/visual/fonts QT_SCALE_FACTOR=2 ej_ui_tests "capture.*"
+//     EJ_CAPTURE_DIR=screenshots/pairs EJ_CAPTURE_FONTS=build/visual/fonts QT_SCALE_FACTOR=2 ej_ui_tests "capture.*"
 //
 // Environment: EJ_CAPTURE_DIR (the folder for the PNGs, required), EJ_CAPTURE_FONTS (a folder of .ttf files to
 // register; the first family found becomes the application font; without it the font of the platform), EJ_CAPTURE_ONLY
