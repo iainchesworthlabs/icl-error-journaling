@@ -25,6 +25,10 @@ import ErrorJournalingApp
 SheetHost {
     id: root
 
+    // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
+    // form column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    readonly property real side: WindowLayout.sideMargin(width, Theme.layout.formColumn)
+
     required property var settings
     // The layer the shell presents sheets in, so that the sheet covers the tab bar as the mock-up has it. Null keeps the
     // sheet in this page's own layer.
@@ -88,8 +92,8 @@ SheetHost {
             Column {
                 id: column
 
-                x: Theme.space.screenMargin
-                width: flick.width - 2 * Theme.space.screenMargin
+                x: root.side
+                width: flick.width - 2 * root.side
                 spacing: 0
 
                 Banner {

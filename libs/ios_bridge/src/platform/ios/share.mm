@@ -105,8 +105,14 @@ public:
             log_outcome(result);
             done(result);
         };
-        // Unused on an iPhone; an iPad raises an exception without an anchor.
+        // Unused on an iPhone; an iPad raises an exception without an anchor. It points at the control that asked, when
+        // the request names one (a rectangle in points in the window, which fills the root view), and else at the whole view.
         sheet.popoverPresentationController.sourceView = presenter.view;
+        if (request.m_Anchor.has_value())
+        {
+            const ShareAnchor& anchor = *request.m_Anchor;
+            sheet.popoverPresentationController.sourceRect = CGRectMake(anchor.m_X, anchor.m_Y, anchor.m_Width, anchor.m_Height);
+        }
         [presenter presentViewController:sheet animated:YES completion:nil];
     }
 };

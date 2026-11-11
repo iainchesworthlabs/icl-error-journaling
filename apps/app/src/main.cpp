@@ -81,6 +81,7 @@ int main(int argc, char* argv[])
     ej::bridge::PerfMarks& marks = *services.m_PerfMarks;
     ej::bridge::DocumentPicker& document_picker = *services.m_DocumentPicker;
     ej::bridge::BackgroundTasks& background_tasks = *services.m_BackgroundTasks;
+    ej::bridge::WindowLimits& window_limits = *services.m_WindowLimits;
     ej::bridge::OpenFileFilter open_files([&marks](std::string_view line) { marks.log(line); });
     QCoreApplication::instance()->installEventFilter(&open_files);
     const QString temporary_path = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
@@ -227,6 +228,19 @@ int main(int argc, char* argv[])
         {
             QObject::connect(window, &QQuickWindow::frameSwapped, &platform_bridge,
                              [&launch] { launch.frame_swapped(); });
+            // The window declares the smallest size it is laid out for (Main.qml); a desktop honours that itself, and iPadOS
+            // is told, now and each time the application becomes active (a window scene can connect after the start).
+            const auto forward_minimum = [&window_limits, window]
+            { window_limits.set_minimum_size(window->minimumWidth(), window->minimumHeight()); };
+            forward_minimum();
+            QObject::connect(&app, &QGuiApplication::applicationStateChanged, window,
+                             [forward_minimum](Qt::ApplicationState state)
+                             {
+                                 if (state == Qt::ApplicationActive)
+                                 {
+                                     forward_minimum();
+                                 }
+                             });
         }
     }
 

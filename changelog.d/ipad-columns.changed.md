@@ -1,0 +1,1 @@
+**The iPad keeps the screens in a readable column.** On an iPad in portrait, the Log screen, Review, History, Today's details, Settings and its editors, and first launch sit in a centred column with wider margins, instead of stretching across the whole screen. The tabs share the same column. A phone, and a narrow Split View window, look as before. Not yet run on an iPad.

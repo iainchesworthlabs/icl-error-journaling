@@ -38,6 +38,10 @@ import ErrorJournalingApp
 SheetHost {
     id: root
 
+    // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
+    // form column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    readonly property real side: WindowLayout.sideMargin(width, Theme.layout.formColumn)
+
     required property var session
     required property var settings
     // For the time of the version sheet (`formatLocalSeconds`); the screen does not use it itself.
@@ -370,8 +374,8 @@ SheetHost {
             Column {
                 id: column
 
-                x: Theme.space.screenMargin
-                width: parent.width - 2 * Theme.space.screenMargin
+                x: root.side
+                width: parent.width - 2 * root.side
                 spacing: Theme.space.sectionGap + Theme.space.tileGap
 
                 Text {
@@ -586,9 +590,9 @@ SheetHost {
                 id: startButton
 
                 objectName: "headerStart"
-                x: Theme.space.screenMargin
+                x: root.side
                 y: nav.collapsed ? footer.height - height : Theme.space.tileGap
-                width: parent.width - 2 * Theme.space.screenMargin
+                width: parent.width - 2 * root.side
                 text: qsTr("Start logging")
                 onClicked: root.leave()
             }
@@ -597,9 +601,9 @@ SheetHost {
                 id: note
 
                 visible: !nav.collapsed
-                x: Theme.space.screenMargin
+                x: root.side
                 y: startButton.y + startButton.height + footer.noteGap
-                width: parent.width - 2 * Theme.space.screenMargin
+                width: parent.width - 2 * root.side
                 horizontalAlignment: Text.AlignHCenter
                 color: Theme.colour.textSecondary
                 font: Theme.font.caption.font

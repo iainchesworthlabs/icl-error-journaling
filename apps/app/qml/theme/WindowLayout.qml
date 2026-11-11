@@ -52,12 +52,26 @@ QtObject {
 
     readonly property real screenMargin: compact ? Theme.space.screenMargin : Theme.layout.screenMargin
     readonly property real tileGap: compact ? Theme.space.tileGap : Theme.layout.tileGap
+    // The board's text and count badge: the phone's in Compact, larger on the larger tiles of a larger window.
+    readonly property var tileLabelRole: compact ? Theme.font.tileLabel : Theme.font.tileLabelLarge
+    readonly property var badgeRole: compact ? Theme.font.badge : Theme.font.badgeLarge
+    readonly property real badge: compact ? Theme.size.badge : Theme.layout.badge
 
     // The width of a centred column no wider than `limit`, inside the screen margins. A Compact window has no
     // limit: its columns are the full width less the margins, as on the phone.
     function columnWidth(limit: real): real {
         const full = Math.max(0, windowWidth - 2 * screenMargin);
         return compact ? full : Math.min(limit, full);
+    }
+
+    // The margin on each side of a centred column no wider than `limit`, in a space `available` wide (a screen's own
+    // width, which is the window's less any side insets). In a Compact window it is the phone's screen margin, so
+    // `x: sideMargin(w, limit)` and `width: w - 2 * sideMargin(w, limit)` are the phone's layout to the point; else it
+    // is at least the larger margin and as much more as keeps the column within its limit. Rounded to a whole point.
+    function sideMargin(available: real, limit: real): real {
+        if (compact)
+            return Theme.space.screenMargin;
+        return Math.max(screenMargin, Math.round((available - limit) / 2));
     }
 
     readonly property real logColumnWidth: columnWidth(Theme.layout.logColumn)

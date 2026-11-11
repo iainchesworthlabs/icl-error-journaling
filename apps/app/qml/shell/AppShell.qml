@@ -271,6 +271,7 @@ Item {
                     settings: root.settings
                     bridge: root.bridge
                     picker: root.picker
+                    share: root.share
                     bottomClearance: tabBar.height
                     sheetLayer: root.sheetLayer
                     onTodaysDetailsRequested: root.showDetails(logStack)
