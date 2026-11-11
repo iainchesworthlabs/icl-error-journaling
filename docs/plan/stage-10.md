@@ -278,7 +278,7 @@ The pull request template's checklist gets "Guide updated, or not user-visible".
 
 | WP | Title | Contents | Depends on | Can start |
 |---|---|---|---|---|
-| 10.1 | Site structure, privacy and support | `mkdocs.yml` navigation (guide first, "For developers" after), `docs/index.md` as the guide home, `docs/developers.md`, the guide pages with their section headings and one-line scopes, `privacy.md` and `support.md` in final words, the URL constant in the app, the `AGENTS.md` and template rows. A changelog fragment. | Owner decisions 1 to 4 | Now |
+| 10.1 | Site structure, privacy and support | `mkdocs.yml` navigation (guide first, "For developers" after), `docs/index.md` as the guide home, `docs/developers.md`, the guide's structure as an unpublished outline (`docs/guide/outline.md`, so no empty page goes public), `privacy.md` and `support.md` in final words, the `AGENTS.md` rows. As built, the URL constant in the app moved to 10.6, where the first link to these pages is made, so 10.1 is docs only and needs no changelog fragment. | Owner decisions 1 to 4 | Now |
 | 10.2 | Setup-file reference and its checks | `guide/setup-file.md` in full, `check_setup_doc.py` with its tests in `tools/tests/`, `config.guide_example` and `config.guide_messages`. | 10.1 | Now |
 | 10.3 | Screen pages | Getting started, Setting up the board, A day of logging, Today's details, Sharing and the next day, History, with screenshots, `screenshots.json`, `guide_screenshots.py`. iPad and Android notes as Stages 8 and 9 land. | Stage 7 fixes merged; `ej_screenshots` | After Stage 7 |
 | 10.4 | FAQ and troubleshooting | Both pages, seeded as above, with the Stage 7 findings. | 10.2, 10.3 | After Stage 7 |
