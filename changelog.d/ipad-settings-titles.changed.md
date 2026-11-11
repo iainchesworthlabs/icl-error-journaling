@@ -1,0 +1,1 @@
+**On an iPad the title of a Settings page lines up with its list.** On a wide window the large title and the Back and Done actions of the Settings pages and editors sat at the screen edge while the list was in a centred column; they now start where the list does. The phone is unchanged. Not yet run on an iPad.

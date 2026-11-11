@@ -45,6 +45,8 @@ Rectangle {
             anchors.right: parent.right
             anchors.top: parent.top
             large: true
+            // The title and the actions line up with the content, which the editors keep in the form column.
+            sideInset: WindowLayout.sideMargin(width, Theme.layout.formColumn)
             title: root.title
             leadingText: root.leadingText.length > 0 && Theme.clampedScale > root.compactScale ? qsTr("Back") : root.leadingText
             leadingAccessibleName: root.leadingAccessibleName

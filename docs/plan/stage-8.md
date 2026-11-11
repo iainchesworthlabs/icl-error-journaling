@@ -320,6 +320,29 @@ The labels are as in `docs/testing.md`. Every UI test runs in the offscreen app 
 The phone suites run unchanged in every package. A package that changes a phone test's expected value is wrong, unless
 the owner agrees the change.
 
+## Visual pass (8.8)
+
+`tools/visual/run_capture.py --only <the 18 iPad mock-ups>` pairs each iPad mock-up with the app in the same state, light
+and dark (T8-15). It was run on Windows after 8.7, on the squashed Stage 8 code, and the pairs were looked at (the Log
+screen in both orientations, Review, Settings, Other, Edit entry and First launch, in both modes). It is the eye's check,
+not a pass or fail test, and it is not the device checklist: D1 still needs an iPad.
+
+**Fixed in 8.8**
+- On the Settings page and the editors the large title and the Back and Done actions started at the screen margin while the
+  content under them sat in the form column, so on a 820 pt window the title was 100 pt left of the list. `NavBar` has a
+  `sideInset`, which these pages set to their own margin; on the phone it is the screen margin, as before.
+
+**Seen, and left as they are**
+- Edit entry, and the other sheets that are `Large` on the phone, are a 720 pt card on an iPad, taller than their mock-up,
+  which fits its content. The content is not wrong, and the card is within the plan's 720 pt maximum. A Content detent for
+  the card needs the sheet's content height measured, which is a change to a sheet that the phone also uses.
+- On the Settings page the miniature board is not in a card, and its tiles are a little smaller than the mock-up's. The
+  board is the phone's component, and was left as it is.
+- First launch: the app's two buttons (Import a setup file and Set up by hand) are the phone's redesign (#112); the
+  mock-up's cards with chevrons were drawn before it. The mock-up is the one that is out of date.
+- The pairs differ in the data of the state (the log's entries, error type names in Other), which come from the capture's
+  own sample setup and not from the layout.
+
 ## Device checklist (the exit gate)
 
 Run on a TestFlight build on an iPad, ideally an iPad mini, which is the tightest in landscape, and one 11-inch or
