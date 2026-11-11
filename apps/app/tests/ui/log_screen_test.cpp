@@ -40,6 +40,7 @@
 #include "rig/ui_rig.hpp"
 // clang-format on
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <QFile>
@@ -48,6 +49,7 @@
 #include <QMetaObject>
 #include <QObject>
 #include <QQuickItem>
+#include <QQuickWindow>
 #include <QSignalSpy>
 #include <QString>
 #include <QStringList>
@@ -2205,6 +2207,88 @@ TEST_CASE("perf.first_frame: the loading screen draws all 12 tile rectangles in 
             CHECK(node.m_Item->property("text").toString().isEmpty());
         }
     }
+}
+
+// ------------------------------------------------------------------------------------------------- the board fits (F1, F2)
+
+namespace
+{
+
+/// The twelve tiles are at least 88 pt high and wide and wholly above the tab bar, at the text scale the screen has now.
+void expect_board_fits(Screen& screen)
+{
+    const double bottom = screen.rig.window().height() - screen.item->property("bottomClearance").toDouble();
+    for (int row = 0; row < 12; ++row)
+    {
+        CAPTURE(row);
+        const QRectF rect = screen.rig.geometry(screen.tile(row));
+        CHECK(rect.height() >= 88.0 - 0.5);
+        CHECK(rect.width() >= 88.0 - 0.5);
+        CHECK(rect.bottom() <= bottom + 0.5);
+    }
+}
+
+} // namespace
+
+TEST_CASE("layout.board_fits: all twelve tiles are wholly above the tab bar at every text size, with the strip of empty "
+          "fields and without",
+          "[ui][log][large]")
+{
+    SECTION("a first start: four empty fields, so the header card has its strip")
+    {
+        LogRig sim;
+        sim.load();
+        Screen screen(sim);
+        for (const double scale : {0.82, 1.0, 1.3, 1.76, 3.1})
+        {
+            CAPTURE(scale);
+            screen.rig.set_text_scale(scale);
+            screen.rig.settle();
+            expect_board_fits(screen);
+        }
+    }
+
+    SECTION("a complete header")
+    {
+        LogRig sim(Options().existing());
+        sim.load();
+        Screen screen(sim);
+        for (const double scale : {0.82, 1.0, 1.3, 1.76, 3.1})
+        {
+            CAPTURE(scale);
+            screen.rig.set_text_scale(scale);
+            screen.rig.settle();
+            expect_board_fits(screen);
+        }
+    }
+}
+
+TEST_CASE("layout.header_two_lines: at the largest text sizes the header card is two lines and the chips one row",
+          "[ui][log][large]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    Screen screen(sim);
+    screen.rig.set_text_scale(3.1);
+    screen.rig.settle();
+    QQuickItem* card = screen.named(QStringLiteral("logHeaderCard"));
+    CHECK(card->property("reduced").toBool());
+    // Two lines of the largest size and the padding: under a sixth of the window.
+    CHECK(screen.rig.geometry(card).height() <= 874.0 / 6.0);
+    // One row of chips: every chip has the same top.
+    double top = -1;
+    for (const char* name : {"chip"})
+    {
+        for (QQuickItem* chip : screen.rig.find_items(QString::fromLatin1(name)))
+        {
+            const double y = screen.rig.geometry(chip).top();
+            top = top < 0 ? y : top;
+            CHECK(y == Catch::Approx(top).margin(0.5));
+        }
+    }
+    screen.rig.set_text_scale(1.0);
+    screen.rig.settle();
+    CHECK_FALSE(card->property("reduced").toBool());
 }
 
 #include "log_screen_test.moc"

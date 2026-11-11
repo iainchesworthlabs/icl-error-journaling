@@ -92,14 +92,14 @@ Item {
     // The room for the board under the composer, above the tab bar, and what the Last bar takes of it.
     readonly property real roomBelowComposer: height - bottomClearance - frame.topInset - (composer.y + composer.height + Theme.space.sectionGap)
     readonly property real lastBarRoom: lastBar.implicitHeight + Theme.space.sectionGap
-    readonly property bool lastBarHidden: wide || (shortWindow && fittingTile(roomBelowComposer - lastBarRoom) < Theme.size.tileMinimum)
+    // The Last bar gives way when the tiles would be under the 88 pt minimum with it: in a short window, or at a large text size,
+    // or with the strip of empty fields in the header card (Stage 7, F1 and F2). The board keeps all twelve tiles above the tab bar.
+    readonly property bool lastBarHidden: wide || fittingTile(roomBelowComposer - lastBarRoom) < Theme.size.tileMinimum
     readonly property real tileHeight: {
         // A Wide board fills the height of its pane, to the 88 pt minimum.
         if (wide)
             return Math.max(Theme.size.tileMinimum, fittingTile(roomBelowComposer - Theme.space.screenMargin));
         const preferred = WindowLayout.tileHeightFor(grid.tileWidth);
-        if (!shortWindow)
-            return preferred;
         const room = roomBelowComposer - (lastBarHidden ? 0 : lastBarRoom);
         return Math.max(Theme.size.tileMinimum, Math.min(preferred, fittingTile(room)));
     }

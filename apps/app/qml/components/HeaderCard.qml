@@ -62,6 +62,10 @@ Item {
         return shown.join(qsTr(", "));
     }
     readonly property bool pressed: tap.pressed
+    // From a text scale of 1.2 up the card shows two lines, the unit and the site and version, each on one line and cut with
+    // an ellipsis; the date and the facilitator are one tap away in Today's details (Stage 7, F1). The accessible name has
+    // all of it.
+    readonly property bool reduced: Theme.clampedScale > 1.2 && !skeleton
 
     signal clicked
 
@@ -88,7 +92,7 @@ Item {
         id: main
 
         width: parent.width
-        height: Math.max(Theme.size.headerCardHeight, Math.max(leftColumn.height, rightColumn.height) + 2 * Theme.space.sectionGap)
+        height: Math.max(Theme.size.headerCardHeight, Math.max(leftColumn.height, root.reduced ? 0 : rightColumn.height) + 2 * Theme.space.sectionGap)
 
         TextMetrics {
             id: dateMetrics
@@ -108,7 +112,7 @@ Item {
 
             x: Theme.space.screenMargin
             y: (main.height - height) / 2
-            width: rightColumn.x - Theme.space.sectionGap - x
+            width: (root.reduced ? chevron.x : rightColumn.x) - Theme.space.sectionGap - x
             spacing: Theme.border.hairline * 2
 
             Text {
@@ -120,6 +124,8 @@ Item {
                 font: Theme.font.headerUnit.font
                 text: root.unitText.length > 0 ? root.unitText : root.unitPrompt
                 wrapMode: Text.WordWrap
+                maximumLineCount: root.reduced ? 1 : 100
+                elide: root.reduced ? Text.ElideRight : Text.ElideNone
                 height: root.skeleton && root.nominalMetrics ? Theme.font.headerUnit.nominalPitch : implicitHeight
                 Accessible.ignored: true
             }
@@ -132,6 +138,8 @@ Item {
                 font: Theme.font.caption.font
                 text: qsTr("%1 · %2").arg(root.locationText.length > 0 ? root.locationText : root.locationPrompt).arg(root.versionText.length > 0 ? qsTr("v%1").arg(root.versionText) : root.versionPrompt)
                 wrapMode: Text.WordWrap
+                maximumLineCount: root.reduced ? 1 : 100
+                elide: root.reduced ? Text.ElideRight : Text.ElideNone
                 height: root.skeleton && root.nominalMetrics ? Theme.font.caption.nominalPitch : implicitHeight
                 Accessible.ignored: true
             }
@@ -142,6 +150,7 @@ Item {
 
             x: chevron.x - Theme.space.sectionGap - width
             y: (main.height - height) / 2
+            visible: !root.reduced
             width: root.skeleton && root.nominalMetrics ? main.width * 0.4 : Math.min(Math.ceil(Math.max(dateMetrics.advanceWidth, facilitatorMetrics.advanceWidth)) + Theme.border.hairline, main.width * 0.4)
             spacing: Theme.border.hairline * 2
 
@@ -229,13 +238,15 @@ Item {
         id: strip
 
         objectName: "headerStrip"
-        // The row of the strip: 30 pt at least, between 4 pt above and 6 pt below, under the divider.
-        readonly property real rowTop: Theme.border.hairline + Theme.border.hairline * 4
-        readonly property real rowHeight: Math.max(Theme.size.badge + Theme.border.hairline * 6, stripText.implicitHeight)
+        // The row of the strip: 30 pt at least, between 4 pt above and 6 pt below, under the divider. At a large text size it is
+        // one line with a hairline or two around it, so that the board keeps all twelve tiles above the tab bar whatever the
+        // font's line height is (Stage 7, F1).
+        readonly property real rowTop: Theme.border.hairline + Theme.border.hairline * (root.reduced ? 1 : 4)
+        readonly property real rowHeight: Math.max(Theme.size.badge + (root.reduced ? 0 : Theme.border.hairline * 6), stripText.implicitHeight)
 
         y: main.height
         width: parent.width
-        height: rowTop + rowHeight + Theme.border.hairline * 6
+        height: rowTop + rowHeight + Theme.border.hairline * (root.reduced ? 2 : 6) // literal-ok: hairline multiples of the strip's padding, as the row above
         visible: root.missingCount > 0 && !root.skeleton
 
         Rectangle {
@@ -263,6 +274,8 @@ Item {
             font: Theme.font.caption.selectedFont
             text: qsTr("Not filled in yet: %1").arg(root.missingText)
             wrapMode: Text.WordWrap
+            maximumLineCount: root.reduced ? 1 : 100
+            elide: root.reduced ? Text.ElideRight : Text.ElideNone
             Accessible.ignored: true
         }
     }

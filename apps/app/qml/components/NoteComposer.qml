@@ -87,40 +87,56 @@ Item {
         width: parent.width - 2 * Theme.space.sectionGap
         spacing: Theme.space.tileGap + Theme.border.hairline * 2
 
-        // The chips wrap onto more rows when there is no room (a long name, or a large text size).
-        Flow {
-            id: chipRow
+        // The chips wrap onto more rows when there is no room (a long name). From a text scale of 1.2 up they are one row that
+        // scrolls sideways, so that the board keeps its height (Stage 7, F1).
+        Flickable {
+            id: chipScroll
+
+            readonly property bool oneRow: Theme.clampedScale > 1.2
 
             width: parent.width
-            spacing: Theme.space.tileGap
+            height: chipRow.height
+            clip: oneRow
+            contentWidth: oneRow ? chipRow.childrenRect.width : width
+            contentHeight: chipRow.height
+            flickableDirection: Flickable.HorizontalFlick
+            interactive: oneRow && contentWidth > width
+            boundsBehavior: Flickable.StopAtBounds
             visible: root.skeleton || chipRepeater.count > 0
 
-            Repeater {
-                id: chipRepeater
+            Flow {
+                id: chipRow
 
-                model: root.skeleton ? 0 : root.chips
+                width: chipScroll.oneRow ? 100000 : chipScroll.width // literal-ok: wider than any row of chips, so that the chips do not wrap
+                spacing: Theme.space.tileGap
 
-                delegate: Chip {
-                    required property string templateId
-                    required property string name
+                Repeater {
+                    id: chipRepeater
 
-                    objectName: "chip"
-                    text: name
-                    iconKind: root.chipIcons[templateId] !== undefined ? root.chipIcons[templateId] : ""
-                    maxWidth: chipRow.width
-                    onClicked: root.chipChosen(templateId)
+                    model: root.skeleton ? 0 : root.chips
+
+                    delegate: Chip {
+                        required property string templateId
+                        required property string name
+
+                        objectName: "chip"
+                        text: name
+                        iconKind: root.chipIcons[templateId] !== undefined ? root.chipIcons[templateId] : ""
+                        maxWidth: chipScroll.oneRow ? 0 : chipRow.width
+                        onClicked: root.chipChosen(templateId)
+                    }
                 }
-            }
 
-            // The launch screen's shapes: two chips.
-            Repeater {
-                model: root.skeleton ? 2 : 0
+                // The launch screen's shapes: two chips.
+                Repeater {
+                    model: root.skeleton ? 2 : 0
 
-                delegate: Rectangle {
-                    width: Theme.size.minTouchTarget * 2
-                    height: Theme.size.chipHeight
-                    radius: Theme.radius.chip
-                    color: Theme.colour.border
+                    delegate: Rectangle {
+                        width: Theme.size.minTouchTarget * 2
+                        height: Theme.size.chipHeight
+                        radius: Theme.radius.chip
+                        color: Theme.colour.border
+                    }
                 }
             }
         }
