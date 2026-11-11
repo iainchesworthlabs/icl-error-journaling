@@ -56,9 +56,9 @@ Sheet {
         }
     }
 
-    // Scrolls to the end of the list, where the add form is, so that it stays in view when the keyboard shortens the sheet.
+    // Scrolls to the top of the list, where the add form is, so that it stays in view when the keyboard shortens the sheet.
     function showForm(): void {
-        flick.contentY = Math.max(0, flick.contentHeight - flick.height);
+        flick.contentY = 0;
     }
 
     accessibleName: qsTr("Log another error")
@@ -230,60 +230,8 @@ Sheet {
             width: flick.width - 2 * Theme.space.screenMargin
             spacing: Theme.space.screenMargin
 
-            GroupedList {
-                title: qsTr("Not on your board")
-                width: parent.width
-                visible: offRepeater.count > 0
-                surface: Theme.colour.surfaceRaised
-                headingInset: 0
-
-                Repeater {
-                    id: offRepeater
-
-                    model: offBoard
-
-                    TypeRow {
-                        id: offRow
-
-                        onActivated: root.pick(offRow.typeId)
-                    }
-                }
-            }
-
-            GroupedList {
-                title: qsTr("On your board")
-                width: parent.width
-                visible: onRepeater.count > 0
-                surface: Theme.colour.surfaceRaised
-                headingInset: 0
-
-                Repeater {
-                    id: onRepeater
-
-                    model: onBoard
-
-                    TypeRow {
-                        id: onRow
-
-                        onTheBoard: true
-                        onActivated: root.pick(onRow.typeId)
-                    }
-                }
-            }
-
-            Text {
-                objectName: "pickerEmpty"
-                width: parent.width
-                visible: offRepeater.count + onRepeater.count === 0
-                horizontalAlignment: Text.AlignHCenter
-                color: Theme.colour.textSecondary
-                font: Theme.font.body.font
-                wrapMode: Text.WordWrap
-                text: root.picker.filter.length > 0 ? qsTr("No error types match “%1”.").arg(root.picker.filter) : qsTr("There are no error types to choose from.")
-                Accessible.role: Accessible.StaticText
-                Accessible.name: text
-            }
-
+            // Adding a type is the first row, so that it is found without scrolling past a full board (Stage 7, F10); while a
+            // search finds nothing it offers to add what was typed.
             GroupedList {
                 width: parent.width
                 surface: Theme.colour.surfaceRaised
@@ -292,12 +240,16 @@ Sheet {
                     id: addRow
 
                     objectName: "pickerAdd"
-                    text: qsTr("Add a new error type")
+                    // While the search finds nothing the row offers to add what was typed.
+                    readonly property bool offersFilter: root.picker.filter.length > 0 && offRepeater.count + onRepeater.count === 0
+                    text: offersFilter ? qsTr("No match? Add “%1”").arg(root.picker.filter) : qsTr("Add a new error type")
                     markWidth: Theme.size.badge * 5 / 6
                     minimumHeight: Theme.size.rowHeightForm
                     labelColour: Theme.colour.primaryText
                     labelFont: Theme.font.body.make(Font.Medium, false)
                     onActivated: {
+                        if (addRow.offersFilter)
+                            form.name = root.picker.filter;
                         form.open = true;
                         newName.focusField();
                     }
@@ -353,6 +305,60 @@ Sheet {
                     accessibleName: qsTr("Add error type")
                     onClicked: root.addType()
                 }
+            }
+
+            GroupedList {
+                title: qsTr("Not on your board")
+                width: parent.width
+                visible: offRepeater.count > 0
+                surface: Theme.colour.surfaceRaised
+                headingInset: 0
+
+                Repeater {
+                    id: offRepeater
+
+                    model: offBoard
+
+                    TypeRow {
+                        id: offRow
+
+                        onActivated: root.pick(offRow.typeId)
+                    }
+                }
+            }
+
+            GroupedList {
+                title: qsTr("On your board")
+                width: parent.width
+                visible: onRepeater.count > 0
+                surface: Theme.colour.surfaceRaised
+                headingInset: 0
+
+                Repeater {
+                    id: onRepeater
+
+                    model: onBoard
+
+                    TypeRow {
+                        id: onRow
+
+                        onTheBoard: true
+                        onActivated: root.pick(onRow.typeId)
+                    }
+                }
+            }
+
+            Text {
+                objectName: "pickerEmpty"
+                width: parent.width
+                visible: offRepeater.count + onRepeater.count === 0
+                horizontalAlignment: Text.AlignHCenter
+                color: Theme.colour.textSecondary
+                font: Theme.font.body.font
+                wrapMode: Text.WordWrap
+                text: root.picker.filter.length > 0 ? qsTr("No error types match “%1”.").arg(root.picker.filter) : qsTr("There are no error types to choose from.")
+                Accessible.role: Accessible.StaticText
+                Accessible.name: text
             }
         }
     }

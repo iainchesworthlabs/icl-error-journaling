@@ -1,0 +1,1 @@
+**Adding an error type is the first row in Other.** "Add a new error type" is under the search field, so it is found without scrolling past a full board. When a search finds nothing the row reads "No match? Add “…”" and a tap fills the form with what you typed.
