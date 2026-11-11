@@ -490,10 +490,11 @@ def other_screen(p: Page) -> str:
         f'background: {c["searchBackground"]}; padding: 0 10px; font-size: 16px; color: {c["textPlaceholder"]}">'
         f'{icon("search", c["textSecondary"], 18)}Search error types</div></div>'
         f'<div style="padding: 0 16px; display: flex; flex-direction: column; gap: 12px">'
+        f'<div style="height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: {c["surfaceRaised"]}; '
+        f'border-radius: 14px; color: {c["primaryText"]}; font-size: 16px; font-weight: 600">{icon("plus", c["primaryText"], 20)}Add a new error type</div>'
         f'{p.section_label("Not on your board")}<div style="background: {c["surfaceRaised"]}; border-radius: 14px; overflow: hidden">{off}</div>'
         f'{p.section_label("On your board")}<div style="background: {c["surfaceRaised"]}; border-radius: 14px; overflow: hidden">{on}</div>'
-        f'<div style="height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: {c["surfaceRaised"]}; '
-        f'border-radius: 14px; color: {c["primaryText"]}; font-size: 16px; font-weight: 600">{icon("plus", c["primaryText"], 20)}Add a new error type</div></div>'
+        f'</div>'
     )
     body = dimmed(log_body(p, toast=False)) + form_sheet(p, inner)
     return p.document("Other error picker", body, background=c["sheetScrim"])

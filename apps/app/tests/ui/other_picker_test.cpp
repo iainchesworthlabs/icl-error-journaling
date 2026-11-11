@@ -199,11 +199,12 @@ struct Fixture
     }
 
     /// Scrolls the list to its end, where the add row is.
-    void scroll_to_end()
+    void scroll_to_add()
     {
         QQuickItem* list = find(QStringLiteral("pickerList"));
         REQUIRE(list != nullptr);
-        list->setProperty("contentY", qMax(0.0, list->property("contentHeight").toDouble() - list->height()));
+        // The add row and its form are at the top of the list (F10).
+        list->setProperty("contentY", 0.0);
         m_Rig.layout();
     }
 
@@ -546,7 +547,7 @@ TEST_CASE("other.add: a valid name is added, nothing is recorded, and the type i
     QQuickItem* input = f.find(QStringLiteral("searchInput"));
     input->forceActiveFocus();
     f.m_Rig.type(QStringLiteral("mute"));
-    f.scroll_to_end();
+    f.scroll_to_add();
 
     QQuickItem* name = f.find(QStringLiteral("pickerNewName"));
     REQUIRE(name != nullptr);
@@ -595,7 +596,7 @@ TEST_CASE("other.add: a refused name stays in the field with the model's message
 {
     Fixture f;
     f.open();
-    f.scroll_to_end();
+    f.scroll_to_add();
     f.m_Rig.tap(f.find(QStringLiteral("pickerAdd")));
     f.m_Rig.layout();
     QQuickItem* name = f.find(QStringLiteral("pickerNewName"));
@@ -714,7 +715,7 @@ TEST_CASE("other.checks: names, targets, reading order and text scale, in light 
         // A short list, so that no row is scrolled out of its frame: the reading-order check knows nothing of clipping.
         f.m_Picker->set_filter(QStringLiteral("mute"));
         f.m_Rig.layout();
-        f.scroll_to_end();
+        f.scroll_to_add();
         f.m_Rig.tap(f.find(QStringLiteral("pickerAdd")));
         f.m_Rig.layout();
         f.m_Rig.tap(f.find(QStringLiteral("pickerAddButton")));
@@ -727,6 +728,9 @@ TEST_CASE("other.checks: names, targets, reading order and text scale, in light 
         REQUIRE(search != nullptr);
         search->forceActiveFocus();
         f.m_Rig.type(QStringLiteral("zzz"));
+        f.m_Rig.layout();
+        // The message is under the add row, which offers the typed name.
+        CHECK(f.m_Rig.geometry(f.find(QStringLiteral("pickerEmpty"))).top() >= f.m_Rig.geometry(f.find(QStringLiteral("pickerAdd"))).bottom());
         expect_clean(check_everything(f.m_Rig));
     }
 }
@@ -766,3 +770,39 @@ TEST_CASE("motion.reduce: with Reduce Motion the sheet fades in 100 ms and does 
 }
 
 #include "other_picker_test.moc"
+
+TEST_CASE("other.add_row: adding a type is the first row, above the lists, and a search that finds nothing offers to add it (F10)",
+          "[ui][other]")
+{
+    Fixture f;
+    f.open();
+    QQuickItem* add = f.find(QStringLiteral("pickerAdd"));
+    REQUIRE(add != nullptr);
+
+    // Above the first type row, and in view with the full list of twelve types.
+    const std::vector<Row> all = rows(f);
+    REQUIRE_FALSE(all.empty());
+    CHECK(f.m_Rig.geometry(add).bottom() <= f.m_Rig.geometry(all.front().m_Item).top());
+    const QRectF sheet = f.m_Rig.geometry(f.find(QStringLiteral("pickerList")));
+    CHECK(f.m_Rig.geometry(add).bottom() <= sheet.bottom());
+    CHECK(add->property("text").toString() == QStringLiteral("Add a new error type"));
+
+    // A search with no match: the row offers the typed name, and a tap fills the form with it.
+    QQuickItem* input = f.find(QStringLiteral("searchInput"));
+    input->forceActiveFocus();
+    f.m_Rig.type(QStringLiteral("Zebra"));
+    CHECK(rows(f).empty());
+    CHECK(add->property("text").toString() == QString::fromUtf8("No match? Add \xE2\x80\x9CZEBRA\xE2\x80\x9D").replace(QStringLiteral("ZEBRA"), f.m_Picker->filter()));
+    f.m_Rig.tap(add);
+    f.m_Rig.layout();
+    QQuickItem* name = f.find(QStringLiteral("pickerNewName"));
+    REQUIRE(name != nullptr);
+    CHECK(name->isVisible());
+    CHECK(name->property("text").toString() == f.m_Picker->filter());
+
+    // A search that finds something keeps the plain label.
+    f.m_Rig.tap(f.find(QStringLiteral("clearButton")));
+    input->forceActiveFocus();
+    f.m_Rig.type(QStringLiteral("mute"));
+    CHECK(add->property("text").toString() == QStringLiteral("Add a new error type"));
+}
