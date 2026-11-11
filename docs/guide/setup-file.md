@@ -174,6 +174,7 @@ The file below is the sample setup that the app's tests use. All the names in it
 | `unit_environments` | Optional | The environments the unit picker offers in Today's details, in the order shown. "None" is always the first choice and is not in the list. | A list of names, not empty, up to 500 of them, each up to 20 characters of lower-case letters, digits and dashes, not starting or ending with a dash, each used once. Without this key the choices are `prod` and `dev`. |
 | `time_format` | Optional | How times are shown and shared. | An object, below. Without it: 24-hour clock, no seconds. |
 | `include_totals` | Optional | Whether a shared log ends with a totals line, per error type. | `true` or `false`. Without it: `false`. |
+| `error_prefix` | Optional | The text before the error name on each error line of a shared log. | Text, up to 12 characters, on one line; may be empty. Without it: `T|`. |
 
 ### Time format
 
