@@ -25,6 +25,9 @@ SettingsPage {
     property string draft: current
     // The model's refusal of the last Save, shown under the field until the person types again.
     property string refusal: ""
+    // The name of the page that this one was opened from, when it is not the usual one (the unit prefix is opened from the
+    // Facilitator page and from the Settings list).
+    property string backText: ""
 
     // The page was left, by Back or by a Save that the model accepted.
     signal closeRequested
@@ -41,7 +44,7 @@ SettingsPage {
     }
 
     title: isFacilitator ? qsTr("Facilitator") : qsTr("Unit prefix")
-    leadingText: isFacilitator ? qsTr("Settings") : qsTr("Facilitator")
+    leadingText: backText.length > 0 ? backText : isFacilitator ? qsTr("Settings") : qsTr("Facilitator")
     trailingText: qsTr("Save")
     trailingEnabled: draft !== current
     onLeadingTriggered: closeRequested()

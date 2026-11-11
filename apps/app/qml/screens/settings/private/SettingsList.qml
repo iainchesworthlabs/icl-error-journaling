@@ -27,6 +27,7 @@ SettingsPage {
     signal templatesRequested
     signal locationsRequested
     signal facilitatorRequested
+    signal unitPrefixRequested
     signal timeFormatRequested
     signal importExportRequested
     signal aboutRequested
@@ -215,6 +216,24 @@ SettingsPage {
                 minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.facilitatorRequested()
+            }
+
+            // The unit prefix and the totals line are on the list too, so that nobody has to guess that they are behind the
+            // facilitator (Stage 7, F4). The same settings are on the facilitator page, under "In the shared log".
+            ListRow {
+                objectName: "settingsUnitPrefixRow"
+                text: qsTr("Unit prefix")
+                value: root.settings.unitPrefix
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.unitPrefixRequested()
+            }
+
+            SettingsSwitchRow {
+                objectName: "settingsTotalsRow"
+                text: qsTr("Include a totals line")
+                checked: root.settings.includeTotals
+                onToggled: wanted => root.show(root.settings.setIncludeTotals(wanted))
             }
 
             ListRow {
