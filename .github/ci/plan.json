@@ -73,7 +73,7 @@
       ]
     },
     "coverage": {
-      "home": "pull_request",
+      "home": "queue",
       "skips": [
         "libs/*/src/platform/{macos,ios,android,windows,wasm}/**",
         "apps/app/packaging/ios/**",
