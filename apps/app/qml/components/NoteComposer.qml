@@ -104,41 +104,41 @@ Item {
             boundsBehavior: Flickable.StopAtBounds
             visible: root.skeleton || chipRepeater.count > 0
 
-        Flow {
-            id: chipRow
+            Flow {
+                id: chipRow
 
-            width: chipScroll.oneRow ? 100000 : chipScroll.width // literal-ok: wider than any row of chips, so that the chips do not wrap
-            spacing: Theme.space.tileGap
+                width: chipScroll.oneRow ? 100000 : chipScroll.width // literal-ok: wider than any row of chips, so that the chips do not wrap
+                spacing: Theme.space.tileGap
 
-            Repeater {
-                id: chipRepeater
+                Repeater {
+                    id: chipRepeater
 
-                model: root.skeleton ? 0 : root.chips
+                    model: root.skeleton ? 0 : root.chips
 
-                delegate: Chip {
-                    required property string templateId
-                    required property string name
+                    delegate: Chip {
+                        required property string templateId
+                        required property string name
 
-                    objectName: "chip"
-                    text: name
-                    iconKind: root.chipIcons[templateId] !== undefined ? root.chipIcons[templateId] : ""
-                    maxWidth: chipScroll.oneRow ? 0 : chipRow.width
-                    onClicked: root.chipChosen(templateId)
+                        objectName: "chip"
+                        text: name
+                        iconKind: root.chipIcons[templateId] !== undefined ? root.chipIcons[templateId] : ""
+                        maxWidth: chipScroll.oneRow ? 0 : chipRow.width
+                        onClicked: root.chipChosen(templateId)
+                    }
+                }
+
+                // The launch screen's shapes: two chips.
+                Repeater {
+                    model: root.skeleton ? 2 : 0
+
+                    delegate: Rectangle {
+                        width: Theme.size.minTouchTarget * 2
+                        height: Theme.size.chipHeight
+                        radius: Theme.radius.chip
+                        color: Theme.colour.border
+                    }
                 }
             }
-
-            // The launch screen's shapes: two chips.
-            Repeater {
-                model: root.skeleton ? 2 : 0
-
-                delegate: Rectangle {
-                    width: Theme.size.minTouchTarget * 2
-                    height: Theme.size.chipHeight
-                    radius: Theme.radius.chip
-                    color: Theme.colour.border
-                }
-            }
-        }
         }
 
         Row {
