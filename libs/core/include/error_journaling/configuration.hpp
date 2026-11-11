@@ -7,6 +7,7 @@
 #include <string_view>
 #include <vector>
 
+#include "error_journaling/export_format.hpp"
 #include "error_journaling/ids.hpp"
 #include "error_journaling/note_template.hpp"
 #include "error_journaling/result.hpp"
@@ -50,6 +51,21 @@ struct Location
     return {"prod", "dev"};
 }
 
+/// What is wrong with a text offered as the error prefix (PRF-13), after its leading and trailing spaces are trimmed.
+enum class ErrorPrefixProblem
+{
+    NONE,
+    TOO_LONG,
+    CONTROL_CHARACTER ///< a line break, a tab or another control character
+};
+
+/// The text without its leading and trailing spaces.
+[[nodiscard]] std::string trim_error_prefix(std::string_view text);
+
+/// Whether a (trimmed) text may be the error prefix: at most export_format::MAX_ERROR_PREFIX_CHARACTERS characters (UTF-8
+/// code points), and no line break, tab or other control character. The empty text is allowed.
+[[nodiscard]] ErrorPrefixProblem error_prefix_problem(std::string_view trimmed);
+
 struct Configuration
 {
     std::string m_Facilitator;
@@ -59,6 +75,9 @@ struct Configuration
     std::vector<std::string> m_UnitEnvironments = default_unit_environments();
     TimeFormat m_TimeFormat;
     bool m_IncludeTotals = false;
+    /// The text before the error name on an error line of the export (PRF-13). "T|" unless the facilitator changed it;
+    /// may be empty. The setup file's optional `error_prefix` key replaces the default.
+    std::string m_ErrorPrefix = std::string(export_format::DEFAULT_ERROR_PREFIX);
     std::vector<ErrorType> m_ErrorTypes;
     std::vector<Location> m_Locations;
     std::vector<NoteTemplate> m_Templates;

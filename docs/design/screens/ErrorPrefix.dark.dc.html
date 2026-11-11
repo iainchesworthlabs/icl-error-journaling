@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error prefix</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8FC6E6}a:hover{color:#8FC6E6}
+input::placeholder{color:#93A3B0}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #0E141A; font-family: Inter, -apple-system, system-ui, sans-serif; color: #EEF2F6">
+  <div style="position: absolute; left: 0; right: 0; top: 0; padding: 59px 16px 0; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: center; justify-content: space-between; height: 44px"><a href="BoardSettings.dc.html" style="font-size: 17px; text-decoration: none; color: #8FC6E6">Settings</a><span style="font-size: 17px; font-weight: 600; color: #8FC6E6">Save</span></div>
+    <h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.4px">Error prefix</h1>
+    <div style="font-size: 12px; font-weight: 600; color: #B4C0CA; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px; margin-top: 12px">Prefix</div>
+    <div style="background: #212C37; border: 2px solid #8FC6E6; border-radius: 12px; box-sizing: border-box; min-height: 48px; display: flex; align-items: center; padding: 0 14px; font-size: 17px; color: #EEF2F6">ERR:</div>
+    <div style="font-size: 13px; color: #B4C0CA; padding: 0 4px; line-height: 1.35">The text before the error name on each error line of the log. Leave it empty for none. Up to 12 characters.</div>
+    <div style="font-size: 12px; font-weight: 600; color: #B4C0CA; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px; margin-top: 12px">Example</div>
+    <div style="background: #212C37; border-radius: 14px; padding: 14px; font-family: ui-monospace, Menlo, monospace; font-size: 14px; color: #EEF2F6">10:05 ERR: Wrong Response</div>
+    <div style="margin-top: 8px; height: 54px; border-radius: 14px; background: #1B2F3D; color: #8FC6E6; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600">Reset to T|</div>
+    <div style="font-size: 13px; color: #B4C0CA; padding: 0 4px; line-height: 1.35">Another tool that reads the shared log may expect the default, T|. Change it only if you are sure.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

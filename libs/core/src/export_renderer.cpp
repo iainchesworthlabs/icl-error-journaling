@@ -185,7 +185,11 @@ Result<std::string, RenderError> render_line(const Entry& entry, const HeaderHis
         {
             return fail(name.error());
         }
-        line += export_format::ERROR_MARKER;
+        if (!context.m_ErrorPrefix.empty())
+        {
+            line += context.m_ErrorPrefix;
+            line += ' ';
+        }
         line += *name;
         if (error->m_AttachedNote)
         {

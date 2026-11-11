@@ -24,8 +24,12 @@ inline constexpr char LINE_END = '\n';
 
 // Timeline lines. <time> is formatted by format_time.
 
-/// After the time on an error line, including the space after the marker (accepted: "10:05 T| Wrong Response").
-inline constexpr std::string_view ERROR_MARKER = "T| ";
+/// The text between the time and the error name on an error line when the facilitator has not chosen another (PRF-13;
+/// accepted: "10:05 T| Wrong Response"). The space after the prefix is part of the line format and is written only when
+/// the prefix is not empty.
+inline constexpr std::string_view DEFAULT_ERROR_PREFIX = "T|";
+/// The longest the prefix may be, in characters.
+inline constexpr int MAX_ERROR_PREFIX_CHARACTERS = 12;
 /// Between an error name and its attached note (an en dash with a space each side).
 inline constexpr std::string_view ATTACHED_NOTE_SEPARATOR = " \xE2\x80\x93 ";
 /// After the time on a note line.

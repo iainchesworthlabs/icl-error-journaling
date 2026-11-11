@@ -74,6 +74,7 @@ class SettingsModel : public QObject, public ConfigurationSource, public Configu
     // settings.formatTime(ms, zone))`.
     Q_PROPERTY(QString timeFormatKey READ time_format_key NOTIFY timeFormatChanged)
     Q_PROPERTY(bool includeTotals READ include_totals NOTIFY configurationChanged) // PRF-10
+    Q_PROPERTY(QString errorPrefix READ error_prefix NOTIFY configurationChanged)  // PRF-13
     Q_PROPERTY(QAbstractItemModel* errorTypes READ error_types CONSTANT)           // PRF-04
     Q_PROPERTY(QAbstractItemModel* locations READ locations CONSTANT)              // PRF-03
     Q_PROPERTY(QAbstractItemModel* templates READ templates CONSTANT)              // PRF-06
@@ -116,6 +117,7 @@ public:
     [[nodiscard]] QString time_meridiem() const;
     [[nodiscard]] QString time_format_key() const;
     [[nodiscard]] bool include_totals() const;
+    [[nodiscard]] QString error_prefix() const;
     [[nodiscard]] QAbstractItemModel* error_types() const;
     [[nodiscard]] QAbstractItemModel* locations() const;
     [[nodiscard]] QAbstractItemModel* templates() const;
@@ -150,6 +152,11 @@ public:
     /// `style` is "24h" or "12h"; `meridiem` is "upper" (AM, PM) or "lower" (am, pm) and only matters for "12h".
     Q_INVOKABLE QString setTimeFormat(const QString& style, bool seconds, const QString& meridiem);
     Q_INVOKABLE QString setIncludeTotals(bool include);
+    /// The text before the error name on an error line (PRF-13): at most 12 characters on one line, which may be empty;
+    /// spaces at either end are dropped. Returns "" on success, or the refusal in plain words.
+    Q_INVOKABLE QString setErrorPrefix(const QString& prefix);
+    /// Puts the default, "T|", back.
+    Q_INVOKABLE QString resetErrorPrefix();
 
     /// `from` and `to` are rows of the `locations` model.
     Q_INVOKABLE QString addLocation(const QString& name);
