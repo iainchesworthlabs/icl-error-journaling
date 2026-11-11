@@ -283,9 +283,12 @@ Item {
                     id: copyButton
 
                     objectName: "reviewCopyAll"
+                    // The icon and its word, so the button says what it does (Stage 7, F11). At the largest text sizes the word
+                    // would take the room of the title, and the icon is alone, as before.
+                    readonly property bool labelShown: copyLabel.implicitWidth + copyIcon.width + Theme.space.tileGap < bar.width * 0.45
                     x: parent.width - width
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Theme.size.minTouchTarget
+                    width: Math.max(Theme.size.minTouchTarget, labelShown ? copyIcon.width + Theme.space.tileGap + copyLabel.implicitWidth : copyIcon.width)
                     height: Theme.size.minTouchTarget
                     enabled: !root.empty
                     opacity: enabled ? 1 : 0.4
@@ -300,10 +303,27 @@ Item {
                     }
 
                     Icon {
-                        anchors.centerIn: parent
+                        id: copyIcon
+
+                        objectName: "reviewCopyIcon"
+                        x: copyButton.labelShown ? 0 : (parent.width - width) / 2
+                        anchors.verticalCenter: parent.verticalCenter
                         kind: "copy"
                         size: Theme.size.badge * 11 / 12
                         colour: Theme.colour.primaryText
+                    }
+
+                    Text {
+                        id: copyLabel
+
+                        objectName: "reviewCopyLabel"
+                        x: copyIcon.width + Theme.space.tileGap
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: copyButton.labelShown
+                        color: Theme.colour.primaryText
+                        font: Theme.font.bodySmall.selectedFont
+                        text: qsTr("Copy log")
+                        Accessible.ignored: true
                     }
                     Keys.onReturnPressed: root.copyAll()
                     Keys.onSpacePressed: root.copyAll()
@@ -429,14 +449,37 @@ Item {
                     }
                 }
 
-                // The empty log says so, in the place of the rows.
+                // The empty log says so, in the place of the rows; a log with entries says how to use them.
                 footer: Item {
+                    readonly property bool hintShown: !root.empty && !root.pastLog
+
                     width: list.width
-                    height: root.empty ? emptyCard.height : 0
-                    visible: root.empty
+                    height: root.empty ? emptyCard.height : hintShown ? hint.implicitHeight : 0
+                    visible: root.empty || hintShown
+
+                    Text {
+                        id: hint
+
+                        objectName: "reviewHint"
+                        visible: parent.hintShown
+                        width: parent.width
+                        topPadding: Theme.space.sectionGap
+                        leftPadding: Theme.space.tileGap / 2
+                        rightPadding: Theme.space.tileGap / 2
+                        color: Theme.colour.reviewTextSecondary
+                        font: Theme.font.footnote.font
+                        lineHeightMode: Text.FixedHeight
+                        lineHeight: Theme.font.footnote.linePitch
+                        text: qsTr("Tap a line to edit it. Swipe left for Copy and Delete.")
+                        wrapMode: Text.WordWrap
+                        // For a finger: a screen reader has each row as a button, and Copy and Delete as buttons under it.
+                        Accessible.ignored: true
+                    }
 
                     Rectangle {
                         id: emptyCard
+
+                        visible: root.empty
 
                         objectName: "reviewEmpty"
                         width: parent.width
