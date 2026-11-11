@@ -534,3 +534,39 @@ TEST_CASE("review.cross_cutting: with Reduce Motion a swiped row jumps and nothi
     s.swipe_open(0);
     expect_clean(check_motion_reduced(s.m_Rig));
 }
+
+TEST_CASE("review.discoverable: the copy button says Copy log, and a log with entries says how to use its rows (F11)",
+          "[ui][review]")
+{
+    SECTION("with entries")
+    {
+        Screen s;
+        QQuickItem* label = s.item("reviewCopyLabel");
+        REQUIRE(label != nullptr);
+        CHECK(label->isVisible());
+        CHECK(label->property("text").toString() == QStringLiteral("Copy log"));
+        // The name for a screen reader is unchanged.
+        CHECK(input::require_interface(s.item("reviewCopyAll"))->text(QAccessible::Name) == QStringLiteral("Copy whole log"));
+
+        QQuickItem* hint = s.item("reviewHint");
+        REQUIRE(hint != nullptr);
+        CHECK(hint->isVisible());
+        CHECK(hint->property("text").toString() == QStringLiteral("Tap a line to edit it. Swipe left for Copy and Delete."));
+    }
+
+    SECTION("an empty log has no hint")
+    {
+        Screen s(Options::empty_log());
+        CHECK_FALSE(s.item("reviewHint")->isVisible());
+    }
+
+    SECTION("at the largest text size the icon is alone and the title keeps its room")
+    {
+        Screen s;
+        s.m_Rig.set_text_scale(3.1);
+        s.m_Rig.settle();
+        CHECK_FALSE(s.item("reviewCopyLabel")->isVisible());
+        CHECK(s.item("reviewCopyAll")->width() >= 44.0);
+        s.m_Rig.set_text_scale(1.0);
+    }
+}

@@ -506,10 +506,11 @@ def review_body(p: Page) -> str:
         f'<div style="position: absolute; left: {x}px; width: {width}px; top: {SAFE_TOP}px; display: flex; flex-direction: column; gap: {GAP}px">'
         f'<div style="display: flex; align-items: center; justify-content: space-between; height: 44px">'
         f'<span style="font-size: 15px; color: {c["textSecondary"]}">Sat 7 Nov · 7 entries</span>'
-        f'<span aria-label="Copy whole log" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">'
-        f'{icon("copy", c["primaryText"], 22)}</span></div>'
+        f'<span aria-label="Copy whole log" style="height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; '
+        f'font-size: 15px; font-weight: 600; color: {c["primaryText"]}">{icon("copy", c["primaryText"], 22)}Copy log</span></div>'
         f'<h1 style="margin: -4px 0 0; font-size: 30px; font-weight: 700; letter-spacing: -0.4px">Today’s log</h1>'
         f"{p.header_block()}{p.review_card()}"
+        f'<p style="margin: 0; font-size: 13px; line-height: 1.4; color: {c["textSecondary"]}">Tap a line to edit it. Swipe left for Copy and Delete.</p>'
         f'<div style="margin-top: 4px">{p.primary_button("Share log", "share")}</div></div>' + p.tab_bar(1)
     )
 
@@ -707,8 +708,8 @@ def first_launch_screen(p: Page) -> str:
         f'<p style="margin: 0; text-align: center; font-size: 16px; line-height: 1.45; color: {c["textBody"]}">Log what goes wrong during a session, '
         f"as it happens, and share the log at the end of the day.</p>"
         f'{p.section_label("How do you want to start?")}'
-        f'{choice("file", "Import a setup file")}'
         f'{choice("pencil", "Set up by hand")}'
+        f'{choice("file", "Import a setup file")}'
         f'<p style="margin: 0; font-size: 13px; line-height: 1.4; color: {c["textSecondary"]}">A setup file holds your error types, locations and '
         f"note templates. You can import one later in Settings.</p></div>"
     )
