@@ -1,0 +1,90 @@
+{
+  "_comment": "The store screenshots (docs/plan/stage-11.md, 11.4). A shot names a state of screens.json, a mode, and the file name it gets. A set names the store, the exact pixel size, the capture class its pictures come from (phone: 402 x 874 points; ipad-portrait: 820 x 1180; ipad-landscape: 1180 x 820) and its shots. store_screenshots.py checks the sizes, the counts and the names, and tests/test_store_screenshots.py checks that every state and mode exists in screens.json.",
+  "scale": {
+    "phone": 3,
+    "ipad-portrait": 2,
+    "ipad-landscape": 2
+  },
+  "limits": {
+    "appstore": {"min": 1, "max": 10},
+    "play-phone": {"min": 2, "max": 8},
+    "play-large": {"min": 4, "max": 8}
+  },
+  "sets": [
+    {
+      "id": "appstore-iphone-6.9",
+      "store": "appstore",
+      "limit": "appstore",
+      "size": [1320, 2868],
+      "shots": [
+        {"file": "01-log-board", "state": "Main", "mode": "light", "class": "phone"},
+        {"file": "02-log-board-dark", "state": "Main", "mode": "dark", "class": "phone"},
+        {"file": "03-note-template", "state": "TemplateValue", "mode": "light", "class": "phone"},
+        {"file": "04-review", "state": "Review", "mode": "light", "class": "phone"},
+        {"file": "05-history", "state": "History", "mode": "light", "class": "phone"},
+        {"file": "06-board-setup", "state": "BoardSettings", "mode": "light", "class": "phone"}
+      ]
+    },
+    {
+      "id": "appstore-ipad-13-portrait",
+      "store": "appstore",
+      "limit": "appstore",
+      "size": [2064, 2752],
+      "shots": [
+        {"file": "01-log-board", "state": "Main.ipad-portrait", "mode": "light", "class": "ipad-portrait"},
+        {"file": "02-log-board-dark", "state": "Main.ipad-portrait", "mode": "dark", "class": "ipad-portrait"},
+        {"file": "03-review", "state": "Review.ipad-portrait", "mode": "light", "class": "ipad-portrait"},
+        {"file": "04-history", "state": "History.ipad-portrait", "mode": "light", "class": "ipad-portrait"},
+        {"file": "05-board-setup", "state": "BoardSettings.ipad-portrait", "mode": "light", "class": "ipad-portrait"}
+      ]
+    },
+    {
+      "id": "appstore-ipad-13-landscape",
+      "store": "appstore",
+      "limit": "appstore",
+      "size": [2752, 2064],
+      "shots": [
+        {"file": "01-board-and-log", "state": "Main.ipad-landscape", "mode": "light", "class": "ipad-landscape"},
+        {"file": "02-board-and-log-dark", "state": "Main.ipad-landscape", "mode": "dark", "class": "ipad-landscape"}
+      ]
+    },
+    {
+      "id": "play-phone",
+      "store": "play",
+      "limit": "play-phone",
+      "size": [1080, 1920],
+      "shots": [
+        {"file": "01-log-board", "state": "Main", "mode": "light", "class": "phone"},
+        {"file": "02-log-board-dark", "state": "Main", "mode": "dark", "class": "phone"},
+        {"file": "03-note-template", "state": "TemplateValue", "mode": "light", "class": "phone"},
+        {"file": "04-review", "state": "Review", "mode": "light", "class": "phone"},
+        {"file": "05-history", "state": "History", "mode": "light", "class": "phone"},
+        {"file": "06-board-setup", "state": "BoardSettings", "mode": "light", "class": "phone"}
+      ]
+    },
+    {
+      "id": "play-large-portrait",
+      "store": "play",
+      "limit": "play-large",
+      "size": [1440, 2560],
+      "shots": [
+        {"file": "01-log-board", "state": "Main.ipad-portrait", "mode": "light", "class": "ipad-portrait"},
+        {"file": "02-review", "state": "Review.ipad-portrait", "mode": "light", "class": "ipad-portrait"},
+        {"file": "03-history", "state": "History.ipad-portrait", "mode": "light", "class": "ipad-portrait"},
+        {"file": "04-board-setup", "state": "BoardSettings.ipad-portrait", "mode": "light", "class": "ipad-portrait"}
+      ]
+    },
+    {
+      "id": "play-large-landscape",
+      "store": "play",
+      "limit": "play-large",
+      "size": [2560, 1440],
+      "shots": [
+        {"file": "01-board-and-log", "state": "Main.ipad-landscape", "mode": "light", "class": "ipad-landscape"},
+        {"file": "02-review", "state": "Review.ipad-landscape", "mode": "light", "class": "ipad-landscape"},
+        {"file": "03-history", "state": "History.ipad-landscape", "mode": "light", "class": "ipad-landscape"},
+        {"file": "04-board-setup", "state": "BoardSettings.ipad-landscape", "mode": "light", "class": "ipad-landscape"}
+      ]
+    }
+  ]
+}

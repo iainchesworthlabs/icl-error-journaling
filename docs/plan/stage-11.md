@@ -106,6 +106,13 @@ Sam Example, UNIT, North Site, Wrong Response and the other types). The renderin
 the fonts are bundled. CI can make the images again for every release, and a test fails when a screen changes and the
 committed list of shots no longer matches. The PNGs are a workflow artifact. They are not committed.
 
+Built in 11.4: `tools/ej_screenshots/store_screenshots.py` and the shot list `tools/ej_screenshots/store_shots.json`
+(`docs/testing.md`). Shot 5, the text preview before the share sheet, is not made, because `screens.json` has no state that
+shows it. It is added to the list when Stage 7 gives it one. The iPhone set has six shots, and the iPad sets use the
+Review, History and board setup screens in place of the share step. The phone captures are 402 × 874 points, so the 6.9"
+shot is that capture at a scale of 3, enlarged by 9%; Play's 9:16 phone shots have the screen's colour at each side. The
+iPad captures are 820 × 1180 and 1180 × 820, fitted to the store's sizes in the same way.
+
 Two choices for the owner:
 
 - **Status bar.** A desktop render has no iOS status bar. Option (a) draws a neutral one (9:41, full signal and battery)
