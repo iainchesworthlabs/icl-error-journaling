@@ -57,6 +57,7 @@ This file applies to any automated contributor. Read it before changing the repo
 | A public header in `libs/*/include` | The tests, and `docs/architecture.md` when the layout changes |
 | A dependency in `vcpkg.json` | Nothing else; Dependabot and the baseline check cover the fork |
 | A CMake option or preset | `docs/building.md` |
+| The setup-file reader in `libs/core/src/configuration.cpp` | `docs/guide/setup-file.md`; `tools/ci/check_setup_doc.py` fails until the page matches |
 | Test labels or phases | `docs/testing.md` |
 | A workflow in `.github/workflows` | `docs/ci.md`; pin every `uses:` to a full SHA with a version comment |
 | Which paths need a build | `.github/ci/plan.json` |

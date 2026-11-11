@@ -309,6 +309,10 @@ The **Confidentiality** job of `ci.yml` is part of CI Status. It runs the unit t
 
 - `check_config_files.py` fails when any tracked file other than `config/sample-config.json` is named `*-config.json` or
   `*.ejconfig` (the setup file as the app exports it).
+- `check_setup_doc.py` fails when `docs/guide/setup-file.md` and the setup-file reader in `libs/core` disagree: a key the
+  reader accepts that the page does not list (or the reverse), a key marked required or optional the wrong way, a length
+  limit, number range, clock choice or whole-file limit that differs, a `ConfigError::Code` or `Problem` with no row, or
+  an example that is not `config/sample-config.json`. The reader is the truth. `tools/ci/precheck.py` runs it too.
 - `check_confidential_terms.py` fails on a case-insensitive whole-word match of any term in the tracked files and their
   names, the commit messages and author names of the pull request range (or merge group, or push), and the pull request
   title and body. The title and body are passed through `env:`, never interpolated into the script. The script prints the
