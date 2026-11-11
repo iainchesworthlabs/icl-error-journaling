@@ -601,3 +601,41 @@ TEST_CASE("available is what the composition root says and does not stop a share
     Fixture phone(true, true);
     CHECK(phone.service->available());
 }
+
+TEST_CASE("The sheet points at the control that asked for it, for that share only", "[viewmodel][share][anchor]")
+{
+    Fixture fixture;
+
+    // A share with no anchor names none.
+    REQUIRE(fixture.service->shareOpenLog());
+    REQUIRE(fixture.m_Platform.anchors().size() == 1);
+    CHECK_FALSE(fixture.m_Platform.anchors()[0].has_value());
+
+    // An anchor set before the call reaches the sheet, as the rectangle that was given.
+    fixture.service->setAnchor(120.0, 640.5, 300.0, 54.0);
+    REQUIRE(fixture.service->shareOpenLog());
+    REQUIRE(fixture.m_Platform.anchors().size() == 2);
+    REQUIRE(fixture.m_Platform.anchors()[1].has_value());
+    CHECK(*fixture.m_Platform.anchors()[1] == ej::bridge::ShareAnchor{120.0, 640.5, 300.0, 54.0});
+
+    // It was for that share only: the next one, which sets none, does not point at the old control.
+    REQUIRE(fixture.service->shareOpenLog());
+    REQUIRE(fixture.m_Platform.anchors().size() == 3);
+    CHECK_FALSE(fixture.m_Platform.anchors()[2].has_value());
+}
+
+TEST_CASE("An anchor set for a share that was refused does not leak into the next one", "[viewmodel][share][anchor]")
+{
+    Fixture fixture;
+    fixture.m_Platform.hold_completion();
+    REQUIRE(fixture.service->shareOpenLog()); // under way: the sheet is open
+    REQUIRE(fixture.m_Platform.anchors().size() == 1);
+
+    fixture.service->setAnchor(10.0, 20.0, 30.0, 40.0);
+    CHECK_FALSE(fixture.service->shareOpenLog()); // refused: one share at a time, and the anchor is spent
+    REQUIRE(fixture.m_Platform.complete_share_sheet(FakePlatform::share_outcome::CANCELLED));
+
+    REQUIRE(fixture.service->shareOpenLog());
+    REQUIRE(fixture.m_Platform.anchors().size() == 2);
+    CHECK_FALSE(fixture.m_Platform.anchors()[1].has_value());
+}

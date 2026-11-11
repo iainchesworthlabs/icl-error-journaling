@@ -53,6 +53,11 @@ public:
     {
         return m_Held.has_value();
     }
+    /// The anchor of each sheet that was presented, in order (unset when the share named none).
+    [[nodiscard]] const std::vector<std::optional<ej::bridge::ShareAnchor>>& anchors() const
+    {
+        return m_Anchors;
+    }
     [[nodiscard]] std::size_t sheets_presented() const
     {
         return m_Texts.size();
@@ -79,6 +84,7 @@ private:
     bool m_Hold = false;
     std::optional<ej::bridge::ShareCallback> m_Held;
     std::vector<std::string> m_Texts;
+    std::vector<std::optional<ej::bridge::ShareAnchor>> m_Anchors;
     std::vector<haptic_kind> m_Haptics;
     int m_Prepared = 0;
 };

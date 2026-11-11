@@ -60,12 +60,54 @@ import ErrorJournalingApp
 // A board with no error type on it (a setup made by hand) says so over the tiles (docs/design/screens/LogEmptyBoard):
 // "Your board is empty" and "Add error types". The empty tiles stay buttons under it.
 //
+// In a Wide window (an iPad in landscape, Stage 8, 8.5) the screen is two panes side by side: the composer and the board on
+// the left, and the header card and today's log (LogPane, with Share log) on the right. The Last bar is not shown, because the log
+// shows the last entry. The items are the same ones, moved: a draft, the focus, the toast and its Undo, a held tile and an
+// open sheet are all still there after a rotation. The log pane is made when the window becomes Wide.
+//
 // The screen fills the window. `bottomClearance` is the height of the tab bar at the foot of it, which the toast stays
 // above; the shell sets it if the screen does not extend behind the tab bar. The template value sheet is a child of
 // `sheetLayer`, which the shell sets to its SheetHost layer so that the sheet covers the tab bar as well (a sheet under
 // the disabled screen would be disabled too).
 Item {
     id: root
+
+    // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
+    // log column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    readonly property real side: WindowLayout.sideMargin(width, Theme.layout.logColumn)
+    // Two panes side by side (Stage 8, 8.5): the board on the left, the header card and the log on the right.
+    readonly property bool wide: WindowLayout.wide
+    readonly property real paneLeft: WindowLayout.screenMargin
+    readonly property real logPaneLeft: paneLeft + WindowLayout.boardPaneWidth + Theme.layout.paneGap
+    // The space above the top of the content in a window that is not Compact, under the status bar.
+    readonly property real topGap: WindowLayout.compact ? 0 : Theme.space.screenMargin
+    // Where the content ends in a Wide window: a screen margin above the tab bar. In the coordinates of the safe frame.
+    readonly property real paneBottom: height - bottomClearance - frame.topInset - Theme.space.screenMargin
+    // The height of the board's tiles (Stage 8, "Layout rules"): the phone's 104 pt, or 0.7 of a tile's width in a larger
+    // window, up to its limit. A window shorter than the phone's design frame (a Split View or Stage Manager window on an
+    // iPad, or a smaller phone) gives the tiles only the room above the tab bar, down to the 88 pt minimum; when even that
+    // does not fit, the Last bar gives way (Review is a tab away). A window as tall as the design frame keeps the phone's
+    // tiles and Last bar as they were.
+    readonly property bool shortWindow: WindowLayout.windowHeight < Theme.frame.height
+    // The room for the board under the composer, above the tab bar, and what the Last bar takes of it.
+    readonly property real roomBelowComposer: height - bottomClearance - frame.topInset - (composer.y + composer.height + Theme.space.sectionGap)
+    readonly property real lastBarRoom: lastBar.implicitHeight + Theme.space.sectionGap
+    readonly property bool lastBarHidden: wide || (shortWindow && fittingTile(roomBelowComposer - lastBarRoom) < Theme.size.tileMinimum)
+    readonly property real tileHeight: {
+        // A Wide board fills the height of its pane, to the 88 pt minimum.
+        if (wide)
+            return Math.max(Theme.size.tileMinimum, fittingTile(roomBelowComposer - Theme.space.screenMargin));
+        const preferred = WindowLayout.tileHeightFor(grid.tileWidth);
+        if (!shortWindow)
+            return preferred;
+        const room = roomBelowComposer - (lastBarHidden ? 0 : lastBarRoom);
+        return Math.max(Theme.size.tileMinimum, Math.min(preferred, fittingTile(room)));
+    }
+
+    // The tallest tile of which four rows, with their gaps, fit in `room`.
+    function fittingTile(room: real): real {
+        return Math.floor((room - (Theme.size.boardRows - 1) * WindowLayout.tileGap) / Theme.size.boardRows);
+    }
 
     required property var session
     required property var board
@@ -74,6 +116,8 @@ Item {
     required property var settings
     required property var bridge
     property var picker: null
+    // The ShareService, for the Share log button of the log pane. Null where there is none (a test of the screen alone).
+    property var share: null
 
     property real bottomClearance: Theme.size.tabBarHeight
     property Item sheetLayer: root
@@ -150,6 +194,12 @@ Item {
             editLoader.active = true;
             editor.editNote(entryId);
         }
+    }
+
+    // A row of the log pane was tapped: Edit entry opens on it, in the sheet that a hold uses (made at the first need).
+    function openEdit(entryId: string): void {
+        editLoader.active = true;
+        editor.edit(entryId);
     }
 
     // One tap on a tile logged nothing: say what logs it. The card is made at the first hint.
@@ -273,8 +323,9 @@ Item {
             id: header
 
             objectName: "logHeaderCard"
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
+            x: root.wide ? root.logPaneLeft : root.side
+            y: root.topGap
+            width: root.wide ? WindowLayout.logPaneWidth : parent.width - 2 * root.side
             unitText: root.session.unitText
             locationText: root.session.locationText
             versionText: root.session.versionText
@@ -294,8 +345,9 @@ Item {
             id: banners
 
             objectName: "logBanners"
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
+            x: header.x
+            y: header.y
+            width: header.width
             z: 1
             spacing: Theme.space.tileGap
 
@@ -337,10 +389,10 @@ Item {
             id: composer
 
             objectName: "logComposer"
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
-            anchors.top: header.bottom
-            anchors.topMargin: Theme.space.sectionGap
+            x: root.wide ? root.paneLeft : root.side
+            width: root.wide ? WindowLayout.boardPaneWidth : parent.width - 2 * root.side
+            anchors.top: root.wide ? parent.top : header.bottom
+            anchors.topMargin: root.wide ? root.topGap : Theme.space.sectionGap
             draft: root.session.draft
             chips: root.settings.templates
             chipIcons: root.chipIcons
@@ -354,10 +406,11 @@ Item {
             id: lastBar
 
             objectName: "logLastBar"
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
+            x: root.wide ? root.paneLeft : root.side
+            width: root.wide ? WindowLayout.boardPaneWidth : parent.width - 2 * root.side
             anchors.top: composer.bottom
             anchors.topMargin: Theme.space.sectionGap
+            visible: !root.lastBarHidden
             lastLine: root.timeline.lastLine
             entryCount: root.timeline.entryCount
             skeleton: root.loading
@@ -371,7 +424,7 @@ Item {
             id: emptyBoardLoader
 
             // The first three rows: the board without its last row and the gap above it.
-            readonly property real rowsHeight: grid.boardHeight - Theme.size.tileHeight - Theme.space.tileGap
+            readonly property real rowsHeight: grid.boardHeight - grid.tileHeight - grid.gap
 
             x: grid.x
             y: grid.y
@@ -472,10 +525,12 @@ Item {
             id: grid
 
             objectName: "logBoard"
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
-            anchors.top: lastBar.bottom
+            x: root.wide ? root.paneLeft : root.side
+            width: root.wide ? WindowLayout.boardPaneWidth : parent.width - 2 * root.side
+            anchors.top: root.lastBarHidden ? composer.bottom : lastBar.bottom
             anchors.topMargin: Theme.space.sectionGap
+            gap: WindowLayout.tileGap
+            tileHeight: root.tileHeight
             model: root.board
             skeleton: root.loading
             coveredTiles: emptyBoardLoader.active ? Theme.size.boardColumns * (Theme.size.boardRows - 1) : 0
@@ -489,18 +544,39 @@ Item {
             }
             onEmptyTapped: position => root.boardSetupRequested(position)
         }
+
+        // Today's log, beside the board in a Wide window. After the board in the tree, so that a screen reader reads the header
+        // card, the composer and the board, and then the log.
+        Loader {
+            id: logPaneLoader
+
+            objectName: "logPaneLoader"
+            active: root.wide
+            x: root.logPaneLeft
+            y: header.y + header.height + Theme.space.sectionGap
+            width: WindowLayout.logPaneWidth
+            height: Math.max(0, root.paneBottom - y)
+
+            sourceComponent: LogPane {
+                timeline: root.timeline
+                settings: root.settings
+                share: root.share
+                onEditRequested: entryId => root.openEdit(entryId)
+            }
+        }
     }
 
     UndoToast {
         id: toast
 
         objectName: "logToast"
-        anchors.left: parent.left
-        anchors.right: parent.right
+        // As wide as the column on a phone; on a larger window no wider than the toast's limit, under the board. In a Wide
+        // window it is in the log pane, over the room that the list keeps free above Share log.
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: root.wide ? frame.leftInset + root.logPaneLeft + WindowLayout.logPaneWidth / 2 - root.width / 2 : 0
+        width: root.wide ? WindowLayout.logPaneWidth - 2 * Theme.space.rowPadding : WindowLayout.compact ? parent.width - 2 * root.side : Math.min(Theme.layout.toastMaxWidth, parent.width - 2 * root.side)
         anchors.bottom: parent.bottom
-        anchors.leftMargin: Theme.space.screenMargin
-        anchors.rightMargin: Theme.space.screenMargin
-        anchors.bottomMargin: root.bottomClearance + Theme.space.sectionGap
+        anchors.bottomMargin: root.wide ? root.bottomClearance + Theme.space.screenMargin + ((logPaneLoader.item as LogPane)?.toastBottom ?? 0) : root.bottomClearance + Theme.space.sectionGap
         active: root.undo.active
         text: root.undo.text
         undoing: root.undo.undoing
@@ -515,6 +591,7 @@ Item {
 
         objectName: "logTapHintLoader"
         anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: root.wide ? frame.leftInset + root.paneLeft + WindowLayout.boardPaneWidth / 2 - root.width / 2 : 0
         anchors.bottom: toast.bottom
         anchors.bottomMargin: toast.present ? toast.height + Theme.space.tileGap : 0
         active: false

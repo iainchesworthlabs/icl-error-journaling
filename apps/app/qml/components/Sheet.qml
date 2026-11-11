@@ -26,6 +26,12 @@ import ErrorJournalingApp
 //   centre     the card of an alert hangs from Theme.size.alertAnchor (374 pt on the design frame): the point 3/8 of the way
 //              down the card is there, so a taller card sits higher, as in the mock-ups, and none is centred; it moves up
 //              when it is too tall to fit below that, never into the top inset.
+//   form       in a window that is not Compact (an iPad, Stage 8) a bottom sheet is a form sheet: a card as wide as
+//              Theme.layout.sheetWidth in the middle of the window, as tall as its content (the Content detent) or as
+//              the largest it may be (the others), never nearer the window's edge than Theme.layout.sheetMargin, with
+//              all four corners rounded, no grabber and no drag. It comes in and goes as an alert does, by fading and
+//              scaling in place. An alert in such a window is the same card, centred vertically. A Compact window,
+//              which is every phone, keeps the bottom sheet and the alert as drawn above.
 //   keyboard   `keyboardHeight` lifts the sheet's bottom edge to the top of the keyboard; the sheet gets shorter if it
 //              would otherwise reach into the top inset, and the content area ends at the keyboard.
 //   focus      opening moves focus to the sheet; closing returns focus to the item that had it. What keeps Tab inside is
@@ -93,14 +99,20 @@ FocusScope {
     // ---- geometry ----
 
     readonly property bool centred: presentation === Sheet.Centre
+    // A bottom sheet in a window that is not Compact is a card in the middle of it (see "form" above).
+    readonly property bool formSheet: !centred && !WindowLayout.compact
+    // Whether the sheet comes in and goes by fading and scaling in place, and not by sliding.
+    readonly property bool popIn: centred || formSheet
     readonly property real cardMargin: 2 * Theme.space.screenMargin
     // The top of a large sheet: Theme.size.sheetTop on the design frame, the same distance from another phone's inset.
     readonly property real largeTop: Math.max(0, topInset + Theme.size.sheetTop - Theme.frame.safeAreaTop)
     readonly property real largeHeight: root.height - largeTop
     // The padding the content keeps at the bottom when it runs under the home indicator: the inset, or 0 over a keyboard.
-    readonly property real contentBottomInset: contentUnderHomeIndicator && keyboardHeight <= 0 ? bottomInset : 0
-    // The part of a bottom sheet under its content area: the home indicator, unless the content runs under it.
-    readonly property real bottomReserve: keyboardHeight > 0 || contentUnderHomeIndicator ? 0 : bottomInset
+    // A form sheet is clear of the home indicator, so its content has nothing to pad for.
+    readonly property real contentBottomInset: contentUnderHomeIndicator && keyboardHeight <= 0 && !formSheet ? bottomInset : 0
+    // The part of a bottom sheet under its content area: the home indicator, unless the content runs under it; a form
+    // sheet keeps a screen margin.
+    readonly property real bottomReserve: formSheet ? Theme.space.screenMargin : keyboardHeight > 0 || contentUnderHomeIndicator ? 0 : bottomInset
     readonly property real mediumHeight: root.height / 2
     // The bottom edge of what the sheet may use: the window, or the top of the keyboard.
     readonly property real bottomEdge: root.height - keyboardHeight
@@ -114,12 +126,24 @@ FocusScope {
     readonly property real grabberZone: Theme.space.tileGap + Theme.border.hairline * 5
     // The height of the Content detent: the grabber, the content and what is kept under it.
     readonly property real contentHeight: grabberZone + contentImplicitHeight + (keyboardHeight > 0 ? 0 : bottomInset)
-    readonly property real panelHeight: centred ? Math.min(contentImplicitHeight + Theme.size.badge + Theme.space.screenMargin, centreAvailable - 2 * Theme.space.screenMargin) : Math.min(detent === Sheet.Medium ? mediumHeight : detent === Sheet.Content ? contentHeight : largeHeight, available)
+    // The form sheet: its width, the space it may use (clear of the insets, the keyboard and the margin), and its height,
+    // which is its content's under the Content detent and else the most it may be.
+    readonly property real formWidth: Math.min(Theme.layout.sheetWidth, root.width - 2 * Theme.layout.screenMargin)
+    readonly property real formTop: topInset + Theme.layout.sheetMargin
+    readonly property real formBottom: bottomEdge - (keyboardHeight > 0 ? Theme.space.screenMargin : bottomInset + Theme.layout.sheetMargin)
+    readonly property real formSpace: Math.max(0, formBottom - formTop)
+    readonly property real formNatural: detent === Sheet.Content ? grabberZone + contentImplicitHeight + Theme.space.screenMargin : Theme.layout.sheetMaxHeight
+    readonly property real formHeight: Math.min(formNatural, Theme.layout.sheetMaxHeight, formSpace)
+    // The width of the card of an alert: the design frame's less its margins on every window, so it is not stretched.
+    readonly property real alertWidth: WindowLayout.compact ? root.width - 2 * cardMargin : Theme.frame.width - 2 * cardMargin
+    readonly property real panelHeight: formSheet ? formHeight : centred ? Math.min(contentImplicitHeight + Theme.size.badge + Theme.space.screenMargin, centreAvailable - 2 * Theme.space.screenMargin) : Math.min(detent === Sheet.Medium ? mediumHeight : detent === Sheet.Content ? contentHeight : largeHeight, available)
     // The card of an alert: 3/8 of its height above alertAnchor on the design frame (the same distance from another phone's
     // inset), moved up when the card would not fit under that, and never above the inset.
     readonly property real alertTop: topInset + Theme.size.alertAnchor - Theme.frame.safeAreaTop - panelHeight * 3 / 8
-    readonly property real centreTop: Math.max(topInset + Theme.space.screenMargin, Math.min(alertTop, topInset + centreAvailable - Theme.space.screenMargin - panelHeight))
-    readonly property real restY: centred ? centreTop : bottomEdge - panelHeight
+    // In a window that is not Compact the card is centred in the space between the inset and the bottom edge instead.
+    readonly property real alertCentredTop: topInset + Math.round((centreAvailable - panelHeight) / 2)
+    readonly property real centreTop: Math.max(topInset + Theme.space.screenMargin, Math.min(WindowLayout.compact ? alertTop : alertCentredTop, topInset + centreAvailable - Theme.space.screenMargin - panelHeight))
+    readonly property real restY: formSheet ? formTop + Math.round((formSpace - formHeight) / 2) : centred ? centreTop : bottomEdge - panelHeight
     // The level the scrim reaches. It is a fraction of the scrim colour's own opacity, not a design colour.
     readonly property real scrimLevel: 0.6
 
@@ -237,11 +261,11 @@ FocusScope {
         id: panel
 
         objectName: "sheetPanel"
-        x: root.centred ? root.cardMargin : 0
+        x: root.popIn ? (root.width - width) / 2 : 0
         y: root.restY + root.dragOffset
-        width: root.centred ? root.width - 2 * root.cardMargin : root.width
-        // The bottom corners of a bottom sheet are rounded too; they are drawn below the window.
-        height: root.panelHeight + (root.centred ? 0 : Theme.radius.sheetTop)
+        width: root.formSheet ? root.formWidth : root.centred ? root.alertWidth : root.width
+        // The bottom corners of a bottom sheet are rounded too; they are drawn below the window. A form sheet is a card.
+        height: root.panelHeight + (root.popIn ? 0 : Theme.radius.sheetTop)
         radius: root.centred ? Theme.radius.alert : Theme.radius.sheetTop
         color: root.centred ? Theme.colour.surfaceRaised : Theme.colour.sheetBackground
         transformOrigin: Item.Center
@@ -264,8 +288,8 @@ FocusScope {
             width: parent.width
             height: parent.height
             radius: parent.radius
-            topCornersOnly: !root.centred
-            token: root.centred ? Theme.shadow.alert : Theme.shadow.sheet
+            topCornersOnly: !root.popIn
+            token: root.popIn ? Theme.shadow.alert : Theme.shadow.sheet
         }
 
         // Takes every touch that lands on the sheet outside its controls, so none reaches the scrim.
@@ -278,20 +302,20 @@ FocusScope {
             id: grabber
 
             objectName: "sheetGrabber"
-            visible: !root.centred
+            visible: !root.popIn
             // A large sheet starts a little above the top inset, as the design has it; the strip that takes the drag
             // starts at the inset, so nothing that takes a touch is in it. The pill is drawn where the design has it.
             y: Math.max(0, root.topInset - root.restY)
             width: parent.width
             height: Theme.size.minTouchTarget
-            Accessible.ignored: root.centred || !root.dismissible
+            Accessible.ignored: root.popIn || !root.dismissible
             Accessible.role: Accessible.Button
             Accessible.name: qsTr("Close")
             Accessible.onPressAction: root.close()
 
             DragHandler {
                 target: null
-                enabled: root.dismissible && !root.centred
+                enabled: root.dismissible && !root.popIn
                 xAxis.enabled: false
                 // The distance is measured in the window's coordinates: the handler's own item moves with the sheet, and a
                 // distance in its coordinates would grow with every step.
@@ -335,21 +359,21 @@ FocusScope {
 
         YAnimator {
             target: panel
-            from: root.restY + (root.centred ? 0 : Theme.motion.travel(root.height - root.restY))
+            from: root.restY + (root.popIn ? 0 : Theme.motion.travel(root.height - root.restY))
             to: root.restY
             duration: Theme.motion.sheetPresentMs
             easing.type: Theme.motion.easingSpring
         }
         ScaleAnimator {
             target: panel
-            from: root.centred && !Theme.reduceMotion ? Theme.motion.tilePressScale : 1
+            from: root.popIn && !Theme.reduceMotion ? Theme.motion.tilePressScale : 1
             to: 1
             duration: Theme.motion.sheetPresentMs
             easing.type: Theme.motion.easingSpring
         }
         OpacityAnimator {
             target: panel
-            from: root.centred || Theme.reduceMotion ? 0 : 1
+            from: root.popIn || Theme.reduceMotion ? 0 : 1
             to: 1
             duration: Theme.motion.sheetPresentMs
         }
@@ -372,21 +396,21 @@ FocusScope {
         YAnimator {
             target: panel
             from: panel.y
-            to: panel.y + (root.centred ? 0 : Theme.motion.travel(root.height - panel.y))
+            to: panel.y + (root.popIn ? 0 : Theme.motion.travel(root.height - panel.y))
             duration: Theme.motion.sheetPresentMs
             easing.type: Theme.motion.easingSpring
         }
         ScaleAnimator {
             target: panel
             from: 1
-            to: root.centred && !Theme.reduceMotion ? Theme.motion.tilePressScale : 1
+            to: root.popIn && !Theme.reduceMotion ? Theme.motion.tilePressScale : 1
             duration: Theme.motion.sheetPresentMs
             easing.type: Theme.motion.easingSpring
         }
         OpacityAnimator {
             target: panel
             from: 1
-            to: root.centred || Theme.reduceMotion ? 0 : 1
+            to: root.popIn || Theme.reduceMotion ? 0 : 1
             duration: Theme.motion.sheetPresentMs
         }
         OpacityAnimator {

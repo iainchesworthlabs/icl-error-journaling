@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace ej::bridge
@@ -18,11 +19,26 @@ enum class ShareOutcome
     FAILED,      ///< The sheet could not be presented, the request was not valid, or the activity reported an error.
 };
 
+/// Where a share sheet that is a popover (on an iPad) points: the control that asked for it, as a rectangle in points
+/// in the window's own coordinates. A phone shows the sheet from the bottom of the screen and ignores it.
+struct ShareAnchor
+{
+    double m_X = 0;
+    double m_Y = 0;
+    double m_Width = 0;
+    double m_Height = 0;
+
+    friend bool operator==(const ShareAnchor&, const ShareAnchor&) = default;
+};
+
 /// What to share: exactly one of the two members is set.
 struct ShareRequest
 {
     std::string m_Text;           ///< The export text, UTF-8. Empty when sharing a file.
     std::filesystem::path m_File; ///< A file to share (the configuration export). Empty when sharing text.
+    /// The control the popover points at. Unset points it at the whole view, which is what a share without a control to
+    /// point at (a prompt, the setup export) gets.
+    std::optional<ShareAnchor> m_Anchor;
 };
 
 struct ShareResult

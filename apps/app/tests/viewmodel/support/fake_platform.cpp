@@ -40,6 +40,7 @@ std::string_view share_outcome_name(bridge::ShareOutcome outcome)
 void FakePlatform::present(bridge::ShareRequest request, bridge::ShareCallback done)
 {
     m_Texts.push_back(std::move(request.m_Text));
+    m_Anchors.push_back(request.m_Anchor);
     if (m_Log != nullptr)
     {
         m_Log->record(EventKind::SHARE, "opened");

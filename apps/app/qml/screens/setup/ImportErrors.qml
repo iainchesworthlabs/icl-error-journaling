@@ -8,6 +8,10 @@ import ErrorJournalingApp
 EditorPage {
     id: root
 
+    // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
+    // form column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    readonly property real side: WindowLayout.sideMargin(width, Theme.layout.formColumn)
+
     // The messages, in file order.
     property var messages: []
 
@@ -33,8 +37,8 @@ EditorPage {
         Column {
             id: column
 
-            x: Theme.space.screenMargin
-            width: flick.width - 2 * Theme.space.screenMargin
+            x: root.side
+            width: flick.width - 2 * root.side
             // 20 pt between the parts (a 12 pt margin and the 8 pt gap), and 4 pt more above the heading.
             spacing: Theme.space.sectionGap + Theme.space.tileGap
 
@@ -77,8 +81,8 @@ EditorPage {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.leftMargin: Theme.space.screenMargin
-        anchors.rightMargin: Theme.space.screenMargin
+        anchors.leftMargin: root.side
+        anchors.rightMargin: root.side
         anchors.bottomMargin: 0
         // 10 pt between the buttons, the last one ending at the bottom of the safe area.
         spacing: Theme.space.tileGap + Theme.border.hairline * 2

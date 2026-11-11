@@ -125,14 +125,14 @@ The mock-up script uses these numbers, and so will `WindowLayout.qml`. `Compact`
 | Reading column (Review, History, past log) | full width | ≤ 720, centred | ≤ 720, centred |
 | First launch column | full width | ≤ 480, centred vertically | ≤ 480, centred vertically |
 | Tile gap | 8 | 12 | 12 |
-| Tile height | 104, or less in a window too short for it, not below 88 | 0.7 × tile width, from 104 to 152 | fills the board pane's height, at least 88 |
+| Tile height | 104; in a window shorter than 874 pt, only the room above the tab bar, not below 88 (the Last bar gives way first when 88 does not fit) | 0.7 × tile width, from 104 to 152 | fills the board pane's height, at least 88 |
 | Tile label | 13.5 pt, cap 1.3 | 17 pt, cap 1.3 | 17 pt, cap 1.3 |
 | Count badge | 24 pt, 13 pt text | 28 pt, 15 pt text | 28 pt, 15 pt text |
 | Last bar | shown | shown | hidden (the log pane shows the last entry) |
 | Undo toast | above the tab bar | under the board, ≤ 520 wide, centred | at the foot of the log pane, above Share log |
 | Tab bar | 49 + inset, full width | 49 + inset, tabs in the 680 column | as Regular |
-| Sheets | bottom sheet with detents | form sheet: 560 wide, centred, as tall as its content, at most the height less 64 above and below | as Regular |
-| Alerts | card hung from the alert anchor | the same card, centred vertically | as Regular |
+| Sheets | bottom sheet with detents | form sheet: 560 wide, centred, four rounded corners, no grabber or drag, as tall as its content (the Content detent) or 720 (the others), at most the height less the insets and 64 above and below; above the keyboard when it is up | as Regular |
+| Alerts | card hung from the alert anchor | the same 338 pt card, centred between the status bar and the home indicator | as Regular |
 | Other text | unchanged | unchanged | unchanged |
 
 Text sizes other than the tile label do not change. iPadOS uses the same type sizes as iOS, and Dynamic Type still
@@ -190,13 +190,18 @@ What stays off:
 - **Picture in Picture and external displays.** They are not relevant.
 
 What is needed:
-- **Short windows in `Compact`.** The phone layout has fixed tile heights and does not scroll. On the iPhone 17 it fits
-  with room to spare, but a Split View window on an iPad mini in landscape is only 744 pt tall. With the iPad's insets
-  (24 and 20) the phone layout needs about 787 pt. So in `Compact` the tiles get shorter when the window is too short for
-  104 pt tiles, down to the 88 pt minimum. On every iPhone the tiles stay 104 pt, so the phone does not change.
-- **A minimum window size.** iPadOS lets a Stage Manager window be smaller than any phone. The bridge sets the window
-  scene's `sizeRestrictions.minimumSize` to 375 × 720 pt, the smallest size at which the board fits with 88 pt tiles.
-  It is one call in `libs/ios_bridge/src/platform/ios/` and an empty desktop version.
+- **Short windows in `Compact`.** The phone layout has fixed tile heights and does not scroll. The composer is 150 pt
+  tall since 4.17 added its hint, so the column needs about 840 pt with the iPad's insets. A Split View window on an
+  iPad mini in landscape is only 744 pt tall. So in a window shorter than the phone's 874 pt design frame, the tiles get
+  only the room above the tab bar, down to the 88 pt minimum. When even 88 pt does not fit, the Last bar gives way, since
+  Review is one tab away. A window as tall as the design frame keeps the phone's tiles and Last bar, so the iPhone 17 does
+  not change. A smaller phone (the iPhone 16e or SE) gets shorter tiles that end above the tab bar instead of under it.
+- **A minimum window size.** iPadOS lets a Stage Manager window be smaller than any phone. `Main.qml` declares the
+  window's `minimumWidth` and `minimumHeight` from the layout tokens (375 × 720 pt, the smallest size at which the board
+  fits with 88 pt tiles). A desktop honours that itself. Qt does not pass it to iOS, so `main.cpp` forwards it to a new
+  bridge capability, `WindowLimits`, now and each time the application becomes active (a window scene can connect after
+  the start). `ios/window_limits.mm` sets each connected window scene's `sizeRestrictions.minimumSize`; the desktop
+  version does nothing.
 - **Resizing tests** at Split View sizes, and while the size changes (T8-5).
 
 If the owner prefers full screen only, `UIRequiresFullScreen` stays and the iPad lists four orientations. The layout work
@@ -277,8 +282,8 @@ values.
 | 8.2 | Regular: columns | The log, form, reading and first-launch columns. The tab bar in the column. Margins. | T8-3, T8-4, T8-9 |
 | 8.3 | Regular: board | Tile size, gap, label and badge from `WindowLayout`. The toast under the board. Shorter tiles in a short `Compact` window. | T8-3, T8-6, T8-7 |
 | 8.4 | Form sheets and alerts | `Sheet` and `SheetHost` form-sheet mode. Alerts centred. The keyboard with a form sheet. | T8-8 |
-| 8.5 | Wide: side by side | `LogScreen`'s second arrangement and `LogPane`. The Last bar hidden. The toast in the log pane. Rows open Edit entry. The share popover's anchor (A3). | T8-3, T8-10, T8-11 |
-| 8.6 | Resizing | State kept across a change of size or class. Keyboard and sheet placement after a rotation. The minimum window size through the bridge. | T8-5, T8-12 |
+| 8.5 | Wide: side by side | `LogScreen`'s second arrangement and `LogPane`. The Last bar hidden. The toast in the log pane. Rows open Edit entry. The share popover's anchor (A3). | T8-3, T8-5 (the part that needs Wide), T8-9, T8-10, T8-11 |
+| 8.6 | Resizing | State kept across a change of size or class (checked, and nothing needed fixing). Keyboard and sheet placement after a rotation. The minimum window size through the bridge (`WindowLimits`). | T8-5, T8-12 |
 | 8.7 | Info.plist and launch | Orientations. `UIRequiresFullScreen` removed. The phone-only launch image. The plist checks. A `changelog.d` fragment ("Runs on iPad in portrait and landscape"). | T8-13, T8-14 |
 | 8.8 | Visual pass and exit gate | The capture of the app against the iPad mock-ups. Fixes. The device checklist on an iPad. | the [checklist](#device-checklist-the-exit-gate) |
 
@@ -300,14 +305,14 @@ The labels are as in `docs/testing.md`. Every UI test runs in the offscreen app 
 | T8-2 | `layout.no_platform` | unit | `check_qml_platform.py` passes. `WindowLayout.qml` reads no `Qt.platform` and nothing of the device. |
 | T8-3 | `ipad.screens_fit` | ui | At every iPad size and class, each tab's root screen: nothing is outside the window or under the safe area; no text is cut off (the `a11y.text_scale` check); every touch target is at least 44 pt; the board's 12 tiles are visible without scrolling. |
 | T8-4 | `ipad.compact_is_phone` | ui | At 507 × 1180, the geometry of the Log screen's header card, composer, Last bar, tiles and tab bar matches the phone's, relative to the window. At 507 × 744 and 375 × 720, the 12 tiles are visible above the tab bar and at least 88 pt high. |
-| T8-5 | `ipad.resize_keeps_state` | ui | With a draft note, focus in the composer, a toast with Undo, an open Other sheet, and Review scrolled half way: resize through Regular, Wide, Compact and back. Each piece of state is still there, Undo still undoes, and no entry is added or lost (count before equals count after). |
+| T8-5 | `ipad.rotation_keeps_state` | ui | With a draft note, focus in the composer and a toast with Undo, resize through Wide, Regular, Compact and Wide again; each piece of state is still there, Undo still undoes, and no entry is added or lost. An open Other sheet follows the window and stays centred. Review keeps its place in the log (`ipad.resize_review`), and a sheet that is open is a card in a wide window and the phone's bottom sheet in a Compact one (`ipad.sheet_across_classes`, 8.6). |
 | T8-6 | `ipad.tiles` | ui | Tile sizes in Regular and Wide at each iPad size: at least 88 pt high, the same 3 × 4 positions as the phone, and the longest label ("Sequence Out of Order") not cut at 17 pt and at the 1.3 cap. |
 | T8-7 | `ipad.tap_latency` | perf | The press path (4.12) at 1180 × 820 keeps the phone's budget: a tile press reaches the session on the press. |
 | T8-8 | `ipad.form_sheet` | ui | Each sheet at Regular and Wide is 560 wide, centred, inside the safe area, and above the keyboard (simulated keyboard heights 313 and 398). Cancel and Save are reachable, the scrim tap does what it does on the phone, and VoiceOver order is the sheet only (`a11y.reading_order`). |
-| T8-9 | `ipad.reading_order` | ui | In Regular and Wide, VoiceOver order on the Log screen is the same as on the phone in Regular. In Wide it is: composer, board, then header card, log, Share log. Tab bar last. |
-| T8-10 | `ipad.log_pane` | ui | In Wide: a tap logs and the new row appears at the end of the log pane and is scrolled into view. Undo removes it. A row opens Edit entry. Swipe gives Copy and Delete. Share log calls the share service with today's text. The pane uses only the review colours (no tile colour). |
-| T8-11 | `ipad.toast_clear` | ui | In Regular and Wide, the visible toast covers no tile and no row of the log pane. |
-| T8-12 | `ipad.keyboard_rotation` | ui | With the keyboard up over the composer, a change from Wide to Regular keeps the field visible and focused. |
+| T8-9 | `ipad.wide_reading_order` | ui | In Wide, VoiceOver reads the header card, the composer (chips, note field, Add) and the board, then the log pane (Copy all, the rows, Share log), then the tabs. The header card stays first, as on the phone, because the tree is the same in every class: a screen reader reads the facilitator's header, then the work area, then the log. (The plan first said composer and board before the header card; that would need a different tree in Wide.) In Regular the order is the phone's. |
+| T8-10 | `ipad.log_pane`, `ipad.log_pane_empty`, `ipad.wide_screens_fit` | ui | In Wide: the log pane lists the log in time order with the prefix in the secondary colour; the newest entry is in view when one is added; a tap on a row opens Edit entry; a swipe gives Copy and Delete, and Undo, which is in the pane, brings a deleted row back; Copy all confirms itself; Share log shares the open log and the popover's anchor is the button's rectangle; an empty log says so and has nothing to copy or share. The panes, the tiles (all the same height, at least 88 pt, in the phone's places, the last row a screen margin above the tab bar) and the card are where the plan has them on every iPad in landscape, with names, touch targets, text scale and the safe area clean. |
+| T8-11 | `ipad.toast_clear`, `ipad.wide_toast_clear` | ui | In Regular the toast is under the board; in Wide it is in the log pane, between the list and Share log; it covers no tile and no row. |
+| T8-12 | `ipad.keyboard_rotation` | ui | With the keyboard up over the composer, a change from Wide to Regular keeps the field visible and focused. (Built with 8.6, which owns the keyboard and rotation.) |
 | T8-13 | `plist.orientations` | unit | `check_ios_plist.py`: the iPhone is portrait only, the iPad has four orientations, there is no `UIRequiresFullScreen` (unless the owner keeps it), and multiple scenes are off. |
 | T8-14 | `launch.ipad_plain` | unit | The launch image set is `iphone` only. `launch.image_current` and `launch.matches_screen` are unchanged and pass. |
 | T8-15 | Visual pass | none (tool) | `tools/visual/run_capture.py --only Main.ipad-landscape ...` pairs each iPad mock-up with the app in the same state. The differences are reviewed in 8.8. It is not a pass or fail test, the same as for the phone. |
@@ -340,8 +345,8 @@ Run on a TestFlight build on an iPad, ideally an iPad mini, which is the tightes
 | # | Assumption | Checked by | If wrong |
 |---|---|---|---|
 | A1 | Qt's iOS plugin resizes the `QWindow` when the iPad rotates, and when a Split View or Stage Manager window is resized. The safe-area margins follow. | D2, D4, D5 | Report it upstream, and have the bridge pass the scene's size to the window (one `.mm` change). |
-| A2 | `windowScene.sizeRestrictions.minimumSize` is honoured in Stage Manager on iPadOS 26. | D5 | The Log screen scrolls below 375 × 720, rather than cutting off the bottom row. |
-| A3 | On an iPad, the share sheet is a popover. The Stage 5 bridge (`share.mm`) anchors it to the whole view and gives no `sourceRect`, so it does not crash, but the popover points at the middle or the corner of the screen rather than at the button. | D10 | In 8.5, the share call takes an anchor rectangle from QML (the Share log button, or History's Share), which becomes `sourceRect`. The phone ignores it. |
+| A2 | `windowScene.sizeRestrictions.minimumSize` is honoured in Stage Manager on iPadOS 26, and `main.cpp`'s call reaches a scene that exists (it is made at the start and again on becoming active). | D5 | Below 375 × 720 the Log screen, which does not scroll, runs its bottom row under the tab bar. Call it from the scene delegate (`.mm`) instead, or make the Log screen scroll below that size. |
+| A3 | On an iPad, the share sheet is a popover. The Stage 5 bridge (`share.mm`) anchored it to the whole view with no `sourceRect`, so it did not crash, but the popover pointed at the middle or the corner of the screen rather than at the button. 8.5 gives `ShareRequest` an optional `ShareAnchor` (set through `ShareService.setAnchor` just before a share, and spent by that share), and `share.mm` sets `sourceRect` from it. Review's Share log and the log pane's set it; History's swipe action and the alert buttons (Share this log first, Share first) do not, and keep the whole view as their anchor. Whether `sourceRect` in window points lines up with the root view on an iPad is unproven. | D10 | The coordinates differ by the offset of Qt's view in the root view controller's: add it in `share.mm`. The History and alert shares get an anchor in a follow-up if the owner wants one. |
 | A4 | An asset catalogue image set with only `iphone` images shows no image on an iPad launch screen, and does not fail the build. | D7, and the Xcode build in CI | Keep `universal`, and add an `ipad` image of the background colour only. |
 | A5 | App Store Connect's validation rejects a build that drops `UIRequiresFullScreen` without four iPad orientations, and accepts this one. | The first TestFlight upload after 8.7 | Change the orientations to what the error message asks for. |
 | A6 | The document picker (Stage 5) is presented as a form sheet on an iPad, without an anchor. | D11 | Give it an anchor, as for A3. |

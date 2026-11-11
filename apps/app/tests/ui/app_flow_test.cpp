@@ -31,6 +31,7 @@
 #include <QByteArray>
 #include <QColor>
 #include <QFile>
+#include <QFont>
 #include <QHash>
 #include <QMetaObject>
 #include <QObject>
@@ -45,9 +46,13 @@
 #include <QString>
 #include <QVariant>
 #include <QVariantMap>
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <memory>
+#include <utility>
+#include <vector>
 
 using namespace ej;
 using namespace ej::test;
@@ -978,6 +983,965 @@ TEST_CASE("app.accessibility: the tree of each tab is named and in order in ligh
         }
         app.choose_tab(LOG_TAB);
     }
+}
+
+// ---- the iPad (Stage 8): the screens in the columns of a larger window ----
+
+namespace
+{
+
+/// The safe-area insets of an iPad: the status bar and the home indicator.
+constexpr double IPAD_TOP = 24.0;
+constexpr double IPAD_BOTTOM = 20.0;
+/// The column limits of docs/plan/stage-8.md ("Layout rules"), as Theme.layout has them.
+constexpr double LOG_COLUMN = 680.0;
+constexpr double READING_COLUMN = 720.0;
+constexpr double REGULAR_MARGIN = 24.0;
+
+/// Every iPad in portrait (the iPad mini, the 11-inch and the 13-inch): the Regular class. Landscape is the Wide class,
+/// whose Log screen is the board and the log side by side (package 8.5); until then the iPad stays in portrait.
+const QSize IPAD_SIZES[] = {QSize(744, 1133), QSize(820, 1180), QSize(1032, 1376)};
+
+/// The width of a centred column no wider than `limit` in a window `window` wide, with the iPad's margins.
+double column(double window, double limit)
+{
+    return std::min(limit, window - 2 * REGULAR_MARGIN);
+}
+
+/// The item is `width` wide and centred in the window, to the point.
+void check_centred(UiRig& ui, QQuickItem* item, double window, double width)
+{
+    REQUIRE(item != nullptr);
+    const QRectF r = ui.geometry(item);
+    INFO(item->objectName().toStdString() << " at " << r.x() << ", " << r.width() << " wide");
+    CHECK(std::abs(r.width() - width) <= 1.0);
+    CHECK(std::abs(r.center().x() - window / 2) <= 1.0);
+}
+
+} // namespace
+
+TEST_CASE("ipad.screens_fit: on every iPad in portrait the tabs are in their columns, inside the safe area, named, in "
+          "order and "
+          "large enough",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+    app.ui.settle();
+    app.services.advance(6s);
+    app.ui.advance(300ms);
+    const auto minimum = [](const Node& node)
+    { return node.m_ObjectName.startsWith(QStringLiteral("tile")) ? 88.0 : 44.0; };
+
+    for (const QSize size : IPAD_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        const double w = size.width();
+        REQUIRE(app.ui.window_layout()->property("regular").toBool());
+
+        app.choose_tab(LOG_TAB);
+        app.ui.layout();
+        const double log = column(w, LOG_COLUMN);
+        for (const char* name : {"logHeaderCard", "logComposer", "logLastBar", "logBoard"})
+        {
+            check_centred(app.ui, app.need(QString::fromLatin1(name)), w, log);
+        }
+        // The twelve tiles are all above the tab bar.
+        const double tab_bar_top = app.ui.geometry(app.need(QStringLiteral("shellTabBar"))).top();
+        for (int i = 0; i < 12; ++i)
+        {
+            CAPTURE(i);
+            CHECK(app.ui.geometry(app.need(QStringLiteral("tile%1").arg(i))).bottom() <= tab_bar_top);
+        }
+        // The four tabs share the log column.
+        const QRectF first = app.ui.geometry(app.need(QStringLiteral("tabLog")));
+        const QRectF last = app.ui.geometry(app.need(QStringLiteral("tabSettings")));
+        CHECK(std::abs(last.right() - first.left() - log) <= 1.0);
+        CHECK(std::abs((first.left() + last.right()) / 2 - w / 2) <= 1.0);
+
+        app.choose_tab(REVIEW_TAB);
+        app.ui.layout();
+        check_centred(app.ui, app.need(QStringLiteral("reviewList")), w, column(w, READING_COLUMN));
+        check_centred(app.ui, app.need(QStringLiteral("reviewShare")), w, column(w, READING_COLUMN));
+
+        app.choose_tab(HISTORY_TAB);
+        app.ui.layout();
+        check_centred(app.ui, app.need(QStringLiteral("historyList")), w, column(w, READING_COLUMN));
+
+        for (const int tab : {LOG_TAB, REVIEW_TAB, HISTORY_TAB, SETTINGS_TAB})
+        {
+            CAPTURE(tab);
+            app.choose_tab(tab);
+            app.ui.layout();
+            expect_clean(check_names(app.ui));
+            expect_clean(check_targets(app.ui, minimum));
+            expect_clean(check_safe_area(app.ui, IPAD_TOP, IPAD_BOTTOM));
+            expect_clean(check_text_scale(app.ui));
+            // As in app.accessibility, the rows of the Settings list scrolled under the tab bar read out of order.
+            if (tab != SETTINGS_TAB)
+            {
+                expect_clean(check_reading_order(app.ui));
+            }
+        }
+    }
+}
+
+TEST_CASE("ipad.compact_is_phone: a narrow Split View window has the phone's layout", "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    // The phone, for reference: what each item's left edge and width are on the design frame.
+    app.ui.layout();
+    std::vector<std::pair<double, double>> phone;
+    const QStringList names{QStringLiteral("logHeaderCard"), QStringLiteral("logComposer"),
+                            QStringLiteral("logLastBar"),    QStringLiteral("logBoard"),
+                            QStringLiteral("tabLog"),        QStringLiteral("tabSettings")};
+    for (const QString& name : names)
+    {
+        const QRectF r = app.ui.geometry(app.need(name));
+        phone.emplace_back(r.left(), r.width());
+    }
+
+    app.ui.set_window_size(QSize(507, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    REQUIRE(app.ui.window_layout()->property("compact").toBool());
+    // The same 16 pt margins; the items are 507 - 402 = 105 pt wider, and the tabs a quarter of that each.
+    for (std::size_t i = 0; i < 4; ++i)
+    {
+        CAPTURE(names.at(static_cast<qsizetype>(i)).toStdString());
+        const QRectF r = app.ui.geometry(app.need(names.at(static_cast<qsizetype>(i))));
+        CHECK(r.left() == phone[i].first);
+        CHECK(r.width() == phone[i].second + 105);
+    }
+    CHECK(app.ui.geometry(app.need(QStringLiteral("tabLog"))).left() == 0);
+    CHECK(app.ui.geometry(app.need(QStringLiteral("tabSettings"))).right() == 507);
+}
+
+TEST_CASE("ipad.first_launch: in a larger window the first-launch screen is a narrow column in the middle",
+          "[ui][app][ipad]")
+{
+    App app(false);
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    QQuickItem* title = app.need(QStringLiteral("appTitle"));
+    QQuickItem* import = app.need(QStringLiteral("manualCard"));
+    const QRectF t = app.ui.geometry(title);
+    const QRectF b = app.ui.geometry(import);
+    CHECK(std::abs(b.width() - 480) <= 1.0);
+    CHECK(std::abs(b.center().x() - 410) <= 1.0);
+    // The group is in the middle: the gap above the title is about the gap below the last choice.
+    CHECK(t.top() > 200);
+    CHECK(b.bottom() < 1180 - 200);
+    expect_clean(check_names(app.ui));
+    expect_clean(check_safe_area(app.ui, IPAD_TOP, IPAD_BOTTOM));
+}
+
+TEST_CASE("ipad.tiles: in portrait the tiles are larger, in the phone's places, with whole labels", "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    for (const QSize size : IPAD_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.ui.layout();
+        const QRectF board = app.ui.geometry(app.need(QStringLiteral("logBoard")));
+        // The rules: a 12 pt gap, and a tile 0.7 of its width high, between the phone's 104 and 152.
+        const double tile_width = (board.width() - 2 * 12.0) / 3;
+        const double expected = std::round(std::clamp(tile_width * 0.7, 104.0, 152.0));
+        for (int i = 0; i < 12; ++i)
+        {
+            CAPTURE(i);
+            const QRectF tile = app.ui.geometry(app.need(QStringLiteral("tile%1").arg(i)));
+            CHECK(tile.height() == expected);
+            CHECK(std::abs(tile.width() - tile_width) <= 0.5);
+            // The phone's place: column i % 3 and row i / 3.
+            CHECK(std::abs(tile.left() - (board.left() + (i % 3) * (tile_width + 12.0))) <= 0.5);
+            CHECK(std::abs(tile.top() - (board.top() + (i / 3) * (expected + 12.0))) <= 0.5);
+        }
+        // The label is the larger role, and no label is cut at the default size or at the 1.3 cap.
+        QQuickItem* label = app.ui.find_item(QStringLiteral("tileLabel"), app.need(QStringLiteral("tile1")));
+        REQUIRE(label != nullptr);
+        CHECK(label->property("font").value<QFont>().pixelSize() == 17);
+        for (const double scale : {1.0, 1.3})
+        {
+            CAPTURE(scale);
+            app.ui.set_text_scale(scale);
+            expect_clean(check_text_scale(app.ui));
+        }
+        app.ui.set_text_scale(1.0);
+    }
+}
+
+TEST_CASE("ipad.toast_clear: in portrait the undo toast is under the board and covers no tile", "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    for (const QSize size : IPAD_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.ui.layout();
+        REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+        app.ui.settle();
+        app.ui.advance(300ms);
+        QQuickItem* toast = app.need(QStringLiteral("logToast"));
+        REQUIRE(toast->property("present").toBool());
+        const QRectF t = app.ui.geometry(toast);
+        CHECK(t.width() <= 520.0);
+        CHECK(std::abs(t.center().x() - size.width() / 2.0) <= 1.0);
+        CHECK(t.top() >= app.ui.geometry(app.need(QStringLiteral("logBoard"))).bottom());
+        CHECK(t.bottom() <= app.ui.geometry(app.need(QStringLiteral("shellTabBar"))).top());
+        app.services.advance(6s);
+        app.ui.advance(300ms);
+    }
+}
+
+TEST_CASE(
+    "ipad.short_window: in a window shorter than the phone's frame the tiles are shorter, down to 88 pt, the Last "
+    "bar gives way when it must, and the board ends above the tab bar",
+    "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    // The phone keeps its tiles.
+    app.ui.layout();
+    CHECK(app.ui.geometry(app.need(QStringLiteral("tile0"))).height() == 104);
+
+    // The smallest window the app allows on an iPad, and a Split View window on an iPad mini in landscape.
+    for (const QSize size : {QSize(375, 720), QSize(507, 744)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.ui.layout();
+        REQUIRE(app.ui.window_layout()->property("compact").toBool());
+        const double tab_bar_top = app.ui.geometry(app.need(QStringLiteral("shellTabBar"))).top();
+        for (int i = 0; i < 12; ++i)
+        {
+            CAPTURE(i);
+            const QRectF tile = app.ui.geometry(app.need(QStringLiteral("tile%1").arg(i)));
+            CHECK(tile.height() >= 88);
+            CHECK(tile.height() < 104);
+            CHECK(tile.bottom() <= tab_bar_top);
+        }
+        // At 375 x 720 even 88 pt tiles do not fit under the Last bar (whatever the font), so it gives way and the
+        // board moves up under the composer. At 507 x 744 it depends on the composer's height, which depends on the
+        // font: then either it is hidden, or it is shown and the board starts under it.
+        QQuickItem* last_bar = app.need(QStringLiteral("logLastBar"));
+        if (size.height() == 720)
+        {
+            CHECK_FALSE(last_bar->isVisible());
+        }
+        else if (last_bar->isVisible())
+        {
+            CHECK(app.ui.geometry(app.need(QStringLiteral("logBoard"))).top() >= app.ui.geometry(last_bar).bottom());
+        }
+        expect_clean(check_text_scale(app.ui));
+        expect_clean(check_reading_order(app.ui));
+    }
+
+    // A window as tall as the phone's design frame keeps the phone's tiles and Last bar, however narrow.
+    app.ui.set_window_size(QSize(375, 874));
+    app.ui.layout();
+    CHECK(app.ui.geometry(app.need(QStringLiteral("tile0"))).height() == 104);
+    CHECK(app.need(QStringLiteral("logLastBar"))->isVisible());
+}
+
+namespace
+{
+
+/// Every iPad window, in both orientations: sheets and alerts do not depend on the Log screen's own layout.
+const QSize IPAD_ALL_SIZES[] = {QSize(744, 1133), QSize(820, 1180), QSize(1032, 1376),
+                                QSize(1133, 744), QSize(1180, 820), QSize(1376, 1032)};
+constexpr double SHEET_WIDTH = 560.0;
+constexpr double SHEET_MARGIN = 64.0;
+constexpr double SHEET_MAX_HEIGHT = 720.0;
+constexpr double IPAD_KEYBOARD = 313.0;
+
+/// The new-day prompt over nothing, with the iPad's insets.
+constexpr auto NEW_DAY_ALERT = R"(
+            import QtQuick
+            import ErrorJournalingApp
+            SheetHost {
+                sheets: [
+                    Alert {
+                        id: alert
+                        objectName: "alert"
+                        title: "It's Sunday 8 November"
+                        message: "Saturday's log has 7 entries and hasn't been shared yet. Starting a new log keeps it in History."
+                        icon: Alert.Calendar
+                        confirmText: "Start a new log"
+                        alternateText: "Share Saturday's log first"
+                        cancelText: "Keep Saturday's log open"
+                        overrideInsets: true
+                        overrideTop: 24
+                        overrideBottom: 20
+                    }
+                ]
+            })";
+
+/// The panel of the sheet that is open in the app: the one that is shown.
+QQuickItem* open_panel(App& app, const QString& sheet)
+{
+    QQuickItem* item = app.need(sheet);
+    REQUIRE(item->property("isOpen").toBool());
+    auto* panel = item->property("panelItem").value<QQuickItem*>();
+    REQUIRE(panel != nullptr);
+    return panel;
+}
+
+/// The card is 560 wide (or the window's width less its margins), centred, and clear of the insets and the margin.
+void check_form_card(UiRig& ui, QQuickItem* panel, QSize window, double bottom_edge)
+{
+    const QRectF r = ui.geometry(panel);
+    INFO("panel " << r.x() << ", " << r.y() << " " << r.width() << " x " << r.height());
+    CHECK(std::abs(r.width() - std::min(SHEET_WIDTH, window.width() - 48.0)) <= 1.0);
+    CHECK(std::abs(r.center().x() - window.width() / 2.0) <= 1.0);
+    CHECK(r.top() >= IPAD_TOP + SHEET_MARGIN - 1.0);
+    CHECK(r.bottom() <= bottom_edge + 1.0);
+    CHECK(r.height() <= SHEET_MAX_HEIGHT + 1.0);
+}
+
+} // namespace
+
+TEST_CASE("ipad.form_sheet: on every iPad a sheet is a 560 pt card in the middle, clear of the insets and above the "
+          "keyboard, and the scrim dismisses it",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+    app.ui.settle();
+    const auto minimum = [](const Node&) { return 44.0; };
+
+    for (const QSize size : IPAD_ALL_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.choose_tab(LOG_TAB);
+        app.ui.layout();
+
+        // The Other picker: a Large sheet, so as tall as it may be.
+        QQuickItem* picker = app.need(QStringLiteral("otherPicker"));
+        REQUIRE(QMetaObject::invokeMethod(picker, "open"));
+        app.play();
+        QQuickItem* panel = open_panel(app, QStringLiteral("otherPicker"));
+        check_form_card(app.ui, panel, size, size.height() - IPAD_BOTTOM - SHEET_MARGIN);
+        const double space = size.height() - IPAD_TOP - IPAD_BOTTOM - 2 * SHEET_MARGIN;
+        CHECK(std::abs(app.ui.geometry(panel).height() - std::min(SHEET_MAX_HEIGHT, space)) <= 1.0);
+        // No grabber to drag, and the content ends inside the card.
+        CHECK_FALSE(app.need(QStringLiteral("sheetGrabber"))->isVisible());
+        const QRectF area = app.ui.geometry(picker->property("contentArea").value<QQuickItem*>());
+        CHECK(area.bottom() <= app.ui.geometry(panel).bottom() - 15.0);
+        expect_clean(check_names(app.ui));
+        expect_clean(check_targets(app.ui, minimum));
+        // check_safe_area is not used: it reads the rows of the list that are scrolled out of the card and clipped as
+        // in view. The card itself is checked against the insets and the margin above.
+
+        // The keyboard comes up over the search field: the card is above it, whole.
+        app.ui.show_keyboard(IPAD_KEYBOARD);
+        app.ui.settle();
+        app.ui.advance(100ms);
+        const QRectF lifted = app.ui.geometry(panel);
+        CHECK(lifted.bottom() <= size.height() - IPAD_KEYBOARD);
+        CHECK(lifted.top() >= IPAD_TOP + SHEET_MARGIN - 1.0);
+        app.ui.hide_keyboard();
+        app.ui.settle();
+
+        // A tap on the scrim, outside the card, dismisses it.
+        app.ui.tap(app.need(QStringLiteral("sheetScrim")), QPointF(8, 8));
+        app.play();
+        CHECK_FALSE(picker->property("isOpen").toBool());
+        CHECK(app.need(QStringLiteral("shellTabs"))->isEnabled());
+    }
+}
+
+TEST_CASE("ipad.form_sheet_content: a sheet that is as tall as its content is a card of that height, centred",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+    app.ui.settle();
+    for (const QSize size : IPAD_ALL_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.choose_tab(REVIEW_TAB);
+        app.ui.layout();
+        app.ui.tap(app.need(QStringLiteral("reviewSwipe")));
+        app.play();
+        QQuickItem* panel = open_panel(app, QStringLiteral("editSheet"));
+        const QRectF r = app.ui.geometry(panel);
+        check_form_card(app.ui, panel, size, size.height() - IPAD_BOTTOM - SHEET_MARGIN);
+        // Centred in the space between the margins.
+        const double top_limit = IPAD_TOP + SHEET_MARGIN;
+        const double bottom_limit = size.height() - IPAD_BOTTOM - SHEET_MARGIN;
+        CHECK(std::abs((r.top() - top_limit) - (bottom_limit - r.bottom())) <= 1.5);
+        expect_clean(check_names(app.ui));
+        expect_clean(check_text_scale(app.ui));
+        REQUIRE(QMetaObject::invokeMethod(app.need(QStringLiteral("editSheet")), "close"));
+        app.play();
+    }
+}
+
+TEST_CASE("ipad.alert: on an iPad an alert is the phone's card, 338 pt wide, centred in the window", "[ui][app][ipad]")
+{
+    for (const QSize size : IPAD_ALL_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        UiRig ui(size);
+        REQUIRE(ui.load_source(NEW_DAY_ALERT) != nullptr);
+        ui.set_window_size(size);
+        QQuickItem* alert = ui.find_item(QStringLiteral("alert"));
+        REQUIRE(alert != nullptr);
+        REQUIRE(QMetaObject::invokeMethod(alert, "open"));
+        ui.advance(600ms);
+        auto* panel = alert->property("panelItem").value<QQuickItem*>();
+        REQUIRE(panel != nullptr);
+        const QRectF r = ui.geometry(panel);
+        CHECK(std::abs(r.width() - 338.0) <= 1.0);
+        CHECK(std::abs(r.center().x() - size.width() / 2.0) <= 1.0);
+        // Centred between the status bar and the home indicator.
+        CHECK(std::abs((r.top() - IPAD_TOP) - (size.height() - IPAD_BOTTOM - r.bottom())) <= 1.5);
+        expect_clean(check_names(ui));
+    }
+}
+
+TEST_CASE("ipad.phone_sheet: in a Compact window a sheet is still a bottom sheet, the full width", "[ui][app][ipad]")
+{
+    App app;
+    app.ui.set_window_size(QSize(507, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    REQUIRE(app.ui.window_layout()->property("compact").toBool());
+    QQuickItem* picker = app.need(QStringLiteral("otherPicker"));
+    REQUIRE(QMetaObject::invokeMethod(picker, "open"));
+    app.play();
+    const QRectF r = app.ui.geometry(open_panel(app, QStringLiteral("otherPicker")));
+    CHECK(r.left() == 0);
+    CHECK(r.width() == 507);
+    CHECK(app.need(QStringLiteral("sheetGrabber"))->isVisible());
+}
+
+namespace
+{
+
+/// The iPads in landscape (the iPad mini, the 11-inch and the 13-inch): the Wide class, the board and the log side by
+/// side.
+const QSize IPAD_WIDE_SIZES[] = {QSize(1133, 744), QSize(1180, 820), QSize(1376, 1032)};
+constexpr double PANE_GAP = 20.0;
+constexpr double BOARD_SHARE = 0.58;
+
+/// The two panes of a Wide window `window` wide, as docs/plan/stage-8.md ("Layout rules") has them.
+struct Panes
+{
+    double m_BoardX;
+    double m_BoardWidth;
+    double m_LogX;
+    double m_LogWidth;
+};
+
+Panes panes_of(double window)
+{
+    const double inner = window - 2 * REGULAR_MARGIN - PANE_GAP;
+    const double board = std::round(inner * BOARD_SHARE);
+    return {REGULAR_MARGIN, board, REGULAR_MARGIN + board + PANE_GAP, inner - board};
+}
+
+/// Logs `count` errors on the board, a minute apart, and lets the toast go.
+void log_entries(App& app, int count)
+{
+    for (int i = 0; i < count; ++i)
+    {
+        app.services.go_to(7, 9, 40 + i, 0);
+        REQUIRE(app.services.tap(role_of(*app.services.root().board(), i % 11, "typeId").toString()));
+        app.ui.settle();
+    }
+    app.services.advance(6s);
+    app.ui.advance(300ms);
+}
+
+/// The last row of the list that is shown whole inside it: the list reuses its delegates, so the items that exist
+/// include ones that are pooled or partly clipped, which a touch would not reach.
+QQuickItem* last_row_in_view(App& app, QQuickItem* list)
+{
+    const QRectF area = app.ui.geometry(list);
+    QQuickItem* found = nullptr;
+    for (QQuickItem* row : app.ui.find_items(QStringLiteral("logPaneSwipe")))
+    {
+        if (row->isVisible() && area.contains(app.ui.geometry(row)))
+        {
+            found = row;
+        }
+    }
+    return found;
+}
+
+/// The log pane, which is made when the window is Wide.
+QQuickItem* log_pane(App& app)
+{
+    auto* pane = app.need(QStringLiteral("logPaneLoader"))->property("item").value<QQuickItem*>();
+    REQUIRE(pane != nullptr);
+    return pane;
+}
+
+void check_at(UiRig& ui, QQuickItem* item, double x, double width)
+{
+    const QRectF r = ui.geometry(item);
+    INFO(item->objectName().toStdString()
+         << " at " << r.x() << ", " << r.width() << " wide; wanted " << x << ", " << width);
+    CHECK(std::abs(r.x() - x) <= 1.0);
+    CHECK(std::abs(r.width() - width) <= 1.0);
+}
+
+} // namespace
+
+TEST_CASE(
+    "ipad.wide_screens_fit: on every iPad in landscape the board and the log are side by side, inside the safe area, "
+    "named and large enough",
+    "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 7);
+    const auto minimum = [](const Node& node)
+    { return node.m_ObjectName.startsWith(QStringLiteral("tile")) ? 88.0 : 44.0; };
+
+    for (const QSize size : IPAD_WIDE_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.choose_tab(LOG_TAB);
+        app.ui.layout();
+        REQUIRE(app.ui.window_layout()->property("wide").toBool());
+        const Panes p = panes_of(size.width());
+
+        // Two panes: the composer and the board on the left, the header card and the log on the right. No Last bar.
+        CHECK_FALSE(app.need(QStringLiteral("logLastBar"))->isVisible());
+        check_at(app.ui, app.need(QStringLiteral("logComposer")), p.m_BoardX, p.m_BoardWidth);
+        check_at(app.ui, app.need(QStringLiteral("logBoard")), p.m_BoardX, p.m_BoardWidth);
+        check_at(app.ui, app.need(QStringLiteral("logHeaderCard")), p.m_LogX, p.m_LogWidth);
+        check_at(app.ui, app.need(QStringLiteral("logPaneCard")), p.m_LogX, p.m_LogWidth);
+        // Both panes start a screen margin (16 pt) under the status bar.
+        const double top = IPAD_TOP + 16.0;
+        CHECK(std::abs(app.ui.geometry(app.need(QStringLiteral("logComposer"))).top() - top) <= 1.0);
+        CHECK(std::abs(app.ui.geometry(app.need(QStringLiteral("logHeaderCard"))).top() - top) <= 1.0);
+
+        // The board fills its pane: the bottom row ends a screen margin above the tab bar; the tiles are in the phone's
+        // places.
+        const double tab_bar_top = app.ui.geometry(app.need(QStringLiteral("shellTabBar"))).top();
+        const QRectF board = app.ui.geometry(app.need(QStringLiteral("logBoard")));
+        const double tile_width = (p.m_BoardWidth - 2 * 12.0) / 3;
+        const double tile_height = app.ui.geometry(app.need(QStringLiteral("tile0"))).height();
+        CHECK(tile_height >= 88);
+        for (int i = 0; i < 12; ++i)
+        {
+            CAPTURE(i);
+            const QRectF tile = app.ui.geometry(app.need(QStringLiteral("tile%1").arg(i)));
+            CHECK(tile.height() == tile_height);
+            CHECK(std::abs(tile.width() - tile_width) <= 0.5);
+            CHECK(std::abs(tile.left() - (board.left() + (i % 3) * (tile_width + 12.0))) <= 0.5);
+            CHECK(std::abs(tile.top() - (board.top() + (i / 3) * (tile_height + 12.0))) <= 0.5);
+        }
+        CHECK(std::abs(app.ui.geometry(app.need(QStringLiteral("tile11"))).bottom() - (tab_bar_top - 16.0)) <= 4.0);
+
+        // The log pane: under the header card, to the same foot as the board, with Share log inside it.
+        const QRectF card = app.ui.geometry(app.need(QStringLiteral("logPaneCard")));
+        const QRectF header = app.ui.geometry(app.need(QStringLiteral("logHeaderCard")));
+        CHECK(std::abs(card.top() - (header.bottom() + 12.0)) <= 1.0);
+        CHECK(std::abs(card.bottom() - (tab_bar_top - 16.0)) <= 1.0);
+        const QRectF share = app.ui.geometry(app.need(QStringLiteral("logPaneShare")));
+        CHECK(card.contains(share));
+        CHECK(app.need(QStringLiteral("logPaneList"))->property("count").toInt() == 7);
+
+        for (const double scale : {1.0, 1.3})
+        {
+            CAPTURE(scale);
+            app.ui.set_text_scale(scale);
+            app.ui.layout();
+            expect_clean(check_names(app.ui));
+            expect_clean(check_targets(app.ui, minimum));
+            expect_clean(check_text_scale(app.ui));
+        }
+        app.ui.set_text_scale(1.0);
+        app.ui.layout();
+        expect_clean(check_safe_area(app.ui, IPAD_TOP, IPAD_BOTTOM));
+    }
+}
+
+TEST_CASE("ipad.log_pane: the log pane lists the log, shows the newest entry, and opens, copies, deletes and shares",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    log_entries(app, 3);
+    app.ui.layout();
+    QQuickItem* pane = log_pane(app);
+    QQuickItem* list = app.need(QStringLiteral("logPaneList"));
+    CHECK(list->property("count").toInt() == 3);
+    CHECK(app.need(QStringLiteral("logPaneCount"))->property("text").toString() == QStringLiteral("3 entries"));
+
+    // The rows are in time order, and the prefix of a line is in the secondary colour, as on Review.
+    const std::vector<QQuickItem*> rows = app.ui.find_items(QStringLiteral("logPaneRow"));
+    REQUIRE(rows.size() == 3);
+    CHECK(app.ui.geometry(rows[0]).top() < app.ui.geometry(rows[1]).top());
+    QQuickItem* first_line = app.ui.find_item(QStringLiteral("logPaneLine"), rows[0]);
+    REQUIRE(first_line != nullptr);
+    CHECK(first_line->property("text").toString().contains(QStringLiteral("T|")));
+    CHECK(first_line->property("textFormat").toInt() == 4); // Text.StyledText
+
+    // More entries than fit: the newest is in view.
+    log_entries(app, 20);
+    app.ui.layout();
+    CHECK(list->property("count").toInt() == 23);
+    CHECK(list->property("atYEnd").toBool());
+    CHECK(app.need(QStringLiteral("logPaneCount"))->property("text").toString() == QStringLiteral("23 entries"));
+
+    // A tap on a row opens Edit entry on it, over the window; Cancel leaves the log as it was.
+    QQuickItem* row_in_view = last_row_in_view(app, list);
+    REQUIRE(row_in_view != nullptr);
+    app.ui.tap(row_in_view);
+    app.play();
+    QQuickItem* editor = app.need(QStringLiteral("editSheet"));
+    CHECK(editor->property("isOpen").toBool());
+    REQUIRE(QMetaObject::invokeMethod(editor, "close"));
+    app.play();
+    CHECK(list->property("count").toInt() == 23);
+
+    // Copy-all confirms itself.
+    app.tap(QStringLiteral("logPaneCopyAll"));
+    app.ui.advance(16ms);
+    CHECK_FALSE(pane->property("copiedText").toString().isEmpty());
+
+    // Delete on a swipe removes the row, and the toast's Undo, which is in the pane, brings it back.
+    QQuickItem* swipe = last_row_in_view(app, list);
+    REQUIRE(swipe != nullptr);
+    const QRectF s = app.ui.geometry(swipe);
+    app.ui.swipe(swipe, QPointF(s.width() - 8, s.height() / 2), QPointF(8, s.height() / 2));
+    app.ui.advance(300ms);
+    QQuickItem* delete_action = app.ui.find_item(QStringLiteral("deleteAction"), swipe);
+    REQUIRE(delete_action != nullptr);
+    app.ui.tap(delete_action);
+    app.ui.settle();
+    app.play();
+    CHECK(list->property("count").toInt() == 22);
+    app.tap(QStringLiteral("toastUndo"));
+    app.ui.settle();
+    app.play();
+    CHECK(list->property("count").toInt() == 23);
+
+    // Share log shares the open log, and the popover points at the button.
+    const QRectF share = app.ui.geometry(app.need(QStringLiteral("logPaneShare")));
+    app.tap(QStringLiteral("logPaneShare"));
+    app.ui.settle();
+    REQUIRE(app.services.platform().sheets_presented() == 1);
+    REQUIRE(app.services.platform().anchors().size() == 1);
+    REQUIRE(app.services.platform().anchors()[0].has_value());
+    const ej::bridge::ShareAnchor anchor = *app.services.platform().anchors()[0];
+    CHECK(std::abs(anchor.m_X - share.x()) <= 1.0);
+    CHECK(std::abs(anchor.m_Y - share.y()) <= 1.0);
+    CHECK(std::abs(anchor.m_Width - share.width()) <= 1.0);
+    CHECK(std::abs(anchor.m_Height - share.height()) <= 1.0);
+}
+
+TEST_CASE("ipad.log_pane_empty: a log with no entries says so, and has nothing to copy or share", "[ui][app][ipad]")
+{
+    App app;
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    CHECK(app.need(QStringLiteral("logPaneEmpty"))->isVisible());
+    CHECK_FALSE(app.need(QStringLiteral("logPaneCopyAll"))->isEnabled());
+    CHECK_FALSE(app.need(QStringLiteral("logPaneShare"))->isEnabled());
+}
+
+TEST_CASE(
+    "ipad.wide_toast_clear: in landscape the undo toast is in the log pane, over its foot, and covers no tile and "
+    "no row",
+    "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 30);
+    for (const QSize size : IPAD_WIDE_SIZES)
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.choose_tab(LOG_TAB);
+        app.ui.layout();
+        REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+        app.ui.settle();
+        app.ui.advance(300ms);
+        QQuickItem* toast = app.need(QStringLiteral("logToast"));
+        REQUIRE(toast->property("present").toBool());
+        const QRectF t = app.ui.geometry(toast);
+        const QRectF card = app.ui.geometry(app.need(QStringLiteral("logPaneCard")));
+        const QRectF list = app.ui.geometry(app.need(QStringLiteral("logPaneList")));
+        const QRectF share = app.ui.geometry(app.need(QStringLiteral("logPaneShare")));
+        // In the pane, between the list and the Share button.
+        CHECK(t.left() >= card.left());
+        CHECK(t.right() <= card.right());
+        CHECK(t.top() >= list.bottom() - 0.5);
+        CHECK(t.bottom() <= share.top() + 0.5);
+        // No tile is under it, and no row of the list.
+        for (int i = 0; i < 12; ++i)
+        {
+            CAPTURE(i);
+            CHECK_FALSE(t.intersects(app.ui.geometry(app.need(QStringLiteral("tile%1").arg(i)))));
+        }
+        for (QQuickItem* row : app.ui.find_items(QStringLiteral("logPaneRow")))
+        {
+            if (row->isVisible())
+            {
+                CHECK_FALSE(t.intersects(app.ui.geometry(row)));
+            }
+        }
+        app.services.advance(6s);
+        app.ui.advance(300ms);
+    }
+}
+
+TEST_CASE("ipad.rotation_keeps_state: a draft, the focus, a toast with Undo and an open sheet survive a change of size",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 3);
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+
+    // A draft in the composer, with the focus there, and a toast with Undo.
+    app.ui.tap(app.need(QStringLiteral("noteInput")));
+    app.ui.type(QStringLiteral("Caller asked for the next song"));
+    app.ui.advance(16ms);
+    QQuickItem* input = app.ui.focused_input();
+    REQUIRE(input != nullptr);
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 1, "typeId").toString()));
+    app.ui.settle();
+    app.ui.advance(100ms);
+    REQUIRE(app.need(QStringLiteral("logToast"))->property("present").toBool());
+    const int entries = app.services.root().timeline()->rowCount();
+
+    for (const QSize size : {QSize(1180, 820), QSize(820, 1180), QSize(402, 874), QSize(1133, 744)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(size.width() > 600 ? IPAD_TOP : 59.0, size.width() > 600 ? IPAD_BOTTOM : 34.0);
+        app.ui.layout();
+        CHECK(app.services.session().draft() == QStringLiteral("Caller asked for the next song"));
+        CHECK(app.ui.focused_input() == input);
+        CHECK(app.need(QStringLiteral("logToast"))->property("present").toBool());
+        CHECK(app.services.root().timeline()->rowCount() == entries);
+    }
+
+    // The toast's Undo still undoes the entry.
+    app.tap(QStringLiteral("toastUndo"));
+    app.ui.settle();
+    app.play();
+    CHECK(app.services.root().timeline()->rowCount() == entries - 1);
+
+    // A sheet that is open follows the window: it is still open, and in the middle of the new one.
+    QQuickItem* picker = app.need(QStringLiteral("otherPicker"));
+    REQUIRE(QMetaObject::invokeMethod(picker, "open"));
+    app.play();
+    for (const QSize size : {QSize(1180, 820), QSize(820, 1180)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.ui.layout();
+        CHECK(picker->property("isOpen").toBool());
+        check_centred(app.ui, open_panel(app, QStringLiteral("otherPicker")), size.width(), 560.0);
+    }
+    REQUIRE(QMetaObject::invokeMethod(picker, "close"));
+    app.play();
+}
+
+TEST_CASE(
+    "ipad.wide_reading_order: a screen reader reads the header card, the composer and the board, then the log and "
+    "Share log, then the tabs",
+    "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 3);
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+
+    std::vector<QString> order;
+    for (const Node& node : app.ui.accessible_tree())
+    {
+        if (node.m_Visible && !node.m_ObjectName.isEmpty())
+        {
+            order.push_back(node.m_ObjectName);
+        }
+    }
+    const auto index = [&order](const QString& name)
+    {
+        const auto found = std::find(order.begin(), order.end(), name);
+        INFO(name.toStdString());
+        REQUIRE(found != order.end());
+        return std::distance(order.begin(), found);
+    };
+    const std::vector<QString> expected{QStringLiteral("logHeaderCard"), QStringLiteral("tile0"),
+                                        QStringLiteral("tile11"),        QStringLiteral("logPaneCopyAll"),
+                                        QStringLiteral("logPaneRow"),    QStringLiteral("logPaneShare"),
+                                        QStringLiteral("tabLog")};
+    for (std::size_t i = 1; i < expected.size(); ++i)
+    {
+        CAPTURE(expected[i - 1].toStdString(), expected[i].toStdString());
+        CHECK(index(expected[i - 1]) < index(expected[i]));
+    }
+}
+
+TEST_CASE("ipad.wide_is_not_phone: the phone and the Regular class have no log pane", "[ui][app][ipad]")
+{
+    App app;
+    CHECK(app.ui.find_item(QStringLiteral("logPaneCard")) == nullptr);
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    CHECK(app.ui.find_item(QStringLiteral("logPaneCard")) == nullptr);
+    CHECK(app.need(QStringLiteral("logLastBar"))->isVisible());
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.layout();
+    CHECK(app.ui.find_item(QStringLiteral("logPaneCard")) != nullptr);
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.layout();
+    CHECK(app.ui.find_item(QStringLiteral("logPaneCard")) == nullptr);
+}
+
+TEST_CASE("ipad.keyboard_rotation: with the keyboard up over the composer, a change of window keeps the field focused "
+          "and above the keyboard",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 3);
+    struct Step
+    {
+        QSize m_Size;
+        double m_Keyboard;
+    };
+    // The iPad's keyboard is taller in landscape (398 pt) than in portrait (313 pt); the system sends the new rectangle
+    // when the window turns.
+    const Step steps[] = {{QSize(1180, 820), 398.0},
+                          {QSize(820, 1180), 313.0},
+                          {QSize(1133, 744), 398.0},
+                          {QSize(744, 1133), 313.0},
+                          {QSize(402, 874), 301.0}};
+    app.ui.set_window_size(steps[0].m_Size);
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    app.ui.tap(app.need(QStringLiteral("noteInput")));
+    app.ui.show_keyboard(steps[0].m_Keyboard);
+    app.ui.settle();
+    QQuickItem* input = app.ui.focused_input();
+    REQUIRE(input != nullptr);
+    app.ui.type(QStringLiteral("Caller asked"));
+    app.ui.advance(16ms);
+
+    for (const Step& step : steps)
+    {
+        CAPTURE(step.m_Size.width(), step.m_Size.height(), step.m_Keyboard);
+        app.ui.set_window_size(step.m_Size);
+        const bool tablet = step.m_Size.width() > 600;
+        app.ui.set_safe_area(tablet ? IPAD_TOP : 59.0, tablet ? IPAD_BOTTOM : 34.0);
+        app.ui.show_keyboard(step.m_Keyboard);
+        app.ui.settle();
+        app.ui.advance(100ms);
+        CHECK(app.ui.keyboard_up());
+        CHECK(app.ui.focused_input() == input);
+        CHECK(app.services.session().draft() == QStringLiteral("Caller asked"));
+        const QRectF field = app.ui.geometry(input);
+        CHECK(field.bottom() <= step.m_Size.height() - step.m_Keyboard);
+        CHECK(field.top() >= (tablet ? IPAD_TOP : 59.0));
+    }
+}
+
+TEST_CASE("ipad.resize_review: Review keeps its place in the log across a change of window", "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    log_entries(app, 40);
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.choose_tab(REVIEW_TAB);
+    app.ui.layout();
+    QQuickItem* list = app.need(QStringLiteral("reviewList"));
+    // Half way down the log.
+    list->setProperty("contentY", (list->property("contentHeight").toDouble() - list->height()) / 2);
+    app.ui.layout();
+    const auto top_row = [&list]
+    {
+        int row = -1;
+        REQUIRE(QMetaObject::invokeMethod(list, "indexAt", Q_RETURN_ARG(int, row), Q_ARG(double, 10.0),
+                                          Q_ARG(double, list->property("contentY").toDouble() + 10.0)));
+        return row;
+    };
+    const int before = top_row();
+    REQUIRE(before > 5);
+
+    for (const QSize size : {QSize(1180, 820), QSize(402, 874), QSize(820, 1180), QSize(507, 744)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(size.width() > 600 ? IPAD_TOP : 59.0, size.width() > 600 ? IPAD_BOTTOM : 34.0);
+        app.ui.layout();
+        CHECK(app.current_tab() == REVIEW_TAB);
+        CHECK(std::abs(top_row() - before) <= 2);
+    }
+}
+
+TEST_CASE(
+    "ipad.sheet_across_classes: a sheet that is open turns into a bottom sheet in a Compact window and back into a "
+    "card",
+    "[ui][app][ipad]")
+{
+    App app;
+    app.ui.set_window_size(QSize(820, 1180));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    app.ui.layout();
+    QQuickItem* picker = app.need(QStringLiteral("otherPicker"));
+    REQUIRE(QMetaObject::invokeMethod(picker, "open"));
+    app.play();
+    check_centred(app.ui, open_panel(app, QStringLiteral("otherPicker")), 820, 560.0);
+
+    // Split View makes the window narrow: the same sheet is the phone's bottom sheet, the full width, with its grabber.
+    app.ui.set_window_size(QSize(507, 1180));
+    app.ui.layout();
+    REQUIRE(picker->property("isOpen").toBool());
+    const QRectF narrow = app.ui.geometry(open_panel(app, QStringLiteral("otherPicker")));
+    CHECK(narrow.left() == 0);
+    CHECK(narrow.width() == 507);
+    CHECK(narrow.bottom() >= 1180);
+    CHECK(app.need(QStringLiteral("sheetGrabber"))->isVisible());
+
+    // And wide again: a card in the middle.
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.layout();
+    REQUIRE(picker->property("isOpen").toBool());
+    check_centred(app.ui, open_panel(app, QStringLiteral("otherPicker")), 1180, 560.0);
+    CHECK_FALSE(app.need(QStringLiteral("sheetGrabber"))->isVisible());
+    REQUIRE(QMetaObject::invokeMethod(picker, "close"));
+    app.play();
+    CHECK(app.need(QStringLiteral("shellTabs"))->isEnabled());
 }
 
 #include "app_flow_test.moc"

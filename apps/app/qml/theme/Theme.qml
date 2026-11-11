@@ -246,12 +246,11 @@ QtObject {
         readonly property real boardShare: 0.58
         readonly property real tileHeightRatio: 0.7
         readonly property real tileHeightMax: 152
-        readonly property real tileLabel: 17
         readonly property real badge: 28
-        readonly property real badgeText: 15
         readonly property real toastMaxWidth: 520
         readonly property real sheetWidth: 560
         readonly property real sheetMargin: 64
+        readonly property real sheetMaxHeight: 720
         readonly property real minimumWindowWidth: 375
         readonly property real minimumWindowHeight: 720
     }
@@ -582,6 +581,18 @@ QtObject {
             textScale: set.textScale
             dpi: set.dpi
         }
+        // The tile label and the count badge of a larger window (Stage 8): the board's tiles are larger and are read at
+        // arm's length, so their text is too. Every other role keeps its size on an iPad.
+        readonly property FontRole tileLabelLarge: FontRole {
+            basePt: 17
+            weight: 600
+            lineHeight: 1.2
+            largeLetterSpacing: -0.2
+            maxLines: 4
+            scaleCap: 1.3
+            textScale: set.textScale
+            dpi: set.dpi
+        }
         readonly property FontRole caption: FontRole {
             basePt: 13
             weight: 400
@@ -648,6 +659,13 @@ QtObject {
         // The count badge of a tile: it keeps its 24 pt pill, so the number does not grow past the default size.
         readonly property FontRole badge: FontRole {
             basePt: 13
+            weight: 700
+            scaleCap: 1.0
+            textScale: set.textScale
+            dpi: set.dpi
+        }
+        readonly property FontRole badgeLarge: FontRole {
+            basePt: 15
             weight: 700
             scaleCap: 1.0
             textScale: set.textScale

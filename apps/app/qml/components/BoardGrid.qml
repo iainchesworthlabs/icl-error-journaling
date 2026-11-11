@@ -43,8 +43,13 @@ Item {
     signal tileSingleTapped(int row, string typeId)
     signal emptyTapped(int position)
 
-    readonly property real tileWidth: (width + Theme.space.tileGap) / Theme.size.boardColumns - Theme.space.tileGap
-    readonly property real boardHeight: (Theme.size.tileHeight + Theme.space.tileGap) * Theme.size.boardRows - Theme.space.tileGap
+    // The height of a tile and the gap between tiles: the phone's unless the screen gives others (the Log screen does, in
+    // a larger window or a window too short for the phone's tiles; Stage 8).
+    property real tileHeight: Theme.size.tileHeight
+    property real gap: Theme.space.tileGap
+
+    readonly property real tileWidth: (width + gap) / Theme.size.boardColumns - gap
+    readonly property real boardHeight: (tileHeight + gap) * Theme.size.boardRows - gap
 
     implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
     implicitHeight: boardHeight
@@ -54,7 +59,7 @@ Item {
 
         objectName: "boardGrid"
         columns: Theme.size.boardColumns
-        spacing: Theme.space.tileGap
+        spacing: root.gap
 
         Repeater {
             id: tiles
@@ -71,7 +76,7 @@ Item {
 
                 objectName: "tile" + index
                 width: root.tileWidth
-                height: Theme.size.tileHeight
+                height: root.tileHeight
                 skeleton: root.skeleton
                 covered: tile.index < root.coveredTiles
                 onPressed: root.tilePressed(tile.index, tile.typeId, tile.isOther)
@@ -105,10 +110,10 @@ Item {
             required property bool isEmpty
 
             objectName: "boardNoteAction"
-            x: (index % Theme.size.boardColumns) * (root.tileWidth + Theme.space.tileGap)
-            y: Math.floor(index / Theme.size.boardColumns) * (Theme.size.tileHeight + Theme.space.tileGap)
+            x: (index % Theme.size.boardColumns) * (root.tileWidth + root.gap)
+            y: Math.floor(index / Theme.size.boardColumns) * (root.tileHeight + root.gap)
             width: root.tileWidth
-            height: Theme.size.tileHeight
+            height: root.tileHeight
             // Not every row is offered: Other and an empty position cannot be held, and the empty-board card covers some.
             readonly property bool offered: !isOther && !isEmpty && index >= root.coveredTiles
             Accessible.role: Accessible.Button
