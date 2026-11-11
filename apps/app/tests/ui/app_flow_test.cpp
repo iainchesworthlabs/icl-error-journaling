@@ -772,6 +772,11 @@ TEST_CASE("app.settings: the import and export rows go through the chooser to th
     App app;
     app.choose_tab(SETTINGS_TAB);
 
+    // The list has the unit prefix and totals rows now (F4), so the row is reached by scrolling to the end.
+    QQuickItem* list = app.need(QStringLiteral("settingsFlickable"));
+    list->setProperty("contentY", qMax(0.0, list->property("contentHeight").toDouble() - list->height()));
+    app.ui.advance(50ms);
+
     // Export: the row asks the chooser for a place, offering the name of a setup file, and the chosen path is written.
     app.tap(QStringLiteral("settingsImportExport"));
     app.play();

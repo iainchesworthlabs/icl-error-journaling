@@ -646,7 +646,7 @@ def settings_screen(p: Page) -> str:
         f'<p style="margin: -4px 4px 0; font-size: 13px; line-height: 1.4; color: {c["textSecondary"]}">Hold and drag a tile to move it. '
         f"Tap a tile to change its error type, or + to add one. Each type keeps its colour.</p>"
         + p.grouped([("Error types", "", True), ("Note templates", "", True), ("Locations", "", True)])
-        + p.grouped([("Facilitator", "Sam Example", True), ("Time format", "24-hour", True)])
+        + p.grouped([("Facilitator", "Sam Example", True), ("Unit prefix", "UNIT", True), ("Include a totals line", "Off", False), ("Time format", "24-hour", True)])
         + p.grouped([("Import or export setup", "", True)])
         + "</div>"
         + p.tab_bar(3)

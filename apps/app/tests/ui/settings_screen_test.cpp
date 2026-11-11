@@ -309,7 +309,7 @@ TEST_CASE("settings.rows: the rows show the values of the model, with no counts,
         INFO(row.toStdString());
         CHECK(fixture.m_Ui.geometry(fixture.require(row)).height() == 44.0);
     }
-    // The unit prefix and the totals switch are not on the list: they are on the Facilitator page.
+    // The Facilitator page has its own unit prefix row and totals switch; the list has rows of its own for them (F4).
     CHECK(fixture.shown(QStringLiteral("settingsUnitPrefix")) == nullptr);
     CHECK(fixture.shown(QStringLiteral("settingsTotals")) == nullptr);
 
@@ -1349,4 +1349,32 @@ TEST_CASE("settings.about: the licence text is whole at the largest text size an
         CHECK(paragraph->property("contentHeight").toDouble() <= paragraph->height() + 1.0);
     }
     expect_clean(check_everything(fixture.m_Ui, min_target));
+}
+
+TEST_CASE("settings.list_rows: the unit prefix and the totals line are on the list, below the facilitator (F4)",
+          "[ui][settings_screen]")
+{
+    Fixture fixture;
+    QQuickItem* facilitator = fixture.require(QStringLiteral("settingsFacilitator"));
+    QQuickItem* prefix = fixture.require(QStringLiteral("settingsUnitPrefixRow"));
+    QQuickItem* totals = fixture.require(QStringLiteral("settingsTotalsRow"));
+    CHECK(prefix->property("text").toString() == QStringLiteral("Unit prefix"));
+    CHECK(prefix->property("value").toString() == QStringLiteral("UNIT"));
+    CHECK(totals->property("text").toString() == QStringLiteral("Include a totals line"));
+    CHECK(fixture.m_Ui.geometry(prefix).top() >= fixture.m_Ui.geometry(facilitator).bottom() - 0.5);
+    CHECK(fixture.m_Ui.geometry(totals).top() >= fixture.m_Ui.geometry(prefix).bottom() - 0.5);
+
+    // The switch is the setting's own: it saves and moves.
+    CHECK_FALSE(fixture.settings().include_totals());
+    const std::size_t before = fixture.saves();
+    fixture.tap(QStringLiteral("settingsTotalsRow"));
+    fixture.m_Ui.settle();
+    CHECK(fixture.saves() == before + 1);
+    CHECK(fixture.settings().include_totals());
+    CHECK(totals->property("checked").toBool());
+
+    // The prefix row opens the unit prefix page, with the value in the field.
+    fixture.open_page(QStringLiteral("settingsUnitPrefixRow"));
+    CHECK(fixture.depth() == 2);
+    CHECK(fixture.require(QStringLiteral("formInput"))->property("text").toString() == "UNIT");
 }

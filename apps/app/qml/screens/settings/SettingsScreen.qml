@@ -139,6 +139,9 @@ Item {
             onFacilitatorRequested: stack.push(textPage, {
                 "kind": "facilitator"
             })
+            onUnitPrefixRequested: stack.push(textPage, {
+                "kind": "unitPrefix"
+            })
             onTimeFormatRequested: stack.push(timeFormatPage)
             onImportExportRequested: stack.push(importExportPage)
             onAboutRequested: stack.push(aboutPage)
