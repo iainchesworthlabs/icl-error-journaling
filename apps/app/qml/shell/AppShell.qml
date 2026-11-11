@@ -338,6 +338,7 @@ Item {
                     onErrorTypesRequested: pushPage(errorTypesPage, {})
                     onTemplatesRequested: pushPage(templatesPage, {})
                     onLocationsRequested: pushPage(locationsPage, {})
+                    onUnitEnvironmentsRequested: pushPage(unitEnvironmentsPage, {})
                     onOpenUrlRequested: url => root.urlOpener.open(url)
                     onImportRequested: root.fileChooser.chooseToOpen()
                     onExportRequested: root.fileChooser.chooseToSave(SetupFile.defaultFileName)
@@ -522,6 +523,17 @@ Item {
         id: locationsPage
 
         Locations {
+            settings: root.settings
+            // The sheet of the editor covers the tab bar, as every sheet does.
+            sheetLayer: root.sheetLayer
+            onCloseRequested: StackView.view.pop()
+        }
+    }
+
+    Component {
+        id: unitEnvironmentsPage
+
+        UnitEnvironments {
             settings: root.settings
             // The sheet of the editor covers the tab bar, as every sheet does.
             sheetLayer: root.sheetLayer

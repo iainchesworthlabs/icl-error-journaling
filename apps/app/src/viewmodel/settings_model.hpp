@@ -165,6 +165,16 @@ public:
     /// Retires the location: it leaves the list and the pickers, and past logs still name it.
     Q_INVOKABLE QString removeLocation(const QString& id);
 
+    // The environments of a unit, which Today's details offers (PRF-11). `unitEnvironments` lists them in the order the
+    // picker shows them. A name is lower-case letters, digits and dashes, at most 20 characters, not starting or ending
+    // with a dash; upper case is lowered; none is listed twice; at least one stays. Each call returns "" on success or the
+    // refusal in plain words. `from` and `to` are rows of `unitEnvironments`.
+    Q_INVOKABLE QString addUnitEnvironment(const QString& name);
+    Q_INVOKABLE QString renameUnitEnvironment(const QString& from, const QString& to);
+    Q_INVOKABLE QString moveUnitEnvironment(int from, int to);
+    /// A log whose unit has this environment keeps it; the picker stops offering it.
+    Q_INVOKABLE QString removeUnitEnvironment(const QString& name);
+
     /// A new type goes to the end of the master list and onto the first empty board position, in the same change (one
     /// save); when the board is full it is not on the board. `errorTypeAdded` says where it went once it is in force.
     Q_INVOKABLE QString addErrorType(const QString& name);

@@ -1052,6 +1052,13 @@ void scene_locations(Phone& phone)
     phone.play();
 }
 
+void scene_unit_environments(Phone& phone)
+{
+    open_settings_page(phone, QStringLiteral("settingsUnitEnvironments"));
+    phone.type_into(QStringLiteral("newEnvironmentField"), QStringLiteral("Staging"));
+    phone.play();
+}
+
 void scene_templates(Phone& phone)
 {
     open_settings_page(phone, QStringLiteral("settingsTemplates"));
@@ -1195,6 +1202,8 @@ std::vector<Scene> phone_scenes()
                         "from the mock-up's.")},
         {QStringLiteral("Locations"), TODAY, scene_locations,
          QStringLiteral("A third location, East Depot, added, and \"West Yard\" typed in the new-location field.")},
+        {QStringLiteral("UnitEnvironments"), TODAY, scene_unit_environments,
+         QStringLiteral("Settings, Unit environments (the default two), \"Staging\" typed in the new-environment field.")},
         {QStringLiteral("Templates"), TODAY, scene_templates,
          QStringLiteral("Settings, Note templates (the sample's two).")},
         {QStringLiteral("TemplateEdit"), TODAY, scene_template_edit,

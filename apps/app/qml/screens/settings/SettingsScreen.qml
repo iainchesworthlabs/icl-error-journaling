@@ -26,7 +26,7 @@ import ErrorJournalingApp
 //
 // What it leaves to the shell, as signals (the editors are package 4.13, the file dialog is the platform's):
 //
-//   errorTypesRequested, templatesRequested, locationsRequested   open the editor of that list
+//   errorTypesRequested, templatesRequested, locationsRequested, unitEnvironmentsRequested   open the editor of that list
 //   importRequested, exportRequested                              choose a file, then `settings.loadImport(path)` or
 //                                                                 `settings.exportTo(path)`
 //   openUrlRequested                                               open an address (the source code) in the browser
@@ -48,6 +48,7 @@ Item {
     signal errorTypesRequested
     signal templatesRequested
     signal locationsRequested
+    signal unitEnvironmentsRequested
     signal importRequested
     signal exportRequested
     // An address, such as the source code, is to be opened in the browser (the About page).
@@ -136,6 +137,7 @@ Item {
             onErrorTypesRequested: root.errorTypesRequested()
             onTemplatesRequested: root.templatesRequested()
             onLocationsRequested: root.locationsRequested()
+            onUnitEnvironmentsRequested: root.unitEnvironmentsRequested()
             onFacilitatorRequested: stack.push(textPage, {
                 "kind": "facilitator"
             })
