@@ -246,7 +246,7 @@ Item {
 
         y: main.height
         width: parent.width
-        height: rowTop + rowHeight + Theme.border.hairline * (root.reduced ? 2 : 6)
+        height: rowTop + rowHeight + Theme.border.hairline * (root.reduced ? 2 : 6) // literal-ok: hairline multiples of the strip's padding, as the row above
         visible: root.missingCount > 0 && !root.skeleton
 
         Rectangle {
