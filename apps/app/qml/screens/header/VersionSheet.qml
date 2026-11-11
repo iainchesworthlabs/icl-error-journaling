@@ -209,7 +209,8 @@ Sheet {
             objectName: "versionScroller"
             y: nav.height
             width: parent.width
-            height: Math.max(0, footer.y - y - Theme.space.sectionGap)
+            // Down to the button, so the last line of the sheet is whole at rest at the default size (Stage 7, F7).
+            height: Math.max(0, footer.y - y)
             clip: true
             contentWidth: width
             contentHeight: column.height + Theme.space.sectionGap
