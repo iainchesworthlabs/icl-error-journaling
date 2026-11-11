@@ -182,6 +182,22 @@ Violations check_reading_order(UiRig& rig)
     return out;
 }
 
+/// Whether the item is in a row that scrolls sideways, such as the template chips at a large text size: what lies past the
+/// edge of the window is reached by the scroll, and is not lost.
+static bool in_sideways_scroller(const QQuickItem* item)
+{
+    constexpr int HORIZONTAL_FLICK = 1; // Flickable.HorizontalFlick
+    for (const QQuickItem* up = item->parentItem(); up != nullptr; up = up->parentItem())
+    {
+        if (up->inherits("QQuickFlickable") && up->property("flickableDirection").toInt() == HORIZONTAL_FLICK &&
+            up->property("contentWidth").toReal() > up->width() + EPSILON)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 Violations check_text_scale(UiRig& rig)
 {
     Violations out;
@@ -207,7 +223,7 @@ Violations check_text_scale(UiRig& rig)
         {
             out.push_back(QStringLiteral("text is wider than its box: ") + label(node));
         }
-        if (node.m_Rect.left() < -EPSILON || node.m_Rect.right() > window_width + EPSILON)
+        if ((node.m_Rect.left() < -EPSILON || node.m_Rect.right() > window_width + EPSILON) && !in_sideways_scroller(item))
         {
             out.push_back(QStringLiteral("text leaves the window sideways: ") + label(node));
         }
