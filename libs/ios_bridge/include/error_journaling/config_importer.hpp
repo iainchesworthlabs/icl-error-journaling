@@ -61,11 +61,15 @@ private:
 };
 
 /// Removes the files a past import may have left: `Documents/Inbox` (where the system copies a file opened in the
-/// application) and the directory the export is written to. Run at launch. Returns how many files went; a directory
+/// application), the directory the export is written to, and the directory the Android picker and "Open with" copy to. Run at launch. Returns how many files went; a directory
 /// that does not exist is not an error and nothing else is touched.
 std::size_t purge_import_leftovers(const QString& documents_directory, const QString& temporary_directory);
 
 /// The directory under the temporary directory that the export is written to.
 [[nodiscard]] QString export_directory(const QString& temporary_directory);
+
+/// The directory under the temporary directory that Android copies a picked or opened setup file to
+/// (`android_import_directory_name`). It is purged at launch on every platform, and empty where nothing writes to it.
+[[nodiscard]] QString import_directory(const QString& temporary_directory);
 
 } // namespace ej::bridge

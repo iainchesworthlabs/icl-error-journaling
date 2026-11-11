@@ -1,0 +1,181 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The Android emulator smoke test (docs/plan/stage-9.md, "CI jobs", package 9.8; docs/ci.md, "Android emulator smoke test").
+# Builds the android-emulator preset (x86_64) into an APK, starts an API 36 emulator on a runner with KVM, installs the APK
+# and runs tools/ci/android_smoke.py: the application starts, reaches its first lifecycle line, survives Home and a return,
+# logs no fault, and Package Manager offers it for the setup file's types only. Not a required check: the owner's decision 8
+# is that it stays non-blocking for two weeks and is made required if it is stable (the pass rate is in docs/ci.md).
+#
+# It runs on a push to develop, by hand, and on a pull request that carries the label `android-emulator`.
+name: Android emulator
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "libs/**"
+      - "apps/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "vcpkg.json"
+      - "tools/ci/android_smoke.py"
+      - ".github/workflows/android-emulator.yml"
+      - ".github/toolchain-versions.json"
+  pull_request:
+    branches: [develop]
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - "libs/**"
+      - "apps/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "vcpkg.json"
+      - "tools/ci/android_smoke.py"
+      - ".github/workflows/android-emulator.yml"
+      - ".github/toolchain-versions.json"
+  workflow_dispatch:
+
+concurrency:
+  group: android-emulator-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/main' }}
+
+permissions: {}
+
+env:
+  VCPKG_DISABLE_METRICS: "1"
+  APPLICATION_ID: com.iainchesworthlabs.errorjournaling
+  # The NDK Qt 6.12.0's Android kit was built with (its modules/Core.json); Qt recommends the same one.
+  NDK_VERSION: "27.2.12479018"
+  ANDROID_PLATFORM_PACKAGE: "platforms;android-37.0"
+  ANDROID_BUILD_TOOLS: "37.0.0"
+
+jobs:
+  smoke:
+    name: Android (x86_64 emulator, API 36, smoke test)
+    # A pull request runs it only when it carries the label; a push to develop and a manual run always do.
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'android-emulator')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@62594bba592708100d459112523992fa2a736843 # v0.1.21
+
+      - name: Set up CMake
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@62594bba592708100d459112523992fa2a736843 # v0.1.21
+
+      # The desktop kit first: Qt's Android build runs its host tools (moc, qmlcachegen, androiddeployqt).
+      - name: Install Qt (Linux host kit)
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@62594bba592708100d459112523992fa2a736843 # v0.1.21
+
+      - name: Remember the host kit
+        shell: bash
+        run: echo "QT_HOST_PATH=$QT_ROOT_DIR" >> "$GITHUB_ENV"
+
+      - name: Read the Qt version
+        id: qt
+        shell: bash
+        run: echo "version=$(jq -r .qt .github/toolchain-versions.json)" >> "$GITHUB_OUTPUT"
+
+      # aqtinstall 3.3.0 cannot read Qt 6.12's all_os Android repository, so the same pinned source as the Android build.
+      - name: Install Qt (Android x86_64 kit)
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        with:
+          version: ${{ steps.qt.outputs.version }}
+          target: android
+          arch: android_x86_64
+          host: all_os
+          aqtsource: "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7"
+
+      - name: Name the Qt kits
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f "$QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake" ] || { echo "::error::no Android kit at $QT_ROOT_DIR"; exit 1; }
+          [ -x "$QT_HOST_PATH/bin/qmake" ] || [ -x "$QT_HOST_PATH/bin/qtpaths" ] || { echo "::error::no host kit at $QT_HOST_PATH"; exit 1; }
+          echo "QT_ANDROID_X86_64_DIR=$QT_ROOT_DIR" >> "$GITHUB_ENV"
+
+      # The runner image has an Android SDK. Only the exact NDK, platform and build tools are added, when it lacks them. The
+      # emulator and its system image are installed by the emulator action below.
+      - name: Set up the Android SDK, NDK and JDK 21
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          [ -d "$sdk" ] || { echo "::error::the runner has no Android SDK"; exit 1; }
+          [ -n "${JAVA_HOME_21_X64:-}" ] || { echo "::error::the runner has no JDK 21"; exit 1; }
+          sdkmanager="$(ls "$sdk"/cmdline-tools/*/bin/sdkmanager | sort | tail -n 1)"
+          JAVA_HOME="$JAVA_HOME_21_X64" "$sdkmanager" --sdk_root="$sdk" --install \
+            "ndk;$NDK_VERSION" "$ANDROID_PLATFORM_PACKAGE" "build-tools;$ANDROID_BUILD_TOOLS" > /dev/null
+          {
+            echo "ANDROID_SDK_ROOT=$sdk"
+            echo "ANDROID_NDK_ROOT=$sdk/ndk/$NDK_VERSION"
+            echo "ANDROID_NDK_HOME=$sdk/ndk/$NDK_VERSION"
+            echo "JAVA_HOME=$JAVA_HOME_21_X64"
+          } >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: cmake --preset android-emulator
+
+      - name: Build the APK
+        run: cmake --build --preset android-emulator
+
+      # The build is unsigned. The key is made here, for this run only, and signs nothing but this APK: it is not the upload
+      # key and it is not a secret.
+      - name: Sign the APK with a key made for this run
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find build/android-emulator -name '*.apk' -path '*outputs/apk*' | sort | head -n 1)"
+          [ -n "$apk" ] || { echo "::error::no APK under build/android-emulator"; exit 1; }
+          mkdir -p android-smoke
+          pass="$(openssl rand -hex 16)"
+          echo "::add-mask::$pass"
+          "$JAVA_HOME/bin/keytool" -genkeypair -keystore "$RUNNER_TEMP/smoke.jks" -alias smoke -keyalg RSA -keysize 2048 \
+            -validity 1 -dname "CN=CI smoke test" -storepass "$pass" -keypass "$pass"
+          "$ANDROID_SDK_ROOT/build-tools/$ANDROID_BUILD_TOOLS/apksigner" sign --ks "$RUNNER_TEMP/smoke.jks" \
+            --ks-pass "pass:$pass" --out android-smoke/app-signed.apk "$apk"
+          rm -f "$RUNNER_TEMP/smoke.jks"
+          echo "APK_PATH=$PWD/android-smoke/app-signed.apk" >> "$GITHUB_ENV"
+
+      - name: Check the package
+        shell: bash
+        run: |
+          python3 tools/ci/check_android_package.py --sdk "$ANDROID_SDK_ROOT" --ndk "$ANDROID_NDK_ROOT" \
+            --application-id "$APPLICATION_ID" "$APK_PATH"
+
+      # The emulator needs KVM, which the runner has but does not let the runner user open until this rule is applied.
+      - name: Allow KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Start an emulator and run the smoke test
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          disable-animations: false
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          script: python3 tools/ci/android_smoke.py --apk "$APK_PATH" --application-id "$APPLICATION_ID" --artifacts android-smoke
+
+      - name: Upload the log and a picture of the screen
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-smoke
+          path: |
+            android-smoke/logcat.txt
+            android-smoke/screen.png
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/accessibility_settings.hpp"
+#include "error_journaling/android_haptics_plan.hpp"
+#include "error_journaling/android_import_plan.hpp"
+#include "error_journaling/android_share_plan.hpp"
+#include "error_journaling/android_system_plan.hpp"
 #include "error_journaling/config_exporter.hpp"
 #include "error_journaling/config_importer.hpp"
 #include "error_journaling/document_picker.hpp"
@@ -31,9 +35,11 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <random>
 #include <sstream>
 #include <string>
@@ -52,12 +58,18 @@ class FakeShare final : public bridge::Share
 public:
     bridge::ShareResult m_Next{bridge::ShareOutcome::SHARED, "com.example.activity", {}};
     bool m_Hold = false;
+    bool m_Retains = false; // an Android-style share: the receiving app may read a file after the sheet has closed
     std::vector<bridge::ShareRequest> m_Requests;
     bridge::ShareCallback m_Held;
 
     [[nodiscard]] bool available() const noexcept override
     {
         return true;
+    }
+
+    [[nodiscard]] bool retains_shared_files() const noexcept override
+    {
+        return m_Retains;
     }
 
     void present(bridge::ShareRequest request, bridge::ShareCallback done) override
@@ -288,6 +300,124 @@ TEST_CASE("share.stub: the desktop stub reports UNAVAILABLE and calls back once"
     CHECK(calls == 1);
     CHECK(seen.m_Outcome == bridge::ShareOutcome::UNAVAILABLE);
     CHECK(seen.m_ActivityType.empty());
+}
+
+TEST_CASE("marks.android_names: every mark has its own non-empty name", "[unit][marks]")
+{
+    using bridge::Mark;
+    std::vector<std::string> names;
+    for (const Mark mark : {Mark::PROCESS_START, Mark::STORAGE_READY, Mark::QML_LOADED, Mark::FIRST_FRAME,
+                            Mark::BOARD_USABLE, Mark::TAP_TO_HAPTIC, Mark::TOUCH_AGE, Mark::TAP_TO_COMMIT})
+    {
+        const std::string name = bridge::android_mark_name(mark);
+        CHECK_FALSE(name.empty());
+        CHECK(name != "Unknown");
+        names.push_back(name);
+    }
+    std::sort(names.begin(), names.end());
+    CHECK(std::adjacent_find(names.begin(), names.end()) == names.end()); // all different
+    CHECK(std::string(bridge::android_mark_name(Mark::BOARD_USABLE)) == "BoardUsable"); // as iOS's signpost
+}
+
+TEST_CASE("marks.android_start: the start time is field 22 of /proc/self/stat", "[unit][marks]")
+{
+    // pid (name) state ppid pgrp session tty_nr tpgid flags minflt cminflt majflt cmajflt utime stime cutime cstime priority
+    // nice num_threads itrealvalue starttime vsize ...
+    const std::string typical =
+        "10543 (errorjournaling) S 1067 1067 0 0 -1 4194624 41375 0 120 0 85 31 0 0 20 0 28 0 3846127 6841311232 "
+        "114506 18446744073709551615 1 1 0 0 0 0 4612 0 1073775864 0 0 0 17 5 0 0 0 0 0\n";
+    CHECK(bridge::proc_stat_start_ticks(typical) == 3846127ULL);
+
+    // The name is any text, parentheses and spaces included: the fields are counted from the last ')'.
+    const std::string odd_name =
+        "77 (Binder:77_3 (x) y) R 1 1 0 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 42 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n";
+    CHECK(bridge::proc_stat_start_ticks(odd_name) == 42ULL);
+
+    // The same line without the trailing newline.
+    CHECK(bridge::proc_stat_start_ticks("1 (a) S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 0 1 0 99") == 99ULL);
+}
+
+TEST_CASE("marks.android_start: a line that is not a stat line gives nothing", "[unit][marks]")
+{
+    CHECK_FALSE(bridge::proc_stat_start_ticks("").has_value());
+    CHECK_FALSE(bridge::proc_stat_start_ticks("no parenthesis at all").has_value());
+    CHECK_FALSE(bridge::proc_stat_start_ticks("1 (a)").has_value());                         // nothing after the name
+    CHECK_FALSE(bridge::proc_stat_start_ticks("1 (a) S 0 0 0 0 0 0 0 0 0 0").has_value());   // too few fields
+    CHECK_FALSE(bridge::proc_stat_start_ticks("1 (a) S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 0 1 0 x12").has_value()); // not a number
+    CHECK_FALSE(bridge::proc_stat_start_ticks("1 (a) S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 0 1 0 12x").has_value());
+    CHECK_FALSE(bridge::proc_stat_start_ticks("1 (a) S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 0 1 0 -5").has_value());
+}
+
+TEST_CASE("accessibility.android_scale: the font scale is the iOS range, rounded", "[unit][accessibility]")
+{
+    using Catch::Approx;
+    CHECK(bridge::android_text_scale(1.0) == Approx(1.0));  // the default size is the default on both phones
+    CHECK(bridge::android_text_scale(0.85) == Approx(0.85)); // Android's "Small"
+    CHECK(bridge::android_text_scale(1.15) == Approx(1.15));
+    CHECK(bridge::android_text_scale(1.3) == Approx(1.3));
+    CHECK(bridge::android_text_scale(2.0) == Approx(2.0));
+    // Outside the range the layout is made for: clamped to the iOS table's ends.
+    CHECK(bridge::android_text_scale(0.5) == Approx(0.82));
+    CHECK(bridge::android_text_scale(4.0) == Approx(3.12));
+    // A float's noise is not a change.
+    CHECK(bridge::android_text_scale(static_cast<double>(1.1499999f)) == Approx(1.15));
+    CHECK(bridge::android_text_scale(static_cast<double>(1.3000001f)) == Approx(1.3));
+    // Not a positive number: the default.
+    CHECK(bridge::android_text_scale(0.0) == Approx(1.0));
+    CHECK(bridge::android_text_scale(-1.0) == Approx(1.0));
+    CHECK(bridge::android_text_scale(std::nan("")) == Approx(1.0));
+    CHECK(bridge::android_text_scale(std::numeric_limits<double>::infinity()) == Approx(1.0));
+}
+
+TEST_CASE("accessibility.android_scale: the range is rising and agrees with the iOS table's ends", "[unit][accessibility]")
+{
+    // The scales the interface is laid out for, from the iOS table: the smallest and the largest of its categories.
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryXS") == Catch::Approx(0.82).margin(0.005));
+    CHECK(bridge::text_scale_for_category("UICTContentSizeCategoryAccessibilityXXXL") == Catch::Approx(3.12).margin(0.005));
+    double previous = 0.0;
+    for (const double font_scale : {0.5, 0.85, 1.0, 1.15, 1.3, 1.5, 2.0, 3.0, 4.0})
+    {
+        const double scale = bridge::android_text_scale(font_scale);
+        CHECK(scale >= previous);
+        previous = scale;
+    }
+}
+
+TEST_CASE("accessibility.android_motion: only an animator scale of zero is Reduce Motion", "[unit][accessibility]")
+{
+    CHECK(bridge::android_reduce_motion(0.0));
+    CHECK(bridge::android_reduce_motion(-1.0));
+    CHECK(bridge::android_reduce_motion(std::nan("")));
+    CHECK_FALSE(bridge::android_reduce_motion(1.0));  // the default
+    CHECK_FALSE(bridge::android_reduce_motion(0.5));  // shorter animations are still animations
+    CHECK_FALSE(bridge::android_reduce_motion(10.0));
+}
+
+TEST_CASE("haptics.android_constants: IMPACT is VIRTUAL_KEY, SUCCESS is CONFIRM from API 30", "[unit][haptics]")
+{
+    using bridge::HapticKind;
+    // Android's own numbers: HapticFeedbackConstants.VIRTUAL_KEY is 1 and CONFIRM is 16 (API 30).
+    CHECK(bridge::android_haptic_virtual_key == 1);
+    CHECK(bridge::android_haptic_confirm == 16);
+
+    for (const int api : {28, 29, 30, 31, 34, 36})
+    {
+        CHECK(bridge::android_haptic_constant(HapticKind::IMPACT, api) == 1);
+    }
+    CHECK(bridge::android_haptic_constant(HapticKind::SUCCESS, 28) == 1);
+    CHECK(bridge::android_haptic_constant(HapticKind::SUCCESS, 29) == 1);
+    CHECK(bridge::android_haptic_constant(HapticKind::SUCCESS, 30) == 16);
+    CHECK(bridge::android_haptic_constant(HapticKind::SUCCESS, 36) == 16);
+}
+
+TEST_CASE("haptics.android_constants: the two kinds feel different where CONFIRM exists", "[unit][haptics]")
+{
+    using bridge::HapticKind;
+    CHECK(bridge::android_haptic_constant(HapticKind::IMPACT, 36) !=
+          bridge::android_haptic_constant(HapticKind::SUCCESS, 36));
+    // Before API 30 there is one constant for both, and the code still gives a valid one.
+    CHECK(bridge::android_haptic_constant(HapticKind::IMPACT, 28) ==
+          bridge::android_haptic_constant(HapticKind::SUCCESS, 28));
 }
 
 TEST_CASE("haptics.stub: the desktop stub does nothing for either kind", "[unit][haptics]")
@@ -556,6 +686,146 @@ TEST_CASE("share.config_file: a refused request still removes its file", "[integ
 
     CHECK(fakes.m_Share->m_Requests.size() == 1);
     CHECK_FALSE(fs::exists(file));
+}
+
+TEST_CASE("share.android_retained: a file stays for the receiving app after SHARED and CANCELLED", "[integration][share]")
+{
+    TempDirectory directory;
+    FakeShare share;
+    share.m_Retains = true;
+    bridge::SharePresenter presenter(share);
+
+    const auto outcome = GENERATE(bridge::ShareOutcome::SHARED, bridge::ShareOutcome::CANCELLED);
+    const fs::path file = directory.path() / "setup.ejconfig";
+    write_file(file, "{}");
+    share.m_Next = {outcome, {}, {}};
+    int calls = 0;
+    presenter.present_temporary_file(file, [&](const bridge::ShareResult&) { ++calls; });
+
+    CHECK(calls == 1);
+    CHECK(fs::exists(file));
+}
+
+TEST_CASE("share.android_retained: a sheet that could not be shown removes the file", "[integration][share]")
+{
+    TempDirectory directory;
+    FakeShare share;
+    share.m_Retains = true;
+    share.m_Next = {bridge::ShareOutcome::FAILED, {}, {}};
+    bridge::SharePresenter presenter(share);
+
+    const fs::path file = directory.path() / "setup.ejconfig";
+    write_file(file, "{}");
+    presenter.present_temporary_file(file, [](const bridge::ShareResult&) {});
+
+    CHECK_FALSE(fs::exists(file));
+}
+
+TEST_CASE("share.android_retained: the next export removes the older ones, and only in its directory", "[integration][share]")
+{
+    TempDirectory directory;
+    TempDirectory other;
+    FakeShare share;
+    share.m_Retains = true;
+    bridge::SharePresenter presenter(share);
+
+    const fs::path old_export = directory.path() / "old.ejconfig";
+    const fs::path old_text = directory.path() / "log.txt";
+    const fs::path elsewhere = other.path() / "keep.ejconfig";
+    const fs::path fresh = directory.path() / "new.ejconfig";
+    for (const auto& file : {old_export, old_text, elsewhere, fresh})
+    {
+        write_file(file, "x");
+    }
+    fs::create_directories(directory.path() / "subdirectory");
+
+    presenter.present_temporary_file(fresh, [](const bridge::ShareResult&) {});
+
+    CHECK_FALSE(fs::exists(old_export));
+    CHECK_FALSE(fs::exists(old_text));
+    CHECK(fs::exists(fresh));
+    CHECK(fs::exists(elsewhere));
+    CHECK(fs::is_directory(directory.path() / "subdirectory"));
+}
+
+TEST_CASE("share.android_retained: a second request while a sheet is open leaves that sheet's file alone",
+          "[integration][share]")
+{
+    TempDirectory directory;
+    FakeShare share;
+    share.m_Retains = true;
+    share.m_Hold = true;
+    bridge::SharePresenter presenter(share);
+
+    const fs::path first = directory.path() / "first.ejconfig";
+    const fs::path second = directory.path() / "second.ejconfig";
+    write_file(first, "1");
+    write_file(second, "2");
+    presenter.present_temporary_file(first, [](const bridge::ShareResult&) {});
+    presenter.present_temporary_file(second, [](const bridge::ShareResult&) {}); // refused: one sheet at a time
+
+    CHECK(share.m_Requests.size() == 1);
+    CHECK(fs::exists(first));         // on screen
+    CHECK_FALSE(fs::exists(second));  // refused, so FAILED, so removed
+}
+
+TEST_CASE("share.android_retained: the iOS and desktop shares keep removing the file", "[unit][share]")
+{
+    FakeShare share;
+    CHECK_FALSE(share.retains_shared_files());
+}
+
+TEST_CASE("share.android_plan: text goes inline up to the limit, then as a file", "[unit][share]")
+{
+    using bridge::AndroidShareKind;
+    bridge::ShareRequest at_limit;
+    at_limit.m_Text.assign(bridge::android_inline_text_limit, 'a');
+    CHECK(bridge::plan_android_share(at_limit) == AndroidShareKind::TEXT);
+
+    bridge::ShareRequest above;
+    above.m_Text.assign(bridge::android_inline_text_limit + 1, 'a');
+    CHECK(bridge::plan_android_share(above) == AndroidShareKind::TEXT_FILE);
+
+    bridge::ShareRequest small;
+    small.m_Text = "T|a - b";
+    CHECK(bridge::plan_android_share(small) == AndroidShareKind::TEXT);
+
+    bridge::ShareRequest file;
+    file.m_File = "setup.ejconfig";
+    CHECK(bridge::plan_android_share(file) == AndroidShareKind::FILE);
+}
+
+TEST_CASE("share.android_plan: the limit counts UTF-8 bytes, not characters", "[unit][share]")
+{
+    // "â" is the en dash: three bytes, one character.
+    bridge::ShareRequest request;
+    for (std::size_t bytes = 0; bytes + 3 <= bridge::android_inline_text_limit; bytes += 3)
+    {
+        request.m_Text += "â";
+    }
+    request.m_Text += "ab"; // now above the limit in bytes, far below it in characters
+    CHECK(request.m_Text.size() > bridge::android_inline_text_limit);
+    CHECK(bridge::plan_android_share(request) == bridge::AndroidShareKind::TEXT_FILE);
+}
+
+TEST_CASE("share.android_outcome: how the chooser ended maps to one ShareOutcome", "[unit][share]")
+{
+    using bridge::AndroidShareEnd;
+    CHECK(bridge::android_share_outcome(AndroidShareEnd::CHOSEN) == bridge::ShareOutcome::SHARED);
+    CHECK(bridge::android_share_outcome(AndroidShareEnd::DISMISSED) == bridge::ShareOutcome::CANCELLED);
+    CHECK(bridge::android_share_outcome(AndroidShareEnd::ERROR) == bridge::ShareOutcome::FAILED);
+}
+
+TEST_CASE("share.android_outcome: the codes EjShare.java sends", "[unit][share]")
+{
+    using bridge::AndroidShareEnd;
+    CHECK(bridge::android_share_end_from_code(0) == AndroidShareEnd::CHOSEN);
+    CHECK(bridge::android_share_end_from_code(1) == AndroidShareEnd::DISMISSED);
+    CHECK(bridge::android_share_end_from_code(2) == AndroidShareEnd::ERROR);
+    // Anything else is an error, never a success.
+    CHECK(bridge::android_share_end_from_code(-1) == AndroidShareEnd::ERROR);
+    CHECK(bridge::android_share_end_from_code(3) == AndroidShareEnd::ERROR);
+    CHECK(bridge::android_share_end_from_code(1000) == AndroidShareEnd::ERROR);
 }
 
 TEST_CASE("share.config_file: the launch purge removes stale files and nothing else", "[integration][share]")
@@ -1135,6 +1405,57 @@ TEST_CASE("importer.purge: stale files in the Inbox and the export folder go, an
     // Nothing there at all is not an error.
     CHECK(bridge::purge_import_leftovers(qt_path(directory.path() / "none"), qt_path(directory.path() / "nada")) == 0);
     CHECK(bridge::purge_import_leftovers(QString(), QString()) == 0);
+}
+
+TEST_CASE("importer.purge: the Android import directory is emptied at launch too", "[integration][import]")
+{
+    TempDirectory directory;
+    const fs::path temporary = directory.path() / "tmp";
+    const QString imports = bridge::import_directory(qt_path(temporary));
+    const fs::path import_dir = fs::path(imports.toStdU16String());
+    CHECK(import_dir.filename() == std::string(bridge::android_import_directory_name));
+    CHECK(import_dir.parent_path() == temporary);
+
+    fs::create_directories(import_dir);
+    write_file(import_dir / "setup-1.ejconfig", "{}");
+    write_file(import_dir / "setup-2.ejconfig", "{}");
+    write_file(temporary / "keep.txt", "x"); // beside the directory, not in it
+
+    CHECK(bridge::purge_import_leftovers(QString(), qt_path(temporary)) == 2);
+    CHECK_FALSE(fs::exists(import_dir / "setup-1.ejconfig"));
+    CHECK_FALSE(fs::exists(import_dir / "setup-2.ejconfig"));
+    CHECK(fs::exists(temporary / "keep.txt"));
+}
+
+TEST_CASE("importer.android_plan: the copy is capped one byte above what the importer accepts", "[unit][import]")
+{
+    // A file of exactly the limit is a setup file; one byte more is refused by the importer as too large. The copy keeps
+    // that one byte, so the refusal is the importer's own and a stream that never ends cannot fill the storage.
+    CHECK(bridge::android_import_copy_cap_bytes == bridge::CONFIG_MAX_BYTES + 1);
+    CHECK(bridge::android_import_copy_cap_bytes > bridge::CONFIG_MAX_BYTES);
+}
+
+TEST_CASE("importer.android_plan: the picker offers JSON, octet-stream and text, and never everything", "[unit][import]")
+{
+    const auto& types = bridge::android_picker_mime_types;
+    CHECK(std::find(types.begin(), types.end(), "application/json") != types.end());
+    CHECK(std::find(types.begin(), types.end(), "application/octet-stream") != types.end());
+    CHECK(std::find(types.begin(), types.end(), "text/plain") != types.end());
+    for (const auto type : types)
+    {
+        CHECK(type.find('*') == std::string_view::npos);
+    }
+}
+
+TEST_CASE("importer.android_plan: the codes EjDocuments.java sends", "[unit][import]")
+{
+    CHECK(bridge::android_pick_outcome_from_code(0) == bridge::PickOutcome::PICKED);
+    CHECK(bridge::android_pick_outcome_from_code(1) == bridge::PickOutcome::CANCELLED);
+    CHECK(bridge::android_pick_outcome_from_code(2) == bridge::PickOutcome::FAILED);
+    // Anything else is a failure, never a success.
+    CHECK(bridge::android_pick_outcome_from_code(-1) == bridge::PickOutcome::FAILED);
+    CHECK(bridge::android_pick_outcome_from_code(3) == bridge::PickOutcome::FAILED);
+    CHECK(bridge::android_pick_outcome_from_code(1000) == bridge::PickOutcome::FAILED);
 }
 
 TEST_CASE("importer.picker: PICKED is imported and deleted, CANCELLED is silent, FAILED gives one message",

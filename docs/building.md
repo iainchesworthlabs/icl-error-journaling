@@ -44,7 +44,7 @@ ctest --preset linux-debug
 | `macos-debug`, `macos-release` | The desktop program on a Mac, for iterating on the user interface; built with tests |
 | `ios-release` | The iPhone and iPad application (`apps/app`), unsigned, for a device, on a Mac with Xcode; no tests |
 | `ios-simulator` | The same for the iOS simulator. Not working with the aqtinstall kit and not in CI: the link fails because the kit's `qmltooling` plugin objects are built for the device only ("building for 'iOS-simulator', but linking in object file ... built for 'iOS'") |
-| `android-release` | The Android application, `arm64-v8a`, Release: an unsigned APK (build preset `android-release`) and bundle (`android-release-bundle`), on Linux or Windows; no tests |
+| `android-release` | The Android application, `arm64-v8a` and `armeabi-v7a`, Release: an unsigned APK (build preset `android-release`) and bundle (`android-release-bundle`), on Linux or Windows; no tests |
 | `android-emulator` | The same for an `x86_64` emulator, RelWithDebInfo, APK only; no tests |
 | `windows-msvc-release`, `windows-msvc-asan` | The developer machine only. Windows is not a v1 platform and CI has no Windows leg |
 
@@ -89,8 +89,9 @@ judging a new image.
 `cmake --preset android-release` needs:
 
 - a vcpkg checkout at the baseline of `vcpkg.json` (`VCPKG_ROOT`);
-- Qt's Android kit for the ABI (`QT_ANDROID_DIR`, for example `C:/Repos/common/qt/6.12.0/android_arm64_v8a`;
-  `QT_ANDROID_X86_64_DIR` for `android-emulator`);
+- Qt's Android kits: `QT_ANDROID_DIR` for `arm64-v8a` (for example `C:/Repos/common/qt/6.12.0/android_arm64_v8a`),
+  `QT_ANDROID_ARMV7_DIR` for `armeabi-v7a` (`android_armv7`, which `android-release` builds as well, through Qt's multi-ABI
+  build) and `QT_ANDROID_X86_64_DIR` for `android-emulator`;
 - a desktop Qt of the same version for the host tools (`QT_HOST_PATH`, for example `C:/Repos/common/qt/6.12.0/msvc2022_64`);
 - the Android SDK (`ANDROID_SDK_ROOT`) with `platforms;android-37.0` and `build-tools;37.0.0`;
 - the NDK Qt 6.12.0 was built with, `27.2.12479018` (r27c), as `ANDROID_NDK_ROOT` and `ANDROID_NDK_HOME` (vcpkg's
@@ -99,7 +100,7 @@ judging a new image.
 
 Write the paths with forward slashes, also on Windows: Qt's CMake reads `QT_HOST_PATH` into a string where a backslash
 is an escape. On the developer machine the SDK, the NDK, JDK 21, the emulator and the `x86_64` kit are under `E:/android/`
-(`E:/android/sdk`, `E:/android/jdk-21.0.13.0.2+1`, `E:/android/qt/6.12.0/android_x86_64`). The SDK in
+(`E:/android/sdk`, `E:/android/jdk-21.0.13.0.2+1`, `E:/android/qt/6.12.0/android_armv7` and `android_x86_64`). The SDK in
 `C:/Repos/common/android-sdk` has NDK 28 and is not used here.
 
 `cmake --build --preset android-release` runs Qt's `androiddeployqt` and Gradle and writes the unsigned APK, and

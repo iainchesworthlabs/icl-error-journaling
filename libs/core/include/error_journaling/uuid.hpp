@@ -54,11 +54,12 @@ struct std::hash<ej::Uuid>
 {
     std::size_t operator()(const ej::Uuid& id) const noexcept
     {
-        std::size_t h = 1469598103934665603ULL;
+        // FNV-1a over 64 bits, whatever the width of size_t: the constants do not fit a 32-bit size_t.
+        std::uint64_t h = 1469598103934665603ULL;
         for (const auto b : id.bytes())
         {
             h = (h ^ b) * 1099511628211ULL;
         }
-        return h;
+        return static_cast<std::size_t>(h);
     }
 };

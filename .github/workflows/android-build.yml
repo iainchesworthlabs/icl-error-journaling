@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # The Android build (docs/plan/stage-9.md, "CI jobs"; docs/ci.md, "Android build"). Builds the android-release preset
 # into an unsigned APK and bundle with Qt's Android kit, the NDK the kit was built with and JDK 21, then looks inside them
-# (tools/ci/check_android_package.py): the manifest asks for no permission, the SDK range is 28 to 36, and every native
-# library is aligned for 16 KB pages. Nothing runs on a device or an emulator here (that is package 9.8).
+# (tools/ci/check_android_package.py): the manifest asks for no permission, the SDK range is 28 to 36, and every 64-bit
+# native library is aligned for 16 KB pages. The bundle has arm64-v8a and armeabi-v7a (Stage 9, decision 3). Nothing runs on a device or an emulator here (that is package 9.8).
 name: Android build
 
 on:
@@ -51,7 +51,7 @@ env:
 
 jobs:
   android-build:
-    name: Android (arm64-v8a, unsigned build)
+    name: Android (arm64-v8a and armeabi-v7a, unsigned build)
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -91,13 +91,31 @@ jobs:
           host: all_os
           aqtsource: "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7"
 
-      - name: Name the Qt kits
+      - name: Name the arm64-v8a kit
         shell: bash
         run: |
           set -euo pipefail
           [ -f "$QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake" ] || { echo "::error::no Android kit at $QT_ROOT_DIR"; exit 1; }
           [ -x "$QT_HOST_PATH/bin/qmake" ] || [ -x "$QT_HOST_PATH/bin/qtpaths" ] || { echo "::error::no host kit at $QT_HOST_PATH"; exit 1; }
           echo "QT_ANDROID_DIR=$QT_ROOT_DIR" >> "$GITHUB_ENV"
+
+      # The 32-bit kit (Stage 9, decision 3): Qt's multi-ABI build adds armeabi-v7a to the bundle.
+      - name: Install Qt (Android armeabi-v7a kit)
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        with:
+          version: ${{ steps.qt.outputs.version }}
+          target: android
+          arch: android_armv7
+          host: all_os
+          aqtsource: "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7"
+
+      - name: Name the armeabi-v7a kit
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f "$QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake" ] || { echo "::error::no armeabi-v7a kit at $QT_ROOT_DIR"; exit 1; }
+          [ "$QT_ROOT_DIR" != "$QT_ANDROID_DIR" ] || { echo "::error::the two Android kits are one directory"; exit 1; }
+          echo "QT_ANDROID_ARMV7_DIR=$QT_ROOT_DIR" >> "$GITHUB_ENV"
 
       # The runner image has an Android SDK. Only the exact NDK, platform and build tools are added, when it lacks them.
       - name: Set up the Android SDK, NDK and JDK 21

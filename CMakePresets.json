@@ -130,7 +130,7 @@
       "name": "android-base",
       "hidden": true,
       "inherits": "base",
-      "description": "An Android package, built on Linux or Windows with Qt's Android kit and a desktop Qt of the same version for its host tools (QT_HOST_PATH), the Android SDK (ANDROID_SDK_ROOT), the NDK Qt was built with (ANDROID_NDK_ROOT, r27c) and JDK 21 (JAVA_HOME). Unsigned: it needs no key (a signed bundle is the release workflow's). vcpkg's toolchain is the toolchain file, as everywhere, and chains to Qt's kit (VCPKG_CHAINLOAD_TOOLCHAIN_FILE). No tests are built: nothing runs on a device here (docs/building.md, \"Android\").",
+      "description": "An Android package, built on Linux or Windows with Qt's Android kit (and, for android-release, the armeabi-v7a kit as QT_ANDROID_ARMV7_DIR) and a desktop Qt of the same version for its host tools (QT_HOST_PATH), the Android SDK (ANDROID_SDK_ROOT), the NDK Qt was built with (ANDROID_NDK_ROOT, r27c) and JDK 21 (JAVA_HOME). Unsigned: it needs no key (a signed bundle is the release workflow's). vcpkg's toolchain is the toolchain file, as everywhere, and chains to Qt's kit (VCPKG_CHAINLOAD_TOOLCHAIN_FILE). No tests are built: nothing runs on a device here (docs/building.md, \"Android\").",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "QT_HOST_PATH": "$env{QT_HOST_PATH}",
@@ -143,13 +143,16 @@
     },
     {
       "name": "android-release",
-      "displayName": "Android (arm64-v8a, Release, unsigned APK and bundle)",
+      "displayName": "Android (arm64-v8a and armeabi-v7a, Release, unsigned APK and bundle)",
       "inherits": "android-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{QT_ANDROID_DIR}/lib/cmake/Qt6/qt.toolchain.cmake",
         "VCPKG_TARGET_TRIPLET": "arm64-android",
-        "ANDROID_ABI": "arm64-v8a"
+        "ANDROID_ABI": "arm64-v8a",
+        "QT_ANDROID_ABIS": "arm64-v8a;armeabi-v7a",
+        "QT_PATH_ANDROID_ABI_armeabi-v7a": "$env{QT_ANDROID_ARMV7_DIR}",
+        "QT_ANDROID_MULTI_ABI_FORWARD_VARS": "ANDROID_PLATFORM;ANDROID_SDK_ROOT;ANDROID_NDK_ROOT;ERROR_JOURNALING_BUILD_TESTS;ERROR_JOURNALING_ANDROID_VERSION_CODE"
       }
     },
     {
