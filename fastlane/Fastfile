@@ -1,0 +1,88 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The store metadata upload (docs/plan/stage-11.md, task 11.7), run only by .github/workflows/store-metadata.yml.
+#
+# It uploads the listing text in store/ (and the graphics and screenshots the tools made) to App Store Connect and to the
+# Play Console. It never uploads a build: builds come only from release.yml. It never submits for review, and never
+# releases or rolls out: those are the owner's actions in the consoles. tools/tests/test_store_upload_guard.py fails if
+# this file ever asks for any of them.
+
+require "fileutils"
+require "tmpdir"
+
+# No usage analytics: the project sends nothing anywhere it does not have to.
+opt_out_usage
+
+default_platform(:ios)
+
+REPOSITORY = File.expand_path("..", __dir__)
+APPSTORE_METADATA = File.join(REPOSITORY, "store", "appstore")
+APPSTORE_SCREENSHOTS = File.join(REPOSITORY, "store", "appstore", "screenshots")
+PLAY_METADATA = File.join(REPOSITORY, "store", "play")
+
+def flag(value)
+  value.to_s == "true"
+end
+
+platform :ios do
+  # bundle exec fastlane ios metadata version:1.0.0 [build:123] [first_release:true] [phased:false]
+  desc "Upload the App Store listing to the version in App Store Connect. Never submits."
+  lane :metadata do |options|
+    version = options.fetch(:version)
+    UI.user_error!("version must be x.y.z, not '#{version}'") unless version.match?(/\A\d+\.\d+\.\d+\z/)
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_CONTENT"),
+      in_house: false
+    )
+
+    Dir.mktmpdir("appstore-metadata") do |metadata|
+      FileUtils.cp_r(File.join(APPSTORE_METADATA, "."), metadata)
+      # Not part of what deliver reads: the console answers, the captions, and the screenshots (passed on their own).
+      FileUtils.rm_f(Dir.glob(File.join(metadata, "*.md")))
+      FileUtils.rm_f(Dir.glob(File.join(metadata, "*", "screenshot_captions.txt")))
+      FileUtils.rm_rf(File.join(metadata, "screenshots"))
+      # App Store Connect refuses What's New on an app's first version.
+      FileUtils.rm_f(Dir.glob(File.join(metadata, "*", "release_notes.txt"))) if flag(options[:first_release])
+
+      screenshots = Dir.exist?(APPSTORE_SCREENSHOTS) && !Dir.empty?(APPSTORE_SCREENSHOTS)
+      deliver(
+        api_key: api_key,
+        app_identifier: ENV.fetch("BUNDLE_ID"),
+        app_version: version,
+        build_number: options[:build],
+        metadata_path: metadata,
+        screenshots_path: screenshots ? APPSTORE_SCREENSHOTS : nil,
+        skip_screenshots: !screenshots,
+        overwrite_screenshots: screenshots,
+        skip_binary_upload: true,
+        skip_metadata: false,
+        submit_for_review: false,
+        automatic_release: false,
+        phased_release: flag(options[:phased]),
+        run_precheck_before_submit: false,
+        force: true
+      )
+    end
+  end
+end
+
+platform :android do
+  # bundle exec fastlane android metadata
+  desc "Upload the Play listing text and graphics. Never uploads a bundle or starts a release."
+  lane :metadata do
+    images = Dir.glob(File.join(PLAY_METADATA, "*", "images", "*.png")).any?
+    supply(
+      package_name: ENV.fetch("APPLICATION_ID"),
+      json_key_data: ENV.fetch("PLAY_JSON_KEY"),
+      metadata_path: PLAY_METADATA,
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_changelogs: true,
+      skip_upload_metadata: false,
+      skip_upload_images: !images,
+      skip_upload_screenshots: !images
+    )
+  end
+end

@@ -25,7 +25,11 @@
     "LICENSES/**",
     "tools/tests/**",
     "tools/visual/**",
-    "store/**"
+    "store/**",
+    "fastlane/**",
+    "Gemfile",
+    "Gemfile.lock",
+    ".ruby-version"
   ],
   "build": [
     "libs/**",

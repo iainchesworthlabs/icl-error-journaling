@@ -26,3 +26,9 @@ compile_commands.json
 
 # The store graphics, made by tools/store/ for each release.
 /store/play/*/images/
+# Written by fastlane when it runs (fastlane/Fastfile is the source).
+/fastlane/README.md
+/fastlane/report.xml
+/fastlane/test_output/
+# The store screenshots, made by the screenshot tool for each release.
+/store/appstore/screenshots/

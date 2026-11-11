@@ -21,6 +21,19 @@
 
 `main` only ever moves by that fast-forward. The docs site is deployed from the push to `main`.
 
+## Store listings
+
+The App Store and Google Play listings are text in `store/` (`store/README.md`, `docs/plan/stage-11.md`). After the
+release workflow has put the build in TestFlight (and, with Stage 9, the bundle in Play internal testing):
+
+1. Run **Store metadata** (`gh workflow run store-metadata.yml --ref v1.0.0 -f store=appstore -f version=1.0.0 -f
+   build=<run number> -f first_release=true`). It puts the listing text, the review notes and the screenshots on that
+   version in App Store Connect and attaches the build. Leave `first_release` false after 1.0.0, and set `phased` true
+   for later versions (decision D10).
+2. Run it with `-f store=play` for the Play listing text and graphics. It needs the secret `PLAY_SERVICE_ACCOUNT_JSON`.
+3. The owner checks both consoles, answers what the upload cannot (App Privacy, age rating, Data safety, content rating,
+   price and countries), then submits for review and, after approval, releases. The workflow never does these.
+
 ## Verifying a download
 
 ```bash
