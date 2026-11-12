@@ -1311,7 +1311,7 @@ std::vector<Scene> extra_scenes()
          QStringLiteral("The time of the version change tapped.")},
         {QStringLiteral("Facilitator"), TODAY,
          [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsFacilitator")); },
-         QStringLiteral("Settings, Facilitator (with the unit prefix and the totals line).")},
+         QStringLiteral("Settings, Facilitator.")},
         {QStringLiteral("TimeFormat"), TODAY,
          [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsTimeFormat")); },
          QStringLiteral("Settings, Time format.")},
