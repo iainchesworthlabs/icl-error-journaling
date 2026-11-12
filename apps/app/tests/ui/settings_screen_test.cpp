@@ -850,17 +850,17 @@ TEST_CASE("settings.export: the rows emit the requests and the result of an expo
     CHECK(imports.count() == 0);
     // The screen asks and the shell answers: the model tells how it went.
     fixture.settings().exportResult(true, QStringLiteral("Exported to Files"),
-                                    QStringLiteral("cs-bingo-board-setup.ejconfig"),
-                                    QStringLiteral("cs-bingo-board-setup.ejconfig is ready to send."));
+                                    QStringLiteral("field-test-setup.ejconfig"),
+                                    QStringLiteral("field-test-setup.ejconfig is ready to send."));
     fixture.m_Ui.layout();
     REQUIRE(fixture.shown(QStringLiteral("settingsExportResult")) != nullptr);
     CHECK(fixture.shows(QStringLiteral("Exported to Files")));
-    CHECK(fixture.shows(QStringLiteral("cs-bingo-board-setup.ejconfig is ready to send.")));
+    CHECK(fixture.shows(QStringLiteral("field-test-setup.ejconfig is ready to send.")));
     fixture.tap(QStringLiteral("bannerClose"));
     CHECK(fixture.shown(QStringLiteral("settingsExportResult")) == nullptr);
 
     fixture.settings().exportResult(false, QStringLiteral("Export failed"),
-                                    QStringLiteral("cs-bingo-board-setup.ejconfig"),
+                                    QStringLiteral("field-test-setup.ejconfig"),
                                     QStringLiteral("There was no room to write the file."));
     fixture.m_Ui.layout();
     CHECK(fixture.shown(QStringLiteral("settingsExportResult")) != nullptr);
@@ -1096,7 +1096,7 @@ TEST_CASE("settings.about: the last row of the list opens the About page and Bac
     Fixture fixture;
     fixture.reveal(QStringLiteral("settingsAboutRow"));
     QQuickItem* row = fixture.require(QStringLiteral("settingsAboutRow"));
-    CHECK(row->property("text").toString() == "About CS Bingo Board");
+    CHECK(row->property("text").toString() == "About Field Test");
     CHECK(row->property("showChevron").toBool());
     CHECK(fixture.m_Ui.geometry(row).height() == 44.0);
     // After the six rows of the setup, in a group of its own.
@@ -1142,7 +1142,7 @@ TEST_CASE("settings.about: the page says what this build is", "[ui][settings_scr
     Fixture fixture;
     fixture.reveal_and_open(QStringLiteral("settingsAboutRow"));
     REQUIRE(fixture.depth() == 2);
-    CHECK(fixture.value_of(QStringLiteral("aboutName")) == "CS Bingo Board");
+    CHECK(fixture.value_of(QStringLiteral("aboutName")) == "Field Test");
     CHECK(fixture.value_of(QStringLiteral("aboutVersion")) == "0.1.0");
     CHECK(fixture.value_of(QStringLiteral("aboutBuildNumber")) == "57");
     CHECK(fixture.value_of(QStringLiteral("aboutCommit")) == "a1b2c3d");
@@ -1243,7 +1243,7 @@ TEST_CASE("settings.about: Read the licence opens the full text of the licence o
     fixture.reveal_and_open(QStringLiteral("aboutLicenceText"));
     REQUIRE(fixture.depth() == 3);
     CHECK(fixture.value_of(QStringLiteral("licenceExpression")) == "GPL-3.0-or-later");
-    CHECK(fixture.value_of(QStringLiteral("licenceName")) == "CS Bingo Board");
+    CHECK(fixture.value_of(QStringLiteral("licenceName")) == "Field Test");
     // The copyright line and the source address, then the text under the name of the licence: six paragraphs of three
     // joined lines.
     CHECK(fixture.count_shown(QStringLiteral("licenceHeading")) == 3);

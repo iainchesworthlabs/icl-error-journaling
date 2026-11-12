@@ -14,7 +14,7 @@ namespace
 
 QVariantMap summary()
 {
-    return {{"fileName", QStringLiteral("cs-bingo-board-setup.ejconfig")},
+    return {{"fileName", QStringLiteral("field-test-setup.ejconfig")},
             {"errorTypeCount", 11},
             {"locationCount", 2},
             {"templateCount", 2}};
@@ -34,7 +34,7 @@ TEST_CASE("import.flow: the confirmation shows the file and the counts of what i
     world.m_Ui.layout();
 
     CHECK(item(world, QStringLiteral("fromText"))->property("text").toString() ==
-          QStringLiteral("From cs-bingo-board-setup.ejconfig"));
+          QStringLiteral("From field-test-setup.ejconfig"));
     CHECK(value_of(world, QStringLiteral("errorTypesRow")) == QStringLiteral("11"));
     CHECK(value_of(world, QStringLiteral("locationsRow")) == QStringLiteral("2"));
     CHECK(value_of(world, QStringLiteral("templatesRow")) == QStringLiteral("2"));

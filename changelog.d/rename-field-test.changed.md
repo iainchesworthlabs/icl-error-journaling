@@ -1,0 +1,1 @@
+**The app is called Field Test.** The home screen, the window title, the App Store and Google Play name, the setup and log file names and the documentation use the new name. The bundle identifier and the Android application id are now `com.iainchesworthlabs.fieldtest`, so the app is a new app record in App Store Connect and in the Play Console.

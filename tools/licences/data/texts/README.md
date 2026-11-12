@@ -2,7 +2,7 @@
 
 One file per SPDX identifier (`<id>.txt`), read by `tools/licences/notices.py` for the About page. The app's own text is in
 `LICENSES/`, and `GPL-3.0-only` is served from the same file (`textAliases` in `../manifest.json`). Each text applies to the component
-it belongs to, not to CS Bingo Board.
+it belongs to, not to Field Test.
 
 Provenance, so a reviewer knows what was copied and what was typed:
 

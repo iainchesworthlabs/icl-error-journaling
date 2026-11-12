@@ -2,7 +2,7 @@
 
 Last changed: 11 November 2026.
 
-**CS Bingo Board collects no data about you.** It has no accounts, no analytics, no advertising and no crash reporting,
+**Field Test collects no data about you.** It has no accounts, no analytics, no advertising and no crash reporting,
 and it does not send anything over the internet. This page says what that means in practice.
 
 ## What the app stores

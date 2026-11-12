@@ -11,7 +11,7 @@ bottom of preferences"), and the request is this page's brief. The owner reviews
 
 | Part | Where | Notes |
 |---|---|---|
-| The way in | `SettingsList.qml`: the row "About CS Bingo Board", in a group of its own after Import or export setup | The version line at the foot of the list stays, as a plain caption (`SettingsAbout.qml`) |
+| The way in | `SettingsList.qml`: the row "About Field Test", in a group of its own after Import or export setup | The version line at the foot of the list stays, as a plain caption (`SettingsAbout.qml`) |
 | The page | `SettingsAboutPage.qml` | This build, Licence, Source code, Open-source components |
 | A licence text | `SettingsLicencePage.qml`, `SettingsComponentRow.qml` | For the app and for each component: facts, copyright, source, then the text of each licence as paragraphs |
 | The timing readout | the Version row of the About page | Five quick taps, as before; read as text, not as a control |

@@ -34,7 +34,7 @@ namespace
 
 void name_the_program()
 {
-    QCoreApplication::setApplicationName(QStringLiteral("error-journaling"));
+    QCoreApplication::setApplicationName(QStringLiteral("field-test"));
     QCoreApplication::setApplicationVersion(error_journaling::version_text());
 }
 
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
         const QCoreApplication core(argc, argv);
         name_the_program();
         QCommandLineParser parser;
-        parser.setApplicationDescription(QStringLiteral("CS Bingo Board"));
+        parser.setApplicationDescription(QStringLiteral("Field Test"));
         parser.addHelpOption();
         parser.addVersionOption();
         parser.addOption(smoke_test);
@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
     const auto from_view = [](std::string_view text)
     { return QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size())); };
     ej::viewmodel::AboutFacts about_facts;
-    about_facts.m_Name = QStringLiteral("CS Bingo Board");
+    about_facts.m_Name = QStringLiteral("Field Test");
     about_facts.m_Version = error_journaling::version_text();
     about_facts.m_BuildNumber = from_view(build.m_BuildNumber);
     about_facts.m_Commit = from_view(build.m_Commit);

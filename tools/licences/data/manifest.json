@@ -7,7 +7,7 @@
   ],
   "schema": 1,
   "project": {
-    "name": "CS Bingo Board",
+    "name": "Field Test",
     "licence": "GPL-3.0-or-later",
     "copyright": "Copyright (C) Iain Chesworth Labs contributors",
     "source": "https://github.com/iainchesworthlabs/icl-error-journaling"

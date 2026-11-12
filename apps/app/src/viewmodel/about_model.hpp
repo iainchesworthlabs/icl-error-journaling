@@ -18,7 +18,7 @@ namespace ej::viewmodel
 /// information, the bridge and Qt.
 struct AboutFacts
 {
-    QString m_Name;        ///< "CS Bingo Board".
+    QString m_Name;        ///< "Field Test".
     QString m_Version;     ///< "0.1.0".
     QString m_BuildNumber; ///< The iOS build number (CFBundleVersion), else the CI run number, else "unknown".
     QString m_Commit;      ///< The short hash of the commit, or "unknown".

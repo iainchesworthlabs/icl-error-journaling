@@ -17,7 +17,7 @@ namespace
 
 os_log_t share_log()
 {
-    static os_log_t const log = os_log_create("com.iainchesworthlabs.errorjournaling", "share");
+    static os_log_t const log = os_log_create("com.iainchesworthlabs.fieldtest", "share");
     return log;
 }
 

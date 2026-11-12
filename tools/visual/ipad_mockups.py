@@ -705,7 +705,7 @@ def first_launch_screen(p: Page) -> str:
         f'<div style="position: absolute; left: {x}px; width: {width}px; top: {top}px; display: flex; flex-direction: column; gap: 16px">'
         f'<div style="width: 72px; height: 72px; border-radius: 18px; background: {c["headerCard"]}; display: flex; align-items: center; '
         f'justify-content: center; margin: 0 auto">{icon("log", c["textOnHeaderCard"], 40)}</div>'
-        f'<h1 style="margin: 0; text-align: center; font-size: 30px; font-weight: 700; letter-spacing: -0.4px">CS Bingo Board</h1>'
+        f'<h1 style="margin: 0; text-align: center; font-size: 30px; font-weight: 700; letter-spacing: -0.4px">Field Test</h1>'
         f'<p style="margin: 0; text-align: center; font-size: 16px; line-height: 1.45; color: {c["textBody"]}">Log what goes wrong during a session, '
         f"as it happens, and share the log at the end of the day.</p>"
         f'{p.section_label("How do you want to start?")}'

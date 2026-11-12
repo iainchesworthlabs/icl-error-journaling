@@ -22,7 +22,7 @@ const char* subsystem()
 {
     static NSString* const identifier =
         NSBundle.mainBundle.bundleIdentifier != nil ? NSBundle.mainBundle.bundleIdentifier
-                                                    : @"com.iainchesworthlabs.errorjournaling";
+                                                    : @"com.iainchesworthlabs.fieldtest";
     return identifier.UTF8String;
 }
 

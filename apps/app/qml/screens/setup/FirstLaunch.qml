@@ -4,7 +4,7 @@ import QtQuick
 import ErrorJournalingApp
 
 // The first-launch screen (docs/design/screens/FirstLaunch.dc.html, PRF-09), shown while `settings.configured` is false and
-// the settings have finished loading. It names the app, CS Bingo Board, and offers two plain choices:
+// the settings have finished loading. It names the app, Field Test, and offers two plain choices:
 //
 //   Set up by hand         the main button. Opens FirstLaunchManual, which asks for the facilitator and the unit prefix. The
 //                          view model holds them in memory until both are set, then saves and `configured` becomes true.
@@ -35,7 +35,7 @@ Item {
         id: stack
 
         anchors.fill: parent
-        accessibleName: qsTr("CS Bingo Board")
+        accessibleName: qsTr("Field Test")
         initialItem: welcomePage
     }
 
@@ -129,7 +129,7 @@ Item {
                                     horizontalAlignment: Text.AlignHCenter
                                     color: Theme.colour.textPrimary
                                     font: Theme.font.largeTitle.font
-                                    text: qsTr("CS Bingo Board")
+                                    text: qsTr("Field Test")
                                     wrapMode: Text.WordWrap
                                     Accessible.role: Accessible.Heading
                                     Accessible.name: text

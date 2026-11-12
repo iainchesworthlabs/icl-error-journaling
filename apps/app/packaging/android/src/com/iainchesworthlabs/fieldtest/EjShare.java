@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-package com.iainchesworthlabs.errorjournaling;
+package com.iainchesworthlabs.fieldtest;
 
 import android.app.Activity;
 import android.app.PendingIntent;
@@ -29,7 +29,7 @@ import java.io.File;
  */
 public final class EjShare
 {
-    private static final String ACTION = "com.iainchesworthlabs.errorjournaling.SHARE_CHOSEN";
+    private static final String ACTION = "com.iainchesworthlabs.fieldtest.SHARE_CHOSEN";
     // How long after the application returns to the front the broadcast of a choice is waited for.
     private static final long GRACE_MS = 700;
 

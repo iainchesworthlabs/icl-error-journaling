@@ -782,8 +782,8 @@ TEST_CASE("app.settings: the import and export rows go through the chooser to th
     app.play();
     app.tap(QStringLiteral("settingsExport"));
     CHECK(app.stub().property("saves").toInt() == 1);
-    CHECK(app.stub().property("suggestedName").toString() == QStringLiteral("cs-bingo-board-setup.ejconfig"));
-    const QString target = QStringLiteral("exports/cs-bingo-board-setup.ejconfig");
+    CHECK(app.stub().property("suggestedName").toString() == QStringLiteral("field-test-setup.ejconfig"));
+    const QString target = QStringLiteral("exports/field-test-setup.ejconfig");
     app.choose_to_save(target);
     const auto& files = app.services.memory().config().files();
     REQUIRE(files.contains(target.toStdString()));
@@ -793,7 +793,7 @@ TEST_CASE("app.settings: the import and export rows go through the chooser to th
     // nothing.
     app.tap(QStringLiteral("settingsImport"));
     CHECK(app.stub().property("opens").toInt() == 1);
-    app.choose_to_open(target, QStringLiteral("cs-bingo-board-setup.ejconfig"));
+    app.choose_to_open(target, QStringLiteral("field-test-setup.ejconfig"));
     CHECK(app.shown(QStringLiteral("importConfirm")));
     CHECK_FALSE(app.need(QStringLiteral("shellTabs"))->isEnabled());
     app.tap(QStringLiteral("cancelButton"));

@@ -30,7 +30,7 @@
         <!-- Phone portrait (the v1 scope). Android 16 ignores the orientation on screens at least 600 dp wide; what v1
              does there is Stage 9 decision 2 (package 9.7). -->
         <activity
-            android:name="com.iainchesworthlabs.errorjournaling.EjActivity"
+            android:name="com.iainchesworthlabs.fieldtest.EjActivity"
             android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
             android:label="-- %%INSERT_APP_NAME%% --"
             android:launchMode="singleTop"
@@ -70,7 +70,7 @@
         <!-- What the application shares (the configuration export, a long text) is served to the receiving app through this
              provider: a content:// URI with read permission for that share (res/xml/ej_file_paths.xml). -->
         <provider
-            android:name="com.iainchesworthlabs.errorjournaling.EjFileProvider"
+            android:name="com.iainchesworthlabs.fieldtest.EjFileProvider"
             android:authorities="${applicationId}.files"
             android:exported="false"
             android:grantUriPermissions="true">

@@ -1,4 +1,4 @@
-# CS Bingo Board – Implementation plan v1
+# Field Test – Implementation plan v1
 
 7 Nov 2026 · Iain Chesworth
 
@@ -16,7 +16,7 @@ Stages 0 to 3 run in sequence. The UI and the iOS bridge run in parallel once th
 
 The repository iainchesworthlabs/icl-error-journaling, created from the organisation template, builds an empty Qt Quick app for macOS and iOS in CI.
 
-- Create icl-error-journaling from the template, GPL-3.0-or-later. App name CS Bingo Board (iOS display name and App Store name; renamed from ICL Error Journaling on 8 Nov 2026), develop as trunk and main for releases.
+- Create icl-error-journaling from the template, GPL-3.0-or-later. App name Field Test (iOS display name and App Store name; renamed from CS Bingo Board on 12 Nov 2026, and before that from ICL Error Journaling on 8 Nov 2026), develop as trunk and main for releases.
 
 - CMake presets for macOS desktop and iOS device and simulator. Dependencies through the organisation vcpkg fork; Qt from the shared common folder locally and aqtinstall in CI.
 
@@ -206,7 +206,7 @@ Each stage below gets its own page, `docs/plan/stage-N.md`, which sets out the t
 
 **Decisions that block a stage**
 
-- [x] App and repository name – decided: repository icl-error-journaling; public name CS Bingo Board everywhere a user sees it (owner, 8 Nov 2026, replacing ICL Error Journaling).
+- [x] App and repository name – decided: repository icl-error-journaling; public name Field Test everywhere a user sees it (owner, 8 Nov 2026, replacing ICL Error Journaling).
 
 - [ ] Exact spacing of the T\| marker, checked against a line the downstream ticket indexer already reads – blocks the Stage 1 golden tests.
 

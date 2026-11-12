@@ -1,6 +1,6 @@
 # Support
 
-CS Bingo Board is an app for logging robot errors during a session. This page says where to get help.
+Field Test is an app for logging robot errors during a session. This page says where to get help.
 
 ## Before you ask
 
@@ -19,7 +19,7 @@ You need a free GitHub account to do that.
 ## What to tell us
 
 - What you did, what you expected, and what happened instead.
-- The app version and the commit. Open **Settings**, then **About CS Bingo Board**; the **This build** group lists both.
+- The app version and the commit. Open **Settings**, then **About Field Test**; the **This build** group lists both.
 - The kind of phone or tablet and its system version.
 - A screenshot, if it helps.
 

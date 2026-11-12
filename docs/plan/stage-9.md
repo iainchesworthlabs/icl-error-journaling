@@ -41,7 +41,7 @@ Android TV, Wear OS, Chromebooks and the desktop build (Stage 12).
   platform anywhere (`AGENTS.md`). CMake chooses the directory.
 - **Java.** Android delivers activity results, intents and configuration changes to Java. A small Java layer receives
   them and calls into C++. Gradle reads Java only from the Android package source directory, so the Java lives in
-  `apps/app/packaging/android/src/com/iainchesworthlabs/errorjournaling/`, next to `AndroidManifest.xml` and `res/`.
+  `apps/app/packaging/android/src/com/iainchesworthlabs/fieldtest/`, next to `AndroidManifest.xml` and `res/`.
   That is the same place iOS keeps its `Info.plist` and asset catalogue. It holds three classes: `EjActivity`, which
   extends `QtActivity`; `EjShare`; and `EjDocuments`. Each method is a few lines that forward to a `native` method.
 - **The library name.** `ej_ios_bridge` becomes the bridge for both phones. Renaming it touches every target and the
@@ -85,7 +85,7 @@ Android TV, Wear OS, Chromebooks and the desktop build (Stage 12).
 | ABIs | `arm64-v8a` and `armeabi-v7a` in the release bundle; `x86_64` only for the emulator | [Decision 3](#decisions-for-the-owner): 32-bit phones are supported (package 9.1b) |
 | vcpkg triplets | `arm64-android`, `x64-android` | vcpkg's own triplets. The manifest already leaves Catch2 out on Android, so vcpkg installs nothing for a release build. Tracy is installed only with the `profiling` feature |
 | Package | Android App Bundle (`.aab`) for Play; APK for CI and the emulator | Play takes bundles |
-| Application ID | `com.iainchesworthlabs.errorjournaling` | The iOS bundle identifier. It cannot be changed after the first Play upload ([decision 1](#decisions-for-the-owner)) |
+| Application ID | `com.iainchesworthlabs.fieldtest` | The iOS bundle identifier. It cannot be changed after the first Play upload ([decision 1](#decisions-for-the-owner)) |
 | Page size | 16 KB ELF and zip alignment | Play requires it for targets of API 35 and up, and refuses updates without it from 1 February 2027. NDK r27 needs `-Wl,-z,max-page-size=16384`; the kit is built with `android_16kb_pages`, and CI checks the result |
 
 **Presets.** `android-base` hides the shared settings. Like `ios-base`, it uses vcpkg's toolchain file with
@@ -622,7 +622,7 @@ Only the owner can do these. Nothing in 9.9 can upload until O1 to O6 are done. 
 | # | Action | Notes |
 |---|---|---|
 | O1 | Create a Google Play developer account | Personal or organisation. An organisation account needs a D-U-N-S number. A new personal account must run a closed test with 12 testers for 14 days before production (Stage 11's critical path). There is a one-off registration fee, and Google verifies identity |
-| O2 | Create the app in Play Console | Name "CS Bingo Board", default language, app (not game), free or paid (Stage 11 decision) |
+| O2 | Create the app in Play Console | Name "Field Test", default language, app (not game), free or paid (Stage 11 decision) |
 | O3 | Complete what Play Console asks for before a first test release | Some App content declarations, such as app access, ads and target audience, are asked for before any track. The full listing, screenshots and data-safety form are Stage 11 |
 | O4 | Create the upload key, and add the repository secrets | `keytool` as above, on the owner's machine. Back the `.jks` file and its passwords up offline. Secrets: `ANDROID_UPLOAD_KEYSTORE_BASE64`, `ANDROID_UPLOAD_KEYSTORE_PASSWORD`, `ANDROID_UPLOAD_KEY_ALIAS`, `ANDROID_UPLOAD_KEY_PASSWORD` |
 | O5 | Enrol in Play App Signing, and upload the first `.aab` by hand to internal testing | Use the artifact of a `release.yml` dry run. Let Google generate the app signing key |

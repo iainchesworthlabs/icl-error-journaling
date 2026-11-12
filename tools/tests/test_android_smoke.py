@@ -145,7 +145,7 @@ class SmokeTest(unittest.TestCase):
         for line in (
             "E AndroidRuntime: FATAL EXCEPTION: main",
             "E QtLoader: java.lang.UnsatisfiedLinkError: dlopen failed: library \"libc++_shared.so\" not found",
-            "E x: java.lang.NoSuchMethodError: com.iainchesworthlabs.errorjournaling.EjShare.present",
+            "E x: java.lang.NoSuchMethodError: com.iainchesworthlabs.fieldtest.EjShare.present",
             "F libc: Fatal signal 11 (SIGSEGV), code 1",
         ):
             problems = run(FakeDevice(crash_line=line))

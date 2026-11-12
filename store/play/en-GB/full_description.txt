@@ -1,4 +1,4 @@
-CS Bingo Board is a one-tap error log for people who run sessions with a robot.
+Field Test is a one-tap error log for people who run sessions with a robot.
 
 Each common error has its own tile on the board. Tap the tile and the error goes into the day's log with the local time. Notes, templated notes and changes to the day's header, such as a new software version, go into the same journal, in time order.
 
@@ -21,7 +21,7 @@ SET UP YOUR WAY
 • On a tablet, the board and the log side by side in landscape
 
 PRIVATE BY DESIGN
-CS Bingo Board has no account, no internet access, no analytics and no advertising. Your log stays on your device and leaves it only when you share it.
+Field Test has no account, no internet access, no analytics and no advertising. Your log stays on your device and leaves it only when you share it.
 
 OPEN SOURCE
 The source code is published on GitHub under the GNU General Public License, version 3 or later.

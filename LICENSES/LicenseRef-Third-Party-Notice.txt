@@ -1,5 +1,5 @@
-These files reproduce the licence texts of the third-party components that CS Bingo Board is
+These files reproduce the licence texts of the third-party components that Field Test is
 built with. They are kept so that the app can show them. Each text is distributed under the
-terms it states, and applies to the component it belongs to, not to CS Bingo Board. The
+terms it states, and applies to the component it belongs to, not to Field Test. The
 components that each applies to are listed by the generator, tools/licences/notices.py, from
 the build's own link line.

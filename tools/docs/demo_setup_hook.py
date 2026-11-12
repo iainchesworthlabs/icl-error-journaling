@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """MkDocs hook: publish the demo setup file at <site>/demo/demo-setup.ejconfig (docs/plan/stage-11.md, 11.3).
 
-App Review and new users open this address in Safari, and the phone offers to open the file in CS Bingo Board. The
+App Review and new users open this address in Safari, and the phone offers to open the file in Field Test. The
 .ejconfig extension is what makes that work: Pages serves it as a download rather than showing JSON text, and the app
 declares the type as its own. The file is config/sample-config.json byte for byte (stand-in names only, PRD NFR-10).
 It is copied at build time and never committed under a second name: check_config_files.py allows only the sample.

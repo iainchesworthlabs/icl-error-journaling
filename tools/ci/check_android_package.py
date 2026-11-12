@@ -3,7 +3,7 @@
 """Look inside a built Android package, the counterpart of apps/app/packaging/ios/verify_app.sh.
 
     python3 tools/ci/check_android_package.py --sdk "$ANDROID_SDK_ROOT" --ndk "$ANDROID_NDK_ROOT" \\
-        [--application-id com.iainchesworthlabs.errorjournaling] PACKAGE.apk [PACKAGE.aab ...]
+        [--application-id com.iainchesworthlabs.fieldtest] PACKAGE.apk [PACKAGE.aab ...]
 
 For an APK it reads the merged manifest (`aapt2 dump xmltree`) and refuses:
 - any permission except the application's own (NFR-09: no network, so no INTERNET, and no AD_ID; androidx declares one
@@ -35,12 +35,12 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-APPLICATION_ID = "com.iainchesworthlabs.errorjournaling"
+APPLICATION_ID = "com.iainchesworthlabs.fieldtest"
 MIN_SDK = 28
 TARGET_SDK = 36
 # The Java class of the launcher activity. Its package is the one the Java sources are in, which stays as it is when the
 # application ID changes (the ID is set in CMake and need not equal the package of any class).
-ACTIVITY_CLASS = "com.iainchesworthlabs.errorjournaling.EjActivity"
+ACTIVITY_CLASS = "com.iainchesworthlabs.fieldtest.EjActivity"
 # The ABIs of 64-bit devices. Google Play asks for 16 KB page alignment on those only.
 SIXTY_FOUR_BIT = ("arm64-v8a", "x86_64")
 PAGE = 0x4000  # 16 KB

@@ -120,7 +120,7 @@ if(ERROR_JOURNALING_BUILD_TESTS)
         LABELS ui
         TIMEOUT 30
         ENVIRONMENT "QT_QPA_PLATFORM=there-is-no-such-plugin"
-        PASS_REGULAR_EXPRESSION "^error-journaling [0-9]+\\.[0-9]+\\.[0-9]+")
+        PASS_REGULAR_EXPRESSION "^field-test [0-9]+\\.[0-9]+\\.[0-9]+")
 
     # ej_app links Qt Quick; on Windows both programs need the Qt DLLs on PATH (cmake/EjQtTestEnvironment.cmake).
     ej_qt_test_environment(app.smoke app.version)

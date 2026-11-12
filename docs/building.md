@@ -66,7 +66,7 @@ sets `CFBundleVersion`. The identifier is `ERROR_JOURNALING_APPLICATION_ID` in `
 #### Reading the timings on a device
 
 The exit-gate figures (cold start to a usable board, tap to haptic) are read from the application itself, on a TestFlight
-build: there is no Mac, so no Instruments. Open the Settings tab, scroll to the end, open About CS Bingo Board, and tap the Version row
+build: there is no Mac, so no Instruments. Open the Settings tab, scroll to the end, open About Field Test, and tap the Version row
 five times quickly (five more hide it) to see `launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst 77 ms`. The tap figure stops at the haptic call
 returning and does not include the actuator. The same launch figure goes to the system log as a `launch:` line, and the
 marks go to Points of Interest, for anyone with a Mac and Console or Instruments.
@@ -106,7 +106,7 @@ is an escape. On the developer machine the SDK, the NDK, JDK 21, the emulator an
 `cmake --build --preset android-release` runs Qt's `androiddeployqt` and Gradle and writes the unsigned APK, and
 `cmake --build --preset android-release-bundle` then writes the bundle (one after the other: the two share one Gradle
 directory). Both are under `build/android-release/apps/app/android-build/build/outputs/`. The package is
-`com.iainchesworthlabs.errorjournaling` (`ERROR_JOURNALING_APPLICATION_ID`), API 28 to 36 (`apps/app/packaging/android.cmake`).
+`com.iainchesworthlabs.fieldtest` (`ERROR_JOURNALING_APPLICATION_ID`), API 28 to 36 (`apps/app/packaging/android.cmake`).
 `ERROR_JOURNALING_ANDROID_VERSION_CODE` sets `android:versionCode`; empty, it is `MAJOR * 10000 + MINOR * 100 + PATCH`
 of the project version. Check a package with
 `python3 tools/ci/check_android_package.py --sdk "$ANDROID_SDK_ROOT" --ndk "$ANDROID_NDK_ROOT" <apk or aab>`.

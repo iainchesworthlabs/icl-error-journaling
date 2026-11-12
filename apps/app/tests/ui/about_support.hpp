@@ -19,7 +19,7 @@ namespace ej::test
 inline viewmodel::AboutFacts about_facts()
 {
     viewmodel::AboutFacts facts;
-    facts.m_Name = QStringLiteral("CS Bingo Board");
+    facts.m_Name = QStringLiteral("Field Test");
     facts.m_Version = QStringLiteral("0.1.0");
     facts.m_BuildNumber = QStringLiteral("57");
     facts.m_Commit = QStringLiteral("a1b2c3d");
@@ -108,7 +108,7 @@ inline QByteArray about_notices(int long_text_paragraphs = 6, const QString& bas
     const QJsonObject document{
         {QStringLiteral("schema"), 1},
         {QStringLiteral("project"),
-         QJsonObject{{QStringLiteral("name"), QStringLiteral("CS Bingo Board")},
+         QJsonObject{{QStringLiteral("name"), QStringLiteral("Field Test")},
                      {QStringLiteral("licence"), QStringLiteral("GPL-3.0-or-later")},
                      {QStringLiteral("copyright"), QStringLiteral("Copyright (C) Iain Chesworth Labs contributors")}}},
         {QStringLiteral("components"), components},

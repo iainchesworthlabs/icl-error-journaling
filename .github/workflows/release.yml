@@ -100,7 +100,7 @@ jobs:
       contents: read
     env:
       # ERROR_JOURNALING_APPLICATION_ID in CMakeLists.txt; the check of the IPA fails if the two differ.
-      BUNDLE_ID: com.iainchesworthlabs.errorjournaling
+      BUNDLE_ID: com.iainchesworthlabs.fieldtest
       EXECUTABLE: error-journaling
       VCPKG_DISABLE_METRICS: "1"
     steps:

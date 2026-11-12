@@ -31,7 +31,7 @@ public:
             return;
         }
         const int constant = android_haptic_constant(kind, QNativeInterface::QAndroidApplication::sdkVersion());
-        QJniObject::callStaticMethod<void>("com/iainchesworthlabs/errorjournaling/EjHaptics", "fire",
+        QJniObject::callStaticMethod<void>("com/iainchesworthlabs/fieldtest/EjHaptics", "fire",
                                            "(Landroid/app/Activity;I)V", activity.object(), static_cast<jint>(constant));
         // A failed haptic is not worth more than a log line from the JNI layer.
         QJniEnvironment().checkAndClearExceptions();

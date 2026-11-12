@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-package com.iainchesworthlabs.errorjournaling;
+package com.iainchesworthlabs.fieldtest;
 
 import android.app.Activity;
 import android.view.View;

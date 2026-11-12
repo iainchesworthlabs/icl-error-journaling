@@ -43,8 +43,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  BUNDLE_ID: com.iainchesworthlabs.errorjournaling
-  APPLICATION_ID: com.iainchesworthlabs.errorjournaling
+  BUNDLE_ID: com.iainchesworthlabs.fieldtest
+  APPLICATION_ID: com.iainchesworthlabs.fieldtest
 
 jobs:
   upload:

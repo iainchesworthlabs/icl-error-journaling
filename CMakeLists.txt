@@ -18,8 +18,8 @@ set(ICL_PROJECT_PREFIX ERROR_JOURNALING)
 # The application id on Android and the bundle identifier on iOS: com.iainchesworthlabs.<app>, the App ID registered with
 # Apple and what the provisioning profile names. Defined once; the iOS workflows repeat it as BUNDLE_ID and
 # apps/app/packaging/ios/verify_app.sh checks that the two agree.
-set(ERROR_JOURNALING_APPLICATION_ID "com.iainchesworthlabs.errorjournaling")
-set(ERROR_JOURNALING_DISPLAY_NAME "CS Bingo Board")
+set(ERROR_JOURNALING_APPLICATION_ID "com.iainchesworthlabs.fieldtest")
+set(ERROR_JOURNALING_DISPLAY_NAME "Field Test")
 
 # The iOS bridge is Objective-C++ (libs/ios_bridge/src/platform/ios).
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")

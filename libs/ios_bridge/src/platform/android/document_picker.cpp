@@ -29,7 +29,7 @@ namespace ej::bridge
 namespace
 {
 
-constexpr const char* java_class = "com/iainchesworthlabs/errorjournaling/EjDocuments";
+constexpr const char* java_class = "com/iainchesworthlabs/fieldtest/EjDocuments";
 
 using PickCallback = std::function<void(const PickResult&)>;
 
