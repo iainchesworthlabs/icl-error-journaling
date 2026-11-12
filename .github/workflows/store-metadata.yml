@@ -27,6 +27,10 @@ on:
         description: "Build number to attach to the version, from TestFlight (App Store only, optional)"
         type: string
         required: false
+      screenshots_run:
+        description: "ci.yml run (a push to develop) whose screenshots artifact holds the App Store screenshots (App Store only, optional)"
+        type: string
+        required: false
       first_release:
         description: "The app's first version: leave out What's New, which App Store Connect refuses on it"
         type: boolean
@@ -54,6 +58,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -70,6 +75,17 @@ jobs:
 
       - name: Install fastlane
         run: bundle install --jobs 4
+
+      - name: Fetch the App Store screenshots
+        if: inputs.store == 'appstore' && inputs.screenshots_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.screenshots_run }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::screenshots_run must be a run number"; exit 1; }
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name screenshots --dir "$RUNNER_TEMP/screenshots"
+          python3 tools/store/stage_appstore_screenshots.py "$RUNNER_TEMP/screenshots/store/appstore" store/appstore/screenshots/en-GB
 
       - name: Upload the App Store listing
         if: inputs.store == 'appstore'
