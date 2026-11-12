@@ -54,6 +54,8 @@ Item {
     // The AboutModel, for the About pages behind the last row of Settings (PRF-12), which also show the timing line behind five
     // taps on the Version row. Null leaves the row out.
     property var about: null
+    // What the in-app help remembers (HelpState), for the first-run tip of the Log screen. Null shows no tip.
+    property var help: null
     // The QmlBridge: the haptics, the share sheet and the accessibility settings.
     required property var bridge
     // The file chooser that import and export go through. The platform's own unless the test of the shell gives it another.
@@ -116,6 +118,11 @@ Item {
             return;
         detailsOpen = true;
         stack.push(detailsPage);
+    }
+
+    // The help sheet of a topic (HelpTopics), over whatever is on screen.
+    function showHelp(topic: string): void {
+        helpSheet.show(topic);
     }
 
     function selectTab(index: int): void {
@@ -272,6 +279,7 @@ Item {
                     bridge: root.bridge
                     picker: root.picker
                     share: root.share
+                    help: root.help
                     bottomClearance: tabBar.height
                     sheetLayer: root.sheetLayer
                     onTodaysDetailsRequested: root.showDetails(logStack)
@@ -340,6 +348,7 @@ Item {
                     onLocationsRequested: pushPage(locationsPage, {})
                     onUnitEnvironmentsRequested: pushPage(unitEnvironmentsPage, {})
                     onOpenUrlRequested: url => root.urlOpener.open(url)
+                    onHelpRequested: topic => root.showHelp(topic)
                     onImportRequested: root.fileChooser.chooseToOpen()
                     onExportRequested: root.fileChooser.chooseToSave(SetupFile.defaultFileName)
                 }
@@ -423,6 +432,8 @@ Item {
             anchors.fill: parent
             settings: root.settings
             onImportRequested: root.fileChooser.chooseToOpen()
+            onHelpRequested: topic => root.showHelp(topic)
+            onGuideRequested: url => root.urlOpener.open(url)
         }
 
         QtObject {
@@ -466,6 +477,13 @@ Item {
                 session: root.session
                 bridge: root.bridge
             },
+            // The help of a screen (Stage 10, 10.6). Over the tab bar and the import flow, under the new-day alert.
+            HelpSheet {
+                id: helpSheet
+
+                objectName: "helpSheet"
+                onGuideRequested: url => root.urlOpener.open(url)
+            },
             NewDay {
                 objectName: "newDay"
                 day: root.day
@@ -489,6 +507,7 @@ Item {
                 root.detailsOpen = false;
                 StackView.view.pop();
             }
+            onHelpRequested: topic => root.showHelp(topic)
         }
     }
 
@@ -503,6 +522,7 @@ Item {
             settings: root.settings
             bottomClearance: tabBar.height
             onHeaderRequested: root.showDetails(StackView.view)
+            onHelpRequested: topic => root.showHelp(topic)
             // The edit sheet and its time sheet cover the tab bar, as every sheet does.
             sheetLayer: root.sheetLayer
         }
@@ -516,6 +536,7 @@ Item {
             // The sheet of the editor covers the tab bar, as every sheet does.
             sheetLayer: root.sheetLayer
             onCloseRequested: StackView.view.pop()
+            onHelpRequested: topic => root.showHelp(topic)
         }
     }
 
@@ -547,6 +568,7 @@ Item {
         Templates {
             settings: root.settings
             onCloseRequested: StackView.view.pop()
+            onHelpRequested: topic => root.showHelp(topic)
         }
     }
 }

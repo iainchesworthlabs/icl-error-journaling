@@ -20,6 +20,8 @@ Rectangle {
     property string trailingText
     property string trailingAccessibleName: root.trailingText
     property bool trailingEnabled: true
+    // What a screen reader says for the help button of the title bar, such as "Help with error types". Empty for none.
+    property string helpName
 
     // The page's content: below the bar, in the safe area.
     default property alias content: body.data
@@ -27,6 +29,7 @@ Rectangle {
 
     signal leadingTriggered
     signal trailingTriggered
+    signal helpRequested
 
     color: Theme.colour.background
 
@@ -54,6 +57,8 @@ Rectangle {
             trailingText: root.trailingText
             trailingAccessibleName: root.trailingAccessibleName
             trailingEnabled: root.trailingEnabled
+            helpName: root.helpName
+            onHelpTriggered: root.helpRequested()
             onLeadingTriggered: root.leadingTriggered()
             onTrailingTriggered: root.trailingTriggered()
         }

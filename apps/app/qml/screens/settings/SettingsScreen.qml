@@ -29,7 +29,8 @@ import ErrorJournalingApp
 //   errorTypesRequested, templatesRequested, locationsRequested, unitEnvironmentsRequested   open the editor of that list
 //   importRequested, exportRequested                              choose a file, then `settings.loadImport(path)` or
 //                                                                 `settings.exportTo(path)`
-//   openUrlRequested                                               open an address (the source code) in the browser
+//   openUrlRequested                                               open an address (the source code, a page of the guide) in the browser
+//   helpRequested                                                  show the help sheet of a topic (Stage 10, 10.6)
 //
 // The shell may show an editor on the screen's stack with `pushPage` (the Back of the title bar then returns to the list),
 // and goes back to the list with `popToRoot` when the Settings tab is tapped again. The sheet of this screen covers the
@@ -53,6 +54,8 @@ Item {
     signal exportRequested
     // An address, such as the source code, is to be opened in the browser (the About page).
     signal openUrlRequested(string url)
+    // A help button, or a row of Quick help, asks for the sheet of a topic (HelpTopics): its id.
+    signal helpRequested(string topic)
 
     // The safe-area insets, for a test: the platform's are used unless `overrideInsets` is set.
     property alias overrideInsets: frame.overrideInsets
@@ -148,6 +151,9 @@ Item {
             onErrorPrefixRequested: stack.push(errorPrefixPage)
             onTimeFormatRequested: stack.push(timeFormatPage)
             onImportExportRequested: stack.push(importExportPage)
+            onQuickHelpRequested: stack.push(quickHelpPage)
+            onHelpTopicRequested: topic => root.helpRequested(topic)
+            onGuideRequested: url => root.openUrlRequested(url)
             onAboutRequested: stack.push(aboutPage)
             onReplaceRequested: (position, typeId) => picker.openFor(position, typeId)
         }
@@ -192,6 +198,17 @@ Item {
             onCloseRequested: stack.pop()
             onImportRequested: root.importRequested()
             onExportRequested: root.exportRequested()
+            onHelpRequested: root.helpRequested("setupFile")
+        }
+    }
+
+    Component {
+        id: quickHelpPage
+
+        SettingsQuickHelpPage {
+            topInset: frame.topInset
+            onCloseRequested: stack.pop()
+            onTopicRequested: topic => root.helpRequested(topic)
         }
     }
 

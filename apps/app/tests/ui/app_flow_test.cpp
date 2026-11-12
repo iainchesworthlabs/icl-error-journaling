@@ -197,7 +197,7 @@ struct App
     {
         const auto object = [](QObject& value) { return QVariant::fromValue<QObject*>(&value); };
         auto& root = services.root();
-        return QVariantMap{{QStringLiteral("session"), object(*root.session())},
+        QVariantMap given{{QStringLiteral("session"), object(*root.session())},
                            {QStringLiteral("undo"), object(*root.undo())},
                            {QStringLiteral("board"), object(*root.board())},
                            {QStringLiteral("picker"), object(*root.picker())},
@@ -212,6 +212,19 @@ struct App
                            {QStringLiteral("urlOpener"), object(*url_opener)},
                            {QStringLiteral("about"), object(about)},
                            {QStringLiteral("aboutText"), QStringLiteral("0.1.0 · test, storage: memory")}};
+        if (help != nullptr)
+        {
+            given.insert(QStringLiteral("help"), object(*help));
+        }
+        return given;
+    }
+
+    /// What the in-app help remembers (Stage 10, 10.6), given to the shell for the first-run tip. Call it before `load()`.
+    void with_help()
+    {
+        QQmlComponent component(&ui.engine(), MODULE, "UiStubHelpState");
+        help.reset(component.create());
+        REQUIRE(help != nullptr);
     }
 
     void load(const QVariantMap& without = {})
@@ -335,6 +348,7 @@ struct App
     UiRig ui;
     std::unique_ptr<QObject> chooser;
     std::unique_ptr<QObject> url_opener;
+    std::unique_ptr<QObject> help;
     QQuickItem* shell = nullptr;
 };
 
@@ -1083,7 +1097,20 @@ TEST_CASE("ipad.screens_fit: on every iPad in portrait the tabs are in their col
             app.ui.layout();
             expect_clean(check_names(app.ui));
             expect_clean(check_targets(app.ui, minimum));
-            expect_clean(check_safe_area(app.ui, IPAD_TOP, IPAD_BOTTOM));
+            if (tab == SETTINGS_TAB)
+            {
+                // The Settings list scrolls: what is below the fold is reached by scrolling, so the safe area is held by the
+                // page that scrolls, which ends above the tab bar and inside the bottom inset, and starts under the top inset
+                // with a spacer of its own (Stage 10, 10.6: the Help group made the list longer than the window).
+                const QRectF page = app.ui.geometry(app.need(QStringLiteral("settingsFlickable")));
+                CHECK(page.bottom() <= size.height() - IPAD_BOTTOM + 0.5);
+                const QRectF title = app.ui.geometry(app.need(QStringLiteral("settingsNavBar")));
+                CHECK(title.top() >= IPAD_TOP - 0.5);
+            }
+            else
+            {
+                expect_clean(check_safe_area(app.ui, IPAD_TOP, IPAD_BOTTOM));
+            }
             expect_clean(check_text_scale(app.ui));
             // As in app.accessibility, the rows of the Settings list scrolled under the tab bar read out of order.
             if (tab != SETTINGS_TAB)
@@ -2529,4 +2556,356 @@ TEST_CASE(
     CHECK_FALSE(sheet->property("isOpen").toBool());
     expect_no_typing(app);
     CHECK_FALSE(version->property("hasFocus").toBool());
+}
+
+// ---- the in-app help (Stage 10, 10.6) ----
+
+namespace
+{
+
+/// The topics of HelpTopics, in the order of the Quick help list.
+const QStringList HELP_TOPIC_IDS{QStringLiteral("logging"),   QStringLiteral("board"),     QStringLiteral("errorTypes"),
+                                 QStringLiteral("templates"), QStringLiteral("details"),   QStringLiteral("setupFile"),
+                                 QStringLiteral("review")};
+
+/// The accessible names of the help buttons on screen: those of a title bar and the one of Review.
+QStringList help_buttons(App& app)
+{
+    QStringList names;
+    for (const char* object : {"navHelp", "reviewHelp"})
+    {
+        for (QQuickItem* item : app.ui.find_items(QString::fromLatin1(object)))
+        {
+            if (item->isVisible() && item->width() > 0)
+            {
+                names.append(item->property("accessibleName").toString());
+            }
+        }
+    }
+    return names;
+}
+
+QQuickItem* the_help_button(App& app)
+{
+    for (const char* object : {"navHelp", "reviewHelp"})
+    {
+        for (QQuickItem* item : app.ui.find_items(QString::fromLatin1(object)))
+        {
+            if (item->isVisible() && item->width() > 0)
+            {
+                return item;
+            }
+        }
+    }
+    FAIL("no help button is on screen");
+    return nullptr;
+}
+
+/// Taps the help button that is on screen; the heading of the sheet it opens.
+QString open_help(App& app)
+{
+    app.ui.tap(the_help_button(app));
+    app.play();
+    QQuickItem* sheet = app.need(QStringLiteral("helpSheet"));
+    CHECK(sheet->property("isOpen").toBool());
+    return sheet->property("heading").toString();
+}
+
+void close_help(App& app)
+{
+    QQuickItem* sheet = app.need(QStringLiteral("helpSheet"));
+    REQUIRE(QMetaObject::invokeMethod(sheet, "close"));
+    app.play();
+    CHECK_FALSE(sheet->property("isOpen").toBool());
+}
+
+/// The paragraphs of the open help sheet, in the order they are laid out.
+QStringList help_paragraphs(App& app)
+{
+    QStringList texts;
+    QQuickItem* column = app.need(QStringLiteral("helpParagraphs"));
+    for (QQuickItem* child : column->childItems())
+    {
+        const QString text = child->property("text").toString();
+        if (!text.isEmpty())
+        {
+            texts.append(text);
+        }
+    }
+    return texts;
+}
+
+} // namespace
+
+TEST_CASE("help.entry_points: every screen of the entry point table has its help button, named, and it opens its topic",
+          "[ui][help]")
+{
+    App app;
+    app.fill_header();
+
+    app.choose_tab(SETTINGS_TAB);
+    CHECK(help_buttons(app) == QStringList{QStringLiteral("Help with the board layout")});
+    CHECK(open_help(app) == QStringLiteral("Setting up the board"));
+    close_help(app);
+
+    struct Page
+    {
+        const char* row;
+        const char* button;
+        const char* heading;
+    };
+    for (const Page& page : {Page{"settingsErrorTypes", "Help with error types", "Error types"},
+                             Page{"settingsTemplates", "Help with note templates", "Note templates"},
+                             Page{"settingsImportExport", "Help with importing a setup file",
+                                  "Import or export a setup file"}})
+    {
+        CAPTURE(page.row);
+        activate(app, QString::fromLatin1(page.row));
+        CHECK(help_buttons(app) == QStringList{QString::fromUtf8(page.button)});
+        CHECK(open_help(app) == QString::fromUtf8(page.heading));
+        close_help(app);
+        // The tab, tapped again, goes back to the list.
+        app.choose_tab(SETTINGS_TAB);
+    }
+
+    // Today's details, from the Log screen.
+    app.choose_tab(LOG_TAB);
+    app.tap(QStringLiteral("logHeaderCard"));
+    app.play();
+    CHECK(help_buttons(app) == QStringList{QString::fromUtf8("Help with today’s details")});
+    CHECK(open_help(app) == QString::fromUtf8("Today’s details"));
+    close_help(app);
+    REQUIRE(QMetaObject::invokeMethod(app.need(QStringLiteral("headerScreen")), "leave"));
+    app.play();
+
+    // Review.
+    app.choose_tab(REVIEW_TAB);
+    CHECK(help_buttons(app) == QStringList{QStringLiteral("Help with review and sharing")});
+    CHECK(open_help(app) == QStringLiteral("Review and sharing"));
+    close_help(app);
+}
+
+TEST_CASE("help.import_errors: a refused file has a help button and the \"How to fix a setup file\" row, which opens the guide",
+          "[ui][help]")
+{
+    App app;
+    app.add_file("broken.json", "{ this is not a setup file");
+    app.choose_tab(SETTINGS_TAB);
+    app.choose_to_open(QStringLiteral("broken.json"), QStringLiteral("broken.json"));
+    QQuickItem* errors = app.need(QStringLiteral("importErrors"));
+    REQUIRE(app.shown(QStringLiteral("importErrors")));
+
+    QQuickItem* help = app.ui.find_item(QStringLiteral("navHelp"), errors);
+    REQUIRE(help != nullptr);
+    CHECK(help->property("accessibleName").toString() == QStringLiteral("Help with importing a setup file"));
+    app.ui.tap(help);
+    app.play();
+    QQuickItem* sheet = app.need(QStringLiteral("helpSheet"));
+    CHECK(sheet->property("isOpen").toBool());
+    CHECK(sheet->property("heading").toString() == QStringLiteral("Import or export a setup file"));
+    // The sheet is over the import screen, and closing it leaves the screen as it was.
+    close_help(app);
+    CHECK(app.shown(QStringLiteral("importErrors")));
+
+    QQuickItem* row = app.ui.find_item(QStringLiteral("fixGuideRow"), errors);
+    REQUIRE(row != nullptr);
+    CHECK(row->property("text").toString() == QStringLiteral("How to fix a setup file"));
+    CHECK(app.url_opener->property("opened").toList().isEmpty());
+    REQUIRE(QMetaObject::invokeMethod(row, "activated"));
+    const QVariantList opened = app.url_opener->property("opened").toList();
+    REQUIRE(opened.size() == 1);
+    CHECK(opened.at(0).toString().startsWith(QStringLiteral("https://")));
+    CHECK(opened.at(0).toString().endsWith(QStringLiteral("/guide/setup-file/#when-the-app-refuses-a-file")));
+}
+
+TEST_CASE("help.sheet: a topic reads in order, \"Read more\" asks for its guide section, and Done closes it",
+          "[ui][help]")
+{
+    App app;
+    app.choose_tab(SETTINGS_TAB);
+    REQUIRE(open_help(app) == QStringLiteral("Setting up the board"));
+
+    const QStringList paragraphs = help_paragraphs(app);
+    REQUIRE(paragraphs.size() == 5);
+    CHECK(paragraphs.at(0).contains(QStringLiteral("11 tiles")));
+    CHECK(paragraphs.at(4).contains(QStringLiteral("Other")));
+
+    QQuickItem* sheet = app.need(QStringLiteral("helpSheet"));
+    QQuickItem* read_more = app.need(QStringLiteral("helpReadMore"));
+    const std::vector<Node> read_more_tree = app.ui.tree(read_more);
+    REQUIRE_FALSE(read_more_tree.empty());
+    CHECK(read_more_tree.front().m_Name == QStringLiteral("Read more in the guide"));
+    CHECK(read_more_tree.front().m_InAccessibleTree);
+    CHECK(app.need(QStringLiteral("helpOfflineNote"))->property("text").toString() ==
+          QStringLiteral("The guide opens in your browser. This help works without a connection."));
+
+    // Nothing is opened until "Read more" is asked for, and then the opener gets the topic's address, once.
+    CHECK(app.url_opener->property("opened").toList().isEmpty());
+    app.ui.tap(read_more);
+    app.play();
+    const QVariantList opened = app.url_opener->property("opened").toList();
+    REQUIRE(opened.size() == 1);
+    CHECK(opened.at(0).toString().startsWith(QStringLiteral("https://")));
+    CHECK(opened.at(0).toString().endsWith(QStringLiteral("/guide/setup/#your-board")));
+
+    // Done closes the sheet.
+    app.ui.tap(app.ui.find_item(QStringLiteral("navTrailing"), app.need(QStringLiteral("helpBar"))));
+    app.play();
+    CHECK_FALSE(sheet->property("isOpen").toBool());
+    CHECK(app.url_opener->property("opened").toList().size() == 1);
+
+    // An id that is not a topic opens nothing.
+    REQUIRE(QMetaObject::invokeMethod(sheet, "show", Q_ARG(QString, QStringLiteral("noSuchTopic"))));
+    app.play();
+    CHECK_FALSE(sheet->property("isOpen").toBool());
+}
+
+TEST_CASE("help.sheet_large: at the largest text size the sheet stays inside the window, the text scrolls and the button is "
+          "reachable",
+          "[ui][help]")
+{
+    App app;
+    app.bridge.set_text_scale(3.0);
+    app.ui.advance(50ms);
+    app.choose_tab(SETTINGS_TAB);
+    {
+        QQuickItem* button = the_help_button(app);
+        const QRectF at = button->mapRectToScene(QRectF(0, 0, button->width(), button->height()));
+        CAPTURE(at.x(), at.y(), at.width(), at.height(), app.shell->width(), app.shell->height());
+        const QPointF centre = at.center();
+        QStringList under;
+        for (const Node& node : app.ui.tree())
+        {
+            if (node.m_Visible && node.m_Interactive && node.m_Rect.contains(centre))
+            {
+                under.append(node.m_ObjectName + QLatin1Char('/') + node.m_TypeName);
+            }
+        }
+        QStringList open_sheets;
+        for (const Node& node : app.ui.tree())
+        {
+            if (node.m_Item != nullptr && node.m_Item->property("isOpen").toBool())
+            {
+                open_sheets.append(node.m_ObjectName + QLatin1Char('/') + node.m_TypeName);
+            }
+        }
+        CAPTURE(under.join(QStringLiteral(", ")).toStdString(), open_sheets.join(QStringLiteral(", ")).toStdString());
+        REQUIRE(open_help(app) == QStringLiteral("Setting up the board"));
+    }
+
+    QQuickItem* sheet = app.need(QStringLiteral("helpSheet"));
+    QQuickItem* panel = app.ui.find_item(QStringLiteral("sheetPanel"), sheet);
+    REQUIRE(panel != nullptr);
+    const QRectF window(0, 0, sheet->width(), sheet->height());
+    const QRectF panel_rect = panel->mapRectToScene(QRectF(0, 0, panel->width(), panel->height()));
+    CHECK(panel_rect.top() >= 0);
+    CHECK(panel_rect.left() >= 0);
+    CHECK(panel_rect.right() <= window.right() + 0.5);
+
+    // The paragraphs are in a Flickable that scrolls, and "Read more in the guide" stays on screen below it.
+    QQuickItem* flick = app.need(QStringLiteral("helpFlickable"));
+    CHECK(flick->property("contentHeight").toDouble() > flick->height());
+    QQuickItem* read_more = app.need(QStringLiteral("helpReadMore"));
+    const QRectF button = read_more->mapRectToScene(QRectF(0, 0, read_more->width(), read_more->height()));
+    CHECK(button.bottom() <= window.bottom() + 0.5);
+    CHECK(button.top() >= panel_rect.top());
+    CHECK(button.height() >= 44.0);
+    // No paragraph is wider than the sheet.
+    for (QQuickItem* child : app.need(QStringLiteral("helpParagraphs"))->childItems())
+    {
+        CHECK(child->width() <= panel->width());
+    }
+}
+
+TEST_CASE("help.settings_group: the Help group lists Quick help and the three online rows, which open the site",
+          "[ui][help]")
+{
+    App app;
+    app.choose_tab(SETTINGS_TAB);
+
+    for (const char* row : {"settingsQuickHelp", "settingsUserGuide", "settingsSupport", "settingsPrivacy"})
+    {
+        CAPTURE(row);
+        REQUIRE(app.ui.find_item(QString::fromLatin1(row)) != nullptr);
+    }
+    CHECK(app.need(QStringLiteral("settingsHelpGroup"))->property("title").toString() == QStringLiteral("Help"));
+    // The online rows say so to a screen reader.
+    CHECK(app.need(QStringLiteral("settingsUserGuide"))->property("accessibleName").toString() ==
+          QStringLiteral("User guide, opens in your browser"));
+    CHECK(app.need(QStringLiteral("settingsSupport"))->property("accessibleName").toString() ==
+          QStringLiteral("Support, opens in your browser"));
+    CHECK(app.need(QStringLiteral("settingsPrivacy"))->property("accessibleName").toString() ==
+          QStringLiteral("Privacy, opens in your browser"));
+
+    CHECK(app.url_opener->property("opened").toList().isEmpty());
+    activate(app, QStringLiteral("settingsUserGuide"));
+    activate(app, QStringLiteral("settingsSupport"));
+    activate(app, QStringLiteral("settingsPrivacy"));
+    const QVariantList opened = app.url_opener->property("opened").toList();
+    REQUIRE(opened.size() == 3);
+    const QString site = opened.at(0).toString();
+    CHECK(site.startsWith(QStringLiteral("https://")));
+    CHECK(site.endsWith(QLatin1Char('/')));
+    CHECK(opened.at(1).toString() == site + QStringLiteral("support/"));
+    CHECK(opened.at(2).toString() == site + QStringLiteral("privacy/"));
+
+    // Quick help is a list of the topics, and a row opens the sheet of that topic.
+    activate(app, QStringLiteral("settingsQuickHelp"));
+    for (const QString& id : HELP_TOPIC_IDS)
+    {
+        CAPTURE(id);
+        CHECK(app.ui.find_item(QStringLiteral("quickHelp_") + id) != nullptr);
+    }
+    activate(app, QStringLiteral("quickHelp_review"));
+    QQuickItem* sheet = app.need(QStringLiteral("helpSheet"));
+    CHECK(sheet->property("isOpen").toBool());
+    CHECK(sheet->property("heading").toString() == QStringLiteral("Review and sharing"));
+    // Closing it leaves the list as it was.
+    close_help(app);
+    CHECK(app.shown(QStringLiteral("quickHelp_review")));
+}
+
+TEST_CASE("help.offline: every topic shows from the text in the app, and the browser is not asked for until \"Read more\"",
+          "[ui][help]")
+{
+    App app;
+    QQuickItem* sheet = app.need(QStringLiteral("helpSheet"));
+    for (const QString& id : HELP_TOPIC_IDS)
+    {
+        CAPTURE(id);
+        REQUIRE(QMetaObject::invokeMethod(sheet, "show", Q_ARG(QString, id)));
+        app.play();
+        CHECK(sheet->property("isOpen").toBool());
+        CHECK_FALSE(sheet->property("heading").toString().isEmpty());
+        const QStringList paragraphs = help_paragraphs(app);
+        CHECK(paragraphs.size() >= 2);
+        CHECK(paragraphs.size() <= 5);
+        for (const QString& paragraph : paragraphs)
+        {
+            CHECK_FALSE(paragraph.trimmed().isEmpty());
+        }
+        close_help(app);
+    }
+    CHECK(app.url_opener->property("opened").toList().isEmpty());
+}
+
+TEST_CASE("help.first_run_tip_shell: the shell gives the Log screen the state of the tip, and Close is remembered",
+          "[ui][help]")
+{
+    App app(true, false);
+    app.with_help();
+    app.load();
+    QQuickItem* tip = app.need(QStringLiteral("logFirstRunTip"));
+    CHECK(tip->isVisible());
+    CHECK(app.help->property("shownCalls").toInt() >= 1);
+    app.ui.tap(app.ui.find_item(QStringLiteral("tipClose"), tip));
+    app.play();
+    CHECK(app.help->property("closeCalls").toInt() == 1);
+    CHECK(app.ui.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
+
+    // Leaving the Log tab and coming back does not bring it back.
+    CHECK_FALSE(app.help->property("tipOpen").toBool());
+    app.choose_tab(SETTINGS_TAB);
+    app.choose_tab(LOG_TAB);
+    CHECK(app.ui.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
 }

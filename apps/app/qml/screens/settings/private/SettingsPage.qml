@@ -21,6 +21,8 @@ Rectangle {
     property string leadingText
     property string trailingText
     property bool trailingEnabled: true
+    // What a screen reader says for the help button of the title bar, such as "Help with the board layout". Empty for none.
+    property string helpName
     // Whether a drag scrolls the page. The list turns it off while a tile of the board is being dragged.
     property bool scrollable: true
     // Room above the title and between the title and the content, for a page whose title has no actions above it (the
@@ -40,6 +42,7 @@ Rectangle {
 
     signal leadingTriggered
     signal trailingTriggered
+    signal helpRequested
 
     color: Theme.colour.background
 
@@ -91,6 +94,8 @@ Rectangle {
                     leadingBack: root.leadingText.length > 0
                     trailingText: root.trailingText
                     trailingEnabled: root.trailingEnabled
+                    helpName: root.helpName
+                    onHelpTriggered: root.helpRequested()
                     onLeadingTriggered: root.leadingTriggered()
                     onTrailingTriggered: root.trailingTriggered()
                 }

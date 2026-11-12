@@ -55,6 +55,8 @@ Item {
     signal backRequested
     // The header block was tapped (open log only): the shell shows Today's details.
     signal headerRequested
+    // The help button was activated: the id of the topic (HelpTopics).
+    signal helpRequested(string topic)
     // Something was said to a screen reader that is not on a control: the "Copied" confirmation.
     signal announced(string message)
 
@@ -270,13 +272,25 @@ Item {
                     objectName: "reviewSummary"
                     visible: !root.pastLog
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - copyButton.width - Theme.space.sectionGap
+                    width: parent.width - copyButton.width - (reviewHelp.visible ? reviewHelp.width : 0) - Theme.space.sectionGap
                     color: Theme.colour.reviewTextSecondary
                     font: Theme.font.bodySmall.font
                     text: root.timeline.titleText
                     wrapMode: Text.WordWrap
                     Accessible.role: Accessible.StaticText
                     Accessible.name: text
+                }
+
+                // Help for today's log (Stage 10, 10.6). A past log has the back control in its place.
+                HelpButton {
+                    id: reviewHelp
+
+                    objectName: "reviewHelp"
+                    visible: !root.pastLog
+                    x: copyButton.x - width
+                    anchors.verticalCenter: parent.verticalCenter
+                    accessibleName: qsTr("Help with review and sharing")
+                    onTriggered: root.helpRequested("review")
                 }
 
                 Item {

@@ -38,6 +38,10 @@ Item {
     property bool trailingEnabled: true
     // The trailing action is the one that finishes the page, and is set in the heavier weight.
     property bool trailingEmphasised: true
+    // What a screen reader says for the help button, such as "Help with error types". Empty for no help button. The button
+    // is a question mark in a 44 pt target (HelpButton) just before the trailing action, or at the trailing edge when there
+    // is none (Stage 10, 10.6).
+    property string helpName
     // The 30 pt title under the actions, instead of the centred one.
     property bool large: false
     // The compact bar of a sheet, with the padding of the design around its row.
@@ -50,12 +54,13 @@ Item {
 
     signal leadingTriggered
     signal trailingTriggered
+    signal helpTriggered
 
-    readonly property bool hasActions: leadingText.length > 0 || trailingText.length > 0
+    readonly property bool hasActions: leadingText.length > 0 || trailingText.length > 0 || helpName.length > 0
     // A large bar whose page has scrolled: the compact form with a divider.
     readonly property bool collapsed: large && scrollPosition > 0
     // The widest action, which the centred title keeps clear of on both sides so that it stays centred.
-    readonly property real actionWidth: Math.max(leadingItem.visible ? leadingItem.width : 0, trailingItem.visible ? trailingItem.width : 0)
+    readonly property real actionWidth: Math.max(leadingItem.visible ? leadingItem.width : 0, (trailingItem.visible ? trailingItem.width : 0) + (helpItem.visible ? helpItem.width : 0))
     // The room between the actions for a centred title.
     readonly property real inlineRoom: root.width - 2 * (root.sideInset + actionWidth + Theme.space.sectionGap)
     // The width of the title on one line, rounded up, so that a title that fits is never wrapped by a fraction.
@@ -153,6 +158,19 @@ Item {
             to: 1
             duration: Theme.motion.toastMs
         }
+    }
+
+    // ---- the help button, before the trailing action in reading order, as it is before it on the screen ----
+
+    HelpButton {
+        id: helpItem
+
+        objectName: "navHelp"
+        visible: root.helpName.length > 0
+        accessibleName: root.helpName
+        x: trailingItem.visible ? trailingItem.x - width : root.width - width - root.sideInset
+        y: root.rowTop + (root.rowHeight - height) / 2
+        onTriggered: root.helpTriggered()
     }
 
     // ---- the trailing action ----

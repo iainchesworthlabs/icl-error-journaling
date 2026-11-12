@@ -60,6 +60,7 @@ This file applies to any automated contributor. Read it before changing the repo
 | The documentation site's address | `site_url` in `mkdocs.yml` only, then what `tools/ci/check_site_address.py` names (`docs/ci.md`, "The site address") |
 | A CMake option or preset | `docs/building.md` |
 | The setup-file reader in `libs/core/src/configuration.cpp` | `docs/guide/setup-file.md`; `tools/ci/check_setup_doc.py` fails until the page matches |
+| The in-app help (`HelpTopics.qml`) or a heading of the guide it opens | The matching guide section, or the app's link; `tools/ci/check_help_links.py` fails until they agree |
 | Test labels or phases | `docs/testing.md` |
 | A workflow in `.github/workflows` | `docs/ci.md`; pin every `uses:` to a full SHA with a version comment |
 | Which paths need a build | `.github/ci/plan.json` |

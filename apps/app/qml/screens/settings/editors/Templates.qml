@@ -19,6 +19,8 @@ Item {
     required property var settings
 
     signal closeRequested
+    // The help button was activated: the id of the topic (HelpTopics).
+    signal helpRequested(string topic)
 
     function openTemplate(id: string, name: string, prompt: string, pattern: string): void {
         stack.push(editPage, {
@@ -44,6 +46,8 @@ Item {
             title: qsTr("Note templates")
             leadingText: qsTr("Settings")
             leadingAccessibleName: qsTr("Back to Settings")
+            helpName: qsTr("Help with note templates")
+            onHelpRequested: root.helpRequested("templates")
             onLeadingTriggered: root.closeRequested()
 
             Flickable {

@@ -378,6 +378,8 @@ jobs:
         run: python3 tools/ci/check_setup_doc.py
       - name: Check the site address
         run: python3 tools/ci/check_site_address.py
+      - name: Check the help links of the app against the guide
+        run: python3 tools/ci/check_help_links.py
       - name: Check for confidential terms
         env:
           CONFIDENTIAL_TERMS: ${{ secrets.CONFIDENTIAL_TERMS }}

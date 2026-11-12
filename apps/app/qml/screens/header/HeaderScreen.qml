@@ -51,6 +51,8 @@ SheetHost {
 
     // "Log" or "Start logging" was pressed: the shell leaves this screen.
     signal closeRequested
+    // The help button was activated: the id of the topic (HelpTopics).
+    signal helpRequested(string topic)
 
     // The safe-area insets, which a test overrides.
     property bool overrideInsets: false
@@ -346,6 +348,8 @@ SheetHost {
             leadingText: qsTr("Log")
             leadingAccessibleName: qsTr("Back to Log")
             leadingBack: true
+            helpName: qsTr("Help with today’s details")
+            onHelpTriggered: root.helpRequested("details")
             onLeadingTriggered: root.leave()
         }
 

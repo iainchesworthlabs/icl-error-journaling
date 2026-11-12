@@ -36,6 +36,8 @@ Item {
     property bool checkable: false
     property bool checked: false
     property bool showChevron: false
+    // A row that opens an address in the browser shows the arrow leaving a box instead of the chevron (Stage 10, 10.6).
+    property bool showExternal: false
     // A destructive row ("Retire this error type") has its label in the destructive colour.
     property bool destructive: false
     property bool tappable: true
@@ -175,12 +177,12 @@ Item {
         objectName: "rowMark"
         readonly property bool check: root.checkable && root.checked
 
-        visible: check || root.showChevron
+        visible: check || root.showChevron || root.showExternal
         x: root.width - Theme.space.rowPadding - width
         y: (root.height - height) / 2
-        size: check ? Theme.size.badge * 5 / 6 : Theme.size.badge * 7 / 12
-        kind: check ? "check" : "chevronRight"
-        colour: check ? Theme.colour.primaryText : Theme.colour.borderStrong
+        size: check ? Theme.size.badge * 5 / 6 : root.showExternal ? Theme.size.badge * 3 / 4 : Theme.size.badge * 7 / 12
+        kind: check ? "check" : root.showExternal ? "external" : "chevronRight"
+        colour: check ? Theme.colour.primaryText : root.showExternal ? Theme.colour.textSecondary : Theme.colour.borderStrong
     }
 
     TextMetrics {

@@ -48,6 +48,8 @@
 #include <QJsonObject>
 #include <QMetaObject>
 #include <QObject>
+#include <QQmlComponent>
+#include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSignalSpy>
@@ -325,20 +327,30 @@ public:
 /// The rig with the clock and the gateway of the view models attached, and the screen loaded.
 struct Screen
 {
-    explicit Screen(LogRig& sim)
+    explicit Screen(LogRig& sim, bool with_help = false)
     {
         rig.attach(sim.world.m_Clock);
         rig.attach(sim.gateway);
         // The hold of a tile is timed by an animation: the driver has to tick between holds (the Timers of the screen, if any,
         // follow the same clock).
         rig.steady_time();
-        item = rig.load(QStringLiteral("LogScreen"), sim.properties());
+        QVariantMap given = sim.properties();
+        if (with_help)
+        {
+            // What the in-app help remembers (HelpState), as the first-run tip asks for it (Stage 10, 10.6).
+            QQmlComponent component(&rig.engine(), "ErrorJournalingApp", "UiStubHelpState");
+            help.reset(component.create());
+            REQUIRE(help != nullptr);
+            given.insert(QStringLiteral("help"), QVariant::fromValue<QObject*>(help.get()));
+        }
+        item = rig.load(QStringLiteral("LogScreen"), given);
         REQUIRE(item != nullptr);
         rig.layout();
     }
 
     UiRig rig;
     QQuickItem* item = nullptr;
+    std::unique_ptr<QObject> help;
 
     [[nodiscard]] QQuickItem* named(const QString& name)
     {
@@ -2173,6 +2185,8 @@ TEST_CASE("perf.scene: the items and the delegates of the Log screen stay under 
     // The delegates are the board's 12 tiles and the composer's template chips, one for each template of the sample
     // configuration (two): 14. The rig counts what every Repeater has made, so the chips are in the number; the budget
     // is what the screen needs, and a Repeater or a Loader for each tile would raise it.
+    // The budget is 321 items: the 320 of the screen and the one Loader of the first-run tip, whose card is made only while the
+    // tip is wanted and so costs nothing more once it is closed (Stage 10, 10.6).
     constexpr int TILE_DELEGATES = 12;
     constexpr int CHIP_DELEGATES = 2;
     CHECK(limit.value(QStringLiteral("delegates")).toInt() == TILE_DELEGATES + CHIP_DELEGATES);
@@ -2292,3 +2306,89 @@ TEST_CASE("layout.header_two_lines: at the largest text sizes the header card is
 }
 
 #include "log_screen_test.moc"
+
+// ---- the first-run tip (Stage 10, 10.6) ----
+
+TEST_CASE("help.first_run_tip: three things to know take the Last bar's place until Close, and the board stays whole",
+          "[ui][help]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    Screen screen(sim, true);
+
+    QQuickItem* tip = screen.named(QStringLiteral("logFirstRunTip"));
+    CAPTURE(screen.item->property("tipRoom").toDouble(), screen.item->property("roomBelowComposer").toDouble(),
+            screen.item->property("tipShown").toBool(), screen.item->property("loading").toBool(),
+            tip->implicitHeight(), screen.item->property("height").toDouble(),
+            screen.item->property("bottomClearance").toDouble());
+    REQUIRE(tip->isVisible());
+    // The tip counted its day, once it was on screen.
+    CHECK(screen.help->property("shownCalls").toInt() >= 1);
+    CHECK(screen.inside(tip, QStringLiteral("tipTitle"))->property("text").toString() ==
+          QStringLiteral("Three things to know"));
+    const QString message = screen.inside(tip, QStringLiteral("tipMessage"))->property("text").toString();
+    CHECK(message.split(QLatin1Char('\n')) == QStringList{QStringLiteral("Double-tap a tile to log it."),
+                                                           QStringLiteral("Hold a tile to log it with a note."),
+                                                           QStringLiteral("Undo is on the message that appears.")});
+
+    // It stands where the Last bar was, and the Last bar gives way. The board keeps all twelve tiles above the tab bar, none
+    // under the 88 pt minimum, and none under the tip.
+    CHECK_FALSE(screen.named(QStringLiteral("logLastBar"))->isVisible());
+    const double above_tab_bar = screen.item->height() - screen.item->property("bottomClearance").toDouble();
+    const QRectF tip_rect = tip->mapRectToScene(QRectF(0, 0, tip->width(), tip->height()));
+    for (int row = 0; row < ROWS; ++row)
+    {
+        CAPTURE(row);
+        QQuickItem* tile = screen.tile(row);
+        const QRectF rect = tile->mapRectToScene(QRectF(0, 0, tile->width(), tile->height()));
+        CHECK(rect.bottom() <= above_tab_bar + 0.5);
+        CHECK(rect.top() >= tip_rect.bottom() - 0.5);
+        CHECK(rect.height() >= 88.0 - 0.5);
+    }
+
+    // The tip is a banner with a Close button, named for a screen reader.
+    QQuickItem* close = screen.inside(tip, QStringLiteral("tipClose"));
+    CHECK(close->width() >= 44.0);
+    CHECK(close->height() >= 44.0);
+    screen.rig.tap(close);
+    screen.rig.advance(16ms);
+    CHECK(screen.help->property("closeCalls").toInt() == 1);
+    // The card is not made once the tip is closed.
+    CHECK(screen.rig.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
+    CHECK(screen.named(QStringLiteral("logLastBar"))->isVisible());
+}
+
+TEST_CASE("help.first_run_tip: a tip that is no longer open, a missing state and an empty board show no tip", "[ui][help]")
+{
+    SECTION("closed in an earlier run")
+    {
+        LogRig sim(Options().existing());
+        sim.load();
+        Screen screen(sim, true);
+        REQUIRE(screen.named(QStringLiteral("logFirstRunTip"))->isVisible());
+        screen.help->setProperty("tipOpen", false);
+        screen.rig.advance(16ms);
+        CHECK(screen.rig.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
+    }
+
+    SECTION("no help state given")
+    {
+        LogRig sim(Options().existing());
+        sim.load();
+        Screen screen(sim, false);
+        CHECK(screen.rig.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
+        CHECK(screen.named(QStringLiteral("logLastBar"))->isVisible());
+    }
+
+    SECTION("the empty board has its own card")
+    {
+        Configuration configuration = sample_configuration();
+        configuration.m_ErrorTypes.clear();
+        LogRig sim(Options().existing().configuration(std::move(configuration)));
+        sim.load();
+        Screen screen(sim, true);
+        CHECK(screen.named(QStringLiteral("logEmptyBoard"))->isVisible());
+        CHECK(screen.rig.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
+        CHECK(screen.help->property("shownCalls").toInt() == 0);
+    }
+}

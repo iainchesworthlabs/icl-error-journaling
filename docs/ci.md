@@ -378,6 +378,15 @@ The **Confidentiality** job of `ci.yml` is part of CI Status. It runs the unit t
   an example that is not `config/sample-config.json`. The reader is the truth. `tools/ci/precheck.py` runs it too.
 - `check_site_address.py` fails when the documentation site's address is written down in more than one way (see "The
   site address").
+- `check_help_links.py` fails when the in-app help and the guide disagree (Stage 10, 10.6). It reads
+  `apps/app/qml/components/HelpTopics.qml` and the pages of `docs/`: the app's `siteUrl` is not `site_url` of `mkdocs.yml`; a
+  topic has fewer than two or more than five paragraphs, or names a page that is not a file of the guide, or a heading
+  (`anchor`) that the page does not have (the anchor is the one MkDocs makes of the heading); the pages of the Help group
+  (guide, support, privacy) or the heading that "How to fix a setup file" opens are missing; or a screen asks for a topic
+  id that does not exist. So a heading of the guide cannot be renamed, or a page moved, without the app's links changing in
+  the same pull request. It needs no build. `tools/ci/precheck.py` runs it too. When the site moves to a custom domain,
+  change `site_url` and `siteUrl` together (the check fails until they match) and the host allowed in
+  `tools/ci/check_no_network.py`, which lets the app name only the project's own pages.
 - `check_confidential_terms.py` fails on a case-insensitive whole-word match of any term in the tracked files and their
   names, the commit messages and author names of the pull request range (or merge group, or push), and the pull request
   title and body. The title and body are passed through `env:`, never interpolated into the script. The script prints the

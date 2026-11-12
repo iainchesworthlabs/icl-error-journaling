@@ -26,6 +26,7 @@ SettingsPage {
     signal exportRequested
 
     title: qsTr("Import or export")
+    helpName: qsTr("Help with importing a setup file")
     leadingText: qsTr("Settings")
     bodySpacing: Theme.space.tileGap
     onLeadingTriggered: closeRequested()

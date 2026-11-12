@@ -14,11 +14,14 @@
 #include "error_journaling/version.hpp"
 #include "qt_clipboard.hpp"
 #include "viewmodel/about_model.hpp"
+#include "viewmodel/help_state.hpp"
 #include "viewmodel/settings_model.hpp"
 
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QCoreApplication>
+#include <QDate>
+#include <QDir>
 #include <QFile>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -173,8 +176,14 @@ int main(int argc, char* argv[])
                                         return notices.open(QIODevice::ReadOnly) ? notices.readAll() : QByteArray();
                                     });
 
+    // What the in-app help remembers: whether the first-run tip was closed, and on which days it was shown. Its own
+    // small file beside the data, outside the store (Stage 10, 10.6).
+    ej::viewmodel::HelpState help(QDir(data_path).filePath(QStringLiteral("help-state.ini")),
+                                  [] { return QDate::currentDate(); });
+
     QQmlApplicationEngine engine;
     QQmlEngine::setObjectOwnership(&about, QQmlEngine::CppOwnership);
+    QQmlEngine::setObjectOwnership(&help, QQmlEngine::CppOwnership);
     // The root owns the models; QML must never delete one.
     QObject* const models[] = {root.session(), root.undo(), root.board(),    root.picker(), root.timeline(),
                                root.history(), root.day(),  root.settings(), root.share()};
@@ -204,7 +213,8 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("settings"), QVariant::fromValue(root.settings())},
                                  {QStringLiteral("share"), QVariant::fromValue(root.share())},
                                  {QStringLiteral("appRoot"), QVariant::fromValue(&root)},
-                                 {QStringLiteral("about"), QVariant::fromValue(&about)}});
+                                 {QStringLiteral("about"), QVariant::fromValue(&about)},
+                                 {QStringLiteral("help"), QVariant::fromValue(&help)}});
     // The shell says when the 12 tiles accept taps (the Log tab is shown and the session has loaded).
     QObject::connect(&platform_bridge, &ej::bridge::QmlBridge::boardEnabled, &platform_bridge,
                      [&launch] { launch.board_enabled(); });

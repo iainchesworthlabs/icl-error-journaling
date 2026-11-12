@@ -41,6 +41,8 @@ SheetHost {
     property string noticeText: ""
 
     signal closeRequested
+    // The help button was activated: the id of the topic (HelpTopics).
+    signal helpRequested(string topic)
 
     Binding {
         target: editSheet
@@ -75,6 +77,8 @@ SheetHost {
         leadingText: qsTr("Settings")
         leadingAccessibleName: qsTr("Back to Settings")
         trailingText: qsTr("Done")
+        helpName: qsTr("Help with error types")
+        onHelpRequested: root.helpRequested("errorTypes")
         onLeadingTriggered: root.closeRequested()
         onTrailingTriggered: root.closeRequested()
 
@@ -124,6 +128,22 @@ SheetHost {
                 Item {
                     width: parent.width
                     height: root.problem.length > 0 ? Theme.space.tileGap : 0
+                }
+
+                // Which types are on the board, in one line (Stage 10, 10.6; the mock-up ErrorTypesHelp).
+                Text {
+                    objectName: "boardLine"
+                    x: Theme.space.tileGap / 2
+                    width: parent.width - 2 * x
+                    wrapMode: Text.WordWrap
+                    color: Theme.colour.textSecondary
+                    font: Theme.font.bodySmall.font
+                    text: qsTr("Types with a position are on the board. The rest are in Other.")
+                }
+
+                Item {
+                    width: parent.width
+                    height: Theme.space.tileGap
                 }
 
                 GroupedList {
