@@ -2901,11 +2901,11 @@ TEST_CASE("help.first_run_tip_shell: the shell gives the Log screen the state of
     app.ui.tap(app.ui.find_item(QStringLiteral("tipClose"), tip));
     app.play();
     CHECK(app.help->property("closeCalls").toInt() == 1);
-    CHECK_FALSE(tip->isVisible());
+    CHECK(app.ui.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
 
     // Leaving the Log tab and coming back does not bring it back.
     CHECK_FALSE(app.help->property("tipOpen").toBool());
     app.choose_tab(SETTINGS_TAB);
     app.choose_tab(LOG_TAB);
-    CHECK_FALSE(tip->isVisible());
+    CHECK(app.ui.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
 }

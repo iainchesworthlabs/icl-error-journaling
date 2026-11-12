@@ -98,8 +98,10 @@ Item {
     // The first-run tip (Stage 10, 10.6; LogFirstRunTip): a card in the place of the Last bar, while HelpState says it is open.
     // It is not shown on the empty board, which has its own card, nor while the board is loading, nor when the tiles would
     // have to be under the 88 pt minimum to make room for it: the board keeps all twelve tiles above the tab bar.
-    readonly property real tipRoom: tip.implicitHeight + Theme.space.sectionGap
-    readonly property bool tipShown: help !== null && help.tipOpen && !board.boardEmpty && !loading && fittingTile(roomBelowComposer - tipRoom) >= Theme.size.tileMinimum
+    // The card is made only while the tip is wanted, so a screen with no tip pays no items for it (perf.scene).
+    readonly property bool tipWanted: help !== null && help.tipOpen && !board.boardEmpty && !loading
+    readonly property real tipRoom: tipLoader.item ? tipLoader.item.implicitHeight + Theme.space.sectionGap : 0
+    readonly property bool tipShown: tipWanted && tipLoader.item !== null && fittingTile(roomBelowComposer - tipRoom) >= Theme.size.tileMinimum
     readonly property real tileHeight: {
         // A Wide board fills the height of its pane, to the 88 pt minimum.
         if (wide)
@@ -419,20 +421,24 @@ Item {
 
         // The first-run tip: three things to know, until it is closed or has been shown on three days. A card in the
         // information tone, in the place of the Last bar, with a Close button; it is not a dialog and takes no tap from the
-        // board. It is made even when it is not shown, so that the board knows how much room it needs.
-        FirstRunTip {
-            id: tip
+        // board. It is made while it is wanted, even when it is not shown, so that the board knows how much room it needs.
+        Loader {
+            id: tipLoader
 
-            objectName: "logFirstRunTip"
             x: root.wide ? root.paneLeft : root.side
             width: root.wide ? WindowLayout.boardPaneWidth : parent.width - 2 * root.side
+            height: item ? item.implicitHeight : 0
             anchors.top: composer.bottom
             anchors.topMargin: Theme.space.sectionGap
+            active: root.tipWanted
             visible: root.tipShown
-            title: qsTr("Three things to know")
-            message: qsTr("Double-tap a tile to log it.\nHold a tile to log it with a note.\nUndo is on the message that appears.")
-            closeLabel: qsTr("Close")
-            onCloseRequested: root.help.closeTip()
+            sourceComponent: FirstRunTip {
+                objectName: "logFirstRunTip"
+                title: qsTr("Three things to know")
+                message: qsTr("Double-tap a tile to log it.\nHold a tile to log it with a note.\nUndo is on the message that appears.")
+                closeLabel: qsTr("Close")
+                onCloseRequested: root.help.closeTip()
+            }
         }
 
         LastEntryBar {
@@ -560,7 +566,7 @@ Item {
             objectName: "logBoard"
             x: root.wide ? root.paneLeft : root.side
             width: root.wide ? WindowLayout.boardPaneWidth : parent.width - 2 * root.side
-            anchors.top: root.tipShown ? tip.bottom : root.lastBarHidden ? composer.bottom : lastBar.bottom
+            anchors.top: root.tipShown ? tipLoader.bottom : root.lastBarHidden ? composer.bottom : lastBar.bottom
             anchors.topMargin: Theme.space.sectionGap
             gap: WindowLayout.tileGap
             tileHeight: root.tileHeight

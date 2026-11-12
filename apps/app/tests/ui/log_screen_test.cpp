@@ -2185,6 +2185,8 @@ TEST_CASE("perf.scene: the items and the delegates of the Log screen stay under 
     // The delegates are the board's 12 tiles and the composer's template chips, one for each template of the sample
     // configuration (two): 14. The rig counts what every Repeater has made, so the chips are in the number; the budget
     // is what the screen needs, and a Repeater or a Loader for each tile would raise it.
+    // The budget is 321 items: the 320 of the screen and the one Loader of the first-run tip, whose card is made only while the
+    // tip is wanted and so costs nothing more once it is closed (Stage 10, 10.6).
     constexpr int TILE_DELEGATES = 12;
     constexpr int CHIP_DELEGATES = 2;
     CHECK(limit.value(QStringLiteral("delegates")).toInt() == TILE_DELEGATES + CHIP_DELEGATES);
@@ -2351,7 +2353,8 @@ TEST_CASE("help.first_run_tip: three things to know take the Last bar's place un
     screen.rig.tap(close);
     screen.rig.advance(16ms);
     CHECK(screen.help->property("closeCalls").toInt() == 1);
-    CHECK_FALSE(tip->isVisible());
+    // The card is not made once the tip is closed.
+    CHECK(screen.rig.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
     CHECK(screen.named(QStringLiteral("logLastBar"))->isVisible());
 }
 
@@ -2365,7 +2368,7 @@ TEST_CASE("help.first_run_tip: a tip that is no longer open, a missing state and
         REQUIRE(screen.named(QStringLiteral("logFirstRunTip"))->isVisible());
         screen.help->setProperty("tipOpen", false);
         screen.rig.advance(16ms);
-        CHECK_FALSE(screen.named(QStringLiteral("logFirstRunTip"))->isVisible());
+        CHECK(screen.rig.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
     }
 
     SECTION("no help state given")
@@ -2373,7 +2376,7 @@ TEST_CASE("help.first_run_tip: a tip that is no longer open, a missing state and
         LogRig sim(Options().existing());
         sim.load();
         Screen screen(sim, false);
-        CHECK_FALSE(screen.named(QStringLiteral("logFirstRunTip"))->isVisible());
+        CHECK(screen.rig.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
         CHECK(screen.named(QStringLiteral("logLastBar"))->isVisible());
     }
 
@@ -2385,7 +2388,7 @@ TEST_CASE("help.first_run_tip: a tip that is no longer open, a missing state and
         sim.load();
         Screen screen(sim, true);
         CHECK(screen.named(QStringLiteral("logEmptyBoard"))->isVisible());
-        CHECK_FALSE(screen.named(QStringLiteral("logFirstRunTip"))->isVisible());
+        CHECK(screen.rig.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
         CHECK(screen.help->property("shownCalls").toInt() == 0);
     }
 }
