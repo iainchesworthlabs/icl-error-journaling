@@ -569,6 +569,27 @@ Recorded as given to the project by the owner. They replace the proposals above.
   first build of the new record. The repository name and the documentation site URLs are unchanged until the owner renames
   the repository and the domain is ready.
 
+### Before the first build under com.iainchesworthlabs.fieldtest
+
+The identifier is in the repository (PR #219), not in a secret or a variable: `BUNDLE_ID` and `APPLICATION_ID` are set in
+the workflows, and `ERROR_JOURNALING_APPLICATION_ID` in `CMakeLists.txt`. The one secret that holds the old identifier is
+`IOS_PROVISIONING_PROFILE_BASE64` (repository secret). The certificate secrets, the App Store Connect API key and the
+signing team are the same for the new identifier and do not change.
+
+- [ ] **Apple, done by the owner:** the App ID `com.iainchesworthlabs.fieldtest` is registered with Data Protection set to
+  "Protected Until First User Authentication", and the App Store profile "Field Test App Store" is made from it (made on
+  12 Nov 2026, valid to 16 Jul 2027; same distribution certificate as the old profile).
+- [ ] **Secret, owner:** set `IOS_PROVISIONING_PROFILE_BASE64` to the base64 of that profile
+  (`Field_Test_App_Store.mobileprovision`), after PR #219 has merged and before the next release run. A release run on the
+  old code with the new profile, or on the new code with the old profile, fails to sign.
+- [ ] **App Store Connect, owner:** a new app record "Field Test" for `com.iainchesworthlabs.fieldtest` (the name must be
+  free in the store; if it is not, the record needs a different name). TestFlight builds 1 to 12 and build 13 belong to the
+  old record and do not carry over; the testers are invited again on the new record. Complete the record's age rating,
+  App Privacy, price and availability as in this plan.
+- [ ] **Google Play, owner:** the app is created under the package `com.iainchesworthlabs.fieldtest`, and the
+  `PLAY_SERVICE_ACCOUNT_JSON` secret is added.
+- [ ] **Then** run the release workflow from develop: its build number is the run number.
+
 ## Assumptions only the stores can confirm
 
 - The limits and required screenshot sizes above, checked against the published pages in 11.0. App Store Connect and the
