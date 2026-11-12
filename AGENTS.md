@@ -53,10 +53,11 @@ This file applies to any automated contributor. Read it before changing the repo
 
 | You change | Also update |
 |---|---|
-| A user-visible behaviour | A fragment in `changelog.d/`, and the page of the user guide that describes it once the guide has one (`docs/guide/outline.md`) |
+| A user-visible behaviour | A fragment in `changelog.d/`, and the page of the user guide under `docs/guide/` that describes it |
 | What the app stores, sends or keeps in a backup | `docs/privacy.md` (and the store privacy answers in `docs/plan/stage-11.md`) |
 | A public header in `libs/*/include` | The tests, and `docs/architecture.md` when the layout changes |
 | A dependency in `vcpkg.json` | Nothing else; Dependabot and the baseline check cover the fork |
+| The documentation site's address | `site_url` in `mkdocs.yml` only, then what `tools/ci/check_site_address.py` names (`docs/ci.md`, "The site address") |
 | A CMake option or preset | `docs/building.md` |
 | The setup-file reader in `libs/core/src/configuration.cpp` | `docs/guide/setup-file.md`; `tools/ci/check_setup_doc.py` fails until the page matches |
 | The in-app help (`HelpTopics.qml`) or a heading of the guide it opens | The matching guide section, or the app's link; `tools/ci/check_help_links.py` fails until they agree |

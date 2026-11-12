@@ -18,6 +18,8 @@
     {"file": "log-template-value", "state": "TemplateValue", "mode": "light"},
     {"file": "log-other-search", "state": "OtherSearch", "mode": "light"},
     {"file": "log-empty-board", "state": "LogEmptyBoard", "mode": "light"},
+    {"file": "write-failed", "state": "WriteFailed", "mode": "light"},
+    {"file": "recovery", "state": "Recovery", "mode": "light"},
     {"file": "todays-details", "state": "Header", "mode": "light"},
     {"file": "environment", "state": "EnvironmentSheet", "mode": "light"},
     {"file": "software-version", "state": "ChangeVersion", "mode": "light"},

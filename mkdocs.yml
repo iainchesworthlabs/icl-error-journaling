@@ -1,17 +1,18 @@
 site_name: Field Test
 site_description: An app for logging robot session errors through the day and sharing the log
 repo_url: https://github.com/iainchesworthlabs/icl-error-journaling
-# Where the guide, support and privacy pages are published; store/appstore/en-GB/*_url.txt hold the same paths.
+# The one place that holds the site's address. Pages write {{ site_url }}; tools/ci/check_site_address.py holds the files
+# that cannot read this line (the store URL files) to it. A custom domain is a change here (docs/ci.md, "The site address").
 site_url: https://iainchesworthlabs.github.io/icl-error-journaling/
 docs_dir: docs
-# The outline of the guide is a working page for contributors, not for the site (docs/plan/stage-10.md).
+# The list of the guide's pictures is data for tools/docs/guide_screenshots.py, not a page of the site.
 exclude_docs: |
-  guide/outline.md
   guide/screenshots.json
 strict: true
 # Publishes config/sample-config.json as demo/demo-setup.ejconfig for App Review and new users (docs/plan/stage-11.md).
 hooks:
   - tools/docs/demo_setup_hook.py
+  - tools/docs/site_address_hook.py
 markdown_extensions:
   - attr_list  # sets the width of the guide's pictures: ![alt](img/x.png){ width="270" }
 theme:
@@ -29,6 +30,8 @@ nav:
       - Sharing and the next day: guide/sharing.md
       - History: guide/history.md
       - The setup file: guide/setup-file.md
+      - Questions and answers: guide/faq.md
+      - Troubleshooting: guide/troubleshooting.md
   - Support: support.md
   - Privacy: privacy.md
   - For developers: developers.md

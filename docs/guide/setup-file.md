@@ -262,4 +262,4 @@ Some of these problems the app also says in its own words, with the entry's numb
 ## Keeping the file out of the wrong hands
 
 A real setup file names your people and places. Do not post it, attach it to a support request or put it in a public
-place. The [demo setup file](https://iainchesworthlabs.github.io/icl-error-journaling/demo/demo-setup.ejconfig) has made-up names and is safe to share.
+place. The [demo setup file]({{ site_url }}demo/demo-setup.ejconfig) has made-up names and is safe to share.
