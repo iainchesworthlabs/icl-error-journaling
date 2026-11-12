@@ -13,4 +13,4 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/zizmor.yml@eb889c92bd71b4cb51d6f1d3cbf7541255400a49 # v0.1.24
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/zizmor.yml@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
