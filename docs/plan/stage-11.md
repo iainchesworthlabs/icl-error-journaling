@@ -559,7 +559,15 @@ Recorded as given to the project by the owner. They replace the proposals above.
   applies to the countries in the EU.
 - **Licence: cleared.** The owner has taken legal advice on the GPL and the Qt licensing, and it is cleared. Task 11.3's
   notices page and the listing's open-source paragraph follow that advice.
-- **Application ID: undecided.** The identifier stays `com.iainchesworthlabs.errorjournaling` until the owner decides.
+- **Name and application ID: decided.** The display name is Field Test and the application ID (the iOS bundle
+  identifier and the Android package) is `com.iainchesworthlabs.fieldtest`. The rename is PR #219. A new identifier is a
+  new app record in App Store Connect and a new package in the Play Console. The owner creates the App ID with Data
+  Protection, the App Store profile and the app record, and the Play app; then the signing secrets and variables point at
+  the new profile. TestFlight builds 1 to 12 belong to the old record. Build 13 was started under the old identifier
+  (release run 43132773675, from develop at eff63d0), so it also stays on the old record. Whether the testers and builds
+  carry over is the owner's to settle: they do not carry over automatically. The first build on the new identifier is the
+  first build of the new record. The repository name and the documentation site URLs are unchanged until the owner renames
+  the repository and the domain is ready.
 
 ## Assumptions only the stores can confirm
 
