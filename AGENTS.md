@@ -53,7 +53,7 @@ This file applies to any automated contributor. Read it before changing the repo
 
 | You change | Also update |
 |---|---|
-| A user-visible behaviour | A fragment in `changelog.d/`, and the page of the user guide that describes it once the guide has one (`docs/guide/outline.md`) |
+| A user-visible behaviour | A fragment in `changelog.d/`, and the page of the user guide under `docs/guide/` that describes it |
 | What the app stores, sends or keeps in a backup | `docs/privacy.md` (and the store privacy answers in `docs/plan/stage-11.md`) |
 | A public header in `libs/*/include` | The tests, and `docs/architecture.md` when the layout changes |
 | A dependency in `vcpkg.json` | Nothing else; Dependabot and the baseline check cover the fork |
