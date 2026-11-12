@@ -63,14 +63,14 @@ jobs:
           persist-credentials: false
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@eb889c92bd71b4cb51d6f1d3cbf7541255400a49 # v0.1.24
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
 
       - name: Set up CMake
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@eb889c92bd71b4cb51d6f1d3cbf7541255400a49 # v0.1.24
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-cmake@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
 
       # The desktop kit first: Qt's Android build runs its host tools (moc, qmlcachegen, androiddeployqt).
       - name: Install Qt (Linux host kit)
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@eb889c92bd71b4cb51d6f1d3cbf7541255400a49 # v0.1.24
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
 
       - name: Remember the host kit
         shell: bash
@@ -83,7 +83,7 @@ jobs:
 
       # aqtinstall 3.3.0 cannot read Qt 6.12's all_os Android repository, so the same pinned source as the iOS build.
       - name: Install Qt (Android arm64-v8a kit)
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@eb889c92bd71b4cb51d6f1d3cbf7541255400a49 # v0.1.24
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
         with:
           version: ${{ steps.qt.outputs.version }}
           target: android
@@ -101,7 +101,7 @@ jobs:
 
       # The 32-bit kit (Stage 9, decision 3): Qt's multi-ABI build adds armeabi-v7a to the bundle.
       - name: Install Qt (Android armeabi-v7a kit)
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@62594bba592708100d459112523992fa2a736843 # v0.1.21
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-qt@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
         with:
           version: ${{ steps.qt.outputs.version }}
           target: android
