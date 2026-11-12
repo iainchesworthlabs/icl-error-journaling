@@ -446,9 +446,9 @@ Run for 1.0.0, and again for each release. 11.8 adds it to `docs/releasing.md`.
 - [ ] `store-metadata.yml` run against the tag. App Store Connect and the Play Console show the text, the images and the
   build.
 - [ ] App Privacy: Data Not Collected. Play Data safety: no data collected or shared.
-- [ ] Age rating 4+. IARC rating Everyone. Target audience 18+.
+- [ ] Age rating as the questionnaires give it (Apple 4+, the lowest; the owner's 3+ is the PEGI level that IARC gives). IARC rating Everyone. Target audience 18+.
 - [ ] Export compliance shown as exempt on the build.
-- [ ] Price and countries set (owner).
+- [ ] Price 6.99 US dollars (base) and all publishable countries set; the local prices checked in each console (owner, decided 12 Nov 2026).
 - [ ] Closed-test rule met on Play, if it applies.
 
 **Owner only**
@@ -518,8 +518,8 @@ the order that best saves waiting time.
 
 | # | Decision | Proposal |
 |---|---|---|
-| D1 | Licence route | Owner, after advice |
-| D2 | Free or paid, and countries | Owner |
+| D1 | Licence route | Decided 12 Nov 2026: the owner's legal advice has cleared the GPL and Qt licensing (see below) |
+| D2 | Free or paid, and countries | Decided 12 Nov 2026: paid, 6.99 US dollars as the base price, in every country where the app can be published (see below) |
 | D3 | Play account type | Owner |
 | D4 | Store languages | English (UK) only for 1.0 |
 | D5 | Categories | Productivity, then Business |
@@ -529,6 +529,45 @@ the order that best saves waiting time.
 | D9 | Metadata upload tool | fastlane `deliver` and `supply` |
 | D10 | Phased release | None for 1.0.0, phased for later versions, always released manually |
 | D11 | Android `versionCode` | The release run number, the same as iOS (agreed with Stage 9) |
+
+### Owner decisions, 12 November 2026
+
+Recorded as given to the project by the owner. They replace the proposals above.
+
+- **Age rating: 3+.** Apple's questionnaire has no 3+ rating: its lowest is 4+, which these answers give. 3+ is the
+  matching PEGI level that the Play content-rating questionnaire (IARC) gives for the same answers. The answers in
+  `store/appstore/age_rating.md` and `store/play/app_content.md` are unchanged; the ratings the consoles show are
+  checked at submission.
+- **Price: 6.99 US dollars as the base price**, a paid app with no trial and no in-app purchase. Apple's Paid Apps
+  agreement, tax forms and banking, and the Play merchant account, are needed before the first sale (owner actions 3 and
+  1). The App Store takes the US price as the base and fills in the other countries from its price tiers; the Play price
+  is set per country in the Play Console. The amounts below are approximate and are confirmed in the consoles' own price
+  tables before the price is set.
+
+  | Country | Price shown to the buyer (tax included) |
+  |---|---|
+  | United States | 6.99 US dollars |
+  | Australia | about A$9.99 to A$10.99 |
+  | United Kingdom | about £5.99 |
+  | Euro area | about €6.99 |
+
+  In Australia, the United Kingdom and the EU the shown price includes GST or VAT, so the owner receives the price less
+  that tax and less the store's share (15% under Apple's Small Business Program and under Google's first-million tier,
+  if the owner is enrolled). The price can be changed later in either console. Other price points considered: 4.99,
+  9.99 and 14.99 US dollars.
+- **Availability: every country and region where the app can be published.** The EU trader declaration (owner action 4)
+  applies to the countries in the EU.
+- **Licence: cleared.** The owner has taken legal advice on the GPL and the Qt licensing, and it is cleared. Task 11.3's
+  notices page and the listing's open-source paragraph follow that advice.
+- **Name and application ID: decided.** The display name is Field Test and the application ID (the iOS bundle
+  identifier and the Android package) is `com.iainchesworthlabs.fieldtest`. The rename is PR #219. A new identifier is a
+  new app record in App Store Connect and a new package in the Play Console. The owner creates the App ID with Data
+  Protection, the App Store profile and the app record, and the Play app; then the signing secrets and variables point at
+  the new profile. TestFlight builds 1 to 12 belong to the old record. Build 13 was started under the old identifier
+  (release run 43132773675, from develop at eff63d0), so it also stays on the old record. Whether the testers and builds
+  carry over is the owner's to settle: they do not carry over automatically. The first build on the new identifier is the
+  first build of the new record. The repository name and the documentation site URLs are unchanged until the owner renames
+  the repository and the domain is ready.
 
 ## Assumptions only the stores can confirm
 
