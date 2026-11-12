@@ -41,12 +41,12 @@ The owner's decisions of 2026-11-07 (`docs/ci-many-agents.md` in `icl-common-inf
   issue per failed group, naming the pull requests merged since `refs/ci/green/<group>`, and comments once on each. **Mark
   green** then moves `refs/ci/green/<group>` forward for each group that passed. Neither reverts anything or fails the run.
   Those refs live outside `refs/heads` and `refs/tags`; a failure to create one is a warning.
-- **Reuse is in shadow mode.** The **Reuse** job (`find-proof`) looks, in every run, for an earlier run of `ci.yml`
+- **Reuse is on.** The **Reuse** job (`find-proof`) looks, in every run, for an earlier run of `ci.yml`
   (a pull request run, a manual run, or an earlier queue entry of the same pull request) whose groups passed on a tree that
-  differs only in paths the group does not read. It never fails. With the repository variable `CI_REUSE_MODE` unset (the
-  default, `shadow`) it writes what it **would** reuse to the job summary (`Reuse (shadow)`), the `reused` output stays
-  empty, and every group still runs. `CI Status` is given `reused` but, empty, treats every group as required. No reuse
-  for fork pull requests. Shadow mode runs for 7 days or 50 queue entries, whichever is later, before the variable is set to `on`.
+  differs only in paths the group does not read. It never fails. The repository variable `CI_REUSE_MODE` is `on` (set on 10 November 2026): a
+  group with a valid proof is skipped, `reused` names the run and `CI Status` accepts it. Unset or `shadow` only writes what it
+  **would** reuse to the job summary and runs every group; `off` skips the lookup. To revert, `gh variable set CI_REUSE_MODE
+  --body shadow`. No reuse for fork pull requests.
 - **Proofs.** The last steps of `CI Status` upload the `ci-proof` artifact (14 days): which groups passed and the object ids
   of the barrier paths at the tested commit. A pull request run's tested commit is only known from it.
 
@@ -367,6 +367,11 @@ The **Confidentiality** job of `ci.yml` is part of CI Status. It runs the unit t
 
 - `check_config_files.py` fails when any tracked file other than `config/sample-config.json` is named `*-config.json` or
   `*.ejconfig` (the setup file as the app exports it).
+- `check_guide_screenshots.py` fails when the guide's pictures, `docs/guide/screenshots.json` and the screens
+  `ej_screenshots` renders disagree: a picture that names an unknown state or mode, a listed picture with no file (or a file
+  that is not listed, or not of the list's width), a page that shows a picture that is not listed or has no useful alt
+  text, and a listed picture that no page uses. Regenerate them with `tools/docs/guide_screenshots.py` (see "The guide's
+  pictures" in `docs/releasing.md`). It needs no build.
 - `check_setup_doc.py` fails when `docs/guide/setup-file.md` and the setup-file reader in `libs/core` disagree: a key the
   reader accepts that the page does not list (or the reverse), a key marked required or optional the wrong way, a length
   limit, number range, clock choice or whole-file limit that differs, a `ConfigError::Code` or `Problem` with no row, or

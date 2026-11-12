@@ -1,0 +1,31 @@
+{
+  "_comment": "The pictures of the user guide (docs/plan/stage-10.md, 10.3 and 10.7). Each names a state of tools/ej_screenshots/screens.json and a mode; tools/docs/guide_screenshots.py renders or copies them, scales them to 'width' pixels and writes docs/guide/img/<file>.png. The sample data only, never a real setup. A page shows one with ![alt text](img/<file>.png), and tools/ci/check_guide_screenshots.py holds pages, this list, the files and screens.json to each other.",
+  "width": 402,
+  "images": [
+    {"file": "first-launch", "state": "FirstLaunch", "mode": "light"},
+    {"file": "first-launch-by-hand", "state": "FirstLaunchManual", "mode": "light"},
+    {"file": "import-confirm", "state": "ImportConfirm", "mode": "light"},
+    {"file": "import-errors", "state": "ImportErrors", "mode": "light"},
+    {"file": "board-settings", "state": "BoardSettings", "mode": "light"},
+    {"file": "board-type-picker", "state": "BoardTypePicker", "mode": "light"},
+    {"file": "error-types", "state": "ErrorTypes", "mode": "light"},
+    {"file": "templates", "state": "Templates", "mode": "light"},
+    {"file": "template-edit", "state": "TemplateEdit", "mode": "light"},
+    {"file": "import-export", "state": "ImportExport", "mode": "light"},
+    {"file": "log-board", "state": "Main", "mode": "light"},
+    {"file": "log-tap-hint", "state": "TapHint", "mode": "light"},
+    {"file": "log-hold-note", "state": "HoldNote", "mode": "light"},
+    {"file": "log-template-value", "state": "TemplateValue", "mode": "light"},
+    {"file": "log-other-search", "state": "OtherSearch", "mode": "light"},
+    {"file": "log-empty-board", "state": "LogEmptyBoard", "mode": "light"},
+    {"file": "todays-details", "state": "Header", "mode": "light"},
+    {"file": "environment", "state": "EnvironmentSheet", "mode": "light"},
+    {"file": "software-version", "state": "ChangeVersion", "mode": "light"},
+    {"file": "review", "state": "Review", "mode": "light"},
+    {"file": "edit-entry", "state": "EditEntry", "mode": "light"},
+    {"file": "new-day", "state": "NewDay", "mode": "light"},
+    {"file": "history", "state": "History", "mode": "light"},
+    {"file": "past-log", "state": "PastLogReview", "mode": "light"},
+    {"file": "delete-log", "state": "DeleteLog", "mode": "light"}
+  ]
+}

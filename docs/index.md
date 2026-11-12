@@ -11,8 +11,17 @@ when it helps, and share the day's log when you finish. Everything stays on your
 | Know what the app stores and where it goes | [Privacy](privacy.md) |
 | Try the app with the sample setup | [Download the sample setup file]({{ site_url }}demo/demo-setup.ejconfig) |
 
-The step-by-step guide (getting started, setting up the board, a day of logging, sharing, history, the setup file, the
-FAQ and troubleshooting) is being written and will appear here.
+## The guide
+
+1. [Getting started](guide/getting-started.md): the first launch and your first entry.
+2. [Setting up the board](guide/setup.md): the tiles, error types, note templates, and importing a setup file.
+3. [A day of logging](guide/logging.md): double-tap, hold, Other, notes and Undo.
+4. [Today's details](guide/todays-details.md): unit, place, software version.
+5. [Sharing and the next day](guide/sharing.md): Review, Share log and the new day prompt.
+6. [History](guide/history.md): past logs.
+7. [The setup file](guide/setup-file.md): for whoever prepares a setup file for others.
+
+The FAQ and troubleshooting pages are being written and will appear here.
 
 ## About the site
 
