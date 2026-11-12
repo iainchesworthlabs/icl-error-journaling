@@ -1,13 +1,13 @@
 # Getting started
 
-CS Bingo Board is for logging what goes wrong during a robot session, as it happens, and sharing the log at the end of the
+Field Test is for logging what goes wrong during a robot session, as it happens, and sharing the log at the end of the
 day. You tap a tile for each error, add a short note when it helps, and share one plain text log.
 
 Everything stays on your device. Nothing is sent anywhere unless you share the log yourself ([Privacy](../privacy.md)).
 
 ## Install
 
-Install CS Bingo Board from your device's store. It runs on iPhone and iPad, and on Android phones and tablets.
+Install Field Test from your device's store. It runs on iPhone and iPad, and on Android phones and tablets.
 
 ## The first time you open it
 
