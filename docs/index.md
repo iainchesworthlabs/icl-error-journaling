@@ -7,7 +7,7 @@ when it helps, and share the day's log when you finish. Everything stays on your
 
 | If you want to | Go to |
 |---|---|
-| Get help or report a problem | [Support](support.md) |
+| Get help or report a problem | [Troubleshooting](guide/troubleshooting.md), then [Support](support.md) |
 | Know what the app stores and where it goes | [Privacy](privacy.md) |
 | Try the app with the sample setup | [Download the sample setup file](https://iainchesworthlabs.github.io/icl-error-journaling/demo/demo-setup.ejconfig) |
 
@@ -20,8 +20,7 @@ when it helps, and share the day's log when you finish. Everything stays on your
 5. [Sharing and the next day](guide/sharing.md): Review, Share log and the new day prompt.
 6. [History](guide/history.md): past logs.
 7. [The setup file](guide/setup-file.md): for whoever prepares a setup file for others.
-
-The FAQ and troubleshooting pages are being written and will appear here.
+8. [Questions and answers](guide/faq.md) and [Troubleshooting](guide/troubleshooting.md).
 
 ## About the site
 
