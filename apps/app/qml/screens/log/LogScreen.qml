@@ -100,7 +100,7 @@ Item {
     // have to be under the 88 pt minimum to make room for it: the board keeps all twelve tiles above the tab bar.
     // The card is made only while the tip is wanted, so a screen with no tip pays no items for it (perf.scene).
     readonly property bool tipWanted: help !== null && help.tipOpen && !board.boardEmpty && !loading
-    readonly property real tipRoom: tipLoader.item ? tipLoader.item.implicitHeight + Theme.space.sectionGap : 0
+    readonly property real tipRoom: tipLoader.item ? tipLoader.cardHeight + Theme.space.sectionGap : 0
     readonly property bool tipShown: tipWanted && tipLoader.item !== null && fittingTile(roomBelowComposer - tipRoom) >= Theme.size.tileMinimum
     readonly property real tileHeight: {
         // A Wide board fills the height of its pane, to the 88 pt minimum.
@@ -427,7 +427,10 @@ Item {
 
             x: root.wide ? root.paneLeft : root.side
             width: root.wide ? WindowLayout.boardPaneWidth : parent.width - 2 * root.side
-            height: item ? item.implicitHeight : 0
+            // The card's own height, typed so that the lint knows what the Loader holds.
+            readonly property real cardHeight: (item as FirstRunTip)?.implicitHeight ?? 0
+
+            height: cardHeight
             anchors.top: composer.bottom
             anchors.topMargin: Theme.space.sectionGap
             active: root.tipWanted
