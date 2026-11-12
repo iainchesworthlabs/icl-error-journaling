@@ -170,9 +170,6 @@ Item {
             settings: root.settings
             topInset: frame.topInset
             onCloseRequested: stack.pop()
-            onUnitPrefixRequested: stack.push(textPage, {
-                "kind": "unitPrefix"
-            })
         }
     }
 

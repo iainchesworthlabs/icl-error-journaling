@@ -322,9 +322,10 @@ TEST_CASE("settings.rows: the rows show the values of the model, with no counts,
         INFO(row.toStdString());
         CHECK(fixture.m_Ui.geometry(fixture.require(row)).height() == 44.0);
     }
-    // The Facilitator page has its own unit prefix row and totals switch; the list has rows of its own for them (F4).
-    CHECK(fixture.shown(QStringLiteral("settingsUnitPrefix")) == nullptr);
-    CHECK(fixture.shown(QStringLiteral("settingsTotals")) == nullptr);
+    // The unit prefix and the totals line are on the list, and the Facilitator page does not repeat them (F4).
+    CHECK(fixture.shown(QStringLiteral("settingsUnitPrefixRow")) != nullptr);
+    CHECK(fixture.shown(QStringLiteral("settingsTotalsRow")) != nullptr);
+    CHECK(fixture.shown(QStringLiteral("settingsSharedLog")) == nullptr);
 
     // The rows of the three lists leave the editors to the shell.
     fixture.tap(QStringLiteral("settingsErrorTypes"));
@@ -404,11 +405,10 @@ TEST_CASE("settings.facilitator: Save asks the model once, a refusal shows inlin
 TEST_CASE("settings.prefix: Save asks the model once and a refusal shows inline", "[ui][settings_screen]")
 {
     Fixture fixture;
-    // The unit prefix is a row of the Facilitator page ("In the shared log"), which opens a page of its own.
-    fixture.open_page(QStringLiteral("settingsFacilitator"));
-    CHECK(fixture.require(QStringLiteral("settingsUnitPrefix"))->property("value").toString() == "UNIT");
-    fixture.open_page(QStringLiteral("settingsUnitPrefix"));
-    CHECK(fixture.depth() == 3);
+    // The unit prefix is a row of the list, which opens a page of its own.
+    CHECK(fixture.require(QStringLiteral("settingsUnitPrefixRow"))->property("value").toString() == "UNIT");
+    fixture.open_page(QStringLiteral("settingsUnitPrefixRow"));
+    CHECK(fixture.depth() == 2);
     CHECK(fixture.require(QStringLiteral("formInput"))->property("text").toString() == "UNIT");
 
     // A prefix with a dash is not one the importer would accept.
@@ -416,7 +416,7 @@ TEST_CASE("settings.prefix: Save asks the model once and a refusal shows inline"
     replace_text(fixture, QStringLiteral("UNIT-"));
     fixture.tap(QStringLiteral("navTrailing"));
     fixture.m_Ui.settle();
-    CHECK(fixture.depth() == 3);
+    CHECK(fixture.depth() == 2);
     CHECK(fixture.saves() == before);
     CHECK(fixture.settings().unit_prefix() == "UNIT");
     CHECK(fixture.require(QStringLiteral("settingsTextField"))->property("invalid").toBool());
@@ -425,11 +425,11 @@ TEST_CASE("settings.prefix: Save asks the model once and a refusal shows inline"
     fixture.tap(QStringLiteral("navTrailing"));
     fixture.m_Ui.advance(400ms);
     fixture.m_Ui.settle();
-    // Back on the Facilitator page, which shows the prefix once it has been saved.
-    CHECK(fixture.depth() == 2);
+    // Back on the list, which shows the prefix once it has been saved.
+    CHECK(fixture.depth() == 1);
     CHECK(fixture.saves() == before + 1);
     CHECK(fixture.settings().unit_prefix() == "CELL");
-    CHECK(fixture.require(QStringLiteral("settingsUnitPrefix"))->property("value").toString() == "CELL");
+    CHECK(fixture.require(QStringLiteral("settingsUnitPrefixRow"))->property("value").toString() == "CELL");
 }
 
 TEST_CASE("settings.error_prefix: a row on the list opens a page with a field, an example line and Reset (PRF-13)",
@@ -523,14 +523,13 @@ TEST_CASE("settings.totals: the switch calls setIncludeTotals and moves when the
           "[ui][settings_screen]")
 {
     Fixture fixture;
-    // The switch is on the Facilitator page, under "In the shared log".
-    fixture.open_page(QStringLiteral("settingsFacilitator"));
-    QQuickItem* row = fixture.require(QStringLiteral("settingsTotals"));
+    // The switch is a row of the list.
+    QQuickItem* row = fixture.require(QStringLiteral("settingsTotalsRow"));
     CHECK_FALSE(row->property("checked").toBool());
     CHECK_FALSE(fixture.settings().include_totals());
 
     const std::size_t before = fixture.saves();
-    fixture.tap(QStringLiteral("settingsTotals"));
+    fixture.tap(QStringLiteral("settingsTotalsRow"));
     CHECK_FALSE(row->property("checked").toBool());
     fixture.m_Ui.settle();
     CHECK(fixture.saves() == before + 1);
@@ -543,7 +542,7 @@ TEST_CASE("settings.totals: the switch calls setIncludeTotals and moves when the
     REQUIRE(track != nullptr);
     CHECK(knob->x() + knob->width() / 2 > track->width() / 2);
 
-    fixture.tap(QStringLiteral("settingsTotals"));
+    fixture.tap(QStringLiteral("settingsTotalsRow"));
     fixture.m_Ui.settle();
     CHECK_FALSE(fixture.settings().include_totals());
     CHECK(knob->x() + knob->width() / 2 < track->width() / 2);
@@ -946,23 +945,20 @@ TEST_CASE("settings.voiceover: rows read their label and value, the switch reads
     CHECK(name_of(QStringLiteral("settingsErrorTypes")).m_Name == "Error types");
     CHECK(name_of(QStringLiteral("settingsTimeFormat")).m_Name == "Time format, 24-hour");
 
-    // The totals switch is on the Facilitator page.
-    CHECK(accessible_press(fixture.require(QStringLiteral("settingsFacilitator"))));
-    fixture.m_Ui.advance(400ms);
-    const Node totals = name_of(QStringLiteral("settingsTotals"));
+    // The totals switch is a row of the list.
+    const Node totals = name_of(QStringLiteral("settingsTotalsRow"));
     CHECK(totals.m_Role == QAccessible::CheckBox);
     CHECK(totals.m_Name == "Include a totals line");
     QAccessibleInterface* iface =
-        QAccessible::queryAccessibleInterface(fixture.require(QStringLiteral("settingsTotals")));
+        QAccessible::queryAccessibleInterface(fixture.require(QStringLiteral("settingsTotalsRow")));
     REQUIRE(iface != nullptr);
     CHECK_FALSE(iface->state().checked);
 
     // The press action of VoiceOver does what a tap does.
-    CHECK(accessible_press(fixture.require(QStringLiteral("settingsTotals"))));
+    CHECK(accessible_press(fixture.require(QStringLiteral("settingsTotalsRow"))));
     fixture.m_Ui.settle();
     CHECK(fixture.settings().include_totals());
     CHECK(iface->state().checked);
-    fixture.go_back();
 
     // The board: every tile but Other is a button, and the buttons for a selected tile are there for VoiceOver.
     CHECK(accessible_press(fixture.require(QStringLiteral("miniTile4"))));
@@ -1022,11 +1018,9 @@ TEST_CASE("settings.a11y: names, targets, reading order and the text scales, in 
             expect_clean(check_everything(fixture.m_Ui, min_target));
             fixture.go_back();
         }
-        // The unit prefix is a page of its own, opened from the Facilitator page.
-        fixture.open_page(QStringLiteral("settingsFacilitator"));
-        fixture.open_page(QStringLiteral("settingsUnitPrefix"));
+        // The unit prefix is a page of its own, opened from the list.
+        fixture.open_page(QStringLiteral("settingsUnitPrefixRow"));
         expect_clean(check_everything(fixture.m_Ui, min_target));
-        fixture.go_back();
         fixture.go_back();
     }
 }

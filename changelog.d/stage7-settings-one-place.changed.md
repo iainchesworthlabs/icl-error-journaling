@@ -1,0 +1,1 @@
+**Unit prefix and totals line are in one place in Settings.** They are rows on the Settings list, under Facilitator. The Facilitator page no longer repeats them under "In the shared log", so there is one place to change each setting.

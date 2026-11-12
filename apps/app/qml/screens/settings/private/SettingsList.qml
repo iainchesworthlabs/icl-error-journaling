@@ -229,8 +229,8 @@ SettingsPage {
                 onActivated: root.facilitatorRequested()
             }
 
-            // The unit prefix and the totals line are on the list too, so that nobody has to guess that they are behind the
-            // facilitator (Stage 7, F4). The same settings are on the facilitator page, under "In the shared log".
+            // The unit prefix and the totals line are on the list and nowhere else (Stage 7, F4): they are not behind the
+            // facilitator, and no page repeats them.
             ListRow {
                 objectName: "settingsUnitPrefixRow"
                 text: qsTr("Unit prefix")

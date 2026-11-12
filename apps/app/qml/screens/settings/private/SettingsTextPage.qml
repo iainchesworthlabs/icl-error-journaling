@@ -7,9 +7,8 @@ import ErrorJournalingApp
 // where it was, and the page stays open; if it accepts, the page closes and the list shows the value when it has been
 // saved.
 //
-// The facilitator page also holds the two settings that the Settings mock-up has no row for, so that nothing the PRD asks
-// for is lost: under the name, "In the shared log" has the unit prefix (PRF-02, a row that opens this page for the prefix)
-// and the switch for the totals line (PRF-10).
+// The unit prefix and the totals line (PRF-02, PRF-10) have rows on the Settings list, and only there: one setting has
+// one place, so nobody has to wonder which of two copies is the one that counts.
 //
 // This file is a part of SettingsScreen and is tested through it.
 SettingsPage {
@@ -31,10 +30,6 @@ SettingsPage {
 
     // The page was left, by Back or by a Save that the model accepted.
     signal closeRequested
-    // The unit prefix row was activated: the screen pushes this page for the prefix.
-    signal unitPrefixRequested
-    // The last refusal of the totals switch, in the model's words.
-    property string totalsMessage: ""
 
     function save(): void {
         const answer = isFacilitator ? settings.setFacilitator(draft) : settings.setUnitPrefix(draft);
@@ -44,7 +39,7 @@ SettingsPage {
     }
 
     title: isFacilitator ? qsTr("Facilitator") : qsTr("Unit prefix")
-    leadingText: backText.length > 0 ? backText : isFacilitator ? qsTr("Settings") : qsTr("Facilitator")
+    leadingText: backText.length > 0 ? backText : qsTr("Settings")
     trailingText: qsTr("Save")
     trailingEnabled: draft !== current
     onLeadingTriggered: closeRequested()
@@ -64,28 +59,5 @@ SettingsPage {
             root.draft = text;
         }
         onAccepted: root.save()
-    }
-
-    GroupedList {
-        objectName: "settingsSharedLog"
-        width: parent.width
-        visible: root.isFacilitator
-        title: qsTr("In the shared log")
-
-        ListRow {
-            objectName: "settingsUnitPrefix"
-            text: qsTr("Unit prefix")
-            value: root.settings.unitPrefix
-            showChevron: true
-            onActivated: root.unitPrefixRequested()
-        }
-
-        SettingsSwitchRow {
-            objectName: "settingsTotals"
-            text: qsTr("Include a totals line")
-            description: root.totalsMessage.length > 0 ? root.totalsMessage : qsTr("Adds the number of each error type under the log.")
-            checked: root.settings.includeTotals
-            onToggled: wanted => root.totalsMessage = root.settings.setIncludeTotals(wanted)
-        }
     }
 }
