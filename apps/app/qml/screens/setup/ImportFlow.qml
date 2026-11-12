@@ -38,6 +38,10 @@ Item {
     // The person asked for another file.
     signal importRequested
     signal finished
+    // The help button of the import errors was activated: the id of the topic (HelpTopics).
+    signal helpRequested(string topic)
+    // "How to fix a setup file" was activated: the address of the guide's page, to be opened in the browser.
+    signal guideRequested(string url)
 
     function begin(path: string, name: string): void {
         root.fileName = name;
@@ -115,5 +119,7 @@ Item {
             root.importRequested();
         }
         onCancelRequested: root.close()
+        onHelpTopicRequested: topic => root.helpRequested(topic)
+        onFixGuideRequested: root.guideRequested(HelpTopics.setupFileFixAddress)
     }
 }

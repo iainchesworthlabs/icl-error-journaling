@@ -17,9 +17,15 @@ EditorPage {
 
     signal chooseAnotherRequested
     signal cancelRequested
+    // The help button was activated: the id of the topic (HelpTopics).
+    signal helpTopicRequested(string topic)
+    // "How to fix a setup file" was activated: the guide's page of the messages is to be opened.
+    signal fixGuideRequested
 
     title: qsTr("This file can’t be imported")
     leadingText: qsTr("Back")
+    helpName: qsTr("Help with importing a setup file")
+    onHelpRequested: root.helpTopicRequested("setupFile")
     onLeadingTriggered: root.cancelRequested()
 
     Flickable {
@@ -70,6 +76,23 @@ EditorPage {
                         minimumHeight: Theme.size.rowHeightForm
                         tappable: false
                     }
+                }
+            }
+
+            // Every message of the file and its fix are in the guide (Stage 10, 10.6; the mock-up ImportErrorsHelp).
+            GroupedList {
+                objectName: "fixGuideGroup"
+                width: parent.width
+                footer: qsTr("Every message and what to do about it")
+
+                ListRow {
+                    objectName: "fixGuideRow"
+                    text: qsTr("How to fix a setup file")
+                    labelColour: Theme.colour.primaryText
+                    labelFont: Theme.font.body.selectedFont
+                    showExternal: true
+                    accessibleName: qsTr("How to fix a setup file, opens the guide in your browser")
+                    onActivated: root.fixGuideRequested()
                 }
             }
         }

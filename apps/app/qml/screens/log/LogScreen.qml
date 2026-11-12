@@ -94,13 +94,18 @@ Item {
     readonly property real lastBarRoom: lastBar.implicitHeight + Theme.space.sectionGap
     // The Last bar gives way when the tiles would be under the 88 pt minimum with it: in a short window, or at a large text size,
     // or with the strip of empty fields in the header card (Stage 7, F1 and F2). The board keeps all twelve tiles above the tab bar.
-    readonly property bool lastBarHidden: wide || fittingTile(roomBelowComposer - lastBarRoom) < Theme.size.tileMinimum
+    readonly property bool lastBarHidden: wide || tipShown || fittingTile(roomBelowComposer - lastBarRoom) < Theme.size.tileMinimum
+    // The first-run tip (Stage 10, 10.6; LogFirstRunTip): a card in the place of the Last bar, while HelpState says it is open.
+    // It is not shown on the empty board, which has its own card, nor while the board is loading, nor when the tiles would
+    // have to be under the 88 pt minimum to make room for it: the board keeps all twelve tiles above the tab bar.
+    readonly property real tipRoom: tip.implicitHeight + Theme.space.sectionGap
+    readonly property bool tipShown: help !== null && help.tipOpen && !board.boardEmpty && !loading && fittingTile(roomBelowComposer - tipRoom) >= Theme.size.tileMinimum
     readonly property real tileHeight: {
         // A Wide board fills the height of its pane, to the 88 pt minimum.
         if (wide)
-            return Math.max(Theme.size.tileMinimum, fittingTile(roomBelowComposer - Theme.space.screenMargin));
+            return Math.max(Theme.size.tileMinimum, fittingTile(roomBelowComposer - Theme.space.screenMargin - (tipShown ? tipRoom : 0)));
         const preferred = WindowLayout.tileHeightFor(grid.tileWidth);
-        const room = roomBelowComposer - (lastBarHidden ? 0 : lastBarRoom);
+        const room = roomBelowComposer - (tipShown ? tipRoom : lastBarHidden ? 0 : lastBarRoom);
         return Math.max(Theme.size.tileMinimum, Math.min(preferred, fittingTile(room)));
     }
 
@@ -110,12 +115,20 @@ Item {
     }
 
     required property var session
+
+    // The tip counts a day when it is on screen: HelpState keeps the days.
+    onTipShownChanged: {
+        if (tipShown)
+            help.noteTipShown();
+    }
     required property var board
     required property var undo
     required property var timeline
     required property var settings
     required property var bridge
     property var picker: null
+    // What the in-app help remembers (HelpState): `tipOpen`, `noteTipShown()` and `closeTip()`. Null shows no tip.
+    property var help: null
     // The ShareService, for the Share log button of the log pane. Null where there is none (a test of the screen alone).
     property var share: null
 
@@ -256,6 +269,8 @@ Item {
     onVisibleChanged: bridge.setBoardVisible(visible)
     Component.onCompleted: {
         bridge.setBoardVisible(visible);
+        if (tipShown)
+            help.noteTipShown();
         if (session.recoveryNotice.length > 0)
             Accessible.announce(qsTr("Your log was repaired. %1").arg(session.recoveryNotice));
     }
@@ -402,6 +417,24 @@ Item {
             onChipChosen: templateId => root.chooseTemplate(templateId)
         }
 
+        // The first-run tip: three things to know, until it is closed or has been shown on three days. A card in the
+        // information tone, in the place of the Last bar, with a Close button; it is not a dialog and takes no tap from the
+        // board. It is made even when it is not shown, so that the board knows how much room it needs.
+        FirstRunTip {
+            id: tip
+
+            objectName: "logFirstRunTip"
+            x: root.wide ? root.paneLeft : root.side
+            width: root.wide ? WindowLayout.boardPaneWidth : parent.width - 2 * root.side
+            anchors.top: composer.bottom
+            anchors.topMargin: Theme.space.sectionGap
+            visible: root.tipShown
+            title: qsTr("Three things to know")
+            message: qsTr("Double-tap a tile to log it.\nHold a tile to log it with a note.\nUndo is on the message that appears.")
+            closeLabel: qsTr("Close")
+            onCloseRequested: root.help.closeTip()
+        }
+
         LastEntryBar {
             id: lastBar
 
@@ -527,7 +560,7 @@ Item {
             objectName: "logBoard"
             x: root.wide ? root.paneLeft : root.side
             width: root.wide ? WindowLayout.boardPaneWidth : parent.width - 2 * root.side
-            anchors.top: root.lastBarHidden ? composer.bottom : lastBar.bottom
+            anchors.top: root.tipShown ? tip.bottom : root.lastBarHidden ? composer.bottom : lastBar.bottom
             anchors.topMargin: Theme.space.sectionGap
             gap: WindowLayout.tileGap
             tileHeight: root.tileHeight

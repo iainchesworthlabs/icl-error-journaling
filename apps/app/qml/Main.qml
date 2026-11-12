@@ -24,6 +24,8 @@ Window {
     required property QtObject appRoot
     // The model of the About pages: the build's commit and date, the licence and the open-source components.
     required property QtObject about
+    // What the in-app help remembers (HelpState): the first-run tip. Without it the tip is not shown.
+    property QtObject help: null
     required property var bridge
     // The version of the core library and which bridge and storage are linked. They are at the foot of Settings.
     required property string versionText
@@ -64,6 +66,7 @@ Window {
         appRoot: root.appRoot
         bridge: root.bridge
         about: root.about
+        help: root.help
         aboutText: qsTr("%1 · %2").arg(root.versionText).arg(root.platformText)
     }
 }

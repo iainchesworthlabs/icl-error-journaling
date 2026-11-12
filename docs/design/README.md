@@ -144,6 +144,13 @@ is about 14 pt shorter per tile row; the Last bar returns after Close (owner dec
 | 67 | `ErrorTypesHelp` | Error types, with help | One line at the top ("Types with a position are on the board. The rest are in Other.") and the help button |
 | 68 | `ImportErrorsHelp` | Import refused, with help | A "How to fix a setup file" row that opens the setup-file page of the guide, and the help button |
 
+As built (package 10.6, `HelpTopics`, `HelpButton`, `HelpSheet`, `FirstRunTip`): the screens are as drawn, with two
+differences. The first-run tip is a card of its own (`FirstRunTip`), not a `Banner`, because a banner with a title and three
+lines is 108 pt tall and the board would then fall under its 88 pt tile minimum on the 874 pt frame; the card is under 100 pt
+(8 pt padding, the lines at the footnote size on a fixed pitch) and is shown only while the tiles keep that minimum beside it,
+so at the larger text sizes it is not shown at all. And "three days" counts the days on which the tip was on screen, not the
+days on which the person logged: the days are kept in `help-state.ini` beside the data, outside the store and the setup file.
+
 ## Dark mode
 
 Decision 10 of the Stage 4 plan, drawn in `*.dark.dc.html` and held in `tokens.json` under `colour.dark` and the `darkHex` of each tile. The ratios are in [`contrast.md`](contrast.md).

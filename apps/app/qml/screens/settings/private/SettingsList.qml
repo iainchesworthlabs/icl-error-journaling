@@ -33,6 +33,11 @@ SettingsPage {
     signal timeFormatRequested
     signal importExportRequested
     signal aboutRequested
+    signal quickHelpRequested
+    // The help button of the title bar was activated: the id of the topic (HelpTopics).
+    signal helpTopicRequested(string topic)
+    // A row of the Help group that opens a page of the guide: its address.
+    signal guideRequested(string url)
     // A tile of the board is to get another type: its position (1 to 11) and the type it has now.
     signal replaceRequested(int position, string typeId)
 
@@ -80,6 +85,8 @@ SettingsPage {
     }
 
     title: qsTr("Settings")
+    helpName: qsTr("Help with the board layout")
+    onHelpRequested: helpTopicRequested("board")
     scrollable: !board.dragging
     // BoardSettings: 8 pt above the title and 16 pt between it and "YOUR BOARD" (8 of them are the NavBar's own).
     topGap: Theme.space.tileGap
@@ -271,6 +278,54 @@ SettingsPage {
                 minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.importExportRequested()
+            }
+        }
+
+        Item {
+            width: parent.width
+            height: Theme.space.sectionGap
+        }
+
+        // The help: the topics in the app, which work without a connection, and the pages of the site (Stage 10, 10.6).
+        GroupedList {
+            objectName: "settingsHelpGroup"
+            width: parent.width
+            title: qsTr("Help")
+            footer: qsTr("Quick help works without a connection. The guide, support and privacy pages open in your browser.")
+
+            ListRow {
+                objectName: "settingsQuickHelp"
+                text: qsTr("Quick help")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.quickHelpRequested()
+            }
+
+            ListRow {
+                objectName: "settingsUserGuide"
+                text: qsTr("User guide")
+                minimumHeight: Theme.size.rowHeightCompact
+                showExternal: true
+                accessibleName: qsTr("User guide, opens in your browser")
+                onActivated: root.guideRequested(HelpTopics.guideAddress)
+            }
+
+            ListRow {
+                objectName: "settingsSupport"
+                text: qsTr("Support")
+                minimumHeight: Theme.size.rowHeightCompact
+                showExternal: true
+                accessibleName: qsTr("Support, opens in your browser")
+                onActivated: root.guideRequested(HelpTopics.supportAddress)
+            }
+
+            ListRow {
+                objectName: "settingsPrivacy"
+                text: qsTr("Privacy")
+                minimumHeight: Theme.size.rowHeightCompact
+                showExternal: true
+                accessibleName: qsTr("Privacy, opens in your browser")
+                onActivated: root.guideRequested(HelpTopics.privacyAddress)
             }
         }
 

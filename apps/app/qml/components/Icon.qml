@@ -18,7 +18,7 @@ import ErrorJournalingApp
 //
 // Kinds: chevronRight, chevronLeft, plus, close, check, warning, info, ring (an empty circle), search, share (upload),
 // file, list, music, speech (a speech bubble), calendar, grip (six dots), copy, trash, swap (Change error type), board (the
-// Log tab: four rounded squares), sun (the Settings tab: a ring with eight rays). The tabs use list for Review and
+// Log tab: four rounded squares), help (a question mark in a circle), external (an arrow leaving a box), sun (the Settings tab: a ring with eight rays). The tabs use list for Review and
 // calendar for History. An unknown kind draws nothing.
 Item {
     id: root
@@ -50,6 +50,8 @@ Item {
             "trash": "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
             "swap": "M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7",
             "board": "M4.5 3h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5z " + "M15.5 3h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5z " + "M4.5 14h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5z " + "M15.5 14h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5z",
+            "help": "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0z M9.6 9.4a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1.1.9-1.1 1.7 M12 17.2h.01",
+            "external": "M14 4h6v6 M20 4l-9 9 M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5",
             "sun": "M9 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0z M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"
         })
     // The stroke a kind has in the mock-ups: 2.5 for the check, 3 for the dots of the grip, 2 for the rest.
