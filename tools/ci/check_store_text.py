@@ -26,8 +26,11 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCS_HOST = "iainchesworthlabs.github.io"
-DOCS_PATH = "/icl-error-journaling/"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import site_address  # noqa: E402
+
+DOCS_HOST = site_address.host(ROOT)
+DOCS_PATH = site_address.path(ROOT)  # both from mkdocs.yml, the one place that holds the address
 
 # (path under store/, limit, unit, required)
 LIMITS: list[tuple[str, int, str, bool]] = [
