@@ -116,8 +116,9 @@ jobs:
           echo "macos=$macos" >> "$GITHUB_OUTPUT"
 
   # Looks for earlier runs that already passed a group on a tree that differs only in paths the group does not read.
-  # CI_REUSE_MODE is unset, which means shadow: the lookup is logged in the job summary and `reused` stays empty, so
-  # every group still runs. It cannot fail the workflow (continue-on-error, and find-proof falls back on any error).
+  # The repository variable CI_REUSE_MODE is `on`: a group with a valid proof is skipped and `reused` names the run.
+  # Unset or `shadow` would only log the lookup in the job summary and run every group; `off` skips the lookup.
+  # It cannot fail the workflow (continue-on-error, and find-proof falls back on any error).
   reuse:
     name: Reuse
     needs: plan
