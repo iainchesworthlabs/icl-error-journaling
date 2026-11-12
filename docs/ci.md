@@ -347,6 +347,11 @@ The **Confidentiality** job of `ci.yml` is part of CI Status. It runs the unit t
 
 - `check_config_files.py` fails when any tracked file other than `config/sample-config.json` is named `*-config.json` or
   `*.ejconfig` (the setup file as the app exports it).
+- `check_guide_screenshots.py` fails when the guide's pictures, `docs/guide/screenshots.json` and the screens
+  `ej_screenshots` renders disagree: a picture that names an unknown state or mode, a listed picture with no file (or a file
+  that is not listed, or not of the list's width), a page that shows a picture that is not listed or has no useful alt
+  text, and a listed picture that no page uses. Regenerate them with `tools/docs/guide_screenshots.py` (see "The guide's
+  pictures" in `docs/releasing.md`). It needs no build.
 - `check_setup_doc.py` fails when `docs/guide/setup-file.md` and the setup-file reader in `libs/core` disagree: a key the
   reader accepts that the page does not list (or the reverse), a key marked required or optional the wrong way, a length
   limit, number range, clock choice or whole-file limit that differs, a `ConfigError::Code` or `Problem` with no row, or

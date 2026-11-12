@@ -64,4 +64,5 @@ This file applies to any automated contributor. Read it before changing the repo
 | Which paths need a build | `.github/ci/plan.json` |
 | Coverage for a component | `tools/coverage-floors.json` (raise it when coverage rose) |
 | Files that add a preprocessor directive | `tools/preprocessor-baseline.json` only through `--update-baseline` when the count fell |
+| A screen that the user guide shows (`docs/guide/screenshots.json`) | The guide page for it and its picture: `python tools/docs/guide_screenshots.py --src <screens folder>` (`docs/releasing.md`) |
 | A new source file | The SPDX licence header, copied from an existing file |
