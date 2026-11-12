@@ -446,9 +446,9 @@ Run for 1.0.0, and again for each release. 11.8 adds it to `docs/releasing.md`.
 - [ ] `store-metadata.yml` run against the tag. App Store Connect and the Play Console show the text, the images and the
   build.
 - [ ] App Privacy: Data Not Collected. Play Data safety: no data collected or shared.
-- [ ] Age rating 4+. IARC rating Everyone. Target audience 18+.
+- [ ] Age rating as the questionnaires give it (Apple 4+, the lowest; the owner's 3+ is the PEGI level that IARC gives). IARC rating Everyone. Target audience 18+.
 - [ ] Export compliance shown as exempt on the build.
-- [ ] Price and countries set (owner).
+- [ ] Price 9.99 US dollars and all publishable countries set (owner, decided 12 Nov 2026).
 - [ ] Closed-test rule met on Play, if it applies.
 
 **Owner only**
@@ -518,8 +518,8 @@ the order that best saves waiting time.
 
 | # | Decision | Proposal |
 |---|---|---|
-| D1 | Licence route | Owner, after advice |
-| D2 | Free or paid, and countries | Owner |
+| D1 | Licence route | Decided 12 Nov 2026: the owner's legal advice has cleared the GPL and Qt licensing (see below) |
+| D2 | Free or paid, and countries | Decided 12 Nov 2026: paid, 9.99 US dollars, in every country where the app can be published (see below) |
 | D3 | Play account type | Owner |
 | D4 | Store languages | English (UK) only for 1.0 |
 | D5 | Categories | Productivity, then Business |
@@ -529,6 +529,23 @@ the order that best saves waiting time.
 | D9 | Metadata upload tool | fastlane `deliver` and `supply` |
 | D10 | Phased release | None for 1.0.0, phased for later versions, always released manually |
 | D11 | Android `versionCode` | The release run number, the same as iOS (agreed with Stage 9) |
+
+### Owner decisions, 12 November 2026
+
+Recorded as given to the project by the owner. They replace the proposals above.
+
+- **Age rating: 3+.** Apple's questionnaire has no 3+ rating: its lowest is 4+, which these answers give. 3+ is the
+  matching PEGI level that the Play content-rating questionnaire (IARC) gives for the same answers. The answers in
+  `store/appstore/age_rating.md` and `store/play/app_content.md` are unchanged; the ratings the consoles show are
+  checked at submission.
+- **Price: 9.99 US dollars**, a paid app. Apple's Paid Apps agreement, tax forms and banking, and the Play merchant
+  account, are needed before the first sale (owner actions 3 and 1). The App Store's price is set as the closest price
+  tier, and the Play price per country is set in the Play Console.
+- **Availability: every country and region where the app can be published.** The EU trader declaration (owner action 4)
+  applies to the countries in the EU.
+- **Licence: cleared.** The owner has taken legal advice on the GPL and the Qt licensing, and it is cleared. Task 11.3's
+  notices page and the listing's open-source paragraph follow that advice.
+- **Application ID: undecided.** The identifier stays `com.iainchesworthlabs.errorjournaling` until the owner decides.
 
 ## Assumptions only the stores can confirm
 
