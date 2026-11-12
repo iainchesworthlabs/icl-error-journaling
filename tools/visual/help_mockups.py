@@ -289,7 +289,7 @@ def settings_help(p: Phone) -> str:
             + f'<div style="font-size: 13px; color: {c["textSecondary"]}; margin: -4px 4px 0">Quick help works without a connection. '
             f"The guide, support and privacy pages open in your browser.</div>"
             + p.section_label("About")
-            + rows(p, [("About CS Bingo Board", "", "chevron")]),
+            + rows(p, [("About Field Test", "", "chevron")]),
         )
         + tab_bar(p, 3)
     )
