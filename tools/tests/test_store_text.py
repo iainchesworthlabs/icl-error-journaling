@@ -18,9 +18,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ci"))
 
 import check_store_text as store_check  # noqa: E402
+import site_address  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
-URL = "https://iainchesworthlabs.github.io/icl-error-journaling/support/"
+URL = site_address.site_url(ROOT) + "support/"
 GOOD = {
     "appstore/en-GB/name.txt": "Sample Board",
     "appstore/en-GB/subtitle.txt": "A short subtitle",

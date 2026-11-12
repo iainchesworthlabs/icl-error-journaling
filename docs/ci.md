@@ -316,6 +316,26 @@ category is not an App Store identifier; when the Play title differs from the Ap
 ten screenshot captions or one is over 60 characters. The confidentiality guard already reads `store/` with every other
 tracked file. The unit tests are in `tools/tests/test_store_text.py`.
 
+## The site address
+
+The guide, support and privacy pages are one MkDocs site, published by `docs.yml` to GitHub Pages from a build artifact
+(Pages source: GitHub Actions) on a push to `main`. Its address is written in one place: `site_url` in `mkdocs.yml`.
+
+- Pages of `docs/` that need the address write `{{ site_url }}` (it includes the trailing slash) and
+  `tools/docs/site_address_hook.py` fills it in at build time. A page never writes the host out.
+- The files that cannot read `mkdocs.yml` hold the same address: `store/appstore/en-GB/support_url.txt`,
+  `privacy_url.txt`, `marketing_url.txt` and the demo setup address in `store/appstore/review_information/notes.txt`.
+  `tools/ci/check_site_address.py` compares them (and `check_store_text.py` reads the host from `mkdocs.yml` too). The
+  app's own constant joins the list with the in-app help (Stage 10, 10.6).
+- `.github/repo-settings.json` has a `homepage` with the address. It is the owner's file and is not read by a check.
+
+**Moving to a custom domain.** Nothing in the repository is tied to the `github.io` address except the lines above, so
+the move is: (1) the owner adds the domain in the repository's Pages settings and the DNS record (a `CNAME` for a
+subdomain), which is not a file in the repository, because Pages deployed from a workflow ignores a `CNAME` file; (2) one
+pull request changes `site_url` and the files the check names, and it fails until they all agree; (3) the owner updates
+the `homepage` in the repository settings. Do this before the store submission: a store URL that changes later needs a
+new submission.
+
 ## iOS property list check
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_ios_plist.py` on `apps/app/packaging/ios/Info.plist.in` (with the CMake
@@ -351,6 +371,8 @@ The **Confidentiality** job of `ci.yml` is part of CI Status. It runs the unit t
   reader accepts that the page does not list (or the reverse), a key marked required or optional the wrong way, a length
   limit, number range, clock choice or whole-file limit that differs, a `ConfigError::Code` or `Problem` with no row, or
   an example that is not `config/sample-config.json`. The reader is the truth. `tools/ci/precheck.py` runs it too.
+- `check_site_address.py` fails when the documentation site's address is written down in more than one way (see "The
+  site address").
 - `check_confidential_terms.py` fails on a case-insensitive whole-word match of any term in the tracked files and their
   names, the commit messages and author names of the pull request range (or merge group, or push), and the pull request
   title and body. The title and body are passed through `env:`, never interpolated into the script. The script prints the

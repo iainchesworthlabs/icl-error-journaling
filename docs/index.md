@@ -9,7 +9,7 @@ when it helps, and share the day's log when you finish. Everything stays on your
 |---|---|
 | Get help or report a problem | [Support](support.md) |
 | Know what the app stores and where it goes | [Privacy](privacy.md) |
-| Try the app with the sample setup | [Download the sample setup file](https://iainchesworthlabs.github.io/icl-error-journaling/demo/demo-setup.ejconfig) |
+| Try the app with the sample setup | [Download the sample setup file]({{ site_url }}demo/demo-setup.ejconfig) |
 
 The step-by-step guide (getting started, setting up the board, a day of logging, sharing, history, the setup file, the
 FAQ and troubleshooting) is being written and will appear here.
