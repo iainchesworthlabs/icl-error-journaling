@@ -52,7 +52,7 @@ unchanged. The primary language is English (UK). Whether to add English (US) is 
 
 | Field | Limit | Draft file | Draft |
 |---|---|---|---|
-| Name | 30 characters, unique on the store | `name.txt` | CS Bingo Board |
+| Name | 30 characters, unique on the store | `name.txt` | Field Test |
 | Subtitle | 30 characters | `subtitle.txt` | One-tap session error log |
 | Promotional text | 170 characters, can change without a review | `promotional_text.txt` | |
 | Description | 4,000 characters | `description.txt` | |
@@ -216,7 +216,7 @@ Drafted in `store/appstore/review_information/notes.txt`. The notes say:
 - There is no account and no sign-in, so no demo account is needed. There is no network access, no server and no hardware
   to connect. The app does not talk to the robot.
 - How to try it in two minutes. Path 1: on first launch choose "Set up by hand" and add two error types. Path 2: open the
-  demo setup file in Safari, open it in CS Bingo Board, and choose "Use this setup". Then tap tiles, undo one, add a note,
+  demo setup file in Safari, open it in Field Test, and choose "Use this setup". Then tap tiles, undo one, add a note,
   open Review, and share.
 - The demo setup file is `config/sample-config.json`, published by Stage 10 on the documentation site as
   `demo-setup.ejconfig`, with stand-in names only. It is the same file the tests already import (11.3 adds a test that the
@@ -496,11 +496,11 @@ the order that best saves waiting time.
 1. **Google Play developer account.** Choose personal or organisation. An organisation account needs a D-U-N-S number,
    which can take days to weeks. A personal account needs identity checks and, if new, the 12-tester and 14-day closed
    test. Pay the one-time fee. Complete Android developer verification and register the package name
-   `com.iainchesworthlabs.errorjournaling`.
+   `com.iainchesworthlabs.fieldtest`.
 2. **Legal advice on the licence** ([facts and options](#licence-facts-and-options)), and a decision. This blocks 11.3's
    final text and the listing's open-source paragraph.
 3. **App Store Connect app record for public release:** the existing TestFlight record is the one that is released. Check
-   that the name "CS Bingo Board" is still free. Accept any new agreement in Business. For a paid app, also complete the
+   that the name "Field Test" is still free. Accept any new agreement in Business. For a paid app, also complete the
    Paid Apps agreement, tax forms and banking.
 4. **EU trader status (Digital Services Act)** in App Store Connect, and the matching declaration in Play. A trader's
    address, phone and email are shown on the listing in the EU. Not declaring removes the app from EU storefronts

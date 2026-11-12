@@ -1224,7 +1224,7 @@ TEST_CASE("picker.stub: the stub reports UNAVAILABLE once", "[unit][import]")
 
 TEST_CASE("document_types: the constants name the type and the file", "[unit][import]")
 {
-    CHECK(bridge::CONFIG_TYPE_IDENTIFIER == "com.iainchesworthlabs.errorjournaling.config");
+    CHECK(bridge::CONFIG_TYPE_IDENTIFIER == "com.iainchesworthlabs.fieldtest.config");
     CHECK(bridge::CONFIG_EXTENSION == "ejconfig");
     CHECK(bridge::CONFIG_EXPORT_FILE_NAME.ends_with(".ejconfig"));
     CHECK(bridge::CONFIG_MAX_BYTES == 1024 * 1024);
@@ -1836,11 +1836,11 @@ TEST_CASE(
     CHECK_FALSE(fs::exists(picked));
 
     // A file the system opened.
-    const fs::path opened = directory.path() / "cs-bingo-board-setup.ejconfig";
+    const fs::path opened = directory.path() / "field-test-setup.ejconfig";
     write_file(opened, "{}");
     importer.import_file(qt_path(opened));
     REQUIRE(ready.size() == 2);
-    CHECK(names[1] == "cs-bingo-board-setup.ejconfig");
+    CHECK(names[1] == "field-test-setup.ejconfig");
     importer.load_finished();
     CHECK_FALSE(fs::exists(opened));
     CHECK(failures.isEmpty());

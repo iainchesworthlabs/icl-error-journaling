@@ -35,13 +35,13 @@ bool accepts(QQuickItem* probe, const QString& name)
 
 } // namespace
 
-TEST_CASE("import.file: a setup file is named cs-bingo-board-setup.ejconfig", "[ui][import]")
+TEST_CASE("import.file: a setup file is named field-test-setup.ejconfig", "[ui][import]")
 {
     UiRig rig;
     QQuickItem* probe = rig.load_source(QByteArray(PROBE));
     REQUIRE(probe != nullptr);
 
-    CHECK(probe->property("defaultFileName").toString() == QStringLiteral("cs-bingo-board-setup.ejconfig"));
+    CHECK(probe->property("defaultFileName").toString() == QStringLiteral("field-test-setup.ejconfig"));
     CHECK(probe->property("exportExtension").toString() == QStringLiteral("ejconfig"));
     CHECK(probe->property("dialogFilter").toString() == QStringLiteral("Setup files (*.ejconfig *.json)"));
     CHECK(probe->property("extensions").toStringList() ==
@@ -56,7 +56,7 @@ TEST_CASE("import.file: .ejconfig and .json are accepted with any name, and noth
     QQuickItem* probe = rig.load_source(QByteArray(PROBE));
     REQUIRE(probe != nullptr);
 
-    CHECK(accepts(probe, QStringLiteral("cs-bingo-board-setup.ejconfig")));
+    CHECK(accepts(probe, QStringLiteral("field-test-setup.ejconfig")));
     CHECK(accepts(probe, QStringLiteral("anything at all.json")));
     CHECK(accepts(probe, QStringLiteral("Setup.EJCONFIG")));
     CHECK(accepts(probe, QStringLiteral("setup (2).JSON")));

@@ -1,4 +1,4 @@
-# CS Bingo Board
+# Field Test
 
 [![CI](https://github.com/iainchesworthlabs/icl-error-journaling/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/iainchesworthlabs/icl-error-journaling/actions/workflows/ci.yml)
 

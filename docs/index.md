@@ -1,6 +1,6 @@
-# CS Bingo Board
+# Field Test
 
-CS Bingo Board is an app for logging robot errors during a session. You tap a tile each time an error happens, add a note
+Field Test is an app for logging robot errors during a session. You tap a tile each time an error happens, add a note
 when it helps, and share the day's log when you finish. Everything stays on your phone or tablet until you share it.
 
 ## Start here

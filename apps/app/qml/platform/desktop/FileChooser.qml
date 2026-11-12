@@ -15,7 +15,7 @@ import ErrorJournalingApp
 // nothing. `qml_files.cmake` picks the file of the platform, so no screen asks which platform it runs on.
 //
 // What a dialog gives back is a URL. The chooser turns it into the local path that `settings.loadImport` and
-// `settings.exportTo` take, and into the file's name for the import confirmation ("From cs-bingo-board-setup.ejconfig").
+// `settings.exportTo` take, and into the file's name for the import confirmation ("From field-test-setup.ejconfig").
 Item {
     id: root
 

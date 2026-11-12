@@ -20,9 +20,9 @@ Invocation: `MODE=new NAME=icl-error-journaling KIND=app+lib UI=qt PLATFORMS=ios
 | Item | Value |
 |---|---|
 | Repository | `iainchesworthlabs/icl-error-journaling` |
-| Application name | CS Bingo Board (renamed from ICL Error Journaling, 8 Nov 2026) |
-| iOS display name (`ERROR_JOURNALING_DISPLAY_NAME`) | CS Bingo Board |
-| Bundle identifier (`ERROR_JOURNALING_APPLICATION_ID`) | `com.iainchesworthlabs.errorjournaling` |
+| Application name | Field Test (renamed from CS Bingo Board on 12 Nov 2026, and before that from ICL Error Journaling on 8 Nov 2026) |
+| iOS display name (`ERROR_JOURNALING_DISPLAY_NAME`) | Field Test |
+| Bundle identifier (`ERROR_JOURNALING_APPLICATION_ID`) | `com.iainchesworthlabs.fieldtest` |
 | C++ project name, CMake prefix | `error_journaling`, `ERROR_JOURNALING_` |
 | Targets (implementation plan, Stage 0) | `ej_core`, `ej_storage`, `ej_app`, `ej_ios_bridge` |
 
@@ -85,7 +85,7 @@ Needed now (repository administration, section 12):
 Needed before the Stage 0 exit gate (a signed build on TestFlight), in Apple's portal and App Store Connect
 (`docs/releasing.md`, "iOS and TestFlight"):
 
-1. Register the explicit App ID `com.iainchesworthlabs.errorjournaling`.
+1. Register the explicit App ID `com.iainchesworthlabs.fieldtest`.
 2. Create an App Store Connect provisioning profile for it; its base64 goes in the repository secret
    `IOS_PROVISIONING_PROFILE_BASE64`.
 3. Create the app record in App Store Connect and an internal TestFlight group with the testers.

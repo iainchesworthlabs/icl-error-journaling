@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Starts the built Android application on a running emulator and checks that it comes up and survives being backgrounded.
 
-    python3 tools/ci/android_smoke.py --apk app.apk --application-id com.iainchesworthlabs.errorjournaling \\
+    python3 tools/ci/android_smoke.py --apk app.apk --application-id com.iainchesworthlabs.fieldtest \\
         [--adb adb] [--artifacts DIR] [--timeout 90]
 
 The emulator is started by the workflow (.github/workflows/android-emulator.yml). A Qt release build takes no start-up
@@ -34,8 +34,8 @@ from pathlib import Path
 from typing import Callable
 
 # The Java class of the launcher activity (see check_android_package.py): the application ID will change, this will not.
-ACTIVITY_CLASS = "com.iainchesworthlabs.errorjournaling.EjActivity"
-APPLICATION_ID = "com.iainchesworthlabs.errorjournaling"
+ACTIVITY_CLASS = "com.iainchesworthlabs.fieldtest.EjActivity"
+APPLICATION_ID = "com.iainchesworthlabs.fieldtest"
 
 ACTIVE = "lifecycle: active"
 INACTIVE = "lifecycle: inactive"

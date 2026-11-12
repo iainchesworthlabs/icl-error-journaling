@@ -83,7 +83,7 @@ kit's. The iPhone is portrait only and the iPad turns to all four orientations a
   calls an API of a category the manifest does not declare, or carries the Tracy profiler. Qt QML links Qt Network, so
   the executable carries network code the application never calls; `verify_app.sh` reports it, and
   `tools/ci/check_no_network.py` keeps the application's own code free of network use and remote URLs (Stage 11, 11.2).
-- **The setup file type.** The property list exports one type of its own, `com.iainchesworthlabs.errorjournaling.config`
+- **The setup file type.** The property list exports one type of its own, `com.iainchesworthlabs.fieldtest.config`
   (extension `ejconfig`, conforming to `public.json`), names it in `CFBundleDocumentTypes` with the handler rank Owner,
   and registers `public.json` as an alternate, so a setup file that was not renamed still offers the application.
   `LSSupportsOpeningDocumentsInPlace` is `false` (the system copies the file into the sandbox, and the importer deletes

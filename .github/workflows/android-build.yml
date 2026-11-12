@@ -43,7 +43,7 @@ permissions: {}
 
 env:
   VCPKG_DISABLE_METRICS: "1"
-  APPLICATION_ID: com.iainchesworthlabs.errorjournaling
+  APPLICATION_ID: com.iainchesworthlabs.fieldtest
   # The NDK Qt 6.12.0's Android kit was built with (its modules/Core.json); Qt recommends the same one.
   NDK_VERSION: "27.2.12479018"
   ANDROID_PLATFORM_PACKAGE: "platforms;android-37.0"

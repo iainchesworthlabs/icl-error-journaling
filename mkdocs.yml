@@ -1,4 +1,4 @@
-site_name: CS Bingo Board
+site_name: Field Test
 site_description: An app for logging robot session errors through the day and sharing the log
 repo_url: https://github.com/iainchesworthlabs/icl-error-journaling
 # Where the guide, support and privacy pages are published; store/appstore/en-GB/*_url.txt hold the same paths.

@@ -21,7 +21,7 @@ namespace
 AboutFacts facts()
 {
     AboutFacts value;
-    value.m_Name = QStringLiteral("CS Bingo Board");
+    value.m_Name = QStringLiteral("Field Test");
     value.m_Version = QStringLiteral("0.1.0");
     value.m_BuildNumber = QStringLiteral("57");
     value.m_Commit = QStringLiteral("a1b2c3d");
@@ -76,7 +76,7 @@ QByteArray notices()
 TEST_CASE("The facts of the build are what the composition root gave", "[viewmodel][about]")
 {
     const AboutModel model(facts(), [] { return QByteArray(); });
-    CHECK(model.appName() == "CS Bingo Board");
+    CHECK(model.appName() == "Field Test");
     CHECK(model.version() == "0.1.0");
     CHECK(model.buildNumber() == "57");
     CHECK(model.commit() == "a1b2c3d");
@@ -106,7 +106,7 @@ TEST_CASE("The notices are read when they are first wanted, and once", "[viewmod
                                ++reads;
                                return notices();
                            });
-    CHECK(model.appName() == "CS Bingo Board");
+    CHECK(model.appName() == "Field Test");
     CHECK(model.sourceUrl() == "https://example.invalid/source");
     CHECK(reads == 0);
     CHECK(model.components().size() == 3);
@@ -164,7 +164,7 @@ TEST_CASE("The licence of the app is the licence of the project, with its text",
 {
     const AboutModel model(facts(), notices);
     const QVariantMap page = model.licence(QStringLiteral("app"));
-    CHECK(page.value("name") == "CS Bingo Board");
+    CHECK(page.value("name") == "Field Test");
     CHECK(page.value("licence") == "GPL-3.0-or-later");
     CHECK(page.value("copyright") == "Copyright (C) Sample Authors");
     CHECK(page.value("source") == "https://example.invalid/source");
@@ -191,7 +191,7 @@ TEST_CASE("Notices that cannot be read leave the facts and say so in words", "[v
         CHECK_FALSE(model.problem().isEmpty());
         CHECK(model.version() == "0.1.0");
         CHECK(model.licenceName() == "GPL-3.0-or-later");
-        CHECK(model.licence(QStringLiteral("app")).value("name") == "CS Bingo Board");
+        CHECK(model.licence(QStringLiteral("app")).value("name") == "Field Test");
     }
     CHECK_FALSE(AboutModel(facts(), nullptr).problem().isEmpty());
 }

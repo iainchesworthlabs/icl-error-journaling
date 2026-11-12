@@ -25,7 +25,7 @@ namespace ej::bridge
 namespace
 {
 
-constexpr const char* java_class = "com/iainchesworthlabs/errorjournaling/EjShare";
+constexpr const char* java_class = "com/iainchesworthlabs/fieldtest/EjShare";
 
 // The sheets in flight, by the number given to Java. Main thread only.
 std::map<jlong, ShareCallback>& pending()
@@ -94,7 +94,7 @@ QString write_text_file(const std::string& text)
     {
         return {};
     }
-    QFile file(QDir(directory).filePath(QStringLiteral("cs-bingo-board-log.txt")));
+    QFile file(QDir(directory).filePath(QStringLiteral("field-test-log.txt")));
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
         file.write(text.data(), static_cast<qint64>(text.size())) != static_cast<qint64>(text.size()))
     {

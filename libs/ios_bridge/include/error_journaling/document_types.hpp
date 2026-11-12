@@ -13,13 +13,13 @@ namespace ej::bridge
 ///
 /// The identifier is the bundle identifier plus ".config"; the type conforms to public.json, and a plain ".json" file
 /// is accepted as well (the property list registers public.json as an alternate document type).
-inline constexpr std::string_view CONFIG_TYPE_IDENTIFIER = "com.iainchesworthlabs.errorjournaling.config";
-inline constexpr std::string_view CONFIG_TYPE_DESCRIPTION = "CS Bingo Board setup";
+inline constexpr std::string_view CONFIG_TYPE_IDENTIFIER = "com.iainchesworthlabs.fieldtest.config";
+inline constexpr std::string_view CONFIG_TYPE_DESCRIPTION = "Field Test setup";
 inline constexpr std::string_view CONFIG_EXTENSION = "ejconfig";
 inline constexpr std::string_view JSON_EXTENSION = "json";
 
 /// The name of the file the export shares.
-inline constexpr std::string_view CONFIG_EXPORT_FILE_NAME = "cs-bingo-board-setup.ejconfig";
+inline constexpr std::string_view CONFIG_EXPORT_FILE_NAME = "field-test-setup.ejconfig";
 
 /// The largest setup file the importer reads (the Stage 1 limit).
 inline constexpr std::uintmax_t CONFIG_MAX_BYTES = 1024ULL * 1024ULL;

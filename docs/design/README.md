@@ -1,4 +1,4 @@
-# CS Bingo Board – design package v1
+# Field Test – design package v1
 
 The facilitator approved the eight light-mode screens (1 to 8 below) on 7 Nov 2026. They are the visual reference for Stage 4 of the implementation plan. Package 4.2 of Stage 4 added the screens that package lacked (9 to 34) and the dark palette; the owner reviewed every light and dark screen on 7 Nov 2026 and accepted them; Stage 4 builds them on the owner's approval (owner, 7 Nov 2026), and the facilitator approves them on a TestFlight build, with any change she asks for going into a later build (see [Review of the 4.2 drafts](#review-of-the-42-drafts)). All names, sites and error types shown are fictional placeholders; the real values come only from the configuration file at runtime.
 
@@ -26,7 +26,7 @@ The `.dc.html` files were authored for a design-canvas runtime (`support.js`, no
 | 5 | `Review.dc.html` | Today's log | Header block and timeline in export wording, black and white only. Swipe a row for Copy and Delete. Copy-all in the navigation bar, "Share log" button. |
 | 6 | `EditEntry.dc.html` | Edit entry | Sheet with Cancel and Save: error type, time, note, a preview of the shared line, and "Delete entry". The facilitator chose a separate sheet over editing in place. |
 | 7 | `NewDay.dc.html` | New day prompt | Names the new date; warns when the open log is unshared (never shared, or changed since its last share: "has changed since it was last shared"). "Start a new log", "Share [day]'s log first", "Keep [day]'s log open". |
-| 8 | `BoardSettings.dc.html` | Settings | Miniature board: hold and drag to move, tap to swap a type. Rows for error types, note templates, locations, facilitator, time format, and import or export of the setup, and under them, in a group of its own, About CS Bingo Board (PRF-12; only this mock-up draws the row, below the others it is under the tab bar). |
+| 8 | `BoardSettings.dc.html` | Settings | Miniature board: hold and drag to move, tap to swap a type. Rows for error types, note templates, locations, facilitator, time format, and import or export of the setup, and under them, in a group of its own, About Field Test (PRF-12; only this mock-up draws the row, below the others it is under the tab bar). |
 
 ### Screens added by package 4.2 (drafts)
 

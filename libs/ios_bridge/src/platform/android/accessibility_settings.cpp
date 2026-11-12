@@ -21,7 +21,7 @@ namespace ej::bridge
 namespace
 {
 
-constexpr const char* java_class = "com/iainchesworthlabs/errorjournaling/EjAccessibility";
+constexpr const char* java_class = "com/iainchesworthlabs/fieldtest/EjAccessibility";
 
 // What the change notice calls. It outlives the object that owns it in the closure of a queued call, so that nothing is
 // called after the object is gone. Main thread only.

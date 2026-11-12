@@ -35,15 +35,15 @@ void settle_page(World& world)
 
 } // namespace
 
-TEST_CASE("setup.first_launch: the screen is titled CS Bingo Board and offers two choices", "[ui][setup]")
+TEST_CASE("setup.first_launch: the screen is titled Field Test and offers two choices", "[ui][setup]")
 {
     World world(Start::FIRST_LAUNCH);
     REQUIRE_FALSE(world.model().configured());
     world.load("FirstLaunch");
     world.m_Ui.layout();
 
-    CHECK(shows_text(world, QStringLiteral("CS Bingo Board")));
-    CHECK(item(world, QStringLiteral("appTitle"))->property("text").toString() == QStringLiteral("CS Bingo Board"));
+    CHECK(shows_text(world, QStringLiteral("Field Test")));
+    CHECK(item(world, QStringLiteral("appTitle"))->property("text").toString() == QStringLiteral("Field Test"));
     REQUIRE(card(world, QStringLiteral("importCard")) != nullptr);
     REQUIRE(card(world, QStringLiteral("manualCard")) != nullptr);
     CHECK(button_text(world, QStringLiteral("importCard")) == QStringLiteral("Import a setup file"));

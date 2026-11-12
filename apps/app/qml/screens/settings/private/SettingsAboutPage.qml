@@ -4,7 +4,7 @@ import QtQuick
 import ErrorJournalingApp
 
 // The About page (PRF-12): what this build is, the licence of the app, where its source is, and the open-source components it
-// links, each with its licence. It is pushed from the "About CS Bingo Board" row of the Settings list.
+// links, each with its licence. It is pushed from the "About Field Test" row of the Settings list.
 //
 //   this build   the name, the version, the build number, the commit, the branch or tag when there is one, the date of the commit
 //                (UTC), the platform, the Qt version and the storage. All of it comes from `about` (AboutModel), which has it from
@@ -158,7 +158,7 @@ SettingsPage {
         objectName: "aboutLicence"
         width: parent.width
         title: qsTr("Licence")
-        footer: qsTr("CS Bingo Board is free software. You may copy it, change it and share it under the terms of this licence.")
+        footer: qsTr("Field Test is free software. You may copy it, change it and share it under the terms of this licence.")
 
         ListRow {
             objectName: "aboutLicenceName"

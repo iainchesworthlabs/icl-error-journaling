@@ -5,7 +5,7 @@ that right. This page is engineering documentation. It is not legal advice and i
 
 ## What the app is
 
-CS Bingo Board is GPL-3.0-or-later (`LICENSE`, `LICENSES/GPL-3.0-or-later.txt`, and an SPDX header in every source file). The About
+Field Test is GPL-3.0-or-later (`LICENSE`, `LICENSES/GPL-3.0-or-later.txt`, and an SPDX header in every source file). The About
 page names the licence and opens its full text from the bundled notices.
 
 ## Where the About page gets its facts

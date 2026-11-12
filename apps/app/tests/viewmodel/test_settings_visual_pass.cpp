@@ -336,18 +336,18 @@ TEST_CASE("An export reports the file name, the title and the message of the ban
     QSignalSpy result(&rig.m_Settings, &SettingsModel::exportResult);
     QSignalSpy finished(&rig.m_Settings, &SettingsModel::exportFinished);
 
-    rig.m_Settings.exportTo("/tmp/exports/cs-bingo-board-setup.ejconfig");
+    rig.m_Settings.exportTo("/tmp/exports/field-test-setup.ejconfig");
     rig.m_Gateway.run_all();
 
     REQUIRE(result.count() == 1);
     CHECK(result.at(0).at(0).toBool());
     CHECK(result.at(0).at(1).toString() == "Exported to Files");
-    CHECK(result.at(0).at(2).toString() == "cs-bingo-board-setup.ejconfig");
-    CHECK(result.at(0).at(3).toString() == "cs-bingo-board-setup.ejconfig is ready to send.");
+    CHECK(result.at(0).at(2).toString() == "field-test-setup.ejconfig");
+    CHECK(result.at(0).at(3).toString() == "field-test-setup.ejconfig is ready to send.");
     // The older signal says the same, so a screen that listens to it shows the real name too.
     REQUIRE(finished.count() == 1);
     CHECK(finished.at(0).at(0).toBool());
-    CHECK(finished.at(0).at(1).toString() == "cs-bingo-board-setup.ejconfig is ready to send.");
+    CHECK(finished.at(0).at(1).toString() == "field-test-setup.ejconfig is ready to send.");
 }
 
 TEST_CASE("An export that could not be written says so with the name of the file", "[viewmodel][settings]")

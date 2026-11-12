@@ -17,7 +17,7 @@ namespace
 
 using Start = World::Start;
 
-const QString SETUP_NAME = QStringLiteral("cs-bingo-board-setup.ejconfig");
+const QString SETUP_NAME = QStringLiteral("field-test-setup.ejconfig");
 
 std::string replace_first(std::string text, const std::string& from, const std::string& to)
 {
@@ -62,13 +62,13 @@ TEST_CASE("import.flow: nothing is shown until a file has been read, then the su
     World world(Start::FIRST_LAUNCH);
     QQuickItem* flow = world.load("ImportFlow");
     world.m_Ui.layout();
-    world.m_Rig.store().add_file("/files/cs-bingo-board-setup.ejconfig", sample_text());
+    world.m_Rig.store().add_file("/files/field-test-setup.ejconfig", sample_text());
 
     CHECK_FALSE(flow->isVisible());
     CHECK(page(flow) == QStringLiteral("none"));
 
     REQUIRE(QMetaObject::invokeMethod(flow, "begin",
-                                      Q_ARG(QString, QStringLiteral("/files/cs-bingo-board-setup.ejconfig")),
+                                      Q_ARG(QString, QStringLiteral("/files/field-test-setup.ejconfig")),
                                       Q_ARG(QString, SETUP_NAME)));
     // The model reads the file on its storage thread: until the gateway has run, the person sees nothing yet.
     CHECK(world.m_Rig.m_Gateway.pending() == 1);
@@ -84,7 +84,7 @@ TEST_CASE("import.flow: nothing is shown until a file has been read, then the su
     CHECK(value_of(world, QStringLiteral("locationsRow")) == QStringLiteral("2"));
     CHECK(value_of(world, QStringLiteral("templatesRow")) == QStringLiteral("2"));
     CHECK(item(world, QStringLiteral("fromText"))->property("text").toString() ==
-          QStringLiteral("From cs-bingo-board-setup.ejconfig"));
+          QStringLiteral("From field-test-setup.ejconfig"));
 
     // Nothing has changed yet.
     CHECK_FALSE(world.model().configured());
@@ -143,7 +143,7 @@ TEST_CASE("import.flow: with a setup in force the words say it is replaced, and 
 TEST_CASE("import.flow: a file saved with the other accepted extension imports the same way", "[ui][import]")
 {
     for (const char* path :
-         {"/files/anything.json", "/files/My Setup.ejconfig", "/files/cs-bingo-board-setup.ejconfig"})
+         {"/files/anything.json", "/files/My Setup.ejconfig", "/files/field-test-setup.ejconfig"})
     {
         World world(Start::FIRST_LAUNCH);
         QQuickItem* flow = world.load("ImportFlow");
@@ -255,8 +255,8 @@ TEST_CASE("import.sample: the sample file imports and the board, the picker and 
 {
     World world(Start::FIRST_LAUNCH);
     QQuickItem* flow = world.load("ImportFlow");
-    world.m_Rig.store().add_file("/files/cs-bingo-board-setup.ejconfig", sample_text());
-    begin(world, flow, QStringLiteral("/files/cs-bingo-board-setup.ejconfig"));
+    world.m_Rig.store().add_file("/files/field-test-setup.ejconfig", sample_text());
+    begin(world, flow, QStringLiteral("/files/field-test-setup.ejconfig"));
     tap(world, QStringLiteral("replaceButton"));
     REQUIRE(world.model().configured());
 

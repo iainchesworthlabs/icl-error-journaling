@@ -35,8 +35,8 @@ TEST_CASE("chooser.local_path: a file URL becomes the path the import takes, on 
     INFO(rig.errors().toStdString());
     REQUIRE(chooser != nullptr);
 
-    CHECK(call(chooser, "localPath", QUrl(QStringLiteral("file:///C:/data/cs-bingo-board-setup.ejconfig"))) ==
-          QStringLiteral("C:/data/cs-bingo-board-setup.ejconfig"));
+    CHECK(call(chooser, "localPath", QUrl(QStringLiteral("file:///C:/data/field-test-setup.ejconfig"))) ==
+          QStringLiteral("C:/data/field-test-setup.ejconfig"));
     CHECK(call(chooser, "localPath", QUrl(QStringLiteral("file:///home/sam/setup.json"))) ==
           QStringLiteral("/home/sam/setup.json"));
     // A space and a letter that is not ASCII arrive percent-encoded and leave it.
@@ -55,8 +55,8 @@ TEST_CASE("chooser.display_name: the name of the file is what follows the last s
     QQuickItem* chooser = rig.load(QStringLiteral("FileChooser"));
     REQUIRE(chooser != nullptr);
 
-    CHECK(call(chooser, "displayName", QUrl(QStringLiteral("file:///C:/data/cs-bingo-board-setup.ejconfig"))) ==
-          QStringLiteral("cs-bingo-board-setup.ejconfig"));
+    CHECK(call(chooser, "displayName", QUrl(QStringLiteral("file:///C:/data/field-test-setup.ejconfig"))) ==
+          QStringLiteral("field-test-setup.ejconfig"));
     CHECK(call(chooser, "displayName", QUrl(QStringLiteral("file:///home/sam/My%20setup.json"))) ==
           QStringLiteral("My setup.json"));
     CHECK(call(chooser, "displayName", QUrl(QStringLiteral("file:///setup.json"))) == QStringLiteral("setup.json"));

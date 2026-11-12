@@ -156,7 +156,7 @@ and the app may stay open for days. Stage 5's `LifecycleCoordinator` stays, and 
 **Single instance.** Two processes on one store would contend for the file lock that Stage 2 built
 (`file_lock.cpp`). A second launch therefore finds the first through a `QLocalServer` named per user and per data
 folder. It passes along its file argument, if it has one, and exits, and the first window comes to the front. If the
-lock is held and no server answers (the first process hung), the second launch shows "CS Bingo Board is already open"
+lock is held and no server answers (the first process hung), the second launch shows "Field Test is already open"
 and quits without touching the store.
 
 ### Where data is stored
@@ -394,7 +394,7 @@ None of these are done by an agent (AGENTS.md: secrets, settings and releases be
 | # | Action | Needed for | When |
 |---|---|---|---|
 | O-D | Decide the option (A, B, C or D) and answer the [decisions](#decisions-for-the-owner) | Everything | Before any code |
-| O-W1 | **Windows, Store route:** create a Microsoft Partner Center developer account (individual or company), reserve the name "CS Bingo Board", fill in the IARC rating, and add the Store submission credentials (an Entra app registration for the Partner Center API) as repository secrets | 12.7 release job | Before 12.7 merges |
+| O-W1 | **Windows, Store route:** create a Microsoft Partner Center developer account (individual or company), reserve the name "Field Test", fill in the IARC rating, and add the Store submission credentials (an Entra app registration for the Partner Center API) as repository secrets | 12.7 release job | Before 12.7 merges |
 | O-W2 | **Windows, outside-the-Store route:** buy an OV code-signing certificate through a cloud HSM service, or open Azure Trusted Signing if eligible; add its credentials as secrets | 12.7 release job | Before 12.7 merges |
 | O-M1 | **Mac, Developer ID route:** in the existing Apple Developer account, create a Developer ID Application certificate and an App Store Connect API key with the Developer role for `notarytool`; add both as repository secrets (`MACOS_DEVELOPER_ID_P12_BASE64`, its password, `ASC_API_KEY_*`); register the bundle ID (the iOS one, or a `.mac` variant, decision 6) | 12.9 | Before 12.9 merges |
 | O-M2 | **Mac, Store route (only if chosen):** add a macOS platform to the App Store Connect record, an Apple Distribution certificate and a Mac App Store profile | 12.9 | Before 12.9 merges |
@@ -413,7 +413,7 @@ None of these are done by an agent (AGENTS.md: secrets, settings and releases be
 | 5 | Mac architectures: Apple silicon only, or universal | **Apple silicon only** for v1. Intel Macs are then unsupported (Route 0 is Apple silicon only too) |
 | 6 | Mac bundle ID: the iOS one (universal purchase, needed for the Mac App Store's shared listing) or a separate one | **The iOS one** keeps the store route open; Developer ID works with either |
 | 7 | Updates outside a store: Sparkle or a "new version available" check | **The version check** for v1 (no framework, no extra secret); Sparkle in v1.1 if users ask |
-| 8 | Name on desktop | "CS Bingo Board", as everywhere else |
+| 8 | Name on desktop | "Field Test", as everywhere else |
 
 ## What cannot be verified here
 

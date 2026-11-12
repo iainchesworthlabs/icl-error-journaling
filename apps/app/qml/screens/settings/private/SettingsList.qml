@@ -286,7 +286,7 @@ SettingsPage {
 
             ListRow {
                 objectName: "settingsAboutRow"
-                text: qsTr("About CS Bingo Board")
+                text: qsTr("About Field Test")
                 minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.aboutRequested()

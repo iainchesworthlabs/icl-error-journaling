@@ -249,8 +249,8 @@ signals:
     void importFailed(const QStringList& messages);
     void exportFinished(bool ok, const QString& message);
     /// The same end of an export, in the words of the banner: `title` ("Exported to Files", or "Export failed"),
-    /// `fileName` (the last part of the path, "cs-bingo-board-setup.ejconfig"; empty when nothing was written) and
-    /// `message` ("cs-bingo-board-setup.ejconfig is ready to send.", or the reason). Emitted just before
+    /// `fileName` (the last part of the path, "field-test-setup.ejconfig"; empty when nothing was written) and
+    /// `message` ("field-test-setup.ejconfig is ready to send.", or the reason). Emitted just before
     /// `exportFinished`, whose `message` is the same text.
     void exportResult(bool ok, const QString& title, const QString& fileName, const QString& message);
     void writeFailed(const QString& operation, const QString& message);

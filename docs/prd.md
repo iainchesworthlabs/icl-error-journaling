@@ -1,10 +1,10 @@
-# CS Bingo Board – PRD v1
+# Field Test – PRD v1
 
 7 Nov 2026 · Iain Chesworth
 
 ## Overview
 
-CS Bingo Board is an iPhone app that lets a facilitator log a timestamped robot error in one tap, keep a running journal of the session, and post the day's log to Slack at the end of the day. It replaces ad-hoc notes typed during sessions, where timings are lost and errors go uncounted.
+Field Test is an iPhone app that lets a facilitator log a timestamped robot error in one tap, keep a running journal of the session, and post the day's log to Slack at the end of the day. It replaces ad-hoc notes typed during sessions, where timings are lost and errors go uncounted.
 
 The app is an Iain Chesworth Labs product built in C++23 with Qt/QML. v1 targets the iPhone 17 first, and also runs on iPad (portrait and landscape) and Android phones. It is released on the App Store and the Google Play Store (scope widened by the owner on 9 Nov 2026).
 
@@ -161,7 +161,7 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 | PRF-09 | On first launch the app offers to import a configuration file or set up manually.                                                                                                                                                                                                                                                                                                                                                                                         | Must     |
 | PRF-10 | Optional totals line in the export, per error type, default off.                                                                                                                                                                                                                                                                                                                                                                                                          | Should   |
 | PRF-11 | Unit environments: the choices of the environment picker (HDR-08), in order. The default is prod and dev. The list is edited in Settings (add, reorder, remove), and the setup file (PRF-08) can replace it with its optional `unit_environments` key: a list of one or more names, each of lower-case letters, digits and dashes (at most 20 characters, not starting or ending with a dash), none repeated. A file without the key keeps the default. The export writes the key only when the list differs from the default. | Must     |
-| PRF-12 | About page: the last row of Settings, About CS Bingo Board, opens a page with the name, version, build number (the iOS CFBundleVersion), commit, branch or tag, the date of the commit in UTC, the platform, the Qt version and the storage; the licence of the app (GPL-3.0-or-later) with a row that opens the full text; a row that opens the address of the source code in the browser; and the list of the open-source components that the iPhone binary links, each with its name, version and licence and a page with the full licence text. The facts come from the build, not from a typed list: the list is made from the link line, and the build fails when a linked component has no licence entry. A build without git says unknown for the commit and does not fail, and no changing time is built in. Every row is named for VoiceOver and the licence text is read by paragraph, at any text size. Five quick taps on the Version row show the timing readout (NFR-03, NFR-04). | Should   |
+| PRF-12 | About page: the last row of Settings, About Field Test, opens a page with the name, version, build number (the iOS CFBundleVersion), commit, branch or tag, the date of the commit in UTC, the platform, the Qt version and the storage; the licence of the app (GPL-3.0-or-later) with a row that opens the full text; a row that opens the address of the source code in the browser; and the list of the open-source components that the iPhone binary links, each with its name, version and licence and a page with the full licence text. The facts come from the build, not from a typed list: the list is made from the link line, and the build fails when a linked component has no licence entry. A build without git says unknown for the commit and does not fail, and no changing time is built in. Every row is named for VoiceOver and the licence text is read by paragraph, at any text size. Five quick taps on the Version row show the timing readout (NFR-03, NFR-04). | Should   |
 | PRF-13 | Error prefix: the text before the error type name on each error line of the export (Export format, rule 3), `T\|` by default. At most 12 characters with no line break; it may be empty. Changing it re-renders all logs, including past days, as PRF-07 does. The setup file (PRF-08) can set it with its optional `error_prefix` key; the export writes the key only when it differs from the default. | Must |
 
 ## Data model
@@ -295,7 +295,7 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 **Open items**
 
-- [x] App name and repository name: decided – CS Bingo Board on the home screen, in the App Store and in every user-visible text (owner, 8 Nov 2026, replacing ICL Error Journaling); repository icl-error-journaling and bundle identifier com.iainchesworthlabs.errorjournaling unchanged.
+- [x] App name and repository name: decided – Field Test on the home screen, in the App Store and in every user-visible text (owner, 8 Nov 2026, replacing ICL Error Journaling); repository icl-error-journaling and bundle identifier com.iainchesworthlabs.fieldtest unchanged.
 
 - [ ] Dark mode and motion, finalised from the approved light-mode screens. The facilitator's palette of plum and deep blue, and the 11 tile colours, are approved.
 

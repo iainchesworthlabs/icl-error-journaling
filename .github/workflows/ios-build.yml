@@ -48,7 +48,7 @@ permissions: {}
 env:
   VCPKG_DISABLE_METRICS: "1"
   # The bundle identifier of CMakeLists.txt (ERROR_JOURNALING_APPLICATION_ID), which the check of the bundle compares.
-  BUNDLE_ID: com.iainchesworthlabs.errorjournaling
+  BUNDLE_ID: com.iainchesworthlabs.fieldtest
 
 jobs:
   ios-build:

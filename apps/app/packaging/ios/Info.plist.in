@@ -51,9 +51,9 @@
     <array>
         <dict>
             <key>UTTypeIdentifier</key>
-            <string>com.iainchesworthlabs.errorjournaling.config</string>
+            <string>com.iainchesworthlabs.fieldtest.config</string>
             <key>UTTypeDescription</key>
-            <string>CS Bingo Board setup</string>
+            <string>Field Test setup</string>
             <key>UTTypeConformsTo</key>
             <array>
                 <string>public.json</string>
@@ -71,14 +71,14 @@
     <array>
         <dict>
             <key>CFBundleTypeName</key>
-            <string>CS Bingo Board setup</string>
+            <string>Field Test setup</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
             <key>LSHandlerRank</key>
             <string>Owner</string>
             <key>LSItemContentTypes</key>
             <array>
-                <string>com.iainchesworthlabs.errorjournaling.config</string>
+                <string>com.iainchesworthlabs.fieldtest.config</string>
             </array>
         </dict>
         <dict>

@@ -37,7 +37,7 @@ public:
     Q_INVOKABLE void exportSetup();
 
 signals:
-    /// A setup file is ready to import: a local path and the name to show ("From cs-bingo-board-setup.ejconfig").
+    /// A setup file is ready to import: a local path and the name to show ("From field-test-setup.ejconfig").
     void fileReady(const QString& path, const QString& displayName);
     /// Something the shell should tell the person: a file that was too large, or could not be read or opened, or an
     /// export that could not be prepared.

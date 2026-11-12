@@ -1240,7 +1240,7 @@ std::vector<Scene> phone_scenes()
                         "is not in the app.")},
         {QStringLiteral("About"), TODAY, scene_about,
          QStringLiteral(
-             "Settings, About CS Bingo Board, at the top. The mock-up's rows are the build of the mock-up (57, "
+             "Settings, About Field Test, at the top. The mock-up's rows are the build of the mock-up (57, "
              "a1b2c3d, develop, 2026-11-09 03:21 UTC); the app's components are made up for the capture.")},
         {QStringLiteral("AboutLicence"), TODAY, scene_about_licence,
          QStringLiteral("The first component of the About list (Qt Base) opened; the made-up texts are short stand-ins "

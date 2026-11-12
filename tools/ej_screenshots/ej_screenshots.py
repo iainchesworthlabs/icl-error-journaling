@@ -67,11 +67,11 @@ def write_index(out: Path) -> Path:
     files = {(row["state"], row["mode"]): row for row in written}
     modes = [mode["name"] for mode in screens["modes"]]
     parts = [
-        "<!doctype html><meta charset='utf-8'><title>CS Bingo Board screenshots</title>",
+        "<!doctype html><meta charset='utf-8'><title>Field Test screenshots</title>",
         "<style>body{font:14px system-ui,sans-serif;margin:24px;background:#f3f4f6;color:#111}"
         "h2{margin-top:40px}table{border-collapse:collapse}td,th{padding:8px;vertical-align:top;text-align:left}"
         "img{width:260px;border:1px solid #ccc;background:#fff}.note{color:#555;max-width:260px}</style>",
-        "<h1>CS Bingo Board screenshots</h1>",
+        "<h1>Field Test screenshots</h1>",
         "<p>Every state of <code>tools/ej_screenshots/screens.json</code> in each mode. Rendered on the desktop: the fonts "
         "and the renderer are not the phone's.</p>",
     ]

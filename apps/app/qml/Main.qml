@@ -40,7 +40,7 @@ Window {
     // the hint, iOS gives the window only the safe area and draws black above and below it, and the tab bar ends above
     // the home indicator instead of at the bottom of the screen.
     flags: Qt.Window | Qt.ExpandedClientAreaHint
-    title: qsTr("CS Bingo Board")
+    title: qsTr("Field Test")
     // The colour of the launch screen's background, so that the hand-over to the first screen shows no flash.
     color: Theme.colour.background
 
