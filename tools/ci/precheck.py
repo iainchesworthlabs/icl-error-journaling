@@ -11,7 +11,8 @@ Then it runs this repository's checks of the QML that need no Qt (tools/ci/check
 strings, the test files and the animators; docs/ci.md). CI runs them as the tests qml.platform, theme.no_literals,
 i18n.strings, qml.tests and motion.animators, and qml.format and qml.lint with a Qt kit.
 
-And check_setup_doc.py, which holds the setup-file page of the guide to the reader in libs/core (docs/ci.md).
+And check_setup_doc.py, which holds the setup-file page of the guide to the reader in libs/core, and
+check_guide_screenshots.py, which holds the guide's pictures, their list and the screens file to each other (docs/ci.md).
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 QML_CHECKS = ["check_qml_platform.py", "check_qml_literals.py", "check_qml_strings.py", "check_qml_tests.py", "check_qml_motion.py"]
-DOC_CHECKS = ["check_setup_doc.py"]
+DOC_CHECKS = ["check_setup_doc.py", "check_guide_screenshots.py"]
 
 
 def find_infra() -> Path | None:

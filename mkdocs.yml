@@ -7,10 +7,13 @@ docs_dir: docs
 # The outline of the guide is a working page for contributors, not for the site (docs/plan/stage-10.md).
 exclude_docs: |
   guide/outline.md
+  guide/screenshots.json
 strict: true
 # Publishes config/sample-config.json as demo/demo-setup.ejconfig for App Review and new users (docs/plan/stage-11.md).
 hooks:
   - tools/docs/demo_setup_hook.py
+markdown_extensions:
+  - attr_list  # sets the width of the guide's pictures: ![alt](img/x.png){ width="270" }
 theme:
   name: material
   features:
@@ -18,6 +21,14 @@ theme:
     - content.code.copy
 nav:
   - Home: index.md
+  - User guide:
+      - Getting started: guide/getting-started.md
+      - Setting up the board: guide/setup.md
+      - A day of logging: guide/logging.md
+      - Today's details: guide/todays-details.md
+      - Sharing and the next day: guide/sharing.md
+      - History: guide/history.md
+      - The setup file: guide/setup-file.md
   - Support: support.md
   - Privacy: privacy.md
   - For developers: developers.md
@@ -35,7 +46,6 @@ nav:
       - Stage 12 (desktop, v2): plan/stage-12.md
       - Stage 13 (foldables): plan/stage-13.md
       - About page: plan/about-page.md
-  - The setup file: guide/setup-file.md
   - Design: design/README.md
   - Building: building.md
   - Architecture: architecture.md
