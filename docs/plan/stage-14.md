@@ -1,9 +1,9 @@
-# Feedback: the interactions board and people
+# Stage 14: the interactions board and people
 
 This page is the design, task breakdown and test list for a second board for **interactions**, with an optional list of people that
 are typed once and picked later. It is for the owner's review. It writes no production code (the stage gate in
 `AGENTS.md`). Requirement IDs refer to the [PRD](../prd.md). The facilitator's stand-in is **Sam Example**, as everywhere in the repository (NFR-10). The stand-in for a saved name
-on this page is **Alex Sample**, a second fictional name the owner approved on 13 Nov 2026 (package I-0 adds it to
+on this page is **Alex Sample**, a second fictional name the owner approved on 13 Nov 2026 (package I-0 added it to
 `AGENTS.md` and `docs/`).
 
 **Source:** primary-user test feedback. Testers need a second board for what they *did* with or around the thing under

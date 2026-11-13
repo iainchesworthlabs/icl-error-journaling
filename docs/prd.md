@@ -32,6 +32,8 @@ v1 is a single-user, offline iPhone app whose only way off the device is the iOS
 
 - Free-text journal notes, including pre-templated note types such as "Played song".
 
+- An optional second board for interactions, with its own tab, its own interaction types and line templates, and an optional list of People that are typed once and picked later (added to v1 on 13 Nov 2026; Stage 14). Off by default.
+
 - Timestamped header-change entries (for example a software version deployed mid-day).
 
 - Review screen: view, edit, delete and copy any entry.
@@ -40,7 +42,7 @@ v1 is a single-user, offline iPhone app whose only way off the device is the iOS
 
 - Day rollover, extra logs on the same day for a move to another unit or site, and archived past logs that can be browsed and re-shared.
 
-- Preferences: facilitator name, locations, error type list, board layout, note templates, time format.
+- Preferences: facilitator name, locations, error type list, board layout, note templates, time format, and, when the second board is on, interaction types, their layout and lines, People and how names show in shared logs.
 
 - iPad in portrait and landscape, with the board and the log side by side in landscape. Android phones. Public release on the App Store and the Google Play Store. Documentation online and in the app.
 
@@ -49,8 +51,6 @@ v1 is a single-user, offline iPhone app whose only way off the device is the iOS
 **Out of scope for v1**
 
 - Landscape on a phone.
-
-- The interactions board (v2, [#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)).
 
 - Cloud sync, accounts, backend services or direct Slack integration.
 
@@ -95,6 +95,7 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 | HDR-01 | A new day's log is created with the facilitator name from preferences and today's local date already filled in.                                                                                                                                         | Must     |
 | HDR-02 | The unit number is entered on a numeric keypad as digits only and shown as \<prefix\>-\<n\> (for example UNIT-27). No leading zeros and no fixed length. The prefix is a preference. A unit may also carry an environment, picked from a list and shown as \<prefix\>-\<n\>-\<env\> (for example UNIT-27-prod); see HDR-08. | Must     |
 | HDR-03 | Location is picked from the preference list of locations, or Other with free text.                                                                                                                                                                      | Must     |
+| Person            | id, display_name, retired, location_id (nullable), last_used_utc, created_utc | The People list. Held in its own small store, not in the entry tables or any log journal (see Data safety). |
 | HDR-04 | Software version must match major.minor.patch (digits only, no suffix). Invalid input is flagged inline and cannot be saved. The commit of the build is a field of its own (HDR-09), not a suffix.                                                    | Must     |
 | HDR-05 | Header values persist for the day across app restarts and are cleared, except the facilitator, when a new log starts.                                                                                                                                   | Must     |
 | HDR-06 | Error taps and notes are allowed before the header is complete. A banner shows which header fields are still empty.                                                                                                                                     | Must     |
@@ -114,6 +115,11 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 | BRD-06 | Other opens a searchable sheet of every error type in the master list. Picking one records it like a tile tap. A new type can be added from this sheet and is saved to the master list.                                                                                                                                                          | Must     |
 | BRD-07 | Holding a tile for half a second logs the error with a note; it is one entry, never an error and a separate note, and the hold records it (a single tap does not). If a note is typed in the composer and not yet added, the hold logs the error with that note on the same line and clears the composer; one Undo removes the entry and puts the note back. If the composer is empty, the hold logs the error and opens the Edit entry sheet on the new entry with the cursor in the note (NOTE-06): Save attaches it and Cancel leaves the entry as it was. Letting go before half a second is a tap, and counts towards a double-tap; sliding off cancels. With VoiceOver, each tile has a second element, “Log <name> with note”, while a note is typed; the Edit sheet of the review screen is the way to a note without it. The composer’s placeholder says “Type a note, then hold a tile…”. | Should   |
 | BRD-08 | Each error type has its own tile colour from a palette of 12 slightly different hues defined in the design package. The colour follows the type when the board is reordered. Other uses a neutral colour.                                                                                                                                        | Must     |
+| BRD-13 | The second board is optional and off by default (`interactions_board_enabled`). A switch in Settings turns it on; a fifth tab, Interactions, then appears next to Errors (the first tab, renamed from Log). Turning it off hides the tab and the board and deletes nothing: interaction entries, types and people stay, and Review, export and history still show the entries. With the switch off the app is as without the feature (four tabs, one board). The setup file (PRF-08) can carry the switch. | Must |
+| BRD-14 | The interactions board is defined like the error board: 3 columns by 4 rows, tiles 1 to 11 are interaction types in positions chosen in preferences, tile 12 is always Other, an empty position shows a plus and opens the board setup. BRD-02 to BRD-07 apply to it unchanged (double-tap, feedback, undo toast, count badges, the Other sheet, hold for a note). Tiles are 96 pt so a title strip fits above the grid; the 88 pt minimum of NFR-02 still holds. | Must |
+| BRD-15 | The header card, the note composer and the Last bar are shared by both boards, so there is one note draft (NOTE-03) and the Last bar shows the latest entry of either kind. The app reopens on the board last used. The boards are told apart by a title strip ("Interactions") and a second tile hue family; the label carries the meaning (NFR-07). A tap on a tab, or a swipe from the title strip only, switches boards; a swipe on a tile does not. | Must |
+| BRD-16 | An interaction is logged first and asked second. Double-tapping a tile commits the entry at once, with its exact time and no person; if the type asks for a person, the People picker then opens (a bottom sheet) and its result is saved as an edit of that entry. If the type asks for text, the question sheet of NOTE-04 opens. Skip, dismissing the sheet, or the app being killed with the sheet open loses no entry; the entry then reads "(person not set)" in the Last bar and Review, and can be completed on the review screen. Undo removes the entry and closes the sheet. | Must |
+| BRD-17 | The picker lists people last used first, then alphabetically, with those of the log's location first when a person has a location. Typing filters the list; text that matches nobody offers "Add <text> as a new person"; text that differs from a saved name only by case, spacing or accents shows that name instead of making a duplicate. Tapping toggles a tick so one interaction can name several people (up to 20); Done (n) saves them in one change. An Everyone row ticks the people of the log's location. Each row is a button named for VoiceOver and the sheet is modal. | Must |
 
 ### Journal notes
 
@@ -163,6 +169,12 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 | PRF-11 | Unit environments: the choices of the environment picker (HDR-08), in order. The default is prod and dev. The list is edited in Settings (add, reorder, remove), and the setup file (PRF-08) can replace it with its optional `unit_environments` key: a list of one or more names, each of lower-case letters, digits and dashes (at most 20 characters, not starting or ending with a dash), none repeated. A file without the key keeps the default. The export writes the key only when the list differs from the default. | Must     |
 | PRF-12 | About page: the last row of Settings, About Field Test, opens a page with the name, version, build number (the iOS CFBundleVersion), commit, branch or tag, the date of the commit in UTC, the platform, the Qt version and the storage; the licence of the app (GPL-3.0-or-later) with a row that opens the full text; a row that opens the address of the source code in the browser; and the list of the open-source components that the iPhone binary links, each with its name, version and licence and a page with the full licence text. The facts come from the build, not from a typed list: the list is made from the link line, and the build fails when a linked component has no licence entry. A build without git says unknown for the commit and does not fail, and no changing time is built in. Every row is named for VoiceOver and the licence text is read by paragraph, at any text size. Five quick taps on the Version row show the timing readout (NFR-03, NFR-04). | Should   |
 | PRF-13 | Error prefix: the text before the error type name on each error line of the export (Export format, rule 3), `T\|` by default. At most 12 characters with no line break; it may be empty. Changing it re-renders all logs, including past days, as PRF-07 does. The setup file (PRF-08) can set it with its optional `error_prefix` key; the export writes the key only when it differs from the default. | Must |
+| PRF-14 | Interaction types master list: add, rename, retire, and a board position of 1 to 11 or none, edited as PRF-04 and PRF-05 edit error types. A retired type disappears from pickers but stays on past entries, which keep a snapshot of the type's label. A name is never a type; a person is data, not a tile. | Must |
+| PRF-15 | Interaction type lines: a type may have a line as the log shows it, with at most one `{person}` slot (one or several people) and at most one `{value}` slot, for example `Spoke with {person}`, `Played {value}`, `Gave {person} {value}`. The editor shows them as [person] and [answer], has Insert person and Insert answer buttons, and shows an example line. What the type asks for (nothing, a person, or text) comes from the line. A type with no line renders as its name and never opens a picker. With several people the slot reads `A, B and C` in the order picked. | Must |
+| PRF-16 | People: an optional list of names that are typed once and picked later. Settings has add, rename, retire (a retired person leaves the picker and stays on past entries), an optional location, and Forget. The People row is shown only when the second board is on. A name is trimmed, has internal spaces collapsed, is at most 60 characters and is never empty. Renaming corrects every past entry, because entries refer to a person by id. Forget removes the name for good, after a confirmation; entries stay and read "someone". | Must |
+| PRF-17 | Names in shared logs (`name_export`): how a person's name is written in the export, Copy line, Copy all and a re-shared past log. `full` writes Alex Sample, `initials` writes S.E., `hidden` writes someone. The default is `initials`. Review, the board and the picker show the full name, because they never leave the device. The Share preview shows what will leave. | Must |
+| PRF-18 | Interaction line label (`interaction_marker`): the text before an interaction line in the export, `(Interaction)` by default, at most 12 characters with no line break; it may be empty. Changing it re-renders all logs, as PRF-07 does. | Should |
+| PRF-19 | The setup file (PRF-08) carries the switch, the interaction types, their positions and their lines, `name_export` and `interaction_marker`. It never carries people. The name list cannot be exported in any form, and a file that holds a `people` key is refused with a message. A file without the new keys reads as before. | Must |
 
 ## Data model
 
@@ -173,16 +185,18 @@ Header values are held as an initial value plus timestamped change entries. The 
 | Entity            | Key fields                                                                                                                       | Notes                                                                                                                                                         |
 |-------------------|----------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | DayLog            | id, local_date, facilitator, unit_number, location_id or location_text, software_version, created_utc, last_shared_utc, changed_since_share, archived | One per log. Usually one per day; a second log on the same date covers a move to another unit or site. Header fields hold the values at the start of the log. `unit_number` is the digits, or the digits, a dash and the environment (`27-prod`). `changed_since_share` is true when the log was shared and a change was made after the last share (REV-05); a log from before the field existed reads as shared. `software_version` is the three components, or the three components, a plus sign and the commit (`1.4.2+a1b2c3d`). |
-| Entry             | id, day_log_id, kind (error, note, header_change), captured_utc, captured_tz, edited_utc, deleted                                | Common to all entries. Time is editable on the review screen.                                                                                                 |
+| Entry             | id, day_log_id, kind (error, note, header_change, interaction), captured_utc, captured_tz, edited_utc, deleted                                | Common to all entries. Time is editable on the review screen.                                                                                                 |
 | ErrorEntry        | entry_id, error_type_id, attached_note                                                                                           | kind = error.                                                                                                                                                 |
 | NoteEntry         | entry_id, template_id (nullable), value_text                                                                                     | kind = note. Free text has no template.                                                                                                                       |
+| InteractionEntry  | entry_id, interaction_type_id, interaction_type_label, person_ids (zero to 20, in order), value_text (nullable), attached_note | kind = interaction. The type label is a snapshot, as for errors. A person's name is never stored here, only the id. |
 | HeaderChangeEntry | entry_id, field (unit_number, location, software_version), old_value, new_value                                                  | kind = header_change. Created by the Change action (HDR-07). Values of `unit_number` and `software_version` are stored as above.                                                                                                  |
 | ErrorType         | id, name, retired, board_position (1–11 or null)                                                                                 | Master list. Retired types keep their history.                                                                                                                |
+| InteractionType   | id, name, retired, board_position (1–11 or null), line_pattern (nullable), asks (nothing, person, text) | Master list for the second board. The pattern may hold {person} and {value}, one of each at most. Retired types keep their history. |
 | Location          | id, name, sort_order, retired                                                                                                    |                                                                                                                                                               |
 | NoteTemplate      | id, name, value_prompt, output_pattern, sort_order                                                                               | The output pattern uses {value} for the answer; the editor shows it as [answer].                                                                                                                                  |
-| Preferences       | facilitator, unit_prefix, unit_environments, time_format, include_totals, error_prefix                                                        | Single row.                                                                                                                                                   |
+| Preferences       | facilitator, unit_prefix, unit_environments, time_format, include_totals, error_prefix, interactions_board_enabled (default false), name_export (default initials), interaction_marker (default (Interaction))                                                        | Single row.                                                                                                                                                   |
 
-IDs are UUIDs. The schema carries a version number with forward migrations from the first TestFlight build. The configuration export (PRF-08) covers Preferences, ErrorType, Location and NoteTemplate. Day logs are not included.
+IDs are UUIDs. The schema carries a version number with forward migrations from the first TestFlight build. The configuration export (PRF-08) covers Preferences, ErrorType, InteractionType, Location and NoteTemplate. It never covers Person. Day logs are not included.
 
 ## Export format
 
@@ -198,6 +212,7 @@ Software Version: 1.4.2
 10:05 T| Wrong Response
 10:20 T| Mute Delay
 10:30 (Free Text) Played Morning Medley
+10:42 (Interaction) Spoke with Alex Sample
 11:02 T| Wrong Track Played – asked for Evening Song
 13:15 Software Version changed: 1.4.2 → 1.5.0
 13:40 T| Speech Delay
@@ -213,11 +228,13 @@ Rendering rules:
 
 4.  Note lines are \<time\> (Free Text) \<text\>, where templated notes render through their template's line in the log. Notes carry no ticket marker.
 
+4a. Interaction lines are \<time\> \<interaction label\> \<line\>, for example `10:42 (Interaction) Spoke with Alex Sample`, with an attached note after an en dash. The label is the interaction line label preference (PRF-18), `(Interaction)` by default. There is no `T|` marker, so the downstream ticket indexer does not read them. The line is the type's line (PRF-15) with the people written at the name level of PRF-17, or the type's name when it has no line; a person not yet set reads "(person not set)". They sit in the timeline in time order with errors and notes.
+
 5.  Header change lines are \<time\> \<field label\> changed: \<old\> → \<new\>, with no ticket marker.
 
 6.  Times are 24-hour HH:mm by default (PRF-07), in the time zone each entry was captured in.
 
-7.  Deleted entries are excluded. If PRF-10 is on, a blank line and a totals line follow the timeline.
+7.  Deleted entries are excluded. If PRF-10 is on, a blank line and a totals line follow the timeline. The totals count error types only; interactions are not counted.
 
 8.  The label UNIT \# comes from the unit prefix preference (\<prefix\> \#). The value is \<prefix\>-\<n\>, or \<prefix\>-\<n\>-\<env\> when the unit has an environment, in the header block and in change lines.
 
@@ -239,8 +256,8 @@ The app must feel native, fast and polished on an iPhone 17, used one-handed in 
 | NFR-06 | Appearance       | Light and dark mode, following the system setting.                                                                                                                                                                                                                                                      |
 | NFR-07 | Accessibility    | VoiceOver labels on all controls and Dynamic Type for list and note text. Tile colours avoid red–green pairs and keep label text clearly readable. The label always carries the meaning; colour is a visual aid only. Full colour-blind modes are not required.                                         |
 | NFR-08 | Durability       | No loss of committed entries or the note draft if the app crashes, is killed or the phone restarts. Loss of open-log data is a P1 defect; see Data safety.                                                                                                                                              |
-| NFR-09 | Privacy          | No network access, analytics, crash reporting SDKs or third-party services. Data stays in the app sandbox under iOS Data Protection and leaves only through the share sheet, copy, or the user's own device backup.                                                                                                                    |
-| NFR-10 | Codebase hygiene | The repository contains no employer, site, robot or person names. All such values come from preferences or an imported configuration file.                                                                                                                                                              |
+| NFR-09 | Privacy          | No network access, analytics, crash reporting SDKs or third-party services. Data stays in the app sandbox under iOS Data Protection and leaves only through the share sheet, copy, or the user's own device backup. The People list is part of the app data and so of the backup; it is not in the setup file, and it appears in a shared log only at the level of PRF-17.                                                                                                                    |
+| NFR-10 | Codebase hygiene | The repository contains no employer, site, robot or person names. The fictional stand-ins are Sam Example (the facilitator) and Alex Sample (a person the tester saved). All such values come from preferences or an imported configuration file.                                                                                                                                                              |
 | NFR-11 | Localisation     | English (Australia) only in v1. All user-facing strings are translatable.                                                                                                                                                                                                                               |
 
 ### Data safety
@@ -256,6 +273,7 @@ Losing entries from the open log is a P1 defect, because the log feeds a critica
 | DS-05 | No app action deletes or overwrites the open log without explicit confirmation. Starting a new day or a new log archives the open log; it never deletes it.                                              |
 | DS-06 | Schema migrations copy the database first and roll back on failure.                                                                                                                                      |
 | DS-07 | Automated tests kill the app process at random points during writes and confirm no committed entry is lost. Core tests cover journal replay and recovery from a corrupt database.                        |
+| DS-08 | People are held in their own small journal and table, never in a log journal or an entry table, so a name can be forgotten (PRF-16). An interaction is acknowledged before its people are asked for (BRD-16). A damaged or missing people journal never loses an entry: the entries show "someone" and the recovery message gives a count, never names. Forgetting a person rewrites only the people journal, atomically. |
 
 ## Technology and delivery
 
@@ -299,6 +317,8 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 - [ ] Dark mode and motion, finalised from the approved light-mode screens. The facilitator's palette of plum and deep blue, and the 11 tile colours, are approved.
 
+- [x] The interactions board ([#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)): moved from v2 into v1 by the owner on 13 Nov 2026 as an optional second board with an optional People list; design and decisions in [Stage 14](plan/stage-14.md). Played song and Visitor interaction move to interaction types in the sample setup.
+
 - [ ] Note templates: enumerate the list with the facilitator. Played song and Visitor interaction are confirmed; list any others.
 
 - [ ] Confirm the exact spacing of the ticket marker against a line the downstream ticket indexer already picks up (proposed 10:05 T\| Wrong Response).
@@ -313,6 +333,8 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 **Future versions**
 
+- Interactions in the totals line, if wanted (not in v1; no stored data changes).
+
 - Logging a chosen error from the Action Button, a Lock Screen widget or Shortcuts.
 
 - Per-error-type export phrases, such as "UNIT-27 gave a wrong response".
@@ -323,4 +345,3 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 - Per-location board layouts, if site-specific errors appear.
 
-- A second board for logging interactions, with its own tab and its own interaction types, set up like the error board ([#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)). Raised by the facilitator; deferred on 9 Nov 2026.

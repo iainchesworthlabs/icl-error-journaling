@@ -159,9 +159,9 @@ The facilitator uses a TestFlight build in real sessions for one working week be
 
 **Exit gate:** a full week with no lost entries, every Must requirement passing, and the downstream ticket indexer reading the exported tickets.
 
-## Stages 7 to 12 – v1 scope added on 9 Nov 2026
+## Stages 7 to 14 – v1 scope added from 9 Nov 2026
 
-On 9 Nov 2026 the owner widened v1. It now ships publicly on the App Store and the Google Play Store, runs on an iPad in portrait and landscape, and has documentation online and in the app. Landscape stays off on a phone. A desktop build for Mac and Windows is a nice-to-have. The interactions board ([#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)) stays in v2.
+On 9 Nov 2026 the owner widened v1. It now ships publicly on the App Store and the Google Play Store, runs on an iPad in portrait and landscape, and has documentation online and in the app. Landscape stays off on a phone. A desktop build for Mac and Windows is a nice-to-have. The interactions board ([#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)) stayed in v2 at that point. On 13 Nov 2026 the owner moved it into v1 as an optional second board, off by default, with an optional People list (Stage 14, below).
 
 Each stage below gets its own page, `docs/plan/stage-N.md`, which sets out the task breakdown, the test list, the exit gate and the owner's decisions. The owner reviews that page before any code for the stage is written.
 
@@ -174,6 +174,7 @@ Each stage below gets its own page, `docs/plan/stage-N.md`, which sets out the t
 | 11 – Store release | App Store and Google Play listings, screenshots for every device size, the privacy policy and support URL, App Review notes, age rating, export compliance, data-safety form, release workflow and versioning. | Stages 7 to 10 | Approved by App Review and Play review; released |
 | 12 – Desktop (nice-to-have) | Mac and Windows builds as products: window sizing, keyboard and mouse use, packaging and signing. | Stage 8 (wide layout) | Owner decides whether it ships in v1 |
 | 13 – Foldable phones (added 10 Nov 2026) | Book-style foldables (iPhone Duo, Galaxy Z Fold, Pixel Fold, OnePlus Open) and flip phones: one set of size rules for phone, foldable and tablet, a tab rail for short windows, book and tabletop layouts that keep controls off the fold, and no state lost when the device folds. Plan: [stage-13.md](plan/stage-13.md). | Stage 8 (adaptive layout), Stage 9 (Android build) | Approved foldable mock-ups built; Android Studio foldable emulators and Xcode Device Hub checklists pass; nothing lost across a fold; phone and iPad layouts unchanged |
+| 14 – Interactions board and people (added 13 Nov 2026) | An optional second board for interactions (what the tester did with or around the thing under test), off by default, with a fifth tab, its own types and lines, and an optional People list that is typed once and picked later. Names live in their own store, never in a log journal or the setup file, and show in shared logs as initials unless the owner changes it. A new entry kind, one schema step, interaction lines in the export (no `T|`, not in totals). Ten packages, I-0 to I-9. Plan: [stage-14.md](plan/stage-14.md). | Stage 2 (storage), Stage 4 (UI), Stages 8 and 13 (layouts for the wide and fold packages) | No acknowledged entry lost with interactions in the kill workload; privacy page and store answers updated; the owner has tried the board on a phone, an iPad and a foldable |
 
 **Decisions the owner must make before Stage 11:**
 - **Licence.** The app is GPL-3.0-or-later. App Store distribution terms are widely seen as conflicting with the GPL, and statically linking Qt on iOS and Android brings LGPL obligations. The owner will take advice.

@@ -153,7 +153,7 @@ days on which the person logged: the days are kept in `help-state.ini` beside th
 
 ### Interactions board and people (draft, November 2026)
 
-The second board of [the interactions design](../plan/feedback-interactions-board.md), drawn for the owner's review. Phone only; the iPad and fold layouts are package I-8. Each has a light and a dark file. Everything shown is a placeholder (Sam Example is the facilitator, Alex Sample and the others are people the tester has saved). The tile hues of the second board are a draft second family; they are checked by the contrast test in package I-5.
+The second board of [the interactions design](../plan/stage-14.md), drawn for the owner's review. Phone only; the iPad and fold layouts are package I-8. Each has a light and a dark file. Everything shown is a placeholder (Sam Example is the facilitator, Alex Sample and the others are people the tester has saved). The tile hues of the second board are a draft second family; they are checked by the contrast test in package I-5.
 
 | # | File | Screen | Key behaviour |
 | --- | --- | --- | --- |
