@@ -12,7 +12,8 @@ import ErrorJournalingApp
 // text after the note was saved) replaces the text in the field with the cursor at its end. The same text arriving as the
 // echo of the user's own typing changes nothing, so the cursor stays where it is.
 //
-// Add and Return emit `submit(text)` when the text is not empty or only spaces; otherwise they do nothing. The composer does not clear itself: the
+// The field is multi-line: Return starts a new line, and Add emits `submit(text)` when the text is not empty or only spaces;
+// otherwise it does nothing. At rest the field is one line high; with focus it opens over what is under the card (see `box`). The composer does not clear itself: the
 // screen calls the session, the session clears the draft when the note is committed, and the field follows `draft`. A note
 // that was refused is therefore still in the field.
 //
@@ -35,6 +36,8 @@ Item {
     property string addText: qsTr("Add")
     // An Icon kind for each template's chip, by templateId.
     property var chipIcons: ({})
+    // The most lines the open box shows before it scrolls.
+    property int maxLines: 5
 
     readonly property bool canSubmit: field.text.trim().length > 0
     // The width of the Add button, or of the shape in its place.
@@ -42,7 +45,7 @@ Item {
 
     // The user changed the text.
     signal textEdited(string text)
-    // Add or Return, with text in the field.
+    // Add, with text in the field.
     signal submit(string text)
     // A template chip was tapped.
     signal chipChosen(string templateId)
@@ -142,44 +145,80 @@ Item {
         }
 
         Row {
+            id: fieldRow
+
             width: parent.width
             spacing: Theme.space.tileGap
+            // The row is as high as the one-line box, whatever the box is doing, so that what is under the card never moves.
+            height: Theme.size.fieldHeight
+            z: field.activeFocus ? 1 : 0
 
-            TextField {
-                id: field
+            // The box. At rest it is one line high and shows the first line of the note. With focus it opens downwards over
+            // what is under the card, to the height of the text and at most `maxLines` lines (and half the window), and
+            // scrolls inside beyond that; the keyboard covers the board by then. It folds back when focus leaves.
+            Rectangle {
+                id: box
 
-                objectName: "noteInput"
+                objectName: "noteBox"
+
+                readonly property real linePitch: Theme.font.bodySmall.linePitch
+                readonly property real openLimit: Math.min(Theme.size.fieldHeight + (root.maxLines - 1) * linePitch,
+                                                           root.Window.height > 0 ? root.Window.height / 2 : Number.MAX_VALUE)
+
                 width: parent.width - root.buttonWidth - parent.spacing
-                leftPadding: Theme.space.sectionGap
-                rightPadding: Theme.space.sectionGap
-                topPadding: Theme.space.tileGap
-                bottomPadding: Theme.space.tileGap
-                verticalAlignment: TextInput.AlignVCenter
-                color: Theme.colour.textPrimary
-                font: Theme.font.bodySmall.font
-                placeholderText: root.skeleton ? "" : root.placeholderText
-                placeholderTextColor: Theme.colour.textPlaceholder
-                selectionColor: Theme.colour.primaryTint
-                selectedTextColor: Theme.colour.textPrimary
-                enabled: !root.skeleton
-                EnterKey.type: Qt.EnterKeyDone
+                height: field.activeFocus ? Math.max(Theme.size.fieldHeight, Math.min(field.implicitHeight, openLimit)) : Theme.size.fieldHeight
+                radius: Theme.radius.field
+                color: root.skeleton ? Theme.colour.border : Theme.colour.fieldBackground
+                border.width: field.activeFocus ? Theme.border.otherWidth : Theme.border.hairline
+                border.color: field.activeFocus ? Theme.colour.primaryText : Theme.colour.border
 
-                Accessible.ignored: root.skeleton
-                Accessible.role: Accessible.EditableText
-                Accessible.name: root.fieldName
+                Flickable {
+                    id: flick
 
-                background: Rectangle {
-                    implicitHeight: Theme.size.fieldHeight
-                    radius: Theme.radius.field
-                    color: root.skeleton ? Theme.colour.border : Theme.colour.fieldBackground
-                    border.width: field.activeFocus ? Theme.border.otherWidth : Theme.border.hairline
-                    border.color: field.activeFocus ? Theme.colour.primaryText : Theme.colour.border
-                }
+                    anchors.fill: parent
+                    anchors.margins: box.border.width
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    interactive: field.activeFocus && contentHeight > height
 
-                onTextEdited: root.textEdited(text)
-                onAccepted: {
-                    if (root.canSubmit)
-                        root.submit(text);
+                    // Shows that there is more; it takes no touch and says nothing to a screen reader.
+                    ScrollIndicator.vertical: ScrollIndicator {
+                        Accessible.ignored: true
+                    }
+
+                    TextArea.flickable: TextArea {
+                        id: field
+
+                        objectName: "noteInput"
+                        leftPadding: Theme.space.sectionGap
+                        rightPadding: Theme.space.sectionGap
+                        topPadding: Math.max(Theme.space.tileGap, (Theme.size.fieldHeight - box.linePitch) / 2)
+                        bottomPadding: topPadding
+                        color: Theme.colour.textPrimary
+                        font: Theme.font.bodySmall.font
+                        wrapMode: TextEdit.Wrap
+                        placeholderText: root.skeleton ? "" : root.placeholderText
+                        placeholderTextColor: Theme.colour.textPlaceholder
+                        selectionColor: Theme.colour.primaryTint
+                        selectedTextColor: Theme.colour.textPrimary
+                        enabled: !root.skeleton
+                        background: null
+                        EnterKey.type: Qt.EnterKeyNewline
+
+                        Accessible.ignored: root.skeleton
+                        Accessible.role: Accessible.EditableText
+                        Accessible.name: root.fieldName
+
+                        // A change that is not the draft coming back is the user's.
+                        onTextChanged: {
+                            if (text !== root.draft)
+                                root.textEdited(text);
+                        }
+                        onActiveFocusChanged: {
+                            if (!activeFocus)
+                                flick.contentY = 0;
+                        }
+                    }
                 }
             }
 
@@ -187,7 +226,7 @@ Item {
                 id: addButton
 
                 objectName: "addButton"
-                height: field.height
+                height: Theme.size.fieldHeight
                 compact: true
                 text: root.addText
                 visible: !root.skeleton
@@ -201,7 +240,7 @@ Item {
             Rectangle {
                 visible: root.skeleton
                 width: root.buttonWidth
-                height: field.height
+                height: Theme.size.fieldHeight
                 radius: Theme.radius.field
                 color: Theme.colour.border
             }

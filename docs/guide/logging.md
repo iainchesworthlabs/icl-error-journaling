@@ -42,7 +42,7 @@ the top. Pick one to log it, as if you had double-tapped its tile.
 
 ## Notes
 
-Type in the note field and tap **Add** (or Return) to log a note on its own. It is timed when you add it. A note you started
+Type in the note field and tap **Add** to log a note on its own. Return starts a new line, so a note can have several; while you type, the field opens over the board to five lines and then scrolls, and it folds back to one line when you leave it. The shared text prints each note on one line. It is timed when you add it. A note you started
 and did not add is kept if you leave the app.
 
 **Note templates** are the chips above the field. Tap one, answer its question and tap **Add**. The line in the log is

@@ -98,6 +98,21 @@ struct Fixture
     QQuickItem* add = nullptr;
 };
 
+/// Types the lines with Return between them, as the keyboard does.
+void type_lines(Fixture& f, std::initializer_list<const char*> lines)
+{
+    bool first = true;
+    for (const char* line : lines)
+    {
+        if (!first)
+        {
+            f.rig.key(Qt::Key_Return);
+        }
+        first = false;
+        f.rig.type(QString::fromUtf8(line));
+    }
+}
+
 QStringList texts(QSignalSpy& spy)
 {
     QStringList out;
@@ -156,7 +171,7 @@ TEST_CASE("composer.draft_binding: a draft set from outside replaces the text wi
     CHECK(f.cursor() == 4);
 }
 
-TEST_CASE("composer.add: the Add button and Return emit submit once with the text", "[ui][composer]")
+TEST_CASE("composer.add: the Add button emits submit once with the text, and Return does not", "[ui][composer]")
 {
     Fixture f;
     QSignalSpy submitted(f.composer, SIGNAL(submit(QString)));
@@ -168,8 +183,7 @@ TEST_CASE("composer.add: the Add button and Return emit submit once with the tex
 
     f.field->forceActiveFocus();
     f.rig.key(Qt::Key_Return);
-    CHECK(submitted.count() == 2);
-    CHECK(submitted.at(1).at(0).toString() == QStringLiteral("Mute Delay at the gate"));
+    CHECK(submitted.count() == 1);
 }
 
 TEST_CASE("composer.add: nothing or only spaces is ignored, and the text stays until the screen clears the draft",
@@ -180,12 +194,10 @@ TEST_CASE("composer.add: nothing or only spaces is ignored, and the text stays u
 
     f.rig.tap(f.add);
     f.field->forceActiveFocus();
-    f.rig.key(Qt::Key_Return);
     CHECK(submitted.count() == 0);
 
     f.rig.type(QStringLiteral("   "));
     f.rig.tap(f.add);
-    f.rig.key(Qt::Key_Return);
     CHECK(submitted.count() == 0);
     CHECK_FALSE(f.composer->property("canSubmit").toBool());
 
@@ -314,6 +326,62 @@ TEST_CASE("composer.dictation: the field takes text committed by the input metho
     REQUIRE(edited.count() >= 1);
     CHECK(edited.last().at(0).toString() == QStringLiteral("Mute Delay near the stage"));
     CHECK(f.host->property("draft").toString() == QStringLiteral("Mute Delay near the stage"));
+}
+
+TEST_CASE("composer.multiline: Return keeps a line break in the field and the draft, and the Add button submits it whole",
+          "[ui][composer]")
+{
+    Fixture f;
+    QSignalSpy edited(f.composer, SIGNAL(textEdited(QString)));
+    QSignalSpy submitted(f.composer, SIGNAL(submit(QString)));
+
+    f.field->forceActiveFocus();
+    f.rig.type(QStringLiteral("Mute Delay"));
+    f.rig.key(Qt::Key_Return);
+    f.rig.type(QStringLiteral("near the stage"));
+    const QString expected = QStringLiteral("Mute Delay\nnear the stage");
+    CHECK(f.text() == expected);
+    CHECK(f.host->property("draft").toString() == expected);
+    CHECK(edited.last().at(0).toString() == expected);
+    CHECK(submitted.count() == 0);
+
+    f.rig.tap(f.add);
+    REQUIRE(submitted.count() == 1);
+    CHECK(submitted.at(0).at(0).toString() == expected);
+}
+
+TEST_CASE("composer.grow: the card keeps its height; the box opens over what is below with focus, to at most five lines, "
+          "and folds back",
+          "[ui][composer]")
+{
+    Fixture f;
+    const QRectF card = f.rig.geometry(f.composer);
+    QQuickItem* box = f.rig.find(QStringLiteral("noteBox"));
+    REQUIRE(box != nullptr);
+    const double rest = f.rig.geometry(box).height();
+
+    f.field->forceActiveFocus();
+    type_lines(f, {"one", "two", "three"});
+    f.rig.layout();
+    const double three = f.rig.geometry(box).height();
+    CHECK(three > rest);
+    CHECK(f.rig.geometry(f.composer) == card);
+
+    f.rig.key(Qt::Key_Return);
+    type_lines(f, {"four", "five", "six", "seven", "eight", "nine"});
+    f.rig.layout();
+    const double capped = f.rig.geometry(box).height();
+    CHECK(capped > three);
+    f.rig.key(Qt::Key_Return);
+    type_lines(f, {"ten", "eleven"});
+    f.rig.layout();
+    CHECK(f.rig.geometry(box).height() == capped);
+    CHECK(f.rig.geometry(f.composer) == card);
+
+    f.add->forceActiveFocus();
+    f.rig.layout();
+    CHECK(f.rig.geometry(box).height() == rest);
+    CHECK(f.text().startsWith(QStringLiteral("one\ntwo")));
 }
 
 TEST_CASE("composer.skeleton: shapes only, with the same geometry as the card", "[ui][composer]")
