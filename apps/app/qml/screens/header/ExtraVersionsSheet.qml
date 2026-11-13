@@ -27,7 +27,9 @@ Sheet {
     property int revision: 0
 
     readonly property bool refused: {
-        root.revision;
+        // Reads the counter so that the binding follows it (a plain statement would be linted).
+        if (root.revision < 0)
+            return false;
         for (let i = 0; i < root.rows.length; ++i) {
             if (root.session.validateExtraRow(root.rows, i).length > 0)
                 return true;
@@ -139,7 +141,8 @@ Sheet {
                         required property int index
 
                         readonly property var row: {
-                            root.revision;
+                            if (root.revision < 0)
+                                return null;
                             return root.rows[card.index] ?? {
                                 "label": "",
                                 "version": "",
@@ -147,11 +150,13 @@ Sheet {
                             };
                         }
                         readonly property string problem: {
-                            root.revision;
+                            if (root.revision < 0)
+                                return "";
                             return root.session.validateExtraRow(root.rows, card.index);
                         }
                         readonly property string problemField: {
-                            root.revision;
+                            if (root.revision < 0)
+                                return "";
                             return root.session.extraRowField(root.rows, card.index);
                         }
 
