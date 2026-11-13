@@ -2,6 +2,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -41,7 +42,9 @@ enum class RenderError
     UNKNOWN_LOCATION,
     UNKNOWN_TEMPLATE,
     UNKNOWN_ZONE,
-    UNKNOWN_ENTRY
+    UNKNOWN_ENTRY,
+    /// An interaction entry: the lookups for people and the name level arrive with package I-4 of the interactions board.
+    UNSUPPORTED_ENTRY
 };
 
 /// The header block from the log's initial values: five lines, no trailing newline.
@@ -56,5 +59,13 @@ enum class RenderError
 /// rendered too.
 [[nodiscard]] Result<std::string, RenderError> render_entry_line(const Log& log, EntryId id,
                                                                  const ExportContext& context);
+
+
+/// The export line of an interaction: `<time> <marker> <text>`, with ` – <note>` after it when a note is attached
+/// (feedback page, 3.6). No ticket marker. `text` is the result of `render_interaction_text` at the name level chosen
+/// for shared text; it and the note are collapsed to one line. An empty marker is left out, with its space.
+[[nodiscard]] std::string render_interaction_export_line(std::string_view time, std::string_view marker,
+                                                         std::string_view text,
+                                                         const std::optional<std::string>& attached_note);
 
 }  // namespace ej

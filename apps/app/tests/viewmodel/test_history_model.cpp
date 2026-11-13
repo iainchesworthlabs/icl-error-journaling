@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <initializer_list>
 #include <memory>
 #include <optional>
 #include <string>
@@ -258,7 +259,7 @@ public:
 
 private:
     void make(std::uint64_t number, int year, unsigned month, unsigned day, LocationValue location,
-              const std::vector<Entry>& entries, bool archive)
+              std::initializer_list<Entry> entries, bool archive)
     {
         HeaderValues header = sample_header();
         header.m_LocalDate = std::chrono::year{year} / std::chrono::month{month} / std::chrono::day{day};

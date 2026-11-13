@@ -2,9 +2,12 @@
 #include "error_journaling/stored_log.hpp"
 
 #include "error_journaling/header_history.hpp"
+#include "error_journaling/interaction.hpp"
 #include "error_journaling/utf8.hpp"
 
+#include <algorithm>
 #include <cstdlib>
+#include <vector>
 
 namespace ej
 {
@@ -103,6 +106,18 @@ std::string header_text_of(const Log& log)
     return text;
 }
 
+bool has_repeats(const std::vector<PersonId>& people)
+{
+    for (std::size_t i = 0; i < people.size(); ++i)
+    {
+        if (std::find(people.begin() + static_cast<std::ptrdiff_t>(i) + 1, people.end(), people[i]) != people.end())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 /// A record that changes what a share would send has been applied. Only a log that was shared can have changed since;
 /// before the first share the missing share time says it all.
 void note_change(StoredLog& log)
@@ -182,6 +197,37 @@ Result<void, StorageError> validate_entry(const Entry& entry)
     if (const auto* note = std::get_if<NoteEntry>(&entry.m_Body))
     {
         return check_text(note->m_Value, MAX_NOTE_CODE_POINTS, "the note");
+    }
+    if (const auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body))
+    {
+        if (interaction->m_TypeLabel.empty())
+        {
+            return invalid("an interaction entry needs the label of its interaction type");
+        }
+        if (auto ok = check_text(interaction->m_TypeLabel, MAX_LABEL_CODE_POINTS, "the interaction type label"); !ok)
+        {
+            return ok;
+        }
+        if (interaction->m_People.size() > MAX_PEOPLE_PER_INTERACTION)
+        {
+            return limit("an interaction names too many people");
+        }
+        if (has_repeats(interaction->m_People))
+        {
+            return invalid("an interaction names the same person twice");
+        }
+        if (interaction->m_Value)
+        {
+            if (auto ok = check_text(*interaction->m_Value, MAX_INTERACTION_VALUE_CODE_POINTS, "the answer"); !ok)
+            {
+                return ok;
+            }
+        }
+        if (interaction->m_AttachedNote)
+        {
+            return check_text(*interaction->m_AttachedNote, MAX_NOTE_CODE_POINTS, "the attached note");
+        }
+        return {};
     }
     const auto& change = std::get<HeaderChangeEntry>(entry.m_Body);
     return check_text(change.m_NewValue, MAX_HEADER_TEXT_CODE_POINTS, "the header value");

@@ -18,10 +18,12 @@ add_library(ej_core
     src/extra_versions.cpp
     src/header_history.cpp
     src/header_values.cpp
+    src/interaction.cpp
     src/iso_date.cpp
     src/journal_record.cpp
     src/log.cpp
     src/note_template.cpp
+    src/person.cpp
     src/qt_time_zone_provider.cpp
     src/recovery_report.cpp
     src/software_version.cpp

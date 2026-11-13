@@ -201,7 +201,7 @@ TEST_CASE("Lines that are not records are rejected", "[journal]")
 TEST_CASE("A newer version with a good checksum is reported as unsupported, not as damage", "[journal]")
 {
     const std::string line =
-        with_crc("{\"v\":2,\"seq\":2,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}");
+        with_crc("{\"v\":3,\"seq\":2,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}");
     CHECK(decode_record(line).error() == DecodeError::UNSUPPORTED_VERSION);
     const std::string zero =
         with_crc("{\"v\":0,\"seq\":2,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}");

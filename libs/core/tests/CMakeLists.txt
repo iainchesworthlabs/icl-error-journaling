@@ -29,6 +29,7 @@ add_executable(ej_core_tests
     test_extra_versions.cpp
     test_export_snapshot.cpp
     test_foundations.cpp
+    test_interaction.cpp
     test_header_history.cpp
     test_iso_date.cpp
     test_journal_record.cpp
