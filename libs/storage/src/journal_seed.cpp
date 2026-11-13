@@ -14,15 +14,13 @@ std::vector<JournalRecord> seed_records(const StoredLog& log)
 {
     std::vector<JournalRecord> records;
     std::uint64_t seq = 1;
-    // Each body is built in place in the record: a body built apart and moved in trips a false warning in GCC's variant
-    // code.
+    // Each body is built in place in the record, as the variant is constructed with it: a body built apart and moved in
+    // trips a false warning in GCC's variant code, and so does a record whose variant starts as a default
+    // CreateLogBody (a header with several strings) and has it destroyed by the emplace.
     const auto add = [&records, &log, &seq]<typename Body>(std::in_place_type_t<Body>, auto&&... arguments)
     {
-        JournalRecord record;
-        record.m_Seq = seq++;
-        record.m_Log = log.m_Meta.m_Id;
-        record.m_Body.template emplace<Body>(std::forward<decltype(arguments)>(arguments)...);
-        records.push_back(std::move(record));
+        records.push_back(JournalRecord{JOURNAL_VERSION, seq++, log.m_Meta.m_Id,
+                                        JournalBody(std::in_place_type<Body>, std::forward<decltype(arguments)>(arguments)...)});
     };
     add(std::in_place_type<CreateLogBody>, log.m_Log.initial_header(), log.m_Meta.m_CreatedUtc, log.m_Meta.m_Previous);
     // A log that changed after its share has the share before its last entry, so that replaying the records leaves a
