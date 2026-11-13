@@ -29,14 +29,14 @@ class StageAppStoreScreenshotsTest(unittest.TestCase):
     def test_files_are_flat_and_ordered_by_set(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            written = stager.stage(self.make_source(root / "src"), root / "out" / "en-GB")
+            written = stager.stage(self.make_source(root / "src"), root / "out" / "en-AU")
             names = [path.name for path in written]
             ipad = [name for name in names if name.startswith("ipad")]
             self.assertEqual(ipad, sorted(ipad))
             self.assertTrue(ipad[0].startswith("ipad-1-portrait"))
             self.assertEqual(names[0], "iphone-01-a.png")
             self.assertEqual(len(names), 6)
-            self.assertEqual((root / "out" / "en-GB" / "ipad-2-landscape-02-b.png").read_bytes(), b"appstore-ipad-13-landscape")
+            self.assertEqual((root / "out" / "en-AU" / "ipad-2-landscape-02-b.png").read_bytes(), b"appstore-ipad-13-landscape")
 
     def test_target_is_emptied_first(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

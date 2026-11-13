@@ -22,8 +22,8 @@ sys.path.insert(0, str(ROOT / "tools" / "ci"))
 import check_site_address as address_check  # noqa: E402
 import site_address  # noqa: E402
 
-FILES = ("mkdocs.yml", "store/appstore/en-GB/support_url.txt", "store/appstore/en-GB/privacy_url.txt",
-         "store/appstore/en-GB/marketing_url.txt", address_check.NOTES, "docs/index.md", "docs/guide/setup-file.md")
+FILES = ("mkdocs.yml", "store/appstore/en-AU/support_url.txt", "store/appstore/en-AU/privacy_url.txt",
+         "store/appstore/en-AU/marketing_url.txt", address_check.NOTES, "docs/index.md", "docs/guide/setup-file.md")
 
 
 def load_hook():
@@ -63,8 +63,8 @@ class SiteAddressCheck(unittest.TestCase):
 
     def test_a_new_domain_everywhere_passes(self) -> None:
         old = site_address.site_url(self.root)
-        for name in ("mkdocs.yml", "store/appstore/en-GB/support_url.txt", "store/appstore/en-GB/privacy_url.txt",
-                     "store/appstore/en-GB/marketing_url.txt", address_check.NOTES):
+        for name in ("mkdocs.yml", "store/appstore/en-AU/support_url.txt", "store/appstore/en-AU/privacy_url.txt",
+                     "store/appstore/en-AU/marketing_url.txt", address_check.NOTES):
             self.change(name, old, "https://guide.example.test/")
         self.assertEqual(address_check.check(self.root), [])
 
@@ -86,7 +86,7 @@ class SiteAddressCheck(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(address_check.main(["--root", str(self.root)]), 0)
         self.assertIn("ok", out.getvalue())
-        self.change("store/appstore/en-GB/support_url.txt", "support/", "help/")
+        self.change("store/appstore/en-AU/support_url.txt", "support/", "help/")
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(address_check.main(["--root", str(self.root)]), 1)
 

@@ -6,12 +6,12 @@ owner approves Stage 11.
 
 | Path | What | Read by |
 |---|---|---|
-| `appstore/en-GB/*.txt` | App Store listing for English (UK): name, subtitle, description, keywords, promotional text, What's New, the three URLs, screenshot captions | `fastlane deliver` (task 11.7) |
+| `appstore/en-AU/*.txt` | App Store listing for English (Australia): name, subtitle, description, keywords, promotional text, What's New, the three URLs, screenshot captions | `fastlane deliver` (task 11.7) |
 | `appstore/*_category.txt`, `appstore/copyright.txt` | Fields that are not per language | `fastlane deliver` |
 | `appstore/review_information/notes.txt` | App Review notes | `fastlane deliver` |
 | `appstore/age_rating.md`, `appstore/app_privacy.md` | Answers typed into App Store Connect by the owner | People |
-| `play/en-GB/*.txt` | Play listing for English (UK): title, short and full description | `fastlane supply` |
-| `play/en-GB/changelogs/default.txt` | Play release notes | `fastlane supply` |
+| `play/en-AU/*.txt` | Play listing for English (Australia): title, short and full description | `fastlane supply` |
+| `play/en-AU/changelogs/default.txt` | Play release notes | `fastlane supply` |
 | `play/app_content.md` | Data safety, content rating, target audience and other declarations | People |
 
 Rules:

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Make the Google Play listing graphics (docs/plan/stage-11.md, task 11.5).
 
-    python3 tools/store/make_play_graphics.py [--out store/play/en-GB/images]
+    python3 tools/store/make_play_graphics.py [--out store/play/en-AU/images]
 
 Writes, in the layout `fastlane supply` reads:
 
@@ -26,7 +26,7 @@ from PIL import Image, ImageDraw
 ROOT = Path(__file__).resolve().parents[2]
 TOKENS = ROOT / "docs" / "design" / "tokens.json"
 APP_ICON = ROOT / "apps" / "app" / "packaging" / "ios" / "Assets.xcassets" / "AppIcon.appiconset" / "AppIcon-1024.png"
-DEFAULT_OUT = ROOT / "store" / "play" / "en-GB" / "images"
+DEFAULT_OUT = ROOT / "store" / "play" / "en-AU" / "images"
 
 ICON_SIZE = 512
 FEATURE_SIZE = (1024, 500)
