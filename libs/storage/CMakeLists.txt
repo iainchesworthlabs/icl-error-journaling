@@ -22,6 +22,12 @@ add_library(ej_storage
     src/sqlite_log_repository.cpp
     src/storage.cpp
     src/storage_location.cpp)
+# GCC 16 reports a string of the Entry copy in journal_seed.cpp as possibly uninitialised (the cleanup path of the variant's
+# copy constructor, which cannot run with an uninitialised member). It came and went with the size of the header in the
+# record variant, so no rewrite of the code holds it away. The file is the only one affected and the only one that gets
+# the option.
+set_source_files_properties(src/journal_seed.cpp PROPERTIES
+    COMPILE_OPTIONS "$<$<CXX_COMPILER_ID:GNU>:-Wno-maybe-uninitialized>")
 # The pieces that differ by operating system (durable sync, the file lock, file protection): the files of
 # src/platform/<os>/ are compiled and no others. Every directory defines the same functions from the same headers.
 icl_platform_sources(ej_storage)
