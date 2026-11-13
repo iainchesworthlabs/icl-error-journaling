@@ -19,6 +19,8 @@ inline constexpr std::size_t MAX_ENTRIES_PER_LOG = 5'000;
 inline constexpr std::size_t MAX_LABEL_CODE_POINTS = 200;
 inline constexpr std::size_t MAX_HEADER_TEXT_CODE_POINTS = 200;
 inline constexpr std::size_t MAX_ZONE_BYTES = 64;
+/// The answer to an interaction's {value} slot. The people are limited by MAX_PEOPLE_PER_INTERACTION.
+inline constexpr std::size_t MAX_INTERACTION_VALUE_CODE_POINTS = 1'000;
 
 /// What a log is besides its header and entries.
 struct LogMeta

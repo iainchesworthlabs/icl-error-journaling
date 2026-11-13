@@ -30,12 +30,17 @@ struct EntryIdTag;
 struct ErrorTypeIdTag;
 struct NoteTemplateIdTag;
 struct LocationIdTag;
+struct InteractionTypeIdTag;
+struct PersonIdTag;
 struct LogIdTag;
 
 using EntryId = TypedId<EntryIdTag>;
 using ErrorTypeId = TypedId<ErrorTypeIdTag>;
 using NoteTemplateId = TypedId<NoteTemplateIdTag>;
 using LocationId = TypedId<LocationIdTag>;
+using InteractionTypeId = TypedId<InteractionTypeIdTag>;
+/// A person of the optional name list. Entries refer to a person by this id only; the name is never in a log.
+using PersonId = TypedId<PersonIdTag>;
 /// The id of one log (a day's log). The caller generates it as a UUID v4 before the call that creates the log, which is
 /// what makes replaying a journal idempotent.
 using LogId = TypedId<LogIdTag>;

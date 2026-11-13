@@ -230,6 +230,10 @@ Result<std::string, RenderError> render_line(const Entry& entry, const HeaderHis
             line += text;
         }
     }
+    else if (std::holds_alternative<InteractionEntry>(entry.m_Body))
+    {
+        return fail(RenderError::UNSUPPORTED_ENTRY);
+    }
     else
     {
         const auto& change = std::get<HeaderChangeEntry>(entry.m_Body);
@@ -373,6 +377,31 @@ Result<std::string, RenderError> render_header(const Log& log, const ExportConte
         append_labelled(out, extra_version_line_label(extra), extra.m_Version.display());
     }
     return out;
+}
+
+std::string render_interaction_export_line(std::string_view time, std::string_view marker, std::string_view text,
+                                           const std::optional<std::string>& attached_note)
+{
+    std::string line(time);
+    if (!marker.empty())
+    {
+        line += ' ';
+        line += marker;
+    }
+    if (const auto body = collapse(text); !body.empty())
+    {
+        line += ' ';
+        line += body;
+    }
+    if (attached_note)
+    {
+        if (const auto note = collapse(*attached_note); !note.empty())
+        {
+            line += export_format::ATTACHED_NOTE_SEPARATOR;
+            line += note;
+        }
+    }
+    return line;
 }
 
 Result<std::string, RenderError> render_entry_line(const Log& log, EntryId id, const ExportContext& context)

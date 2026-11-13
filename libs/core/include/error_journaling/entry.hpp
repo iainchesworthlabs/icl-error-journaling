@@ -10,6 +10,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 namespace ej
 {
@@ -64,7 +65,21 @@ struct HeaderChangeEntry
     std::string m_NewValue;
 };
 
-using EntryBody = std::variant<ErrorEntry, NoteEntry, HeaderChangeEntry>;
+/// What the tester did on the optional second board (docs/plan/feedback-interactions-board.md, 3.1). Like an error
+/// entry it holds the type's id and a snapshot of its name. It holds people by id only, never a name.
+struct InteractionEntry
+{
+    InteractionTypeId m_Type;
+    /// The name of the interaction type as it read when the entry was written.
+    std::string m_TypeLabel;
+    /// The people involved, in the order they were picked, without repeats; at most MAX_PEOPLE_PER_INTERACTION.
+    std::vector<PersonId> m_People;
+    /// The answer to the type's {value} slot.
+    std::optional<std::string> m_Value;
+    std::optional<std::string> m_AttachedNote;
+};
+
+using EntryBody = std::variant<ErrorEntry, NoteEntry, HeaderChangeEntry, InteractionEntry>;
 
 struct Entry
 {
