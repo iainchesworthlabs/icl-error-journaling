@@ -66,6 +66,28 @@ platform :ios do
       )
     end
   end
+  # bundle exec fastlane ios inspect
+  desc "Print what App Store Connect holds for the app: name, languages, versions. Read only."
+  lane :inspect do
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_CONTENT"),
+      in_house: false
+    )
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**api_key)
+    app = Spaceship::ConnectAPI::App.find(ENV.fetch("BUNDLE_ID"))
+    UI.user_error!("no app record for #{ENV.fetch('BUNDLE_ID')}") if app.nil?
+    UI.message("app: id=#{app.id} name=#{app.name.inspect} primary_locale=#{app.primary_locale} bundle_id=#{app.bundle_id}")
+    app.get_app_infos.each do |info|
+      UI.message("app info #{info.id} state=#{info.state}")
+      info.get_app_info_localizations.each { |l| UI.message("  locale #{l.locale} name=#{l.name.inspect} subtitle=#{l.subtitle.inspect}") }
+    end
+    app.get_app_store_versions.each do |version|
+      UI.message("version #{version.version_string} state=#{version.app_store_state} id=#{version.id}")
+      version.get_app_store_version_localizations.each { |l| UI.message("  locale #{l.locale}") }
+    end
+  end
 end
 
 platform :android do

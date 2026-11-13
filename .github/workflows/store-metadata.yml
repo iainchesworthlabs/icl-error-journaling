@@ -31,6 +31,10 @@ on:
         description: "ci.yml run (a push to develop) whose screenshots artifact holds the App Store screenshots (App Store only, optional)"
         type: string
         required: false
+      inspect:
+        description: "Only print what App Store Connect holds for the app, and change nothing (App Store only)"
+        type: boolean
+        default: false
       first_release:
         description: "The app's first version: leave out What's New, which App Store Connect refuses on it"
         type: boolean
@@ -77,7 +81,7 @@ jobs:
         run: bundle install --jobs 4
 
       - name: Fetch the App Store screenshots
-        if: inputs.store == 'appstore' && inputs.screenshots_run != ''
+        if: inputs.store == 'appstore' && inputs.screenshots_run != '' && !inputs.inspect
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.screenshots_run }}
@@ -87,8 +91,16 @@ jobs:
           gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name screenshots --dir "$RUNNER_TEMP/screenshots"
           python3 tools/store/stage_appstore_screenshots.py "$RUNNER_TEMP/screenshots/store/appstore" store/appstore/screenshots/en-GB
 
+      - name: Inspect the App Store record
+        if: inputs.store == 'appstore' && inputs.inspect
+        env:
+          ASC_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        run: bundle exec fastlane ios inspect
+
       - name: Upload the App Store listing
-        if: inputs.store == 'appstore'
+        if: inputs.store == 'appstore' && !inputs.inspect
         env:
           ASC_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
