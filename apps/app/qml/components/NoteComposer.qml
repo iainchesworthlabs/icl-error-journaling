@@ -203,7 +203,7 @@ Item {
                         selectedTextColor: Theme.colour.textPrimary
                         enabled: !root.skeleton
                         background: null
-                        EnterKey.type: Qt.EnterKeyNewline
+                        EnterKey.type: Qt.EnterKeyReturn
 
                         Accessible.ignored: root.skeleton
                         Accessible.role: Accessible.EditableText
