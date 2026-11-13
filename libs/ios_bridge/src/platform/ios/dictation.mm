@@ -108,14 +108,8 @@ private:
             listen(run);
           });
         };
-        if (@available(iOS 17.0, *))
-        {
-            [AVAudioApplication requestRecordPermissionWithCompletionHandler:answered];
-        }
-        else
-        {
-            [[AVAudioSession sharedInstance] requestRecordPermission:answered];
-        }
+        // The deployment target is iOS 18, so the iOS 17 API is the one to use.
+        [AVAudioApplication requestRecordPermissionWithCompletionHandler:answered];
     }
 
     void listen(std::uint64_t run)
