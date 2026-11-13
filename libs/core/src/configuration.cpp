@@ -137,7 +137,7 @@ void split_path(const std::string& path, ConfigError& error)
     error.m_Section = parts[0];
     std::size_t next = 1;
     const bool is_list = error.m_Section == "error_types" || error.m_Section == "locations" ||
-                         error.m_Section == "note_templates";
+                         error.m_Section == "note_templates" || error.m_Section == "interaction_types";
     if (is_list && parts.size() > 1 && !parts[1].empty() &&
         parts[1].find_first_not_of("0123456789") == std::string::npos && parts[1].size() < 9)
     {
@@ -195,7 +195,15 @@ public:
                     break;
                 }
             }
-            if (!is_known)
+            if (!is_known && (it.key() == QLatin1StringView("people") || it.key() == QLatin1StringView("residents")))
+            {
+                // Never part of a setup file: a name list is kept on the device and not passed around (PRF-08).
+                add(Code::UNKNOWN_FIELD, path + "/" + pointer_escape(it.key()),
+                    "a setup file never holds people. Remove " + shown(it.key()) +
+                        "; people are added in the app and stay on that device.",
+                    problem_detail(ConfigError::Problem::PEOPLE_IN_FILE));
+            }
+            else if (!is_known)
             {
                 add(Code::UNKNOWN_FIELD, path + "/" + pointer_escape(it.key()),
                     "this app does not use " + shown(it.key()) + ". Remove it, or check the spelling.");
@@ -346,9 +354,9 @@ public:
     }
 
     /// The array at `key`, or nullopt after reporting why it cannot be used.
-    std::optional<QJsonArray> list(const QJsonObject& object, const char* key)
+    std::optional<QJsonArray> list(const QJsonObject& object, const char* key, bool required = true)
     {
-        const auto value = field(object, key, "", true);
+        const auto value = field(object, key, "", required);
         if (!value)
         {
             return std::nullopt;
@@ -605,8 +613,13 @@ void read_preferences(Reader& r, const QJsonObject& root, Configuration& out)
         out.m_IncludeTotals = *totals;
     }
     read_error_prefix(r, object, out);
+    if (const auto enabled = r.boolean(object, "interactions_board_enabled", path))
+    {
+        out.m_InteractionsBoardEnabled = *enabled;
+    }
     r.reject_unknown(object, path,
-                     {"facilitator", "unit_prefix", "unit_environments", "time_format", "include_totals", "error_prefix"});
+                     {"facilitator", "unit_prefix", "unit_environments", "time_format", "include_totals", "error_prefix",
+                      "interactions_board_enabled"});
 }
 
 void read_error_types(Reader& r, const QJsonObject& root, Configuration& out)
@@ -760,6 +773,121 @@ void report_pattern(Reader& r, const std::string& path, const QString& pattern, 
                   shown(pattern) + " uses a placeholder the app does not know. Only {value} is allowed.",
                   problem_detail(ConfigError::Problem::UNKNOWN_PLACEHOLDER));
             break;
+    }
+}
+
+void report_interaction_pattern(Reader& r, const std::string& path, const QString& pattern, InteractionPatternError error)
+{
+    switch (error)
+    {
+        case InteractionPatternError::EMPTY:
+            r.add(Code::OUT_OF_RANGE, path, "this is empty. Enter a line, for example \"Spoke with {person}\".",
+                  empty_detail());
+            break;
+        case InteractionPatternError::UNBALANCED_BRACE:
+            r.add(Code::BAD_PATTERN, path,
+                  shown(pattern) +
+                      " has a stray brace. Write {{ or }} for a literal brace, and close every {person} and {value}.",
+                  problem_detail(ConfigError::Problem::STRAY_BRACE));
+            break;
+        case InteractionPatternError::UNKNOWN_PLACEHOLDER:
+            r.add(Code::BAD_PATTERN, path,
+                  shown(pattern) + " uses a placeholder the app does not know. Only {person} and {value} are allowed.",
+                  problem_detail(ConfigError::Problem::UNKNOWN_PLACEHOLDER));
+            break;
+        case InteractionPatternError::REPEATED_PLACEHOLDER:
+            r.add(Code::BAD_PATTERN, path,
+                  shown(pattern) + " has {person} or {value} more than once. Use each at most once.",
+                  problem_detail(ConfigError::Problem::REPEATED_PLACEHOLDER));
+            break;
+    }
+}
+
+/// The optional `interaction_types` list: the tiles of the second board. Without the key the list stays empty.
+void read_interaction_types(Reader& r, const QJsonObject& root, Configuration& out)
+{
+    const auto array = r.list(root, "interaction_types", false);
+    if (!array)
+    {
+        return;
+    }
+    std::unordered_set<InteractionTypeId> ids;
+    std::unordered_map<std::string, std::size_t> names;
+    std::unordered_map<int, std::size_t> positions;
+    for (int i = 0; i < array->size(); ++i)
+    {
+        const auto index = static_cast<std::size_t>(i);
+        const auto path = child("/interaction_types", index);
+        const auto object = r.item(*array, i, path);
+        if (!object)
+        {
+            continue;
+        }
+        InteractionType entry;
+        bool usable = true;
+        if (const auto id = r.id<InteractionTypeId>(*object, path, ids))
+        {
+            entry.m_Id = *id;
+        }
+        else
+        {
+            usable = false;
+        }
+        const auto name = r.text(*object, "name", path, true, MAX_NAME);
+        if (name)
+        {
+            entry.m_Name = name->toStdString();
+        }
+        else
+        {
+            usable = false;
+        }
+        if (const auto retired = r.boolean(*object, "retired", path))
+        {
+            entry.m_Retired = *retired;
+        }
+        const auto position = r.integer(*object, "board_position", path, 1, CONFIG_BOARD_POSITIONS, "from 1 to 11");
+        if (position)
+        {
+            entry.m_BoardPosition = *position;
+        }
+        if (const auto pattern = r.text(*object, "line_pattern", path, false, MAX_PATTERN))
+        {
+            const auto checked = validate_interaction_pattern(pattern->toStdString());
+            if (checked)
+            {
+                entry.m_LinePattern = pattern->toStdString();
+                entry.m_Asks = interaction_asks_for(entry.m_LinePattern);
+            }
+            else
+            {
+                usable = false;
+                report_interaction_pattern(r, child(path, "line_pattern"), *pattern, checked.error());
+            }
+        }
+        if (name)
+        {
+            r.check_name_unique(names, *name, entry.m_Retired, path, index, "interaction type");
+        }
+        if (position && !entry.m_Retired)
+        {
+            const auto [it, inserted] = positions.emplace(*position, index);
+            if (!inserted)
+            {
+                Detail detail = problem_detail(ConfigError::Problem::POSITION_TAKEN);
+                detail.m_Other = it->second + 1;
+                detail.m_Value = std::to_string(*position);
+                r.add(Code::DUPLICATE, child(path, "board_position"),
+                      "board position " + std::to_string(*position) + " is already used by interaction type number " +
+                          std::to_string(it->second + 1) + ". Give each type on the board its own position.",
+                      std::move(detail));
+            }
+        }
+        r.reject_unknown(*object, path, {"id", "name", "retired", "board_position", "line_pattern"});
+        if (usable)
+        {
+            out.m_InteractionTypes.push_back(std::move(entry));
+        }
     }
 }
 
@@ -979,7 +1107,9 @@ Result<Configuration, std::vector<ConfigError>> import_configuration(std::string
     read_error_types(r, root, configuration);
     read_locations(r, root, configuration);
     read_templates(r, root, configuration);
-    r.reject_unknown(root, "", {"schema_version", "preferences", "error_types", "locations", "note_templates"});
+    read_interaction_types(r, root, configuration);
+    r.reject_unknown(root, "",
+                     {"schema_version", "preferences", "error_types", "locations", "note_templates", "interaction_types"});
 
     if (!r.m_Errors.empty())
     {
@@ -1011,6 +1141,11 @@ std::string export_configuration(const Configuration& configuration)
     {
         out += ",\n    \"error_prefix\": ";
         write_string(out, configuration.m_ErrorPrefix);
+    }
+    if (configuration.m_InteractionsBoardEnabled)
+    {
+        out += std::string(",\n    \"interactions_board_enabled\": ") +
+               boolean_text(*configuration.m_InteractionsBoardEnabled);
     }
     out += ",\n    \"time_format\": {\n";
     out += std::string("      \"style\": ") +
@@ -1072,8 +1207,34 @@ std::string export_configuration(const Configuration& configuration)
         }
         out += ",\n      \"sort_order\": " + std::to_string(t.m_SortOrder) + "\n    }";
     }
-    out += configuration.m_Templates.empty() ? "]\n" : "\n  ]\n";
-    out += "}\n";
+    out += configuration.m_Templates.empty() ? "]" : "\n  ]";
+
+    if (!configuration.m_InteractionTypes.empty())
+    {
+        out += ",\n  \"interaction_types\": [";
+        for (std::size_t i = 0; i < configuration.m_InteractionTypes.size(); ++i)
+        {
+            const auto& t = configuration.m_InteractionTypes[i];
+            out += i == 0 ? "\n    {\n" : ",\n    {\n";
+            out += "      \"id\": ";
+            write_string(out, t.m_Id.format());
+            out += ",\n      \"name\": ";
+            write_string(out, t.m_Name);
+            out += std::string(",\n      \"retired\": ") + boolean_text(t.m_Retired);
+            if (t.m_BoardPosition)
+            {
+                out += ",\n      \"board_position\": " + std::to_string(*t.m_BoardPosition);
+            }
+            if (t.m_LinePattern)
+            {
+                out += ",\n      \"line_pattern\": ";
+                write_string(out, *t.m_LinePattern);
+            }
+            out += "\n    }";
+        }
+        out += "\n  ]";
+    }
+    out += "\n}\n";
     return out;
 }
 

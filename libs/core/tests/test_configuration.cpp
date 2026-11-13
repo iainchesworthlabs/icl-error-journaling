@@ -681,3 +681,166 @@ TEST_CASE("The error prefix helpers trim spaces and judge the text", "[config][e
     CHECK(ej::error_prefix_problem("a\nb") == ej::ErrorPrefixProblem::CONTROL_CHARACTER);
     CHECK(ej::error_prefix_problem("a\xC2\x85" "b") == ej::ErrorPrefixProblem::CONTROL_CHARACTER);
 }
+
+TEST_CASE("config.interaction_types: read, write and refuse", "[config][interaction]")
+{
+    const auto config = imported(sample());
+    REQUIRE(config.m_InteractionTypes.size() == 4);
+    CHECK(config.m_InteractionTypes[0].m_Name == "Spoke with");
+    CHECK(config.m_InteractionTypes[0].m_BoardPosition == 1);
+    CHECK(config.m_InteractionTypes[0].m_LinePattern == "Spoke with {person}");
+    CHECK(config.m_InteractionTypes[0].m_Asks == ej::InteractionAsks::PERSON);
+    CHECK(config.m_InteractionTypes[1].m_Asks == ej::InteractionAsks::TEXT);
+    CHECK_FALSE(config.m_InteractionTypes[2].m_LinePattern.has_value());
+    CHECK(config.m_InteractionTypes[2].m_Asks == ej::InteractionAsks::NOTHING);
+    CHECK(config.m_InteractionTypes[3].m_LinePattern == "Gave {person} {value}");
+
+    SECTION("a written file reads back the same")
+    {
+        const auto written = ej::export_configuration(config);
+        CHECK(written == sample());
+        const auto again = imported(written);
+        REQUIRE(again.m_InteractionTypes.size() == 4);
+        for (std::size_t i = 0; i < 4; ++i)
+        {
+            CHECK(again.m_InteractionTypes[i].m_Id == config.m_InteractionTypes[i].m_Id);
+            CHECK(again.m_InteractionTypes[i].m_LinePattern == config.m_InteractionTypes[i].m_LinePattern);
+        }
+    }
+    SECTION("absent keys give an empty list and the file still reads")
+    {
+        auto text = sample();
+        text.erase(text.find(",\n  \"interaction_types\""));
+        text += "\n}\n";
+        const auto old_shape = imported(text);
+        CHECK(old_shape.m_InteractionTypes.empty());
+        CHECK_FALSE(old_shape.m_InteractionsBoardEnabled.has_value());
+        const auto written = ej::export_configuration(old_shape);
+        CHECK(written.find("interaction_types") == std::string::npos);
+        CHECK(written.find("interactions_board_enabled") == std::string::npos);
+    }
+    SECTION("an empty list is accepted")
+    {
+        auto text = sample();
+        text.erase(text.find("\"interaction_types\""));
+        text += "\"interaction_types\": []\n}\n";
+        CHECK(imported(text).m_InteractionTypes.empty());
+    }
+    SECTION("a duplicate name is refused, ignoring case")
+    {
+        const auto errors = errors_of(edited(sample(), "\"Gave item\"", "\"spoke WITH\""));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Code == Code::DUPLICATE);
+        CHECK(errors[0].m_Path == "/interaction_types/3/name");
+        CHECK(errors[0].m_Problem == ConfigError::Problem::NAME_TAKEN);
+        CHECK(errors[0].m_Section == "interaction_types");
+        CHECK(errors[0].m_Item == 4);
+        CHECK(errors[0].m_Other == 1);
+    }
+    SECTION("positions are 1 to 11 and used once")
+    {
+        const std::string from = "\"board_position\": 4,\n      \"line_pattern\": \"Gave";
+        const auto position = [&](const std::string& value)
+        { return errors_of(edited(sample(), from, "\"board_position\": " + value + ",\n      \"line_pattern\": \"Gave")); };
+        const auto taken = position("3");
+        REQUIRE(taken.size() == 1);
+        CHECK(taken[0].m_Problem == ConfigError::Problem::POSITION_TAKEN);
+        CHECK(has(taken, Code::DUPLICATE, "/interaction_types/3/board_position"));
+        CHECK(has(position("0"), Code::OUT_OF_RANGE, "/interaction_types/3/board_position"));
+        CHECK(has(position("12"), Code::OUT_OF_RANGE, "/interaction_types/3/board_position"));
+        CHECK(has(position("\"4\""), Code::WRONG_TYPE, "/interaction_types/3/board_position"));
+    }
+    SECTION("a retired type may share a position with a live one")
+    {
+        const auto text = edited(sample(), "\"retired\": false,\n      \"board_position\": 4,",
+                                 "\"retired\": true,\n      \"board_position\": 3,");
+        CHECK(imported(text).m_InteractionTypes.size() == 4);
+    }
+    SECTION("a bad line is refused")
+    {
+        using Problem = ConfigError::Problem;
+        const std::string from = "\"Spoke with {person}\"";
+        const auto problem_of = [&](const std::string& pattern)
+        {
+            const auto errors = errors_of(edited(sample(), from, pattern));
+            REQUIRE(errors.size() == 1);
+            CHECK(errors[0].m_Path == "/interaction_types/0/line_pattern");
+            return errors[0].m_Problem;
+        };
+        CHECK(problem_of("\"Spoke with {person\"") == Problem::STRAY_BRACE);
+        CHECK(problem_of("\"Spoke with {name}\"") == Problem::UNKNOWN_PLACEHOLDER);
+        CHECK(problem_of("\"{person} and {person}\"") == Problem::REPEATED_PLACEHOLDER);
+        CHECK(problem_of("\"{value} {value}\"") == Problem::REPEATED_PLACEHOLDER);
+        CHECK(problem_of("\"  \"") == Problem::EMPTY);
+    }
+    SECTION("an unknown key and a list that is not a list are refused")
+    {
+        CHECK(has(errors_of(edited(sample(), "\"line_pattern\": \"Spoke with {person}\"",
+                                   "\"line_pattern\": \"Spoke with {person}\", \"asks\": \"person\"")),
+                  Code::UNKNOWN_FIELD, "/interaction_types/0/asks"));
+        CHECK(has(errors_of(edited(sample(), "\"interaction_types\": [", "\"interaction_types\": {}, \"x\": [")),
+                  Code::WRONG_TYPE, "/interaction_types"));
+    }
+}
+
+TEST_CASE("config.no_people: a setup file never holds a person", "[config][interaction]")
+{
+    for (const char* key : {"people", "residents"})
+    {
+        INFO(key);
+        const auto errors = errors_of(edited(sample(), "\"schema_version\": 1,",
+                                             std::string("\"schema_version\": 1, \"") + key + "\": [\"Alex Sample\"],"));
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0].m_Code == Code::UNKNOWN_FIELD);
+        CHECK(errors[0].m_Problem == ConfigError::Problem::PEOPLE_IN_FILE);
+        CHECK(errors[0].m_Path == std::string("/") + key);
+        CHECK(errors[0].m_Message.find("never holds people") != std::string::npos);
+        // The message names the key, not the names in it.
+        CHECK(errors[0].m_Message.find("Alex Sample") == std::string::npos);
+    }
+    // Inside an interaction type too.
+    CHECK(has(errors_of(edited(sample(), "0000000000d3\",", "0000000000d3\", \"people\": [],")), Code::UNKNOWN_FIELD,
+              "/interaction_types/2/people"));
+    // Nothing the writer produces holds a person key.
+    const auto written = ej::export_configuration(imported(sample()));
+    CHECK(written.find("\"people\"") == std::string::npos);
+    CHECK(written.find("\"residents\"") == std::string::npos);
+}
+
+TEST_CASE("config.sample_still_valid: the sample reads and keeps its old parts", "[config][interaction]")
+{
+    const auto config = imported(sample());
+    CHECK(config.m_ErrorTypes.size() == 11);
+    CHECK(config.m_Locations.size() == 2);
+    CHECK(config.m_Templates.size() == 2);
+    CHECK(config.m_InteractionTypes.size() == 4);
+    CHECK(config.m_Facilitator == "Sam Example");
+    CHECK_FALSE(config.m_InteractionsBoardEnabled.has_value());
+}
+
+TEST_CASE("config.board_switch: the file can carry the switch, and without it nothing changes", "[config][interaction]")
+{
+    const auto without = imported(sample());
+    CHECK_FALSE(without.m_InteractionsBoardEnabled.has_value());
+
+    const std::string anchor = "\"include_totals\": false";
+    const auto on = imported(edited(sample(), anchor, anchor + ", \"interactions_board_enabled\": true"));
+    REQUIRE(on.m_InteractionsBoardEnabled.has_value());
+    CHECK(*on.m_InteractionsBoardEnabled);
+    const auto off = imported(edited(sample(), anchor, anchor + ", \"interactions_board_enabled\": false"));
+    REQUIRE(off.m_InteractionsBoardEnabled.has_value());
+    CHECK_FALSE(*off.m_InteractionsBoardEnabled);
+
+    SECTION("both values survive a write and a read")
+    {
+        CHECK(ej::export_configuration(on).find("\"interactions_board_enabled\": true") != std::string::npos);
+        CHECK(imported(ej::export_configuration(on)).m_InteractionsBoardEnabled == true);
+        CHECK(imported(ej::export_configuration(off)).m_InteractionsBoardEnabled == false);
+        CHECK(ej::export_configuration(on) == ej::export_configuration(imported(ej::export_configuration(on))));
+    }
+    SECTION("a value that is not true or false is refused")
+    {
+        CHECK(has(errors_of(edited(sample(), anchor, anchor + ", \"interactions_board_enabled\": \"yes\"")),
+                  Code::WRONG_TYPE, "/preferences/interactions_board_enabled"));
+    }
+}

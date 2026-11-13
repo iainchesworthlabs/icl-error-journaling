@@ -9,6 +9,7 @@
 
 #include "error_journaling/export_format.hpp"
 #include "error_journaling/ids.hpp"
+#include "error_journaling/interaction.hpp"
 #include "error_journaling/note_template.hpp"
 #include "error_journaling/result.hpp"
 #include "error_journaling/time_format.hpp"
@@ -81,6 +82,12 @@ struct Configuration
     std::vector<ErrorType> m_ErrorTypes;
     std::vector<Location> m_Locations;
     std::vector<NoteTemplate> m_Templates;
+    /// The tiles of the optional second board. The pattern of each type is its line, so there is no separate list of
+    /// interaction templates. Empty when the file has no `interaction_types` key. Never holds a person.
+    std::vector<InteractionType> m_InteractionTypes;
+    /// The file's optional `interactions_board_enabled`. No value when the file does not say: the importing app then
+    /// leaves its own setting as it is.
+    std::optional<bool> m_InteractionsBoardEnabled;
 };
 
 struct ConfigError
@@ -108,7 +115,9 @@ struct ConfigError
         POSITION_TAKEN,       // board position `m_Value` is also used by item `m_Other`
         NO_PLACEHOLDER,       // a pattern without {value}
         STRAY_BRACE,          // a pattern with a brace that is not closed or doubled
-        UNKNOWN_PLACEHOLDER   // a pattern with a placeholder other than {value}
+        UNKNOWN_PLACEHOLDER,  // a pattern with a placeholder it does not know
+        REPEATED_PLACEHOLDER, // an interaction line with {person} or {value} twice
+        PEOPLE_IN_FILE        // a `people` or `residents` key: a setup file never holds people
     };
 
     Code m_Code = Code::MALFORMED_JSON;
@@ -118,7 +127,7 @@ struct ConfigError
     // The same problem as data, so that the app can say it in its own words. All are worked out from the path except
     // `m_Problem`, `m_Other`, `m_Value` and `m_Limit`.
     Problem m_Problem = Problem::OTHER;
-    std::string m_Section;    // "preferences", "error_types", "locations", "note_templates" or "" (the whole file)
+    std::string m_Section;    // "preferences", "error_types", "locations", "note_templates", "interaction_types" or "" (the whole file)
     std::size_t m_Item = 0;   // the 1-based place of the item in its list, or 0
     std::string m_Field;      // the key concerned, e.g. "name" or "time_format/style"
     std::size_t m_Other = 0;  // the 1-based place of the other item, for NAME_TAKEN and POSITION_TAKEN
