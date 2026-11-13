@@ -209,9 +209,9 @@ Everything else about names:
 
 ## 4. UI design
 
-No mock-up is drawn with this page. `tools/visual/` writes the iPad and fold mock-ups from rules in Python that are tied
-to numbers in Stage 8 and 13; adding a second board means editing those rules, which is the work of package I-8 and not
-cheap enough to include in a design page. The wireframes below use the phone's numbers from `docs/design/README.md`.
+The phone mock-ups are in `docs/design/screens/` (screens 69 to 76 of [the design package](../design/README.md#interactions-board-and-people-draft-november-2026)): `Interactions`, `InteractionsPicker`, `SecondBoardSettings`, `SecondBoardSettingsOff`, `People`, `PersonEdit`, `InteractionTypeEdit` and `ReviewInteractions`, each in light and dark. The iPad and fold layouts are not drawn: `tools/visual/` writes those from rules tied to numbers in Stage 8 and 13, so they are package I-8. The wireframes below use the phone's numbers.
+
+One change the mock-up forced: the board is 440 pt tall and a title strip does not fit under it, so on this board tiles are 96 pt (the 88 pt minimum of NFR-02 still holds) and the strip is 28 pt.
 
 ### 4.1 The fifth icon (phone)
 

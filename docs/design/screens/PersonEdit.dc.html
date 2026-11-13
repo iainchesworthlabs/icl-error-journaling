@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Person editor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+input::placeholder{color:#6B7A86}
+</style>
+</helmet>
+<div style="width: 402px; height: 874px; position: relative; overflow: hidden; background: #F2F4F7; font-family: Inter, -apple-system, system-ui, sans-serif; color: #14212B">
+<div style="position: absolute; left: 0; right: 0; top: 0; padding: 59px 16px 0; display: flex; flex-direction: column; gap: 8px">
+  <div style="display: flex; align-items: center; justify-content: space-between; height: 44px; font-size: 17px"><span style="color: #1E5B7A">Cancel</span><span style="font-weight: 600">Person</span><span style="color: #1E5B7A; font-weight: 600">Save</span></div>
+  <div style="margin-top: 6px; font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Name</div>
+  <div style="height: 48px; box-sizing: border-box; border-radius: 12px; background: #FFFFFF; padding: 0 14px; display: flex; align-items: center; font-size: 17px">Alex Sample</div>
+  <div style="margin-top: 6px; font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Location</div>
+  <div style="background: #FFFFFF; border-radius: 14px; overflow: hidden"><div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 14px; border-bottom: 1px solid #E8ECF0; box-sizing: border-box; font-size: 16px; color: #14212B"><div style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px"><span>North Site</span></div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E5B7A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg></div><div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 14px; border-bottom: 1px solid #E8ECF0; box-sizing: border-box; font-size: 16px; color: #14212B"><div style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px"><span>South Site</span></div></div><div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 14px;  box-sizing: border-box; font-size: 16px; color: #14212B"><div style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px"><span>No location</span></div></div></div>
+  <p style="margin: 0 4px; font-size: 13px; color: #5A6B78; line-height: 1.4">People at the log’s location come first in the picker.</p>
+  <div style="margin-top: 6px; font-size: 12px; font-weight: 600; color: #5A6B78; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">In shared logs</div>
+  <div style="background: #FFFFFF; border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.55">10:12 (Interaction) Spoke with A.S.</div>
+  <p style="margin: 0 4px; font-size: 13px; color: #5A6B78; line-height: 1.4">Shown as initials, as set in Names in shared logs. On this device the full name shows.</p>
+  <div style="height: 8px"></div>
+  <div style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #FFFFFF; font-size: 16px; font-weight: 600; color: #14212B">Retire this person</div>
+  <div style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #FFFFFF; font-size: 16px; font-weight: 600; color: #B42318">Forget this person…</div>
+  <p style="margin: 0 4px; font-size: 13px; color: #5A6B78; line-height: 1.4">Retire hides them from the picker; past entries keep their name. Forget erases the name from this device: past entries then read “someone”.</p>
+</div>
+<nav style="position: absolute; left: 0; right: 0; bottom: 0; height: 83px; box-sizing: border-box; padding-top: 8px; background: #FFFFFF; border-top: 1px solid #E1E6EB; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr))">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 3px; color: #5A6B78; font-size: 10.5px; font-weight: 500"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5A6B78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>Errors</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 3px; color: #5A6B78; font-size: 10.5px; font-weight: 500"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5A6B78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8M8 13h5"></path></svg>Interactions</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 3px; color: #5A6B78; font-size: 10.5px; font-weight: 500"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5A6B78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>Review</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 3px; color: #5A6B78; font-size: 10.5px; font-weight: 500"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5A6B78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>History</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 3px; color: #1E5B7A; font-size: 10.5px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E5B7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>Settings</div>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":402,"height":874}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = {}; }
+}
+</script>
+</body>
+</html>
