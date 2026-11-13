@@ -79,9 +79,18 @@ platform :ios do
     app = Spaceship::ConnectAPI::App.find(ENV.fetch("BUNDLE_ID"))
     UI.user_error!("no app record for #{ENV.fetch('BUNDLE_ID')}") if app.nil?
     UI.message("app: id=#{app.id} name=#{app.name.inspect} primary_locale=#{app.primary_locale} bundle_id=#{app.bundle_id}")
-    app.get_app_infos.each do |info|
-      UI.message("app info #{info.id} state=#{info.state}")
-      info.get_app_info_localizations.each { |l| UI.message("  locale #{l.locale} name=#{l.name.inspect} subtitle=#{l.subtitle.inspect}") }
+    { "edit" => :get_edit_app_info, "live" => :get_live_app_info }.each do |label, getter|
+      begin
+        info = app.public_send(getter)
+        if info.nil?
+          UI.message("app info (#{label}): none")
+          next
+        end
+        UI.message("app info (#{label}) #{info.id}")
+        info.get_app_info_localizations.each { |l| UI.message("  locale #{l.locale} name=#{l.name.inspect} subtitle=#{l.subtitle.inspect}") }
+      rescue StandardError => e
+        UI.message("app info (#{label}): #{e.class}: #{e.message[0, 200]}")
+      end
     end
     app.get_app_store_versions.each do |version|
       UI.message("version #{version.version_string} state=#{version.app_store_state} id=#{version.id}")
