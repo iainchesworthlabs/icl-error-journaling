@@ -23,6 +23,13 @@ namespace ej
 /// journal written by an older build still rebuilds after a schema migration.
 inline constexpr std::uint32_t JOURNAL_VERSION = 1;
 
+/// The version of a record whose entry is an interaction (feedback page, 3.2). A record of any other kind stays at
+/// `JOURNAL_VERSION`, so a journal that never saw an interaction is byte for byte what an older build wrote.
+inline constexpr std::uint32_t JOURNAL_VERSION_INTERACTIONS = 2;
+
+/// The newest version this build reads. A line with a higher one is `UNSUPPORTED_VERSION`.
+inline constexpr std::uint32_t JOURNAL_VERSION_NEWEST = JOURNAL_VERSION_INTERACTIONS;
+
 /// A journal line, including its CRC, is never longer than this. Notes are capped at 10,000 characters (decision 7), so
 /// a torn tail can never look like a huge valid line, and the reader never buffers more than this for one record.
 inline constexpr std::size_t MAX_RECORD_BYTES = 128 * 1024;
@@ -101,6 +108,10 @@ struct JournalRecord
 };
 
 [[nodiscard]] JournalOp journal_op(const JournalBody& body);
+
+/// The version a record with this body is written at: `JOURNAL_VERSION_INTERACTIONS` for an `add_entry` or
+/// `edit_entry` of an interaction, else `JOURNAL_VERSION`. `encode_record` refuses any other version.
+[[nodiscard]] std::uint32_t journal_version_for(const JournalBody& body);
 [[nodiscard]] std::string_view journal_op_name(JournalOp op);
 
 /// CRC-32 (IEEE 802.3, the zlib polynomial) of `data`, continuing from `previous` (0 starts a new checksum). So

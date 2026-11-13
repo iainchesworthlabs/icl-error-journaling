@@ -17,6 +17,7 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <vector>
 
 namespace ej
 {
@@ -64,6 +65,21 @@ std::uint32_t crc32(std::string_view data, std::uint32_t previous) noexcept
 JournalOp journal_op(const JournalBody& body)
 {
     return static_cast<JournalOp>(body.index());
+}
+
+std::uint32_t journal_version_for(const JournalBody& body)
+{
+    const Entry* entry = nullptr;
+    if (const auto* add = std::get_if<AddEntryBody>(&body))
+    {
+        entry = &add->m_Entry;
+    }
+    else if (const auto* edit = std::get_if<EditEntryBody>(&body))
+    {
+        entry = &edit->m_Entry;
+    }
+    return entry != nullptr && std::holds_alternative<InteractionEntry>(entry->m_Body) ? JOURNAL_VERSION_INTERACTIONS
+                                                                                       : JOURNAL_VERSION;
 }
 
 std::string_view journal_op_name(JournalOp op)
@@ -367,6 +383,35 @@ void write_entry(Writer& w, const Entry& entry)
         w.key("value");
         w.string(note->m_Value);
     }
+    else if (const auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body))
+    {
+        w.key("kind");
+        w.string("interaction");
+        w.raw(",");
+        w.key("type");
+        w.uuid(interaction->m_Type.uuid());
+        w.raw(",");
+        w.key("label");
+        w.string(interaction->m_TypeLabel);
+        w.raw(",");
+        w.key("people");
+        w.raw("[");
+        for (std::size_t i = 0; i < interaction->m_People.size(); ++i)
+        {
+            if (i != 0)
+            {
+                w.raw(",");
+            }
+            w.uuid(interaction->m_People[i].uuid());
+        }
+        w.raw("]");
+        w.raw(",");
+        w.key("value");
+        w.optional_string(interaction->m_Value);
+        w.raw(",");
+        w.key("note");
+        w.optional_string(interaction->m_AttachedNote);
+    }
     else
     {
         const auto& change = std::get<HeaderChangeEntry>(entry.m_Body);
@@ -510,9 +555,11 @@ std::string hex8(std::uint32_t value)
 
 Result<std::string, StorageError> encode_record(const JournalRecord& record)
 {
-    if (record.m_Version != JOURNAL_VERSION)
+    if (record.m_Version != journal_version_for(record.m_Body))
     {
-        return fail(make_error(StorageErrorKind::INVALID_ARGUMENT, "this build writes only journal version 1"));
+        return fail(make_error(StorageErrorKind::INVALID_ARGUMENT,
+                               "the journal version does not match the record: an interaction is version 2, "
+                               "everything else version 1"));
     }
     auto text = encode_without_crc(record);
     if (!text)
@@ -653,6 +700,28 @@ public:
         return parse_uuid(*text);
     }
 
+    [[nodiscard]] std::vector<Uuid> uuid_array(const char* name) const
+    {
+        const QJsonValue value = m_Object.value(QLatin1StringView(name));
+        std::vector<Uuid> result;
+        if (!value.isArray())
+        {
+            m_Decoder.fail(DecodeError::MALFORMED);
+            return result;
+        }
+        for (const QJsonValue element : value.toArray())
+        {
+            if (!element.isString())
+            {
+                m_Decoder.fail(DecodeError::MALFORMED);
+                return {};
+            }
+            const QByteArray utf8 = element.toString().toUtf8();
+            result.push_back(parse_uuid(std::string(utf8.constData(), static_cast<std::size_t>(utf8.size()))));
+        }
+        return result;
+    }
+
     /// A value that parsed as text but is not valid for its type.
     void bad_field() const { m_Decoder.fail(DecodeError::BAD_FIELD); }
 
@@ -763,6 +832,19 @@ Entry read_entry(const Fields& fields)
         }
         note.m_Value = fields.string("value");
         entry.m_Body = std::move(note);
+    }
+    else if (kind == "interaction")
+    {
+        InteractionEntry interaction;
+        interaction.m_Type = InteractionTypeId{fields.uuid("type")};
+        interaction.m_TypeLabel = fields.string("label");
+        for (const Uuid& person : fields.uuid_array("people"))
+        {
+            interaction.m_People.push_back(PersonId{person});
+        }
+        interaction.m_Value = fields.optional_string("value");
+        interaction.m_AttachedNote = fields.optional_string("note");
+        entry.m_Body = std::move(interaction);
     }
     else if (kind == "header_change")
     {
@@ -888,9 +970,9 @@ Result<JournalRecord, DecodeError> decode_record(std::string_view line)
     Decoder decoder;
     const Fields root(decoder, document.object());
     const std::int64_t version = root.integer("v");
-    if (version > static_cast<std::int64_t>(JOURNAL_VERSION))
+    if (version > static_cast<std::int64_t>(JOURNAL_VERSION_NEWEST))
     {
-        // The reader understands every version ever shipped; only version 1 exists so far. A newer one comes from a
+        // The reader understands every version ever shipped: 1, and 2 for an interaction. A newer one comes from a
         // newer build and is not damage.
         return std::unexpected(DecodeError::UNSUPPORTED_VERSION);
     }
@@ -899,7 +981,7 @@ Result<JournalRecord, DecodeError> decode_record(std::string_view line)
     JournalRecord record;
     record.m_Log = LogId{root.uuid("log")};
     const Fields body = root.object("body");
-    if (decoder.m_Error || version != static_cast<std::int64_t>(JOURNAL_VERSION) || seq <= 0 || !op)
+    if (decoder.m_Error || version < static_cast<std::int64_t>(JOURNAL_VERSION) || seq <= 0 || !op)
     {
         return std::unexpected(decoder.m_Error.value_or(DecodeError::MALFORMED));
     }
