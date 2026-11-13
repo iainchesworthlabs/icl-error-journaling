@@ -12,7 +12,8 @@ import ErrorJournalingApp
 // text after the note was saved) replaces the text in the field with the cursor at its end. The same text arriving as the
 // echo of the user's own typing changes nothing, so the cursor stays where it is.
 //
-// Add and Return emit `submit(text)` when the text is not empty or only spaces; otherwise they do nothing. The composer does not clear itself: the
+// The field is multi-line: Return starts a new line, and Add emits `submit(text)` when the text is not empty or only spaces;
+// otherwise it does nothing. At rest the field is one line high; with focus it opens over what is under the card (see `box`). The composer does not clear itself: the
 // screen calls the session, the session clears the draft when the note is committed, and the field follows `draft`. A note
 // that was refused is therefore still in the field.
 //
@@ -35,14 +36,26 @@ Item {
     property string addText: qsTr("Add")
     // An Icon kind for each template's chip, by templateId.
     property var chipIcons: ({})
+    // The most lines the open box shows before it scrolls.
+    property int maxLines: 5
+
+    // The height of the box at rest: one line of the text at the current text size, but never less than the field height
+    // of the design (44 pt), so that at the largest text sizes the line is not cut.
+    readonly property real restHeight: Math.max(Theme.size.fieldHeight, lineMetrics.height + 2 * Theme.space.tileGap)
 
     readonly property bool canSubmit: field.text.trim().length > 0
     // The width of the Add button, or of the shape in its place.
     readonly property real buttonWidth: skeleton && nominalMetrics ? Theme.size.tileMinimum * 8 / 11 : addButton.implicitWidth
 
+    FontMetrics {
+        id: lineMetrics
+
+        font: Theme.font.bodySmall.font
+    }
+
     // The user changed the text.
     signal textEdited(string text)
-    // Add or Return, with text in the field.
+    // Add, with text in the field.
     signal submit(string text)
     // A template chip was tapped.
     signal chipChosen(string templateId)
@@ -53,6 +66,8 @@ Item {
 
     implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
     implicitHeight: column.height + 2 * Theme.space.sectionGap
+    // The open box overflows the card, over the board under it, so the card stands above its neighbours while it is open.
+    z: field.activeFocus ? 1 : 0
     width: parent ? parent.width : implicitWidth
 
     onDraftChanged: {
@@ -142,44 +157,90 @@ Item {
         }
 
         Row {
+            id: fieldRow
+
             width: parent.width
             spacing: Theme.space.tileGap
+            // The row is as high as the one-line box, whatever the box is doing, so that what is under the card never moves.
+            height: root.restHeight
+            z: field.activeFocus ? 1 : 0
 
-            TextField {
-                id: field
+            // The box. At rest it is one line high and shows the first line of the note. With focus it opens downwards over
+            // what is under the card, to the height of the text and at most `maxLines` lines (and half the window), and
+            // scrolls inside beyond that; the keyboard covers the board by then. It folds back when focus leaves.
+            Rectangle {
+                id: box
 
-                objectName: "noteInput"
+                objectName: "noteBox"
+
+                readonly property real openLimit: Math.min(root.restHeight + (root.maxLines - 1) * lineMetrics.height, root.Window.height > 0 ? root.Window.height / 2 : Number.MAX_VALUE)
+
                 width: parent.width - root.buttonWidth - parent.spacing
-                leftPadding: Theme.space.sectionGap
-                rightPadding: Theme.space.sectionGap
-                topPadding: Theme.space.tileGap
-                bottomPadding: Theme.space.tileGap
-                verticalAlignment: TextInput.AlignVCenter
-                color: Theme.colour.textPrimary
-                font: Theme.font.bodySmall.font
-                placeholderText: root.skeleton ? "" : root.placeholderText
-                placeholderTextColor: Theme.colour.textPlaceholder
-                selectionColor: Theme.colour.primaryTint
-                selectedTextColor: Theme.colour.textPrimary
-                enabled: !root.skeleton
-                EnterKey.type: Qt.EnterKeyDone
+                height: field.activeFocus ? Math.max(root.restHeight, Math.min(field.implicitHeight, openLimit)) : root.restHeight
+                radius: Theme.radius.field
+                color: root.skeleton ? Theme.colour.border : Theme.colour.fieldBackground
+                border.width: field.activeFocus ? Theme.border.otherWidth : Theme.border.hairline
+                border.color: field.activeFocus ? Theme.colour.primaryText : Theme.colour.border
 
-                Accessible.ignored: root.skeleton
-                Accessible.role: Accessible.EditableText
-                Accessible.name: root.fieldName
+                Flickable {
+                    id: flick
 
-                background: Rectangle {
-                    implicitHeight: Theme.size.fieldHeight
-                    radius: Theme.radius.field
-                    color: root.skeleton ? Theme.colour.border : Theme.colour.fieldBackground
-                    border.width: field.activeFocus ? Theme.border.otherWidth : Theme.border.hairline
-                    border.color: field.activeFocus ? Theme.colour.primaryText : Theme.colour.border
+                    anchors.fill: parent
+                    anchors.margins: box.border.width
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    interactive: field.activeFocus && contentHeight > height
+
+                    TextArea.flickable: TextArea {
+                        id: field
+
+                        objectName: "noteInput"
+                        leftPadding: Theme.space.sectionGap
+                        rightPadding: Theme.space.sectionGap
+                        topPadding: Theme.space.tileGap
+                        bottomPadding: Theme.space.tileGap
+                        // At least the one-line box high (a touch target), and as high as the text beyond that.
+                        implicitHeight: Math.max(root.restHeight, contentHeight + topPadding + bottomPadding)
+                        height: Math.max(implicitHeight, flick.height)
+                        verticalAlignment: TextEdit.AlignVCenter
+                        color: Theme.colour.textPrimary
+                        font: Theme.font.bodySmall.font
+                        wrapMode: TextEdit.Wrap
+                        placeholderText: root.skeleton ? "" : root.placeholderText
+                        placeholderTextColor: Theme.colour.textPlaceholder
+                        selectionColor: Theme.colour.primaryTint
+                        selectedTextColor: Theme.colour.textPrimary
+                        enabled: !root.skeleton
+                        background: null
+                        EnterKey.type: Qt.EnterKeyReturn
+
+                        Accessible.ignored: root.skeleton
+                        Accessible.role: Accessible.EditableText
+                        Accessible.name: root.fieldName
+
+                        // A change that is not the draft coming back is the user's.
+                        onTextChanged: {
+                            if (text !== root.draft)
+                                root.textEdited(text);
+                        }
+                        onActiveFocusChanged: {
+                            if (!activeFocus)
+                                flick.contentY = 0;
+                        }
+                    }
                 }
 
-                onTextEdited: root.textEdited(text)
-                onAccepted: {
-                    if (root.canSubmit)
-                        root.submit(text);
+                // Shows that there is more text than the box holds. It is a drawing: it takes no touch and has no name.
+                Rectangle {
+                    readonly property real room: box.height - 4 * Theme.border.hairline
+
+                    visible: field.activeFocus && flick.contentHeight > flick.height
+                    x: box.width - width - 2 * Theme.border.hairline
+                    y: 2 * Theme.border.hairline + flick.visibleArea.yPosition * room
+                    width: Theme.border.otherWidth
+                    height: flick.visibleArea.heightRatio * room
+                    radius: width / 2
+                    color: Theme.colour.borderStrong
                 }
             }
 
@@ -187,7 +248,7 @@ Item {
                 id: addButton
 
                 objectName: "addButton"
-                height: field.height
+                height: root.restHeight
                 compact: true
                 text: root.addText
                 visible: !root.skeleton
@@ -201,7 +262,7 @@ Item {
             Rectangle {
                 visible: root.skeleton
                 width: root.buttonWidth
-                height: field.height
+                height: root.restHeight
                 radius: Theme.radius.field
                 color: Theme.colour.border
             }
