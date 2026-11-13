@@ -388,13 +388,13 @@ TEST_CASE("A record after an oversize line follows on", "[journal-reader]")
 TEST_CASE("A record with an unsupported version is counted and not accepted", "[journal-reader]")
 {
     std::string bytes = bytes_of(records_of(2));
-    // A version 2 record with a good checksum.
-    std::string v2 =
-        "{\"v\":2,\"seq\":3,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}";
+    // A version 3 record with a good checksum (version 2 is the interaction record, which this build reads).
+    std::string v3 =
+        "{\"v\":3,\"seq\":3,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}";
     char digits[16];
-    std::snprintf(digits, sizeof digits, "%08x", crc32(v2));
-    v2 = v2.substr(0, v2.size() - 1) + ",\"crc\":\"" + digits + "\"}\n";
-    const JournalScan result = scan(bytes + v2);
+    std::snprintf(digits, sizeof digits, "%08x", crc32(v3));
+    v3 = v3.substr(0, v3.size() - 1) + ",\"crc\":\"" + digits + "\"}\n";
+    const JournalScan result = scan(bytes + v3);
     CHECK(result.m_Records.size() == 2);
     CHECK(result.m_UnsupportedRecords == 1);
     CHECK(result.m_BadRecords == 1);
