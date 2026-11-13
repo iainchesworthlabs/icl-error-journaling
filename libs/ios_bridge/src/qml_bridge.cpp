@@ -100,13 +100,19 @@ void QmlBridge::startDictation()
 
 void QmlBridge::begin_dictation_segment()
 {
+    if (m_Services.m_Dictation == nullptr)
+    {
+        end_dictation(QStringLiteral("unavailable"));
+        return;
+    }
     const std::uint64_t run = ++m_DictationRun;
     emit dictationSegment();
     m_DictationSegmentStart = std::chrono::steady_clock::now();
     DictationHandlers handlers;
-    handlers.m_Text = [self = QPointer<QmlBridge>(this), run](const std::string& text)
+    handlers.m_Text = [guard = QPointer<QmlBridge>(this), run](const std::string& text)
     {
-        if (self && self->m_Dictating && self->m_DictationRun == run)
+        QmlBridge* self = guard.data();
+        if (self != nullptr && self->m_Dictating && self->m_DictationRun == run)
         {
             // Speech was heard: the silence starts again.
             if (!self->m_DictationStopping)
@@ -116,9 +122,10 @@ void QmlBridge::begin_dictation_segment()
             emit self->dictationText(QString::fromStdString(text));
         }
     };
-    handlers.m_Ended = [self = QPointer<QmlBridge>(this), run](DictationEnd end)
+    handlers.m_Ended = [guard = QPointer<QmlBridge>(this), run](DictationEnd end)
     {
-        if (!self || !self->m_Dictating || self->m_DictationRun != run)
+        QmlBridge* self = guard.data();
+        if (self == nullptr || !self->m_Dictating || self->m_DictationRun != run)
         {
             return;
         }
@@ -139,12 +146,14 @@ void QmlBridge::begin_dictation_segment()
                 // The recogniser stopped by itself (a pause in the speech). One tap covers the whole note, so listen
                 // again until the person stops it or the silence limit is reached.
                 QMetaObject::invokeMethod(
-                    self.data(),
-                    [self, run]
+                    self,
+                    [guard, run]
                     {
-                        if (self && self->m_Dictating && self->m_DictationRun == run && !self->m_DictationStopping)
+                        QmlBridge* target = guard.data();
+                        if (target != nullptr && target->m_Dictating && target->m_DictationRun == run &&
+                            !target->m_DictationStopping)
                         {
-                            self->begin_dictation_segment();
+                            target->begin_dictation_segment();
                         }
                     },
                     Qt::QueuedConnection);
@@ -173,6 +182,11 @@ void QmlBridge::stopDictation()
         return;
     }
     m_DictationStopping = true;
+    if (m_Services.m_Dictation == nullptr)
+    {
+        end_dictation(QStringLiteral("finished"));
+        return;
+    }
     // The recogniser sends the last words after it is told to stop, so the run stays open until it ends (FINISHED) or
     // DICTATION_STOP_GRACE has passed, whichever is first.
     m_DictationSilence.start(DICTATION_STOP_GRACE);
