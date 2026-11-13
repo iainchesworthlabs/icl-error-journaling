@@ -47,8 +47,8 @@ stages land.
 
 ### App Store listing
 
-The drafts are in `store/appstore/en-GB/`. They use the file layout that `fastlane deliver` reads, so 11.7 can upload them
-unchanged. The primary language is English (UK). Whether to add English (US) is an owner decision.
+The drafts are in `store/appstore/en-AU/`. They use the file layout that `fastlane deliver` reads, so 11.7 can upload them
+unchanged. The primary language is English (Australia), as the App Store Connect record was created. A UK listing was tried and App Store Connect refused its name, so the listing is English (Australia) only (owner decision, 13 November 2026).
 
 | Field | Limit | Draft file | Draft |
 |---|---|---|---|
@@ -119,7 +119,7 @@ Two choices for the owner:
   in the safe-area band. Option (b) leaves the band empty in the board's background colour. Apple accepts either, as long as
   the shot shows the app in use.
 - **Captions.** Option (a) is a plain capture. Option (b) adds a caption band above a scaled capture, for example "One tap
-  logs the error and the time". A caption is store text, so it is drafted in `store/appstore/en-GB/screenshot_captions.txt`
+  logs the error and the time". A caption is store text, so it is drafted in `store/appstore/en-AU/screenshot_captions.txt`
   and reviewed with the rest.
 
 ### App preview video (optional)
@@ -260,7 +260,7 @@ version page.
 
 ### Google Play listing
 
-The drafts are in `store/play/en-GB/`, in the layout that `fastlane supply` reads.
+The drafts are in `store/play/en-AU/`, in the layout that `fastlane supply` reads.
 
 | Field | Limit | Draft file |
 |---|---|---|
@@ -521,7 +521,7 @@ the order that best saves waiting time.
 | D1 | Licence route | Decided 12 Nov 2026: the owner's legal advice has cleared the GPL and Qt licensing (see below) |
 | D2 | Free or paid, and countries | Decided 12 Nov 2026: paid, 6.99 US dollars as the base price, in every country where the app can be published (see below) |
 | D3 | Play account type | Owner |
-| D4 | Store languages | English (UK) only for 1.0 |
+| D4 | Store languages | Decided 13 Nov 2026: English (Australia) only for 1.0, named Field Test. The English (UK) listing, named ICL Field Test, was refused by App Store Connect ("the app name is already being used by another app") and is dropped. Other languages are added later if wanted |
 | D5 | Categories | Productivity, then Business |
 | D6 | Screenshot status bar and captions | Drawn neutral status bar, no captions for 1.0 |
 | D7 | App preview video | Skip for 1.0 |

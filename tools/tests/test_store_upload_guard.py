@@ -47,8 +47,8 @@ class StoreUploadGuardTest(unittest.TestCase):
         fastfile = FASTFILE.read_text(encoding="utf-8")
         for folder in ('"store", "appstore"', '"store", "play"'):
             self.assertIn(folder, fastfile)
-        self.assertTrue((ROOT / "store" / "appstore" / "en-GB" / "name.txt").is_file())
-        self.assertTrue((ROOT / "store" / "play" / "en-GB" / "title.txt").is_file())
+        self.assertTrue((ROOT / "store" / "appstore" / "en-AU" / "name.txt").is_file())
+        self.assertTrue((ROOT / "store" / "play" / "en-AU" / "title.txt").is_file())
 
     def test_workflow_runs_by_hand_only(self) -> None:
         workflow = code(WORKFLOW)

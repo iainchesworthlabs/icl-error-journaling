@@ -1,1 +1,0 @@
-Log a robot error in one tap, keep the day's journal in order, and share it as plain text at the end of the day. No account, no network, no tracking.

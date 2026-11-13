@@ -93,7 +93,6 @@ jobs:
           set -euo pipefail
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::screenshots_run must be a run number"; exit 1; }
           gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name screenshots --dir "$RUNNER_TEMP/screenshots"
-          python3 tools/store/stage_appstore_screenshots.py "$RUNNER_TEMP/screenshots/store/appstore" store/appstore/screenshots/en-GB
           python3 tools/store/stage_appstore_screenshots.py "$RUNNER_TEMP/screenshots/store/appstore" store/appstore/screenshots/en-AU
 
       - name: Keep one language
