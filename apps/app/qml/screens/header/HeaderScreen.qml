@@ -158,13 +158,19 @@ SheetHost {
     // The version and the commit are saved together, as one value (a Correct of "1.4.2 (a1b2c3d)"). Neither is sent while the
     // other is refused; a commit with no version yet waits.
     function commitVersion(): void {
-        const version = versionDraft.trim();
+        // A v in front is accepted and dropped: the field shows one already, so it is never doubled.
+        const typed = versionDraft.trim();
+        const version = typed.replace(/^[vV]/, "");
         const commit = commitDraft.trim();
-        if (version === versionSaved && commit === commitSaved)
+        if (version === versionSaved && commit === commitSaved) {
+            if (typed !== version && version.length > 0)
+                versionDraft = version;
             return;
+        }
         if (session.validateVersion(version, commit).length > 0)
             return;
         if (session.correctVersion(version, commit)) {
+            versionDraft = version;
             versionSaved = version;
             // The field shows what was kept: lower case, and a full hash as its first 7 characters.
             commitDraft = session.normalizeCommit(commit);

@@ -98,7 +98,7 @@ TEST_CASE("version.choices: two plain choices, exactly one selected, in the faci
           QStringLiteral("Corrects the value. Nothing is added to the log."));
     CHECK(selected_cards(rig) == 1);
     CHECK(changed->property("selected").toBool());
-    CHECK(need(rig, QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("1.4.2"));
+    CHECK(need(rig, QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("v1.4.2"));
 
     rig.tap(typo);
     CHECK(selected_cards(rig) == 1);
@@ -398,8 +398,8 @@ TEST_CASE("version.commit: the same optional field as Today's details, a row of 
     QQuickItem* sheet = open_sheet(rig, world);
 
     // The version in force is shown with its commit, and both new fields start empty.
-    CHECK(sheet->property("fromText").toString() == QStringLiteral("1.4.2 (a1b2c3d)"));
-    CHECK(need(rig, QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("1.4.2 (a1b2c3d)"));
+    CHECK(sheet->property("fromText").toString() == QStringLiteral("v1.4.2 (a1b2c3d)"));
+    CHECK(need(rig, QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("v1.4.2 (a1b2c3d)"));
     QQuickItem* to = need(rig, QStringLiteral("versionTo"));
     QQuickItem* commit = need(rig, QStringLiteral("versionCommit"));
     CHECK(input_of(rig, to)->property("text").toString().isEmpty());
@@ -450,7 +450,7 @@ TEST_CASE("version.commit: a change takes the commit, and the line and the entry
     CHECK(shown == QString::fromUtf8("08:55 Software Version changed: v1.4.2 (a1b2c3d) \xE2\x86\x92 v1.5.0 (e4f5a6b)"));
     CHECK(shown == world.session().previewVersionChange(QStringLiteral("1.5.0"), QStringLiteral("E4F5A6B"), now));
     CHECK(need(rig, QStringLiteral("versionExplainer"))->property("text").toString() ==
-          QStringLiteral("Entries before 08:55 keep 1.4.2 (a1b2c3d). Entries after it use 1.5.0 (e4f5a6b)."));
+          QStringLiteral("Entries before 08:55 keep v1.4.2 (a1b2c3d). Entries after it use v1.5.0 (e4f5a6b)."));
     REQUIRE(save_enabled(rig));
 
     rig.tap(need(rig, QStringLiteral("versionSave")));

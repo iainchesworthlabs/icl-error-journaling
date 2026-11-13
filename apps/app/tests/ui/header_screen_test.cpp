@@ -347,7 +347,7 @@ TEST_CASE("details.version_change: the Software version sheet opens from the che
     rig.tap(accessory);
     play(rig, 500);
     CHECK(sheet->property("isOpen").toBool());
-    CHECK(sheet->property("fromText").toString() == QStringLiteral("1.4.2"));
+    CHECK(sheet->property("fromText").toString() == QStringLiteral("v1.4.2"));
 
     SECTION("a version being typed has no way to the sheet until it is the one in force")
     {

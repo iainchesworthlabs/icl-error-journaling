@@ -155,6 +155,8 @@ TEST_CASE("versions.sheet: a version is added, named and saved by Done", "[ui][e
 
     rig.tap(need(rig, QStringLiteral("navTrailing"), sheet));
     play(rig, 500);
+    world.gateway().run_all();
+    rig.settle();
     CHECK_FALSE(sheet->property("isOpen").toBool());
     CHECK(world.session().extra_versions_text() == QStringLiteral("Influencer v4.5.0"));
     CHECK(world.timeline().entry_count() == 0);
@@ -210,5 +212,7 @@ TEST_CASE("versions.sheet: the sheet starts from what the log has; a version is 
 
     rig.tap(need(rig, QStringLiteral("navTrailing"), sheet));
     play(rig, 500);
+    world.gateway().run_all();
+    rig.settle();
     CHECK(world.session().extra_versions_text() == QStringLiteral("Influencer v4.6.0"));
 }
