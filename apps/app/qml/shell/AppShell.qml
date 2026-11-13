@@ -277,6 +277,7 @@ Item {
                     timeline: root.timeline
                     settings: root.settings
                     bridge: root.bridge
+                    dictation: root.bridge
                     picker: root.picker
                     share: root.share
                     help: root.help

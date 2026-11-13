@@ -9,6 +9,7 @@
 
 #include <QAccessible>
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QInputMethodEvent>
 #include <QQuickItem>
 #include <QSignalSpy>
@@ -385,6 +386,151 @@ TEST_CASE("composer.grow: the card keeps its height; the box opens over what is 
     CHECK(f.rig.geometry(box).height() == rest);
     CHECK(f.composer->z() == 0);
     CHECK(f.text().startsWith(QStringLiteral("one\ntwo")));
+}
+
+TEST_CASE("composer.mic: no microphone where the phone cannot recognise speech on the phone", "[ui][composer][dictation]")
+{
+    Fixture f;
+    QQuickItem* mic = f.rig.find(QStringLiteral("micButton"));
+    REQUIRE(mic != nullptr);
+    CHECK_FALSE(mic->isVisible());
+    for (const Node& node : f.rig.tree(f.composer))
+    {
+        CHECK_FALSE((node.m_Visible && node.m_ObjectName == QStringLiteral("micButton")));
+    }
+}
+
+TEST_CASE("composer.mic: the microphone is on the first line at the trailing edge, 44 pt, named, and a tap toggles",
+          "[ui][composer][dictation]")
+{
+    Fixture f;
+    f.composer->setProperty("dictationAvailable", true);
+    f.rig.layout();
+    QQuickItem* mic = f.rig.find(QStringLiteral("micButton"));
+    REQUIRE(mic != nullptr);
+    REQUIRE(mic->isVisible());
+    QQuickItem* box = f.rig.find(QStringLiteral("noteBox"));
+    const QRectF mic_rect = f.rig.geometry(mic);
+    const QRectF box_rect = f.rig.geometry(box);
+    CHECK(mic_rect.width() >= 44);
+    CHECK(mic_rect.height() >= 44);
+    CHECK(mic_rect.right() == box_rect.right());
+    CHECK(mic_rect.top() == box_rect.top());
+    // The text stops before the microphone.
+    CHECK(f.field->property("rightPadding").toDouble() >= mic_rect.width());
+
+    QSignalSpy toggled(f.composer, SIGNAL(dictationToggled()));
+    f.rig.tap(mic);
+    CHECK(toggled.count() == 1);
+    CHECK(f.field->property("activeFocus").toBool());
+
+    const auto mic_node = [&f]
+    {
+        for (const Node& node : f.rig.tree(f.composer))
+        {
+            if (node.m_ObjectName == QStringLiteral("micButton"))
+            {
+                return node;
+            }
+        }
+        return Node{};
+    };
+    CHECK(mic_node().m_Role == QAccessible::Button);
+    CHECK(mic_node().m_Name == QStringLiteral("Dictate"));
+    f.composer->setProperty("dictating", true);
+    f.rig.layout();
+    CHECK(mic_node().m_Name == QStringLiteral("Stop dictating"));
+}
+
+TEST_CASE("composer.mic: in a right-to-left layout the microphone is at the left edge and the text keeps clear of it",
+          "[ui][composer][dictation]")
+{
+    Fixture f;
+    f.composer->setProperty("dictationAvailable", true);
+    QGuiApplication::setLayoutDirection(Qt::RightToLeft);
+    f.rig.layout();
+    QQuickItem* mic = f.rig.find(QStringLiteral("micButton"));
+    QQuickItem* box = f.rig.find(QStringLiteral("noteBox"));
+    REQUIRE(mic != nullptr);
+    CHECK(f.rig.geometry(mic).left() == f.rig.geometry(box).left());
+    CHECK(f.field->property("leftPadding").toDouble() >= f.rig.geometry(mic).width());
+    QGuiApplication::setLayoutDirection(Qt::LeftToRight);
+}
+
+TEST_CASE("composer.dictation_text: each guess replaces the one before it, a new stretch follows after a space, and "
+          "what was typed is kept",
+          "[ui][composer][dictation]")
+{
+    Fixture f;
+    QSignalSpy edited(f.composer, SIGNAL(textEdited(QString)));
+    f.field->forceActiveFocus();
+    f.rig.type(QStringLiteral("North Site:"));
+
+    QMetaObject::invokeMethod(f.composer, "dictationSegment");
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("mute")));
+    CHECK(f.text() == QStringLiteral("North Site: mute"));
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("mute delay near")));
+    CHECK(f.text() == QStringLiteral("North Site: mute delay near"));
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("mute delay near the stage")));
+    CHECK(f.text() == QStringLiteral("North Site: mute delay near the stage"));
+    CHECK(f.cursor() == f.text().length());
+
+    // The recogniser paused and a new stretch begins: it is added, not substituted.
+    QMetaObject::invokeMethod(f.composer, "dictationSegment");
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("then it recovered")));
+    CHECK(f.text() == QStringLiteral("North Site: mute delay near the stage then it recovered"));
+
+    // Every change was reported as typed, so the draft has it and it survives the app being closed (NOTE-03).
+    CHECK(f.host->property("draft").toString() == f.text());
+    CHECK(edited.last().at(0).toString() == f.text());
+
+    // Empty text, as a recogniser sends before it has heard anything, changes nothing.
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QString()));
+    CHECK(f.text() == QStringLiteral("North Site: mute delay near the stage then it recovered"));
+}
+
+TEST_CASE("composer.dictation_text: in an empty box, or after a line break, there is no space in front",
+          "[ui][composer][dictation]")
+{
+    Fixture f;
+    QMetaObject::invokeMethod(f.composer, "dictationSegment");
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("first line")));
+    CHECK(f.text() == QStringLiteral("first line"));
+    f.field->forceActiveFocus();
+    f.rig.key(Qt::Key_Return);
+    QMetaObject::invokeMethod(f.composer, "dictationSegment");
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("second line")));
+    CHECK(f.text() == QStringLiteral("first line\nsecond line"));
+}
+
+TEST_CASE("composer.dictation_message: the sentence under the box shows when there is one", "[ui][composer][dictation]")
+{
+    Fixture f;
+    QQuickItem* message = f.rig.find(QStringLiteral("dictationMessage"));
+    REQUIRE(message != nullptr);
+    CHECK_FALSE(message->isVisible());
+    const double without = f.rig.geometry(f.composer).height();
+    f.composer->setProperty("dictationMessage", QStringLiteral("Voice input is turned off for this app."));
+    f.rig.layout();
+    CHECK(message->isVisible());
+    CHECK(f.rig.geometry(f.composer).height() > without);
+    f.rig.set_text_scale(3.1);
+    expect_clean(check_text_scale(f.rig));
+}
+
+TEST_CASE("composer.cross_cutting: with the microphone, on and off", "[ui][composer][dictation]")
+{
+    Fixture f;
+    f.composer->setProperty("dictationAvailable", true);
+    f.rig.layout();
+    expect_clean(check_everything(f.rig));
+    f.composer->setProperty("dictating", true);
+    f.rig.layout();
+    expect_clean(check_everything(f.rig));
+    f.rig.set_dark(true);
+    expect_clean(check_everything(f.rig));
+    f.rig.set_reduce_motion(true);
+    expect_clean(check_motion_reduced(f.rig));
 }
 
 TEST_CASE("composer.skeleton: shapes only, with the same geometry as the card", "[ui][composer]")

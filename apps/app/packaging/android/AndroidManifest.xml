@@ -7,8 +7,10 @@
     android:installLocation="auto"
     android:versionCode="-- %%INSERT_VERSION_CODE%% --"
     android:versionName="-- %%INSERT_VERSION_NAME%% --">
-    <!-- No permissions (NFR-09). Qt's marker for them is left out on purpose: with it, Qt adds INTERNET and
+    <!-- One permission: the microphone, for dictation (PRD NOTE-07), asked for at the first tap on the microphone. No
+         network (NFR-09). Qt's marker for permissions is left out on purpose: with it, Qt adds INTERNET and
          ACCESS_NETWORK_STATE (QtQml links QtNetwork) and WRITE_EXTERNAL_STORAGE. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- %%INSERT_FEATURES -->
     <supports-screens
         android:anyDensity="true"

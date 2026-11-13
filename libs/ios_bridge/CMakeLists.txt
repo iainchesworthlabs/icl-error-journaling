@@ -36,8 +36,10 @@ target_link_libraries(ej_ios_bridge
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # Objective-C++ with reference counting, and the frameworks the bridge calls.
     set_source_files_properties(${bridge_sources} PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+    # AVFoundation and Speech: dictation (on-device speech recognition, dictation.mm).
     target_link_libraries(ej_ios_bridge PRIVATE "$<LINK_LIBRARY:FRAMEWORK,Foundation>" "$<LINK_LIBRARY:FRAMEWORK,UIKit>"
-        "$<LINK_LIBRARY:FRAMEWORK,UniformTypeIdentifiers>")
+        "$<LINK_LIBRARY:FRAMEWORK,UniformTypeIdentifiers>" "$<LINK_LIBRARY:FRAMEWORK,AVFoundation>"
+        "$<LINK_LIBRARY:FRAMEWORK,Speech>")
 endif()
 
 if(ANDROID)

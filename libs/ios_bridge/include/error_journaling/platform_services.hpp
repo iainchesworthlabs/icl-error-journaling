@@ -3,6 +3,7 @@
 
 #include "error_journaling/accessibility_settings.hpp"
 #include "error_journaling/background_tasks.hpp"
+#include "error_journaling/dictation.hpp"
 #include "error_journaling/document_picker.hpp"
 #include "error_journaling/haptics.hpp"
 #include "error_journaling/perf_marks.hpp"
@@ -25,6 +26,8 @@ struct PlatformServices
     std::unique_ptr<DocumentPicker> m_DocumentPicker;
     std::unique_ptr<BackgroundTasks> m_BackgroundTasks;
     std::unique_ptr<WindowLimits> m_WindowLimits;
+    /// Optional: a test that does not use dictation leaves it empty, and the bridge then reports it unavailable.
+    std::unique_ptr<Dictation> m_Dictation;
 };
 
 /// The implementations for the platform CMake linked.

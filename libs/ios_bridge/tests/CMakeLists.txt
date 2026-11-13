@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 add_executable(ej_ios_bridge_tests
+    test_dictation.cpp
     test_ios_bridge.cpp)
 target_link_libraries(ej_ios_bridge_tests
     PRIVATE ej_qml_bridge ej_ios_bridge Qt6::Core Qt6::Gui Catch2::Catch2WithMain icl::warnings icl::coverage)

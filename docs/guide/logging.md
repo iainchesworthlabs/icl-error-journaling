@@ -42,7 +42,9 @@ the top. Pick one to log it, as if you had double-tapped its tile.
 
 ## Notes
 
-Type in the note field and tap **Add** to log a note on its own. Return starts a new line, so a note can have several; while you type, the field opens over the board to five lines and then scrolls, and it folds back to one line when you leave it. The shared text prints each note on one line. It is timed when you add it. A note you started
+Type in the note field and tap **Add** to log a note on its own. Return starts a new line, so a note can have several; while you type, the field opens over the board to five lines and then scrolls, and it folds back to one line when you leave it. The shared text prints each note on one line.
+
+**Dictating a note.** On a phone that can recognise speech on the phone itself, the note field has a microphone at its right-hand end (the left in a right-to-left language). Tap it, speak, and your words appear in the note as you say them; tap it again to stop. It also stops after a minute of silence, or when you leave the app. Nothing listens until you tap it, and the first time the phone asks you to allow the microphone and speech recognition. The words are recognised on the phone: no sound and no text are sent anywhere. If you refuse, the note says so and typing works as before. You can edit the words like any text. Where the phone cannot recognise speech on the phone for your language, there is no microphone. It is timed when you add it. A note you started
 and did not add is kept if you leave the app.
 
 **Note templates** are the chips above the field. Tap one, answer its question and tap **Add**. The line in the log is

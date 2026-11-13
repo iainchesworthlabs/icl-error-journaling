@@ -6,7 +6,7 @@
         [--application-id com.iainchesworthlabs.fieldtest] PACKAGE.apk [PACKAGE.aab ...]
 
 For an APK it reads the merged manifest (`aapt2 dump xmltree`) and refuses:
-- any permission except the application's own (NFR-09: no network, so no INTERNET, and no AD_ID; androidx declares one
+- any permission except RECORD_AUDIO (dictation) and the application's own (NFR-09: no network, so no INTERNET, and no AD_ID; androidx declares one
   signature permission named after the application for its unexported receivers);
 - a minimum SDK other than 28 or a target SDK other than 36 (Google Play's requirement from 31 August 2026);
 - an intent filter that takes every type (`*/*`), another application ID, a launcher activity other than EjActivity, an activity that is not portrait, another
@@ -107,6 +107,10 @@ def as_int(value: str | None) -> int | None:
     return int(match.group(1), 0) if match else None
 
 
+# Dictation records from the microphone for the on-device recogniser (PRD NOTE-07). Nothing else: no network.
+ALLOWED_PERMISSIONS = frozenset({"android.permission.RECORD_AUDIO"})
+
+
 def manifest_problems(text: str, application_id: str = APPLICATION_ID) -> list[str]:
     """What is wrong with the merged manifest that `aapt2 dump xmltree` printed."""
     problems = []
@@ -125,8 +129,8 @@ def manifest_problems(text: str, application_id: str = APPLICATION_ID) -> list[s
     for tag in ("uses-permission", "uses-permission-sdk-23"):
         for element in manifest.all(tag):
             name = element.attributes.get("name", "")
-            if not name.startswith(own):
-                problems.append(f"the package asks for the permission '{name}' (NFR-09: none is allowed)")
+            if not name.startswith(own) and name not in ALLOWED_PERMISSIONS:
+                problems.append(f"the package asks for the permission '{name}' (NFR-09: only {sorted(ALLOWED_PERMISSIONS)} is allowed)")
 
     sdk = manifest.all("uses-sdk")
     minimum = as_int(sdk[0].attributes.get("minSdkVersion")) if sdk else None

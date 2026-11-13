@@ -14,6 +14,7 @@ PlatformServices make_platform_services()
     services.m_DocumentPicker = make_document_picker();
     services.m_BackgroundTasks = make_background_tasks();
     services.m_WindowLimits = make_window_limits();
+    services.m_Dictation = make_dictation();
     return services;
 }
 

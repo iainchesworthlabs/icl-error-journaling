@@ -131,9 +131,18 @@ def check(plist: dict, constants: dict[str, str]) -> list[str]:
     if plist.get(FRAME_RATE_KEY) is not True:
         problems.append(f"{FRAME_RATE_KEY} must be true (without it a ProMotion phone runs the application at 60 Hz)")
     for key in sorted(plist):
-        if key.endswith("UsageDescription"):
-            problems.append(f"{key} is set: the application asks for no permission")
+        if key.endswith("UsageDescription") and key not in ALLOWED_USAGE_KEYS:
+            problems.append(f"{key} is set: the application asks for no permission except {sorted(ALLOWED_USAGE_KEYS)}")
+    # Dictation (NOTE-05): the two permissions it asks for at the first tap, each with the text the system shows.
+    for key in sorted(ALLOWED_USAGE_KEYS):
+        value = plist.get(key)
+        if not isinstance(value, str) or not value.strip():
+            problems.append(f"{key} must be a non-empty text (dictation asks for it at the first tap)")
     return problems
+
+
+# The only permissions the application asks for: the microphone and speech recognition, for dictation (PRD NOTE-05, NOTE-07).
+ALLOWED_USAGE_KEYS = frozenset({"NSMicrophoneUsageDescription", "NSSpeechRecognitionUsageDescription"})
 
 
 def check_orientations(plist: dict) -> list[str]:

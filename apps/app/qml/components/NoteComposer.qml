@@ -50,6 +50,53 @@ Item {
     // A template chip was tapped.
     signal chipChosen(string templateId)
 
+    // Dictation (PRD NOTE-07). `dictationAvailable` is whether the phone can recognise speech on the phone itself: the
+    // microphone is drawn only then. `dictating` is whether it is listening. A tap on the microphone emits
+    // `dictationToggled`; the screen starts or stops the dictation, and feeds the words back through `dictationSegment`
+    // and `dictationText` (see below). `dictationMessage` is a plain sentence under the box when dictation could not run.
+    property bool dictationAvailable: false
+    property bool dictating: false
+    property string dictationMessage: ""
+    property string startDictationName: qsTr("Dictate")
+    property string stopDictationName: qsTr("Stop dictating")
+    readonly property bool micShown: dictationAvailable && !skeleton
+    readonly property bool rtl: Qt.application.layoutDirection === Qt.RightToLeft
+
+    signal dictationToggled
+
+    // The words of one stretch of speech go in at the cursor as it was when the stretch began, and each new guess of the
+    // recogniser replaces the one before it. Text typed meanwhile is left where it is.
+    property int dictationStart: 0
+    property int dictationEnd: 0
+    property string dictationLead: ""
+
+    // A new stretch of speech begins at the cursor (after a space, unless the text is empty or ends in white space).
+    function dictationSegment(): void {
+        dictationStart = field.cursorPosition;
+        dictationEnd = dictationStart;
+        const before = field.getText(0, dictationStart);
+        dictationLead = before.length > 0 && !/\s$/.test(before) ? " " : "";
+    }
+
+    // The words so far of the current stretch, replacing the earlier guess.
+    function dictationText(words: string): void {
+        if (words.length === 0)
+            return;
+        const start = Math.min(dictationStart, field.length);
+        const end = Math.min(Math.max(dictationEnd, start), field.length);
+        if (end > start)
+            field.remove(start, end);
+        const inserted = dictationLead + words;
+        field.insert(start, inserted);
+        dictationEnd = start + inserted.length;
+        field.cursorPosition = dictationEnd;
+    }
+
+    function toggleDictation(): void {
+        field.forceActiveFocus();
+        dictationToggled();
+    }
+
     function focusField(): void {
         field.forceActiveFocus();
     }
@@ -186,8 +233,9 @@ Item {
                         id: field
 
                         objectName: "noteInput"
-                        leftPadding: Theme.space.sectionGap
-                        rightPadding: Theme.space.sectionGap
+                        // Room for the microphone at the trailing edge, where it sits.
+                        leftPadding: Theme.space.sectionGap + (root.micShown && root.rtl ? micButton.width : 0)
+                        rightPadding: Theme.space.sectionGap + (root.micShown && !root.rtl ? micButton.width : 0)
                         topPadding: Theme.space.tileGap
                         bottomPadding: Theme.space.tileGap
                         // At least the one-line box high (a touch target), and as high as the text beyond that.
@@ -218,6 +266,50 @@ Item {
                             if (!activeFocus)
                                 flick.contentY = 0;
                         }
+                    }
+                }
+
+                // The microphone (PRD NOTE-07): one tap starts dictation into the note, the next ends it. It is on the first
+                // line of the box, at the trailing edge (the left in a right-to-left layout), and it is not drawn at all
+                // where the phone cannot recognise speech on the phone itself.
+                Item {
+                    id: micButton
+
+                    objectName: "micButton"
+                    x: root.rtl ? 0 : box.width - width
+                    y: 0
+                    width: Theme.size.minTouchTarget
+                    height: Theme.size.fieldHeight
+                    visible: root.micShown
+
+                    Accessible.role: Accessible.Button
+                    Accessible.name: root.dictating ? root.stopDictationName : root.startDictationName
+                    Accessible.checkable: true
+                    Accessible.checked: root.dictating
+                    Accessible.focusable: true
+                    Accessible.onPressAction: root.toggleDictation()
+
+                    // On while listening: a filled disc in the accent tint with a ring, so that it reads without colour.
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: Theme.size.badge + Theme.space.tileGap
+                        height: width
+                        radius: width / 2
+                        visible: root.dictating
+                        color: Theme.colour.primaryTint
+                        border.width: Theme.border.otherWidth
+                        border.color: Theme.colour.primaryText
+                    }
+
+                    Icon {
+                        anchors.centerIn: parent
+                        size: Theme.size.badge - Theme.space.tileGap
+                        kind: "mic"
+                        colour: root.dictating ? Theme.colour.primaryText : Theme.colour.textSecondary
+                    }
+
+                    TapHandler {
+                        onTapped: root.toggleDictation()
                     }
                 }
 
@@ -257,6 +349,19 @@ Item {
                 radius: Theme.radius.field
                 color: Theme.colour.border
             }
+        }
+
+        // Why dictation could not run, in a plain sentence (permission refused, no on-device recogniser, an error).
+        Text {
+            objectName: "dictationMessage"
+            width: parent.width
+            visible: root.dictationMessage.length > 0
+            color: Theme.colour.textSecondary
+            font: Theme.font.caption.font
+            text: root.dictationMessage
+            wrapMode: Text.WordWrap
+            Accessible.role: Accessible.StaticText
+            Accessible.name: root.dictationMessage
         }
     }
 }
