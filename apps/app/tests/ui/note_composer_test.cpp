@@ -364,6 +364,8 @@ TEST_CASE("composer.grow: the card keeps its height; the box opens over what is 
     type_lines(f, {"one", "two", "three"});
     f.rig.layout();
     const double three = f.rig.geometry(box).height();
+    // The card stands above its neighbours while the box overflows it, so that the board is not drawn over the text.
+    CHECK(f.composer->z() > 0);
     CHECK(three > rest);
     CHECK(f.rig.geometry(f.composer) == card);
 
@@ -381,6 +383,7 @@ TEST_CASE("composer.grow: the card keeps its height; the box opens over what is 
     f.add->forceActiveFocus();
     f.rig.layout();
     CHECK(f.rig.geometry(box).height() == rest);
+    CHECK(f.composer->z() == 0);
     CHECK(f.text().startsWith(QStringLiteral("one\ntwo")));
 }
 

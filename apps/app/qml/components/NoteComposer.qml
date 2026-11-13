@@ -56,6 +56,8 @@ Item {
 
     implicitWidth: Theme.frame.width - 2 * Theme.space.screenMargin
     implicitHeight: column.height + 2 * Theme.space.sectionGap
+    // The open box overflows the card, over the board under it, so the card stands above its neighbours while it is open.
+    z: field.activeFocus ? 1 : 0
     width: parent ? parent.width : implicitWidth
 
     onDraftChanged: {
