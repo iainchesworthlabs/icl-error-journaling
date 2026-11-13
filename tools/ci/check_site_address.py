@@ -8,7 +8,7 @@
 guide write `{{ site_url }}` and a hook (tools/docs/site_address_hook.py) fills it in at build time. The files that cannot
 read mkdocs.yml must hold the same address, and this check compares them:
 
-- store/appstore/en-GB/support_url.txt, privacy_url.txt and marketing_url.txt: <site>support/, <site>privacy/, <site>;
+- store/appstore/en-AU/support_url.txt, privacy_url.txt and marketing_url.txt: <site>support/, <site>privacy/, <site>;
 - the demo setup file address in store/appstore/review_information/notes.txt;
 - no page of docs/ other than the plan pages writes the host out.
 
@@ -27,9 +27,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import site_address  # noqa: E402
 
 URL_FILES = {
-    "store/appstore/en-GB/support_url.txt": "support/",
-    "store/appstore/en-GB/privacy_url.txt": "privacy/",
-    "store/appstore/en-GB/marketing_url.txt": "",
+    "store/appstore/en-AU/support_url.txt": "support/",
+    "store/appstore/en-AU/privacy_url.txt": "privacy/",
+    "store/appstore/en-AU/marketing_url.txt": "",
 }
 NOTES = "store/appstore/review_information/notes.txt"
 # Pages that describe the decision itself and the history of the old address may name hosts.

@@ -1435,14 +1435,14 @@ TEST_CASE("settings.list_rows: the unit prefix and the totals line are on the li
     CHECK(fixture.require(QStringLiteral("navLeadingLabel"))->property("text").toString() == "Settings");
 }
 
-TEST_CASE("settings.environments_row: the list has a Unit environments row with the count, which opens the editor "
+TEST_CASE("settings.environments_row: the list has a Number suffixes row with the count, which opens the editor "
           "(F21)",
           "[ui][settings_screen]")
 {
     Fixture fixture;
     QSignalSpy environments(fixture.m_Screen, SIGNAL(unitEnvironmentsRequested()));
     QQuickItem* row = fixture.require(QStringLiteral("settingsUnitEnvironments"));
-    CHECK(row->property("text").toString() == QStringLiteral("Unit environments"));
+    CHECK(row->property("text").toString() == QStringLiteral("Number suffixes"));
     CHECK(row->property("value").toString() == QStringLiteral("2"));
     CHECK(fixture.m_Ui.geometry(row).height() == 44.0);
     // Under Locations, which is the list it is most like.

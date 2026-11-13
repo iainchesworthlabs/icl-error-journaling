@@ -2,9 +2,9 @@ Facilitator: Sam Example
 Date: 7 Nov 2026
 UNIT #: UNIT-28
 Location: North Site
-Software Version: 1.4.2
+Software Version: v1.4.2
 
 10:05 T| Wrong Response
-11:00 Software Version changed: 1.4.2 → 1.5.1
+11:00 Software Version changed: v1.4.2 → v1.5.1
 12:00 UNIT # changed: UNIT-28 → UNIT-31
 12:30 T| Mute Delay

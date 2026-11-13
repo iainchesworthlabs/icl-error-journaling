@@ -47,4 +47,4 @@ with Stage 9).
 | Health app | No |
 | News app | No |
 | Account creation, so account deletion | No account |
-| Privacy policy | The URL in `../appstore/en-GB/privacy_url.txt` (Stage 10) |
+| Privacy policy | The URL in `../appstore/en-AU/privacy_url.txt` (Stage 10) |

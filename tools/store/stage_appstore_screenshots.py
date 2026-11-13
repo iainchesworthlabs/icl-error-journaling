@@ -5,7 +5,7 @@
     python3 tools/store/stage_appstore_screenshots.py SOURCE TARGET
 
 SOURCE is the `store/appstore` folder of the screenshots artifact (one folder per set, made by
-tools/ej_screenshots/store_screenshots.py). TARGET is the language folder deliver reads, store/appstore/screenshots/en-GB.
+tools/ej_screenshots/store_screenshots.py). TARGET is the language folder deliver reads, store/appstore/screenshots/en-AU.
 deliver picks the display size from the pixel size of each file and orders the files of one size by name, so the files are
 copied flat with a prefix that keeps the order: the iPhone set, then the iPad portrait set, then the iPad landscape set.
 The target is emptied first. Nothing is uploaded here.

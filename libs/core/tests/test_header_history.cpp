@@ -369,7 +369,7 @@ TEST_CASE("A first fill of the version takes a commit, and an empty field has no
     CHECK_FALSE(header_field_text(log.initial_header(), HeaderField::SOFTWARE_VERSION).has_value());
     REQUIRE(correct_header(log, HeaderField::SOFTWARE_VERSION, "1.4.2+a1b2c3d").has_value());
     CHECK(header_field_text(log.initial_header(), HeaderField::SOFTWARE_VERSION) == "1.4.2+a1b2c3d");
-    CHECK(log.initial_header().m_SoftwareVersion->display() == "1.4.2 (a1b2c3d)");
+    CHECK(log.initial_header().m_SoftwareVersion->display() == "v1.4.2 (a1b2c3d)");
     // Clearing the field clears the commit with it.
     REQUIRE(correct_header(log, HeaderField::SOFTWARE_VERSION, "").has_value());
     CHECK_FALSE(log.initial_header().m_SoftwareVersion.has_value());

@@ -34,37 +34,37 @@ DOCS_PATH = site_address.path(ROOT)  # both from mkdocs.yml, the one place that 
 
 # (path under store/, limit, unit, required)
 LIMITS: list[tuple[str, int, str, bool]] = [
-    ("appstore/en-GB/name.txt", 30, "chars", True),
-    ("appstore/en-GB/subtitle.txt", 30, "chars", True),
-    ("appstore/en-GB/promotional_text.txt", 170, "chars", True),
-    ("appstore/en-GB/description.txt", 4000, "chars", True),
-    ("appstore/en-GB/keywords.txt", 100, "bytes", True),
-    ("appstore/en-GB/release_notes.txt", 4000, "chars", True),
-    ("appstore/en-GB/support_url.txt", 2048, "chars", True),
-    ("appstore/en-GB/marketing_url.txt", 2048, "chars", False),
-    ("appstore/en-GB/privacy_url.txt", 2048, "chars", True),
+    ("appstore/en-AU/name.txt", 30, "chars", True),
+    ("appstore/en-AU/subtitle.txt", 30, "chars", True),
+    ("appstore/en-AU/promotional_text.txt", 170, "chars", True),
+    ("appstore/en-AU/description.txt", 4000, "chars", True),
+    ("appstore/en-AU/keywords.txt", 100, "bytes", True),
+    ("appstore/en-AU/release_notes.txt", 4000, "chars", True),
+    ("appstore/en-AU/support_url.txt", 2048, "chars", True),
+    ("appstore/en-AU/marketing_url.txt", 2048, "chars", False),
+    ("appstore/en-AU/privacy_url.txt", 2048, "chars", True),
     ("appstore/review_information/notes.txt", 4000, "chars", True),
     ("appstore/copyright.txt", 200, "chars", True),
     ("appstore/primary_category.txt", 64, "chars", True),
     ("appstore/secondary_category.txt", 64, "chars", False),
-    ("play/en-GB/title.txt", 30, "chars", True),
-    ("play/en-GB/short_description.txt", 80, "chars", True),
-    ("play/en-GB/full_description.txt", 4000, "chars", True),
-    ("play/en-GB/changelogs/default.txt", 500, "chars", True),
+    ("play/en-AU/title.txt", 30, "chars", True),
+    ("play/en-AU/short_description.txt", 80, "chars", True),
+    ("play/en-AU/full_description.txt", 4000, "chars", True),
+    ("play/en-AU/changelogs/default.txt", 500, "chars", True),
 ]
-URL_FILES = ["appstore/en-GB/support_url.txt", "appstore/en-GB/marketing_url.txt", "appstore/en-GB/privacy_url.txt"]
+URL_FILES = ["appstore/en-AU/support_url.txt", "appstore/en-AU/marketing_url.txt", "appstore/en-AU/privacy_url.txt"]
 SINGLE_LINE = {
-    "appstore/en-GB/name.txt",
-    "appstore/en-GB/subtitle.txt",
-    "appstore/en-GB/keywords.txt",
+    "appstore/en-AU/name.txt",
+    "appstore/en-AU/subtitle.txt",
+    "appstore/en-AU/keywords.txt",
     "appstore/copyright.txt",
     "appstore/primary_category.txt",
     "appstore/secondary_category.txt",
-    "play/en-GB/title.txt",
-    "play/en-GB/short_description.txt",
+    "play/en-AU/title.txt",
+    "play/en-AU/short_description.txt",
     *URL_FILES,
 }
-CAPTIONS = "appstore/en-GB/screenshot_captions.txt"
+CAPTIONS = "appstore/en-AU/screenshot_captions.txt"
 CAPTION_LIMIT = 60
 CAPTION_COUNT = 10  # the most screenshots in an App Store set
 APP_STORE_CATEGORIES = {
@@ -150,9 +150,9 @@ def check(store: Path) -> list[str]:
         if rel in SINGLE_LINE and "\n" in value:
             problems.append(f"{rel}: must be one line")
 
-    if "appstore/en-GB/keywords.txt" in values:
-        problems += check_keywords(values["appstore/en-GB/keywords.txt"], values.get("appstore/en-GB/name.txt", ""),
-                                   "appstore/en-GB/keywords.txt")
+    if "appstore/en-AU/keywords.txt" in values:
+        problems += check_keywords(values["appstore/en-AU/keywords.txt"], values.get("appstore/en-AU/name.txt", ""),
+                                   "appstore/en-AU/keywords.txt")
     for rel in URL_FILES:
         if rel in values:
             problems += check_url(values[rel], rel)
@@ -162,9 +162,9 @@ def check(store: Path) -> list[str]:
     if values.get("appstore/primary_category.txt") is not None and values.get(
             "appstore/primary_category.txt") == values.get("appstore/secondary_category.txt"):
         problems.append("appstore/secondary_category.txt: the same as the primary category")
-    if values.get("appstore/en-GB/name.txt") is not None and values.get("play/en-GB/title.txt") is not None and values[
-            "appstore/en-GB/name.txt"] != values["play/en-GB/title.txt"]:
-        problems.append("play/en-GB/title.txt: differs from the App Store name")
+    if values.get("appstore/en-AU/name.txt") is not None and values.get("play/en-AU/title.txt") is not None and values[
+            "appstore/en-AU/name.txt"] != values["play/en-AU/title.txt"]:
+        problems.append("play/en-AU/title.txt: differs from the App Store name")
 
     captions = store / CAPTIONS
     if captions.is_file():

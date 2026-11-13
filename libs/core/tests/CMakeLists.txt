@@ -26,6 +26,7 @@ add_executable(ej_core_tests
     test_export_header.cpp
     test_export_golden.cpp
     test_export_rules.cpp
+    test_extra_versions.cpp
     test_export_snapshot.cpp
     test_foundations.cpp
     test_header_history.cpp

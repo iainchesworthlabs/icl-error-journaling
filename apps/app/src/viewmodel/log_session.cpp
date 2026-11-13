@@ -2,6 +2,7 @@
 #include "viewmodel/log_session.hpp"
 
 #include "error_journaling/export_format.hpp"
+#include "error_journaling/extra_versions.hpp"
 #include "error_journaling/export_renderer.hpp"
 #include "error_journaling/header_history.hpp"
 #include "error_journaling/header_values.hpp"
@@ -13,6 +14,7 @@
 #include <algorithm>
 #include <array>
 #include <utility>
+#include <vector>
 #include <variant>
 
 namespace ej::viewmodel
@@ -346,6 +348,40 @@ QString LogSession::version_display_text() const
 {
     const HeaderValues header = header_in_force();
     return header.m_SoftwareVersion ? to_qstring(header.m_SoftwareVersion->display()) : QString{};
+}
+
+QVariantList LogSession::extra_versions() const
+{
+    QVariantList rows;
+    for (const auto& extra : header_in_force().m_ExtraVersions)
+    {
+        QVariantMap row;
+        row.insert(QStringLiteral("label"), to_qstring(std::string(extra.label())));
+        row.insert(QStringLiteral("version"), to_qstring(extra.m_Version.format()));
+        row.insert(QStringLiteral("commit"), to_qstring(std::string(extra.m_Version.commit())));
+        rows.append(row);
+    }
+    return rows;
+}
+
+QString LogSession::extra_versions_text() const
+{
+    return to_qstring(summarize_extra_versions(header_in_force().m_ExtraVersions));
+}
+
+QString LogSession::versions_summary() const
+{
+    const HeaderValues header = header_in_force();
+    std::string out;
+    if (header.m_SoftwareVersion)
+    {
+        out = std::string(ROBOT_LABEL) + " " + header.m_SoftwareVersion->display();
+    }
+    if (const std::string extras = summarize_extra_versions(header.m_ExtraVersions); !extras.empty())
+    {
+        out += out.empty() ? extras : " · " + extras;
+    }
+    return to_qstring(out);
 }
 
 QString LogSession::date_text() const
@@ -772,6 +808,24 @@ QString LogSession::header_message(const HeaderError& error) const
             return tr("A commit has 7 to 12 characters.");
         }
         break;
+    case Kind::INVALID_EXTRA_VERSIONS:
+        switch (error.m_ExtraVersions.value_or(ExtraVersionsError::MALFORMED))
+        {
+        case ExtraVersionsError::EMPTY_LABEL:
+            return tr("Give this version a name, like Influencer.");
+        case ExtraVersionsError::LABEL_TOO_LONG:
+            return tr("A name has at most 20 characters.");
+        case ExtraVersionsError::LABEL_CHARACTERS:
+            return tr("A name uses letters, numbers, spaces and dashes only.");
+        case ExtraVersionsError::LABEL_IS_ROBOT:
+            return tr("Robot is the software version above. Use another name.");
+        case ExtraVersionsError::DUPLICATE_LABEL:
+            return tr("Another version already has that name.");
+        case ExtraVersionsError::INVALID_VERSION:
+        case ExtraVersionsError::MALFORMED:
+            return tr("Use three numbers separated by dots, like 1.4.2.");
+        }
+        break;
     case Kind::EMPTY_LOCATION:
         return tr("Enter a location.");
     case Kind::UNCHANGED:
@@ -923,6 +977,102 @@ QString LogSession::previewVersionChange(const QString& version, const QString& 
         return refusal;
     }
     return previewHeaderChange(QStringLiteral("software_version"), stored_version(version, commit), localSeconds);
+}
+
+namespace
+{
+
+/// The rows of the other-versions editor as the model keeps them. A row with nothing in it is skipped. `first_error` is
+/// the index of the row that was refused, or -1; `message` says why.
+struct ExtraRows
+{
+    ExtraVersions m_Versions;
+    std::vector<int> m_RowOfVersion;
+    int m_BadRow = -1;
+    bool m_BadIsVersion = false;
+    std::optional<HeaderError> m_Error;
+};
+
+ExtraRows read_extra_rows(const QVariantList& rows)
+{
+    ExtraRows out;
+    for (int i = 0; i < rows.size(); ++i)
+    {
+        const QVariantMap row = rows.at(i).toMap();
+        const QString label = row.value(QStringLiteral("label")).toString().trimmed();
+        const QString version = row.value(QStringLiteral("version")).toString().trimmed();
+        const QString commit = row.value(QStringLiteral("commit")).toString().trimmed();
+        if (label.isEmpty() && version.isEmpty())
+        {
+            continue;
+        }
+        const auto fail_row = [&](ExtraVersionsError error)
+        {
+            if (out.m_BadRow < 0)
+            {
+                out.m_BadRow = i;
+                out.m_BadIsVersion = error == ExtraVersionsError::INVALID_VERSION;
+                HeaderError e;
+                e.m_Kind = HeaderError::Kind::INVALID_EXTRA_VERSIONS;
+                e.m_ExtraVersions = error;
+                out.m_Error = e;
+            }
+        };
+        const auto kept = normalize_label(to_utf8(label));
+        if (!kept)
+        {
+            fail_row(kept.error());
+            continue;
+        }
+        const auto parsed = SoftwareVersion::parse(to_utf8(version), to_utf8(commit));
+        if (version.contains(QLatin1Char('+')) || !parsed)
+        {
+            fail_row(ExtraVersionsError::INVALID_VERSION);
+            continue;
+        }
+        const bool twice = std::ranges::any_of(out.m_Versions, [&](const LabelledVersion& other)
+                                               { return QString::fromStdString(std::string(other.label())).compare(to_qstring(*kept), Qt::CaseInsensitive) == 0; });
+        if (twice)
+        {
+            fail_row(ExtraVersionsError::DUPLICATE_LABEL);
+            continue;
+        }
+        out.m_Versions.push_back(LabelledVersion{*kept, *parsed});
+        out.m_RowOfVersion.push_back(i);
+    }
+    return out;
+}
+
+} // namespace
+
+QString LogSession::validateExtraRow(const QVariantList& rows, int index) const
+{
+    const ExtraRows read = read_extra_rows(rows);
+    if (read.m_Error && read.m_BadRow == index)
+    {
+        return header_message(*read.m_Error);
+    }
+    return {};
+}
+
+QString LogSession::extraRowField(const QVariantList& rows, int index) const
+{
+    const ExtraRows read = read_extra_rows(rows);
+    if (!read.m_Error || read.m_BadRow != index)
+    {
+        return {};
+    }
+    return read.m_BadIsVersion ? QStringLiteral("version") : QStringLiteral("label");
+}
+
+bool LogSession::correctExtraVersions(const QVariantList& rows)
+{
+    const ExtraRows read = read_extra_rows(rows);
+    if (read.m_Error)
+    {
+        return false;
+    }
+    return correctHeader(QStringLiteral("extra_versions"), to_qstring(stored_extra_versions(read.m_Versions)));
 }
 
 bool LogSession::correctHeader(const QString& fieldKey, const QString& text)

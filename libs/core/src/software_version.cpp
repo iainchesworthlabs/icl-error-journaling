@@ -81,6 +81,11 @@ Result<SoftwareVersion, SoftwareVersion::Error> SoftwareVersion::parse(std::stri
 
 Result<SoftwareVersion, SoftwareVersion::Error> SoftwareVersion::parse(std::string_view text, std::string_view commit)
 {
+    // A leading "v" is the usual way to write a version and the field already shows one: one is dropped, never kept.
+    if (!text.empty() && (text.front() == 'v' || text.front() == 'V'))
+    {
+        text.remove_prefix(1);
+    }
     if (text.empty())
     {
         return fail(Error::EMPTY);
@@ -152,7 +157,7 @@ std::string SoftwareVersion::stored() const
 
 std::string SoftwareVersion::display() const
 {
-    std::string out = format();
+    std::string out = "v" + format();
     if (m_CommitLength != 0)
     {
         out += " (";

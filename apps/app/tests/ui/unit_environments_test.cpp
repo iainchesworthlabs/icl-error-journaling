@@ -221,6 +221,6 @@ TEST_CASE("editor.voiceover: the environment rows and buttons are named and the 
     world.play(400);
     world.m_Ui.layout();
     REQUIRE(sheet_is_open(world));
-    CHECK(name_of(panel(world)) == QStringLiteral("Environment"));
+    CHECK(name_of(panel(world)) == QStringLiteral("Number suffix"));
     expect_clean(sheet_violations(world));
 }

@@ -98,7 +98,7 @@ TEST_CASE("version.choices: two plain choices, exactly one selected, in the faci
           QStringLiteral("Corrects the value. Nothing is added to the log."));
     CHECK(selected_cards(rig) == 1);
     CHECK(changed->property("selected").toBool());
-    CHECK(need(rig, QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("1.4.2"));
+    CHECK(need(rig, QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("v1.4.2"));
 
     rig.tap(typo);
     CHECK(selected_cards(rig) == 1);
@@ -132,7 +132,7 @@ TEST_CASE("version.change: \"It changed during the day\" records one entry at th
     CHECK(world.storage().repository().call_count(RepositoryOp::ADD_ENTRY) == 1);
     CHECK(world.storage().repository().call_count(RepositoryOp::CORRECT_HEADER) == 0);
     REQUIRE(world.timeline().entry_count() == 1);
-    CHECK(world.timeline().last_line().contains(QStringLiteral("Software Version changed: 1.4.2 → 1.5.0")));
+    CHECK(world.timeline().last_line().contains(QStringLiteral("Software Version changed: v1.4.2 → v1.5.0")));
     CHECK(world.session().version_text() == QStringLiteral("1.5.0"));
 }
 
@@ -398,8 +398,8 @@ TEST_CASE("version.commit: the same optional field as Today's details, a row of 
     QQuickItem* sheet = open_sheet(rig, world);
 
     // The version in force is shown with its commit, and both new fields start empty.
-    CHECK(sheet->property("fromText").toString() == QStringLiteral("1.4.2 (a1b2c3d)"));
-    CHECK(need(rig, QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("1.4.2 (a1b2c3d)"));
+    CHECK(sheet->property("fromText").toString() == QStringLiteral("v1.4.2 (a1b2c3d)"));
+    CHECK(need(rig, QStringLiteral("versionFrom"))->property("value").toString() == QStringLiteral("v1.4.2 (a1b2c3d)"));
     QQuickItem* to = need(rig, QStringLiteral("versionTo"));
     QQuickItem* commit = need(rig, QStringLiteral("versionCommit"));
     CHECK(input_of(rig, to)->property("text").toString().isEmpty());
@@ -444,13 +444,13 @@ TEST_CASE("version.commit: a change takes the commit, and the line and the entry
     const int now = world.session().now_local_seconds();
 
     retype(rig, need(rig, QStringLiteral("versionTo")), QStringLiteral("1.5.0"));
-    CHECK(preview_of(rig) == QString::fromUtf8("08:55 Software Version changed: 1.4.2 (a1b2c3d) \xE2\x86\x92 1.5.0"));
+    CHECK(preview_of(rig) == QString::fromUtf8("08:55 Software Version changed: v1.4.2 (a1b2c3d) \xE2\x86\x92 v1.5.0"));
     retype(rig, need(rig, QStringLiteral("versionCommit")), QStringLiteral("E4F5A6B"));
     const QString shown = preview_of(rig);
-    CHECK(shown == QString::fromUtf8("08:55 Software Version changed: 1.4.2 (a1b2c3d) \xE2\x86\x92 1.5.0 (e4f5a6b)"));
+    CHECK(shown == QString::fromUtf8("08:55 Software Version changed: v1.4.2 (a1b2c3d) \xE2\x86\x92 v1.5.0 (e4f5a6b)"));
     CHECK(shown == world.session().previewVersionChange(QStringLiteral("1.5.0"), QStringLiteral("E4F5A6B"), now));
     CHECK(need(rig, QStringLiteral("versionExplainer"))->property("text").toString() ==
-          QStringLiteral("Entries before 08:55 keep 1.4.2 (a1b2c3d). Entries after it use 1.5.0 (e4f5a6b)."));
+          QStringLiteral("Entries before 08:55 keep v1.4.2 (a1b2c3d). Entries after it use v1.5.0 (e4f5a6b)."));
     REQUIRE(save_enabled(rig));
 
     rig.tap(need(rig, QStringLiteral("versionSave")));
@@ -499,11 +499,11 @@ TEST_CASE("version.commit: a change of the commit alone is a change; the same pa
 
     // The same version with no commit is a change, and so is the same version with another one.
     retype(rig, need(rig, QStringLiteral("versionCommit")), QString());
-    CHECK(preview_of(rig) == QString::fromUtf8("08:55 Software Version changed: 1.4.2 (a1b2c3d) \xE2\x86\x92 1.4.2"));
+    CHECK(preview_of(rig) == QString::fromUtf8("08:55 Software Version changed: v1.4.2 (a1b2c3d) \xE2\x86\x92 v1.4.2"));
     CHECK(save_enabled(rig));
     retype(rig, need(rig, QStringLiteral("versionCommit")), QStringLiteral("0123456"));
     CHECK(preview_of(rig) ==
-          QString::fromUtf8("08:55 Software Version changed: 1.4.2 (a1b2c3d) \xE2\x86\x92 1.4.2 (0123456)"));
+          QString::fromUtf8("08:55 Software Version changed: v1.4.2 (a1b2c3d) \xE2\x86\x92 v1.4.2 (0123456)"));
     CHECK(save_enabled(rig));
 }
 

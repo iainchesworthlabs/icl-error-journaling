@@ -65,7 +65,7 @@ TEST_CASE("A database row written by an older build reads as a version without a
     REQUIRE(header.m_SoftwareVersion.has_value());
     CHECK(header.m_SoftwareVersion->format() == "1.4.2");
     CHECK(header.m_SoftwareVersion->commit().empty());
-    CHECK(header.m_SoftwareVersion->display() == "1.4.2");
+    CHECK(header.m_SoftwareVersion->display() == "v1.4.2");
     CHECK(std::get<HeaderChangeEntry>(open->m_Log.find(entry_id(1))->m_Body).m_NewValue == "1.5.0");
 
     const auto logs = store.repo().list_logs().value();

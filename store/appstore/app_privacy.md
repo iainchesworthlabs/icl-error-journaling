@@ -8,7 +8,7 @@ See [`docs/plan/stage-11.md`](../../docs/plan/stage-11.md#app-privacy) for the e
 |---|---|
 | Do you or your third-party partners collect data from this app? | **No, we do not collect data from this app** |
 | Tracking | None. No IDFA, no App Tracking Transparency prompt |
-| Privacy policy URL | `en-GB/privacy_url.txt` (Stage 10) |
+| Privacy policy URL | `en-AU/privacy_url.txt` (Stage 10) |
 
 The label shown on the store is **Data Not Collected**.
 

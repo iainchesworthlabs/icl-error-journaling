@@ -810,7 +810,7 @@ TEST_CASE("log.note: type and Add, the entry appears after the commit, the field
     CHECK(sim.session.draft() == QStringLiteral("The robot paused twice"));
 }
 
-TEST_CASE("log.note: Return adds the note, and an empty note does nothing", "[ui][log]")
+TEST_CASE("log.note: Add adds the note, Return only starts a new line, and an empty note does nothing", "[ui][log]")
 {
     LogRig sim(Options().existing());
     sim.load();
@@ -822,6 +822,11 @@ TEST_CASE("log.note: Return adds the note, and an empty note does nothing", "[ui
     QMetaObject::invokeMethod(screen.named(QStringLiteral("logComposer")), "focusField");
     screen.rig.type(QStringLiteral("Visitor asked about the robot"));
     screen.rig.key(Qt::Key_Return);
+    sim.gateway.run_all();
+    screen.rig.settle();
+    CHECK(sim.entries().empty());
+    CHECK(sim.session.draft() == QStringLiteral("Visitor asked about the robot\n"));
+    screen.rig.tap(screen.named(QStringLiteral("addButton")));
     sim.gateway.run_all();
     screen.rig.settle();
     CHECK(sim.entries().size() == 1);

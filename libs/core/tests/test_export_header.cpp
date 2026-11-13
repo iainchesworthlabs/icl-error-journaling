@@ -38,7 +38,7 @@ TEST_CASE("The header block shows all five lines, values at the start of the log
     REQUIRE(header.has_value());
     CHECK(*header
           == "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\n"
-             "Software Version: 1.4.2");
+             "Software Version: v1.4.2");
 }
 
 TEST_CASE("An empty header field prints its label and a colon with no trailing space", "[export][header]")
@@ -109,12 +109,12 @@ TEST_CASE("The header block prints the commit after the version, in brackets", "
     const auto header = render_header(Log(values), demo_context());
     REQUIRE(header.has_value());
     CHECK(*header ==
-          "Facilitator: Sam Example\nDate: 7 Nov 2026\nDEMO #:\nLocation:\nSoftware Version: 1.4.2 (a1b2c3d)");
+          "Facilitator: Sam Example\nDate: 7 Nov 2026\nDEMO #:\nLocation:\nSoftware Version: v1.4.2 (a1b2c3d)");
 
     // With no commit the text is exactly what it was.
     values.m_SoftwareVersion = SoftwareVersion::parse("1.4.2").value();
     CHECK(render_header(Log(values), demo_context()).value() ==
-          "Facilitator: Sam Example\nDate: 7 Nov 2026\nDEMO #:\nLocation:\nSoftware Version: 1.4.2");
+          "Facilitator: Sam Example\nDate: 7 Nov 2026\nDEMO #:\nLocation:\nSoftware Version: v1.4.2");
 }
 
 TEST_CASE("The commit golden prints the header and the lines of the changes", "[export][golden][commit]")

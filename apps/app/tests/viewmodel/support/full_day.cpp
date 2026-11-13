@@ -504,9 +504,9 @@ void Day::step_10_version_change()
     CHECK(rig.mutating_calls() == writes + 1);
     CHECK(rig.timeline().entry_count() == 6);
     CHECK(rig.timeline().last_line() ==
-          QStringLiteral("13:15 Software Version changed: 1.4.2 ") + ARROW + QStringLiteral(" 1.5.1"));
+          QStringLiteral("13:15 Software Version changed: v1.4.2 ") + ARROW + QStringLiteral(" v1.5.1"));
     CHECK(rig.session().version_text() == QStringLiteral("1.5.1"));
-    CHECK(rig.timeline().header_text().contains(QStringLiteral("Software Version: 1.4.2")));
+    CHECK(rig.timeline().header_text().contains(QStringLiteral("Software Version: v1.4.2")));
 }
 
 // ------------------------------------------------------------------------------------------------------ 11
@@ -561,9 +561,9 @@ void Day::step_12_review_edits()
         CHECK(rig.timeline().saveEntry(change, edit));
         rig.settle();
         CHECK(line_of(change) ==
-              QStringLiteral("13:15 Software Version changed: 1.4.2 ") + ARROW + QStringLiteral(" 1.5.0"));
+              QStringLiteral("13:15 Software Version changed: v1.4.2 ") + ARROW + QStringLiteral(" v1.5.0"));
         CHECK(rig.session().version_text() == QStringLiteral("1.5.0"));
-        CHECK(rig.timeline().header_text().contains(QStringLiteral("Software Version: 1.4.2")));
+        CHECK(rig.timeline().header_text().contains(QStringLiteral("Software Version: v1.4.2")));
     }
     // d) The wrong tile: Track Delay at 13:41:30 was Speech Delay at 13:40:00.
     {

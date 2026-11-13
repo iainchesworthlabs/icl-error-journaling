@@ -3,7 +3,7 @@
 Everything that makes the app yours is in **Settings**: the tiles on the board, your error types, places and note
 templates, and your name and unit prefix.
 
-![The Settings screen. At the top is Your board, a miniature of the tiles. Below are Error types, Note templates, Locations, Unit environments, Facilitator, Unit prefix and a switch for a totals line.](img/board-settings.png){ width="270" }
+![The Settings screen. At the top is Your board, a miniature of the tiles. Below are Error types, Note templates, Locations, Number suffixes, Facilitator, Unit prefix and a switch for a totals line.](img/board-settings.png){ width="270" }
 
 ## Your board
 
@@ -28,10 +28,10 @@ the board in the order shown. The rest are found under **Other** on the Log scre
 
 ![The Error types list: Add an error type, then the types on the board with arrows to move them.](img/error-types.png){ width="270" }
 
-## Locations and unit environments
+## Locations and number suffixes
 
 **Locations** are the places you work in, for example North Site. They are the choices for Location in Today's details.
-**Unit environments** are the choices for Environment, for example `prod` and `dev`; **None** is always the first choice.
+**Number suffixes** are the choices for the Number suffix on Today's details, for example `prod` and `dev`; **None** is always the first choice.
 
 ## Note templates
 

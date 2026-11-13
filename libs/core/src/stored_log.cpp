@@ -58,6 +58,8 @@ StorageError from_header_error(const HeaderError& error)
         return make_error(StorageErrorKind::INVALID_ARGUMENT, "invalid unit number");
     case HeaderError::Kind::INVALID_SOFTWARE_VERSION:
         return make_error(StorageErrorKind::INVALID_ARGUMENT, "invalid software version");
+    case HeaderError::Kind::INVALID_EXTRA_VERSIONS:
+        return make_error(StorageErrorKind::INVALID_ARGUMENT, "invalid extra versions");
     case HeaderError::Kind::EMPTY_LOCATION:
         return make_error(StorageErrorKind::INVALID_ARGUMENT, "empty location");
     case HeaderError::Kind::UNCHANGED:
@@ -85,7 +87,7 @@ Result<std::string, StorageError> canonical_header_text(HeaderField field, std::
 std::string header_text_of(const Log& log)
 {
     std::string text;
-    for (const HeaderField field : {HeaderField::UNIT_NUMBER, HeaderField::LOCATION, HeaderField::SOFTWARE_VERSION})
+    for (const HeaderField field : {HeaderField::UNIT_NUMBER, HeaderField::LOCATION, HeaderField::SOFTWARE_VERSION, HeaderField::EXTRA_VERSIONS})
     {
         text += header_field_text(log.initial_header(), field).value_or(std::string());
         text.push_back('\x1F');

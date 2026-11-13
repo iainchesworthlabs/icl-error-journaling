@@ -301,7 +301,7 @@ without an emulator. The label `android-emulator` is defined in `.github/labels.
 
 `tools/store/make_play_graphics.py` makes the Google Play icon (512 x 512, from the iOS `AppIcon-1024.png`) and the
 feature graphic (1024 x 500, the tile palette of `docs/design/tokens.json` and the icon, no text) into
-`store/play/en-GB/images/`, which is not committed (Stage 11, 11.5). The output depends only on files in the repository and
+`store/play/en-AU/images/`, which is not committed (Stage 11, 11.5). The output depends only on files in the repository and
 the Pillow version in `requirements/store.txt`, so each release can make it again. The job that runs `tools/tests` installs
 that file, so `tools/tests/test_play_graphics.py` checks the sizes, the colours and that two runs give the same bytes.
 
@@ -323,7 +323,7 @@ The guide, support and privacy pages are one MkDocs site, published by `docs.yml
 
 - Pages of `docs/` that need the address write `{{ site_url }}` (it includes the trailing slash) and
   `tools/docs/site_address_hook.py` fills it in at build time. A page never writes the host out.
-- The files that cannot read `mkdocs.yml` hold the same address: `store/appstore/en-GB/support_url.txt`,
+- The files that cannot read `mkdocs.yml` hold the same address: `store/appstore/en-AU/support_url.txt`,
   `privacy_url.txt`, `marketing_url.txt` and the demo setup address in `store/appstore/review_information/notes.txt`.
   `tools/ci/check_site_address.py` compares them (and `check_store_text.py` reads the host from `mkdocs.yml` too). The
   app's own constant joins the list with the in-app help (Stage 10, 10.6).

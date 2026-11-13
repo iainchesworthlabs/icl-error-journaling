@@ -2,6 +2,7 @@
 #include "error_journaling/journal_record.hpp"
 
 #include "error_journaling/iso_date.hpp"
+#include "error_journaling/extra_versions.hpp"
 #include "error_journaling/software_version.hpp"
 #include "error_journaling/unit_number.hpp"
 #include "error_journaling/utf8.hpp"
@@ -299,6 +300,13 @@ void write_header(Writer& w, const HeaderValues& header)
     {
         w.null();
     }
+    if (!header.m_ExtraVersions.empty())
+    {
+        // Only when there are some, so a log without extra versions is written exactly as before.
+        w.raw(",");
+        w.key("extra_versions");
+        w.string(stored_extra_versions(header.m_ExtraVersions));
+    }
     w.raw("}");
 }
 
@@ -559,6 +567,12 @@ public:
         return Fields(m_Decoder, value.toObject());
     }
 
+    /// Whether the key is there at all (a key added later is absent from older records).
+    [[nodiscard]] bool has(const char* name) const
+    {
+        return m_Object.contains(QLatin1StringView(name));
+    }
+
     /// The sub-object, or nothing when the value is null.
     [[nodiscard]] std::optional<Fields> optional_object(const char* name) const
     {
@@ -691,6 +705,18 @@ HeaderValues read_header(const Fields& fields)
         if (parsed)
         {
             header.m_SoftwareVersion = *parsed;
+        }
+        else
+        {
+            fields.bad_field();
+        }
+    }
+    if (fields.has("extra_versions"))
+    {
+        auto parsed = parse_extra_versions(fields.string("extra_versions"));
+        if (parsed)
+        {
+            header.m_ExtraVersions = std::move(*parsed);
         }
         else
         {

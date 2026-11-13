@@ -220,7 +220,7 @@ SettingsPage {
 
             ListRow {
                 objectName: "settingsUnitEnvironments"
-                text: qsTr("Unit environments")
+                text: qsTr("Number suffixes")
                 value: root.settings.unitEnvironments.length
                 minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true

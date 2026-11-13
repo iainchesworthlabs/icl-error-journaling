@@ -263,6 +263,23 @@ TEST_CASE("A record that is valid JSON but not the encoder's exact text is rejec
     CHECK_FALSE(decode_record(with_crc(extra)).has_value());
 }
 
+TEST_CASE("A multi-line note of the longest legal size keeps every line break and fits the record bound", "[journal]")
+{
+    std::string text;
+    while (text.size() < 10'000)
+    {
+        text += "Mute Delay near the stage\r\n\n";
+    }
+    text.resize(10'000);
+    const auto line = encode_record(sample_record(2, AddEntryBody{sample_note(1, 1, text)}));
+    REQUIRE(line.has_value());
+    CHECK(line->size() < MAX_RECORD_BYTES);
+    CHECK(line->find('\n') == std::string::npos);
+    const auto decoded = decode_record(*line);
+    REQUIRE(decoded.has_value());
+    CHECK(std::get<NoteEntry>(std::get<AddEntryBody>(decoded->m_Body).m_Entry.m_Body).m_Value == text);
+}
+
 TEST_CASE("The size of a record is bounded", "[journal]")
 {
     // The longest legal note encodes well inside the bound, even when every character needs a six byte escape.
