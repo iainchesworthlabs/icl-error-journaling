@@ -1,6 +1,6 @@
-# Feedback: the interactions board and saved names
+# Feedback: the interactions board and people
 
-This page is the design, task breakdown and test list for a second board for **interactions**, with optional saved names that
+This page is the design, task breakdown and test list for a second board for **interactions**, with an optional list of people that
 are typed once and picked later. It is for the owner's review. It writes no production code (the stage gate in
 `AGENTS.md`). Requirement IDs refer to the [PRD](../prd.md). The facilitator's stand-in is **Sam Example**, as everywhere in the repository (NFR-10). The stand-in for a saved name
 on this page is **Alex Sample**, a second fictional name the owner approved on 13 Nov 2026 (package I-0 adds it to
@@ -9,7 +9,7 @@ on this page is **Alex Sample**, a second fictional name the owner approved on 1
 **Source:** primary-user test feedback. Testers need a second board for what they *did* with or around the thing under
 test, including, when it applies, the name of a person involved. **Interactions are not only about people:** a tester
 may be doing actions against equipment with nobody named. So the board is "Interactions", the name feature is optional
-and general (a *saved name*, a **person** in the model), and nothing in the app says "resident". Both boards write to the same log in time order; a fifth icon in
+and general (a **person** in the model and in the app's words, "People" in Settings), and nothing in the app says "resident". Both boards write to the same log in time order; a fifth icon in
 the bottom navigation switches between them; the entries from both appear interleaved in the log.
 
 **Owner decision, 13 Nov 2026: this moves from v2 into v1.** The app supports up to two boards. The second one is
@@ -39,7 +39,7 @@ redesigning them.
 | Issue #105, open questions | How the user switches quickly (is a tab enough?); the export format of interaction lines and whether they count in the totals line; whether the setup file gets an `interactionTypes` list next to the error types. |
 | PRD, export rules | Notes carry no ticket marker (rule 4) and render as `<time> (Free Text) <text>`. Templated notes render through the template's line (NOTE-04). |
 
-**New in this feedback, and not in v2:** saved names (typed once, picked later), a name slot in an interaction's line,
+**New in this feedback, and not in v2:** people (typed once, picked later), a name slot in an interaction's line,
 and the privacy handling of those names. The rest of the page designs those, and settles the open questions of #105 as
 recommendations.
 
@@ -55,7 +55,7 @@ logical, carry their own `v`, and `edit_entry` carries the whole entry; the setu
    notes. Interleaving in time order then needs no new code: the log already sorts by `captured_utc, seq`.
 2. The interactions board is defined **exactly like the error board**: a master list of interaction types with a
    position 1 to 11 or none, tile 12 always Other, a retired flag. (BRD, PRF-04 and PRF-05 apply by analogy.)
-3. Saved names live in **their own small store** (a table and its own journal), and entries refer to a person
+3. People live in **their own small store** (a table and its own journal), and entries refer to a person
    **by id only**. Names never enter the log journals, the database's entry tables, the export of the setup (PRF-08) or
    a shared log unless the user chooses so. This is the privacy design (section 5).
 4. Tapping a tile that needs a name **logs first and asks second**: the entry is committed at the moment of the
@@ -80,7 +80,7 @@ New or changed entities, in the style of the PRD's table:
 
 `asks` is one of `nothing`, `person`, `text`. `line_pattern` is the line as the log shows it and may hold `{person}`
 and `{value}`, at most one of each (`{person}` stands for one **or several** people), in the style of NOTE-04's pattern: `Spoke with {person}`, `Played {value}`,
-`Gave {person} {value}`. The editor shows them as [name] and [answer] and has Insert name and Insert answer
+`Gave {person} {value}`. The editor shows them as [person] and [answer] and has Insert person and Insert answer
 buttons, as PRF-06 does. `asks` is derived from the pattern (`person` if it holds `{person}`, and so on) and is
 stored only so a reader need not parse; the editor keeps the two equal. A type with no pattern renders as its name.
 With several people the slot renders as a list in the order picked, `A, B and C` (two: `A and B`); at the `initials` level each name is shortened separately, at `hidden` the slot reads `someone` whatever the number. Two slots at once (`Gave {person} {value}`) asks for the person first, then the text.
@@ -155,7 +155,7 @@ app. A name written into them could never be erased. So:
 | Rule | How it holds |
 |---|---|
 | Acknowledged means durable (DS-01, DS-02) | An interaction goes through the same write path (2.6): journal, `durable_sync`, then database commit, then the toast. |
-| Log first, name second | The entry is committed and acknowledged **before** the picker opens. Dismissing the picker, a kill with the picker open, or a full disk at the second write loses no entry; at worst the entry reads "Spoke with (name not set)" and shows a marker in the Review list. |
+| Log first, name second | The entry is committed and acknowledged **before** the picker opens. Dismissing the picker, a kill with the picker open, or a full disk at the second write loses no entry; at worst the entry reads "Spoke with (person not set)" and shows a marker in the Review list. |
 | A new name, typed in the picker | The `add_person` record is made durable **before** the `edit_entry` that refers to it. If the second write fails, the person is in the list and the entry still has no name. A kill between them leaves someone with no entries, which is harmless. |
 | Corrupt or missing database | The log is rebuilt from the log journals as before. The person table is rebuilt from `people.jsonl`. |
 | Corrupt or missing **person journal** | Entries are intact and show "someone" where a name was; the report says `people_lost: N`. This is a degraded display, not a lost entry, and not a P1. The journal is also quarantined, not deleted. |
@@ -184,7 +184,7 @@ Interaction lines in the export:
 - **Totals** (PRF-10): unchanged and for error types only. The owner decided on 13 Nov 2026 that interactions are not
   counted in totals; they can be added later without a format change to anything stored.
 
-**Saved names in shared text** are a preference, `name_export`, with these values:
+**People's names in shared text** are a preference, `name_export`, with these values:
 
 | Value | Renders Alex Sample as |
 |---|---|
@@ -279,7 +279,7 @@ decision 3).
   (BRD-07). The double-tap rule is kept on the interactions board unless the owner says an interaction is worth a single
   tap (decided: double-tap is kept).
 - A tile with `asks` of `nothing` behaves exactly like an error tile.
-- A tile with `asks: person` logs, shows the toast "Spoke with … Add a name" (the toast stays 5 s), and **opens the
+- A tile with `asks: person` logs, shows the toast "Spoke with … Add people" (the toast stays 5 s), and **opens the
   person picker at once** (4.4). `asks: text` opens the existing question sheet used for note templates (NOTE-04),
   also after the entry is logged.
 - The Other tile opens the list of interaction types not on the board, as on the Errors board.
@@ -295,25 +295,25 @@ The picker is a bottom sheet, within reach of the thumb:
  │ [ Search or type a name   ]  │
  │ Recent                       │
  │ ( Alex Sample ) ( … ) ( … )  │   chips, last-used first, at least 44 pt tall
- │ All names                    │
+ │ All people                   │
  │  Alex Sample                 │
  │  …                           │
- │  + Add "sam" as a new name   │  appears when the text matches nobody
+ │  + Add "sam" as a new person │  appears when the text matches nobody
  └──────────────────────────────┘
 ```
 
 - **A group.** Tapping a chip or row toggles it (a tick), so one interaction can name several people ("Spoke with
   Alex Sample, Jordan Placeholder and Pat Stand-in"); **Done (n)** commits them in one `edit_entry`. A single tap on a
-  name followed by Done is the common one-person case. **Everyone** is a row that ticks all names at the current
+  name followed by Done is the common one-person case. **Everyone** is a row that ticks all people at the current
   location (it stores the people, so a later rename or Forget still works). The limit is 20 people.
-- Typing filters the list. When the typed text matches nobody the first row is **Add "…" as a new name**; when it
+- Typing filters the list. When the typed text matches nobody the first row is **Add "…" as a new person**; when it
   differs from an existing name only by case, spacing or accents, the sheet shows that name instead and does not create
   a duplicate.
 - Names are trimmed, internal spaces are collapsed, they are at most 60 characters and are never empty. A name is shown
   as it was typed.
 - The order is last used first, then alphabetical; people of the current location come first when a person has a
   location (decided: a person may belong to a location).
-- **Skip** leaves the entry as logged. A skipped entry shows "(name not set)" in the Last bar and Review, and Review
+- **Skip** leaves the entry as logged. A skipped entry shows "(person not set)" in the Last bar and Review, and Review
   can set it later in the Edit entry sheet (which gains the same picker).
 - VoiceOver: each chip is a button with the name, the typed row is announced as an action, the sheet is modal.
 - The keyboard is the system one, with the system microphone (NOTE-05); the app adds no recognition.
@@ -322,8 +322,8 @@ The picker is a bottom sheet, within reach of the thumb:
 
 - **Interaction types**, **Interaction board layout** and **Interaction templates** are the same screens as the error
   versions, with the name changed, and share their view-models by parameter (PRF-04, PRF-05, PRF-06 apply).
-- **Names**: a list with add, rename, retire, **Forget** (a confirmation, "Forget Alex Sample? Entries stay but show 'someone'"), and the location. Retired people leave the picker and stay on past entries.
-- **Saved names in shared logs**: the three-value choice of 3.6 with an example line.
+- **People**: a list with add, rename, retire, **Forget** (a confirmation, "Forget Alex Sample? Entries stay but show 'someone'"), and the location. Retired people leave the picker and stay on past entries.
+- **People's names in shared logs**: the three-value choice of 3.6 with an example line.
 
 ### 4.6 Review, edit, history
 
@@ -372,14 +372,14 @@ the board stays off until `interactions_board_enabled`. Every package updates th
 | **I-6 Interactions board and picker** | The board (tiles, count badges, double-tap, hold, undo, Other), log-first flow, person picker sheet, question sheet for `asks: text`, VoiceOver. | I-2, I-3, I-5 |
 | **I-7 Settings** | Interaction types, layout, templates and People screens; Forget; name-export setting; help topics and `check_help_links.py`. | I-2, I-4, I-5 |
 | **I-8 Wide layouts and mock-ups** | iPad and fold layouts of the second board, mock-ups through `tools/visual/`, owner review of the pictures. | I-5, I-6 |
-| **I-9 Review, edit, history** | Rendering and the Edit entry sheet for interactions, "(name not set)" markers, guide page and screenshots (`docs/guide/screenshots.json`). | I-6 |
+| **I-9 Review, edit, history** | Rendering and the Edit entry sheet for interactions, "(person not set)" markers, guide page and screenshots (`docs/guide/screenshots.json`). | I-6 |
 
 ### Tests, by package
 
 | Test | Label | Package | What it checks |
 |---|---|---|---|
 | T-I1-1 `interaction.name_rules` | unit | I-1 | Trim, collapse, 60 limit, empty refused, "alex sample" matches "Alex Sample", accents. |
-| T-I1-2 `interaction.line_render` | unit | I-1 | Patterns with none, one and both slots; a missing name renders "(name not set)"; a pattern with two `{person}` is refused. |
+| T-I1-2 `interaction.line_render` | unit | I-1 | Patterns with none, one and both slots; a missing name renders "(person not set)"; a pattern with two `{person}` is refused. |
 | T-I1-3 `interaction.name_levels` | unit | I-1 | `full`, `initials` (two words, one word, hyphen, non-Latin), `hidden`. |
 | T-I1-5 `interaction.group_render` | unit | I-1 | One, two and three people render `A`, `A and B`, `A, B and C` in pick order; initials per name; hidden gives `someone`; 21 people refused; a duplicate pick is ignored. |
 | T-I1-4 `journal.v2_roundtrip` | unit | I-1 | Encode and decode the new body; CRC; a `v:1` record still decodes; record under `MAX_RECORD_BYTES` at the longest note, answer and label together. |
@@ -407,7 +407,7 @@ the board stays off until `interactions_board_enabled`. Every package updates th
 | T-I5-4 `theme.interaction_hues` | unit | I-5 | The new colour group passes the contrast test in both schemes and the colour-blind separation note is recorded. |
 | T-I6-1 `board.log_first` | ui | I-6 | Double-tap logs the entry before the picker is shown; dismissing the picker keeps the entry; Undo removes it and closes the picker. |
 | T-I6-2 `board.hold_note` | ui | I-6 | BRD-07 on the second board, with the shared composer. |
-| T-I6-6 `picker.group` | ui | I-6 | Tick several, Done (n) commits one edit; Everyone ticks the location's names; the limit of 20 is explained, not silent; Skip with ticks unsaved leaves the entry as logged. |
+| T-I6-6 `picker.group` | ui | I-6 | Tick several, Done (n) commits one edit; Everyone ticks the current location's people; the limit of 20 is explained, not silent; Skip with ticks unsaved leaves the entry as logged. |
 | T-I6-3 `picker.search_and_add` | ui | I-6 | Filter, add a new name, duplicate by case offered as the existing name, recent first, Skip. |
 | T-I6-4 `picker.write_order` | integration | I-6 | A new name is durable before the `edit_entry`; a failing second write leaves the entry and the person. |
 | T-I6-5 `board.voiceover` | ui | I-6 | Tile names, picker chips, the Add row, modal sheet. |
@@ -432,7 +432,7 @@ as not run on a device, per `AGENTS.md`.
 | A tester downgrades after interactions were written | Unsupported and stated; see 3.2. |
 | The wrong board is tapped | Title strip, second hue family, plain-text wording in Review, Undo. |
 | Five tabs crowd a small phone | Label cap and T-I5-3; Review and History could share a menu if the cap fails (owner call then). |
-| Names leak in a shared log | Default initials; the setting is on the Share preview; names never in the setup file. |
+| Names of people leak in a shared log | Default initials; the setting is on the Share preview; names never in the setup file. |
 | Person journal damaged | Degrades to "someone"; never touches entries; counted in the report. |
 
 ## 8. Owner decisions (13 Nov 2026) and what is still open
@@ -452,11 +452,13 @@ as not run on a device, per `AGENTS.md`.
 | 11 | Ids or a name snapshot | Ids only. A rename fixes history; Forget works. |
 | 13 | "Played song" and "Visitor interaction" | Move to interaction types in the sample setup. Nothing is migrated automatically either way. |
 
-**Still open:**
+**Decided after the first round:**
 
-- **12. Where this lives in the plan.** Recommended: a new Stage 14, added to `docs/implementation-plan.md` and the site
-  navigation by package I-0 when this page is approved. The answer given did not cover it.
-- **14. "Everyone" row.** It is new in this revision: should it stick to the current location's names (as drawn), or to
-  every saved name? And is 20 people enough?
-- **15. Wording on the tab and in Settings.** "Interactions" for the tab and "Names" for the saved list are used here. Say
-  if testers with equipment-only use would read either differently.
+- **12. Plan placement:** yes, a new Stage 14, added to `docs/implementation-plan.md` and the site navigation by I-0.
+- **14. "Everyone":** ticks the people of the **current location** only. The limit of 20 stands.
+- **15. Wording:** "Names" is wrong, because the feature is for equipment with humans in the loop (personal equipment,
+  robots interacting with people). The list is **People** in Settings and the picker, the slot is [person], and the
+  tab stays **Interactions**. An interaction with nobody involved never mentions people at all: the People row in
+  Settings is shown only when the second board is on, and a type with no `{person}` slot never opens the picker.
+
+**Still open:** nothing.
