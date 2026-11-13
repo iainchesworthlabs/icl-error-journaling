@@ -1231,7 +1231,8 @@ QString SettingsModel::previewTemplateLine(const QString& pattern, const QString
     context.m_Template = [&scratch_template](NoteTemplateId id) -> const NoteTemplate*
     { return id == scratch_template.m_Id ? &scratch_template : nullptr; };
     const auto line = render_entry_line(scratch, entry.m_Id, context);
-    return line ? QString::fromStdString(*line) : QString();
+    // As the Log screen shows the note: without the marker the export keeps.
+    return line ? QString::fromStdString(export_format::without_note_marker(*line)) : QString();
 }
 
 QString SettingsModel::patternToField(const QString& pattern) const

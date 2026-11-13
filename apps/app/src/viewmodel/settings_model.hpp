@@ -203,7 +203,7 @@ public:
     Q_INVOKABLE QString validatePattern(const QString& pattern) const;
 
     /// The log line a note made from `pattern` and `value` would have, made by the renderer that makes the review
-    /// screen's lines: "10:30 (Free Text) Played Morning Medley". The time is `localSeconds` (seconds since local
+    /// screen's lines: "10:30 Played Morning Medley". The time is `localSeconds` (seconds since local
     /// midnight, 0 to 86399) on today's date in the device zone, in the user's time format; a negative value means
     /// now. A blank `value` is shown as "Morning Medley", the designs' sample. For a pattern that is not valid it
     /// returns "Fix the line to see an example." (check `validatePattern` to style it differently), and for a

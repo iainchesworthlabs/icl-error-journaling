@@ -877,7 +877,7 @@ TEST_CASE("A new template starts with a question and a line made from its name",
         CHECK(settings.validatePattern(stored).isEmpty());
     }
     CHECK(settings.previewTemplateLine(settings.patternFromField(settings.defaultTemplateLine("Played song")), "",
-                                       37800) == "10:30 (Free Text) Played song: Morning Medley");
+                                       37800) == "10:30 Played song: Morning Medley");
 }
 
 TEST_CASE("A template with a bad name, prompt or pattern is refused and nothing is saved",

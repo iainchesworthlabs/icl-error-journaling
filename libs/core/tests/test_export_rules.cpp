@@ -337,3 +337,17 @@ TEST_CASE("PRF-13: the error prefix is in front of the error name; empty means n
     scenario.m_Context.m_ErrorPrefix = "";
     CHECK(render(scenario) == header + "10:05 Wrong Response\n10:06 Mute Delay " + DASH + " asked for Evening Song");
 }
+
+TEST_CASE("without_note_marker drops the marker of a note line for the screens and leaves the export alone",
+          "[export][rule4]")
+{
+    CHECK(export_format::without_note_marker("10:30 (Free Text) Played Morning Medley") == "10:30 Played Morning Medley");
+    CHECK(export_format::without_note_marker("03:05 PM (Free Text) Played x") == "03:05 PM Played x");
+    CHECK(export_format::without_note_marker("10:07 (Free Text)") == "10:07");
+    CHECK(export_format::without_note_marker("10:30 (Free Text) said (Free Text) twice") == "10:30 said (Free Text) twice");
+
+    // The export itself still writes the marker (PRD rule 4).
+    auto scenario = blank_scenario();
+    must_add(scenario.m_Log, free_note_entry(1, on_day(10, 5), "A note"));
+    CHECK(render(scenario) == std::string(HEADER) + "\n\n10:05 (Free Text) A note");
+}

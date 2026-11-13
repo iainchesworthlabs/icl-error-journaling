@@ -58,7 +58,7 @@ public:
     /// full line.
     ///
     /// `lineText` is the line without its time ("T| Wrong Response"). It is split in two so that a screen can colour
-    /// the marker: `prefixText` is the marker of the line ("T|" for an error, "(Free Text)" for a note, empty for a
+    /// the marker: `prefixText` is the marker of the line ("T|" for an error, empty for a note and for a
     /// change of the header) and `restText` is what follows it ("Wrong Response"). `prefixText + " " + restText` is
     /// `lineText` whenever the prefix is not empty, and `restText` is `lineText` when it is.
     enum Role
@@ -191,7 +191,8 @@ private:
         QString m_IdText;
         QString m_Time;
         QString m_Line;
-        QString m_Full; // empty when the entry could not be rendered
+        QString m_Full; // the export line; empty when the entry could not be rendered
+        QString m_Shown; // the line as the screens show it (a note without its marker); empty likewise
         QString m_Kind;
         QString m_Prefix; // the marker of the line, or empty
         QString m_Rest;   // the line after the marker

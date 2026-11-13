@@ -66,19 +66,23 @@ QString kind_text(const Entry& entry)
     return QStringLiteral("header_change");
 }
 
-/// The marker an error line or a note line starts with, without the space after it ("T|", "(Free Text)"); empty for
-/// a change of the header, and for an error line when the error prefix is empty (PRF-13).
+/// The marker an error line starts with, without the space after it ("T|"); empty for a note, for a change of the
+/// header, and for an error line when the error prefix is empty (PRF-13).
 std::string_view line_marker(const Entry& entry, std::string_view error_prefix)
 {
     if (std::holds_alternative<ErrorEntry>(entry.m_Body))
     {
         return error_prefix;
     }
-    if (std::holds_alternative<NoteEntry>(entry.m_Body))
-    {
-        return export_format::NOTE_MARKER;
-    }
+    // A note has no marker on the screen (the export keeps it).
     return {};
+}
+
+/// The line of `entry` as the screens show it: the export line, without the marker of a note.
+std::string line_of_screen(const Entry& entry, const std::string& export_line)
+{
+    return std::holds_alternative<NoteEntry>(entry.m_Body) ? export_format::without_note_marker(export_line)
+                                                           : export_line;
 }
 
 bool is_header_change(const Entry* entry)
@@ -302,7 +306,7 @@ TimelineModel::Summary TimelineModel::make_summary(const ExportContext& context)
     summary.m_Count = static_cast<int>(m_Rows.size());
     if (!m_Rows.empty())
     {
-        summary.m_Last = m_Rows.back().m_Full;
+        summary.m_Last = m_Rows.back().m_Shown;
     }
     if (!summary.m_Ready)
     {
@@ -367,7 +371,7 @@ QVariant TimelineModel::data(const QModelIndex& index, int role) const
         return row.m_Line;
     case Qt::DisplayRole:
     case FULL_LINE:
-        return row.m_Full;
+        return row.m_Shown;
     case KIND:
         return row.m_Kind;
     case PREFIX_TEXT:
@@ -422,8 +426,11 @@ TimelineModel::Row TimelineModel::make_row(const Log& log, const Entry& entry, c
         if (line->starts_with(prefix))
         {
             row.m_Time = text_of(time);
-            row.m_Line = text_of(line->substr(prefix.size()));
+            // A note shows without its marker; the export wording stays in `m_Full`, which Copy line gives.
+            const std::string shown = line_of_screen(entry, *line);
+            row.m_Line = text_of(shown.substr(std::min(prefix.size(), shown.size())));
             row.m_Full = text_of(*line);
+            row.m_Shown = text_of(shown);
             split_marker(entry, row, context.m_ErrorPrefix);
             return row;
         }
@@ -991,7 +998,12 @@ QString TimelineModel::previewLine(const QString& entryId, const QVariantMap& ed
     }
     const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
     const auto line = render_entry_line(scratch, *id, context);
-    return line ? text_of(*line) : QString();
+    if (!line)
+    {
+        return {};
+    }
+    const Entry* saved = scratch.find(*id);
+    return text_of(saved != nullptr ? line_of_screen(*saved, *line) : *line);
 }
 
 bool TimelineModel::saveEntry(const QString& entryId, const QVariantMap& edit)
