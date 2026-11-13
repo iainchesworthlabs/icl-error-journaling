@@ -173,7 +173,7 @@ private:
 {
     return {QStringLiteral("10:05 T| Wrong Response"),
             QStringLiteral("10:20 T| Mute Delay"),
-            QStringLiteral("10:30 (Free Text) Played Morning Medley"),
+            QStringLiteral("10:30 Played Morning Medley"),
             QStringLiteral("11:02 T| Wrong Track Played – asked for Evening Song"),
             QStringLiteral("13:15 Software Version changed: v1.4.2 → v1.5.0"),
             QStringLiteral("13:40 T| Speech Delay")};

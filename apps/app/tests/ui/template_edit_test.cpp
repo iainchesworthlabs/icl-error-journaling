@@ -79,7 +79,7 @@ TEST_CASE("editor.templates: an existing template shows its name, question and l
     CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played [answer]"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
     // The model builds the note line as the Log screen shows it, with its own sample time and answer.
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 (Free Text) Played Morning Medley"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Played Morning Medley"));
     CHECK(preview(world) == QStringLiteral("In the log: ") +
                                 world.model().previewTemplateLine(QStringLiteral("Played {value}"), QString(), 37800));
     CHECK(save_enabled(page));
@@ -151,13 +151,13 @@ TEST_CASE("editor.templates: a line the model refuses shows its message, no exam
     // A good line brings the example back, while the person types: with the token the button writes ...
     enter_text(world, QStringLiteral("patternField"), QStringLiteral("Heard [answer] twice"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 (Free Text) Heard Morning Medley twice"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Heard Morning Medley twice"));
     CHECK(save_enabled(page));
 
     // ... and with {value} typed by hand, which still works.
     enter_text(world, QStringLiteral("patternField"), QStringLiteral("Heard {value} twice"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 (Free Text) Heard Morning Medley twice"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Heard Morning Medley twice"));
     CHECK(save_enabled(page));
 }
 
@@ -195,7 +195,7 @@ TEST_CASE("editor.templates: Insert answer puts [answer] at the cursor, over a s
     CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played [answer][answer]"));
     CHECK(input->property("cursorPosition").toInt() == 15);
     CHECK(input->property("activeFocus").toBool());
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 (Free Text) Played Morning MedleyMorning Medley"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Played Morning MedleyMorning Medley"));
 
     // At the start.
     put_cursor(world, QStringLiteral("patternField"), 0);
@@ -231,7 +231,7 @@ TEST_CASE("editor.templates: Insert answer makes a refused line good", "[ui][edi
     tap(world, QStringLiteral("insertAnswerButton"));
     CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Heard [answer]"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 (Free Text) Heard Morning Medley"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Heard Morning Medley"));
     CHECK(save_enabled(page));
 }
 
@@ -249,7 +249,7 @@ TEST_CASE("editor.templates: a new template starts with a question and a line ma
     enter_text(world, QStringLiteral("nameField"), QStringLiteral("Visitor note"));
     CHECK(field_text(world, QStringLiteral("promptField")) == QStringLiteral("Visitor note?"));
     CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Visitor note: [answer]"));
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 (Free Text) Visitor note: Morning Medley"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Visitor note: Morning Medley"));
     CHECK(save_enabled(page));
 
     // They follow the name while they are untouched ...

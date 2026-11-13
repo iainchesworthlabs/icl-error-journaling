@@ -74,7 +74,7 @@ Item {
         Accessible.announce(message);
     }
 
-    // The same markup as Review's rows: the prefix ("T|", "(Free Text)") in the secondary colour, and both parts with the
+    // The same markup as Review's rows: the prefix of an error line ("T|") in the secondary colour, and both parts with the
     // characters that it reads as markup written out.
     function styledLine(prefix: string, rest: string): string {
         const safe = value => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

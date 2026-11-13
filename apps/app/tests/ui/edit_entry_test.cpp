@@ -319,10 +319,10 @@ TEST_CASE("edit.save_cancel: Cancel writes nothing, Save saves once, and an unch
         CHECK(e.in("editSheet", "editType")->isVisible() == false);
         CHECK(e.in("editSheet", "editNote")->property("text").toString() == QStringLiteral("Played Morning Medley"));
         e.set_note(QStringLiteral("Played Evening Song"));
-        CHECK(e.preview() == QStringLiteral("10:30 (Free Text) Played Evening Song"));
+        CHECK(e.preview() == QStringLiteral("10:30 Played Evening Song"));
         e.save();
         e.commit();
-        CHECK(e.lines()[2] == QStringLiteral("10:30 (Free Text) Played Evening Song"));
+        CHECK(e.lines()[2] == QStringLiteral("10:30 Played Evening Song"));
     }
 }
 
@@ -564,7 +564,7 @@ TEST_CASE("edit.dst: a time in the hour the clocks skip is refused with the mode
     options.entries = std::vector<Entry>{entry};
     options.header = header;
     Editor e(std::move(options));
-    REQUIRE(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("01:30 (Free Text) Checked the volume")}));
+    REQUIRE(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("01:30 Checked the volume")}));
 
     e.open(1);
     CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("01:30"));
@@ -603,10 +603,10 @@ TEST_CASE("edit.dst: a time in the hour the clocks skip is refused with the mode
     e.done_time();
     CHECK_FALSE(e.time_open());
     REQUIRE(e.can_save());
-    CHECK(e.preview() == QStringLiteral("03:30 (Free Text) Checked the volume"));
+    CHECK(e.preview() == QStringLiteral("03:30 Checked the volume"));
     e.save();
     e.commit();
-    CHECK(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("03:30 (Free Text) Checked the volume")}));
+    CHECK(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("03:30 Checked the volume")}));
 }
 
 TEST_CASE("edit.dst: a time in the repeated hour is allowed and says that the first one is used", "[ui][edit]")
@@ -638,7 +638,7 @@ TEST_CASE("edit.dst: a time in the repeated hour is allowed and says that the fi
     CHECK(e.can_save());
     e.save();
     e.commit();
-    CHECK(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("02:30 (Free Text) Checked the volume")}));
+    CHECK(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("02:30 Checked the volume")}));
 }
 
 namespace

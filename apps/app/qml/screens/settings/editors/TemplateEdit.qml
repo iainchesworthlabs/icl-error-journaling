@@ -15,7 +15,7 @@ import ErrorJournalingApp
 // follows the name until the person edits it. The line is checked while the person types, by `settings.validatePattern`.
 // A line the view model refuses (no answer in it, a curly bracket on its own, another word in brackets, over 500
 // characters) shows its message under the field, has no example ("Fix the line to see an example.") and leaves Save
-// dimmed. A good line shows "In the log: 10:30 (Free Text) Played Morning Medley", made by the model with a sample time
+// dimmed. A good line shows "In the log: 10:30 Played Morning Medley", made by the model with a sample time
 // and answer. Save asks the view model (`addTemplate` or `updateTemplate`); a refusal of the name or the question is
 // shown in a banner and cleared by the next edit.
 //
@@ -52,7 +52,7 @@ EditorPage {
     // The message for the line now in the field; empty when the renderer accepts it.
     readonly property string patternMessage: root.settings.validatePattern(root.draftPattern)
     readonly property bool patternRefused: root.patternMessage.length > 0
-    // The note line the pattern makes, as the Log screen would show it ("10:30 (Free Text) Played Morning Medley"): the
+    // The note line the pattern makes, as the Log screen would show it ("10:30 Played Morning Medley"): the
     // model builds it, with its own sample time and answer, or says "Fix the line to see an example.".
     readonly property string previewLine: root.settings.previewTemplateLine(root.draftPattern, "", root.sampleSeconds)
     readonly property string previewText: root.patternRefused ? root.previewLine : qsTr("In the log: %1").arg(root.previewLine)

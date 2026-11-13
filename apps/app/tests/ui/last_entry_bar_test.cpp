@@ -56,10 +56,10 @@ TEST_CASE("last_bar.line: shows the latest line and the count of today", "[ui][l
     CHECK(rig.geometry(bar).height() == 44);
 
     // It follows the model: another line and another count.
-    bar->setProperty("lastLine", QStringLiteral("10:21  (Free Text) Sam Example waved to UNIT-27"));
+    bar->setProperty("lastLine", QStringLiteral("10:21  Sam Example waved to UNIT-27"));
     bar->setProperty("entryCount", 8);
     rig.layout();
-    CHECK(text_of(rig, "lastBarLine") == QStringLiteral("10:21  (Free Text) Sam Example waved to UNIT-27"));
+    CHECK(text_of(rig, "lastBarLine") == QStringLiteral("10:21  Sam Example waved to UNIT-27"));
     CHECK(text_of(rig, "lastBarCount") == QStringLiteral("8 today"));
 
     // The name has the line and the count whole.
@@ -68,7 +68,7 @@ TEST_CASE("last_bar.line: shows the latest line and the count of today", "[ui][l
         if (node.m_Item == bar)
         {
             CHECK(node.m_Name ==
-                  QStringLiteral("Last entry: 10:21  (Free Text) Sam Example waved to UNIT-27, 8 today"));
+                  QStringLiteral("Last entry: 10:21  Sam Example waved to UNIT-27, 8 today"));
             CHECK(node.m_Description == QStringLiteral("Opens Review"));
         }
     }
@@ -113,7 +113,7 @@ TEST_CASE("last_bar.line: on one row the caption sits on the line's baseline", "
 TEST_CASE("last_bar.line: a long line is cut on the row, and the name keeps it whole", "[ui][last_bar]")
 {
     UiRig rig;
-    const QString line = QStringLiteral("10:24  (Free Text) Sam Example reported that the downstream ticket indexer "
+    const QString line = QStringLiteral("10:24  Sam Example reported that the downstream ticket indexer "
                                         "showed the entry twice on UNIT-27 at North Site");
     QQuickItem* bar = load_bar(rig, line, 12);
     QQuickItem* text = rig.find(QStringLiteral("lastBarLine"));

@@ -4,8 +4,8 @@ import QtQuick
 import ErrorJournalingApp
 
 // The "Last" bar of the Log screen (Stage 4, package 4.5): the latest line of the log, how many entries there are today,
-// and a chevron. A tap opens Review. The line is the one TimelineModel offers as `lastLine`, in the export wording, and the
-// bar never builds one itself.
+// and a chevron. A tap opens Review. The line is the one TimelineModel offers as `lastLine`, as the screens show it (a note
+// without its marker), and the bar never builds one itself.
 //
 //   lastLine     the latest line, or empty when the log has no entry (timeline.lastLine)
 //   entryCount   the entries of today (timeline.entryCount)

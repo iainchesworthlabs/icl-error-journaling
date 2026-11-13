@@ -386,7 +386,7 @@ void Day::step_6_draft_and_note()
     CHECK(rig.platform().haptic_count(ej::bridge::HapticKind::SUCCESS) == 1);
     CHECK(rig.timeline().entry_count() == 4);
     CHECK(line_of(entry_starting(QStringLiteral("10:30 "))) ==
-          QStringLiteral("10:30 (Free Text) Played Morning Medly"));
+          QStringLiteral("10:30 Played Morning Medly"));
 }
 
 // ------------------------------------------------------------------------------------------------------- 7
@@ -539,7 +539,7 @@ void Day::step_12_review_edits()
         CHECK(rig.timeline().validateEdit(note, edit).isEmpty());
         CHECK(rig.timeline().saveEntry(note, edit));
         rig.settle();
-        CHECK(line_of(note) == QStringLiteral("10:30 (Free Text) Played Morning Medley"));
+        CHECK(line_of(note) == QStringLiteral("10:30 Played Morning Medley"));
     }
     // b) An attached note on the 11:02 error; the preview is the line that is then saved.
     {
@@ -794,7 +794,10 @@ void Day::step_18_history()
     {
         lines.push_back(text_in(review, row, "fullLine"));
     }
-    CHECK(lines == golden_lines().mid(6, 6));
+    // The review screen shows the export lines, except that a note has no "(Free Text)" marker on the screen.
+    QStringList expected = golden_lines().mid(6, 6);
+    expected.replaceInStrings(QStringLiteral(" (Free Text)"), QString());
+    CHECK(lines == expected);
 
     rig.platform().answer_with(ej::bridge::ShareOutcome::SHARED);
     CHECK(rig.share().shareLog(log_id));

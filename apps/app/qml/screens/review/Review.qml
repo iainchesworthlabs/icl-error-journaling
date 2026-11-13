@@ -597,7 +597,7 @@ Item {
                                 font: Theme.font.rowText.font
                                 lineHeightMode: Text.FixedHeight
                                 lineHeight: root.rowPitch
-                                // The prefix ("T|", "(Free Text)") is in the secondary colour, as the mock-ups have it.
+                                // The prefix of an error line ("T|") is in the secondary colour, as the mock-ups have it.
                                 textFormat: line.prefixText.length > 0 ? Text.StyledText : Text.PlainText
                                 text: line.prefixText.length > 0 ? root.styledLine(line.prefixText, line.restText) : line.lineText
                                 wrapMode: Text.WordWrap

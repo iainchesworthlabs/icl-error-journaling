@@ -395,7 +395,7 @@ TEST_CASE("Rows follow time order, and entries at the same time keep insertion o
     CHECK(row_text(rig.model(), 3, TimelineModel::ENTRY_ID) == text_of(5));
     CHECK(row_text(rig.model(), 4, TimelineModel::ENTRY_ID) == text_of(1));
     CHECK(full_line(rig.model(), 0) == "11:10 T| First");
-    CHECK(full_line(rig.model(), 2) == "11:20 (Free Text) Same minute");
+    CHECK(full_line(rig.model(), 2) == "11:20 Same minute");
     CHECK(row_text(rig.model(), 0, TimelineModel::KIND) == "error");
     CHECK(row_text(rig.model(), 2, TimelineModel::KIND) == "note");
     CHECK(rig.model().rowOf(text_of(5)) == 3);
@@ -541,8 +541,9 @@ TEST_CASE("Every row is its time and its line, in every time format", "[viewmode
         configuration.m_TimeFormat = format;
         rig.config().set(configuration);
 
-        const std::vector<QString> expected = timeline_of(rig.export_now(rig.document().log()));
+        std::vector<QString> expected = timeline_of(rig.export_now(rig.document().log()));
         REQUIRE(expected.size() == 5);
+        expected[2].remove(QStringLiteral(" (Free Text)")); // the note: the screens show it without the marker
         REQUIRE(static_cast<std::size_t>(rig.model().rowCount()) == expected.size());
         for (int row = 0; row < rig.model().rowCount(); ++row)
         {
@@ -572,14 +573,24 @@ TEST_CASE("Every entry of every golden scenario reads as the export does", "[vie
 
             const auto reference = render_export(scenario.m_Log, scenario.m_Context);
             REQUIRE(reference.has_value());
-            const std::vector<QString> expected = timeline_of(*reference);
+            std::vector<QString> expected = timeline_of(*reference);
+            // The export has the marker after the time; the screens show a note without it.
+            for (QString& line : expected)
+            {
+                const auto marker = line.indexOf(QStringLiteral(" (Free Text)"));
+                if (marker >= 0 && marker <= 9)
+                {
+                    line.remove(marker, QStringLiteral(" (Free Text)").size());
+                }
+            }
 
             REQUIRE(static_cast<std::size_t>(rig.model().rowCount()) == expected.size());
             for (int row = 0; row < rig.model().rowCount(); ++row)
             {
                 CHECK(full_line(rig.model(), row) == expected[static_cast<std::size_t>(row)]);
-                CHECK(row_text(rig.model(), row, TimelineModel::TIME_TEXT) + " " +
-                          row_text(rig.model(), row, TimelineModel::LINE_TEXT) ==
+                // An empty note has no words after its time, and no marker on the screen: just the time.
+                const QString words = row_text(rig.model(), row, TimelineModel::LINE_TEXT);
+                CHECK(row_text(rig.model(), row, TimelineModel::TIME_TEXT) + (words.isEmpty() ? QString() : " " + words) ==
                       full_line(rig.model(), row));
             }
             CHECK(rig.model().header_text().toStdString() ==
@@ -751,12 +762,12 @@ TEST_CASE("Edit: the error type, the attached note and the note text each re-ren
     {
         REQUIRE(rig.model().saveEntry(text_of(3), QVariantMap{{"noteText", "Robot rebooted"}}));
         rig.commit();
-        CHECK(full_line(rig.model(), 2) == "11:30 (Free Text) Robot rebooted");
+        CHECK(full_line(rig.model(), 2) == "11:30 Robot rebooted");
 
         const QString played = QString::fromStdString(configuration.m_Templates[0].m_Id.format());
         REQUIRE(rig.model().saveEntry(text_of(3), QVariantMap{{"noteText", "Morning Medley"}, {"templateId", played}}));
         rig.commit();
-        CHECK(full_line(rig.model(), 2) == "11:30 (Free Text) Played Morning Medley");
+        CHECK(full_line(rig.model(), 2) == "11:30 Played Morning Medley");
         CHECK(rig.model().entryForEdit(text_of(3)).value("templateId") == played);
         CHECK(rig.model().entryForEdit(text_of(3)).value("noteText") == "Morning Medley");
     }
@@ -1736,8 +1747,9 @@ TEST_CASE("A row splits its line into the marker and the rest", "[viewmodel][tim
     CHECK(row_text(rig.model(), 1, TimelineModel::REST_TEXT) ==
           "Wrong Track Played \xE2\x80\x93 asked for Evening Song");
 
-    CHECK(row_text(rig.model(), 2, TimelineModel::PREFIX_TEXT) == "(Free Text)");
+    CHECK(row_text(rig.model(), 2, TimelineModel::PREFIX_TEXT).isEmpty()); // a note has no marker on the screen
     CHECK(row_text(rig.model(), 2, TimelineModel::REST_TEXT) == "Played Morning Medley");
+    CHECK(full_line(rig.model(), 2) == "10:30 Played Morning Medley");
 
     // A change of the header has no marker: the rest is the whole line.
     CHECK(row_text(rig.model(), 3, TimelineModel::PREFIX_TEXT).isEmpty());
@@ -1758,9 +1770,10 @@ TEST_CASE("The marker and the rest make the line again", "[viewmodel][timeline]"
     {
         const QString prefix = row_text(rig.model(), row, TimelineModel::PREFIX_TEXT);
         const QString rest = row_text(rig.model(), row, TimelineModel::REST_TEXT);
-        CHECK(prefix + " " + rest == row_text(rig.model(), row, TimelineModel::LINE_TEXT));
-        CHECK(row_text(rig.model(), row, TimelineModel::TIME_TEXT) + " " + prefix + " " + rest ==
-              full_line(rig.model(), row));
+        // A note has no marker on the screen: its rest is its line.
+        const QString whole = prefix.isEmpty() ? rest : prefix + " " + rest;
+        CHECK(whole == row_text(rig.model(), row, TimelineModel::LINE_TEXT));
+        CHECK(row_text(rig.model(), row, TimelineModel::TIME_TEXT) + " " + whole == full_line(rig.model(), row));
     }
 }
 
