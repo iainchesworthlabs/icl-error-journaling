@@ -533,6 +533,24 @@ TEST_CASE("composer.cross_cutting: with the microphone, on and off", "[ui][compo
     expect_clean(check_motion_reduced(f.rig));
 }
 
+TEST_CASE("composer.large_text: at rest the box holds one whole line at the largest text size, and the card grows with it",
+          "[ui][composer]")
+{
+    Fixture f;
+    // One short word: a longer text wraps at this size, and the box then shows its first lines and opens with focus.
+    f.host->setProperty("draft", QStringLiteral("A"));
+    QQuickItem* box = f.rig.find(QStringLiteral("noteBox"));
+    REQUIRE(box != nullptr);
+    f.rig.layout();
+    const double normal_card = f.rig.geometry(f.composer).height();
+    f.rig.set_text_scale(3.1);
+    f.rig.layout();
+    // The line is not cut: the box is at least as high as the text in it, and the Add button is as high as the box.
+    CHECK(f.rig.geometry(box).height() >= f.field->property("contentHeight").toDouble());
+    CHECK(f.rig.geometry(f.add).height() == f.rig.geometry(box).height());
+    CHECK(f.rig.geometry(f.composer).height() > normal_card);
+}
+
 TEST_CASE("composer.skeleton: shapes only, with the same geometry as the card", "[ui][composer]")
 {
     Fixture f;
