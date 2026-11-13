@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include <algorithm>
+#include <array>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -11,14 +14,39 @@
 namespace ej
 {
 
+inline constexpr std::size_t MAX_EXTRA_LABEL_LENGTH = 20;
+
 /// A software version with a name: "Influencer" and 4.5.0. The robot's own version is the header's software version and
 /// has no label of its own in the data; the screens call it "Robot".
-struct LabelledVersion
+///
+/// The label is kept in the object, as `SoftwareVersion` keeps its commit, and not in a string: a header is copied and
+/// destroyed inside the journal record variants, and GCC's analysis of those reports a string held there as possibly
+/// uninitialised (a false warning that stops the build; see journal_seed.cpp). A label is at most
+/// `MAX_EXTRA_LABEL_LENGTH` characters; a longer one is cut, so callers check it with `normalize_label` first.
+class LabelledVersion
 {
-    std::string m_Label;
+public:
+    LabelledVersion(std::string_view label, SoftwareVersion version) : m_Version(version)
+    {
+        m_LabelLength = static_cast<std::uint8_t>(std::min(label.size(), m_LabelChars.size()));
+        std::copy_n(label.begin(), m_LabelLength, m_LabelChars.begin());
+    }
+
+    [[nodiscard]] std::string_view label() const
+    {
+        return {m_LabelChars.data(), m_LabelLength};
+    }
+
     SoftwareVersion m_Version;
 
-    friend bool operator==(const LabelledVersion&, const LabelledVersion&) = default;
+    friend bool operator==(const LabelledVersion& a, const LabelledVersion& b)
+    {
+        return a.label() == b.label() && a.m_Version == b.m_Version;
+    }
+
+private:
+    std::array<char, 20> m_LabelChars{};
+    std::uint8_t m_LabelLength = 0;
 };
 
 /// The other software versions of a log (HDR-10), in the order the person gave them.
@@ -35,7 +63,6 @@ enum class ExtraVersionsError
     MALFORMED             // stored text with a line that is not label=version
 };
 
-inline constexpr std::size_t MAX_EXTRA_LABEL_LENGTH = 20;
 
 /// The name the screens and the log give to the header's own software version.
 inline constexpr std::string_view ROBOT_LABEL = "Robot";

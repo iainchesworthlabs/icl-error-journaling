@@ -69,12 +69,12 @@ Result<void, ExtraVersionsError> check_extra_versions(const ExtraVersions& versi
     std::vector<std::string> seen;
     for (const auto& version : versions)
     {
-        const auto label = normalize_label(version.m_Label);
+        const auto label = normalize_label(version.label());
         if (!label)
         {
             return fail(label.error());
         }
-        if (*label != version.m_Label)
+        if (*label != version.label())
         {
             return fail(ExtraVersionsError::LABEL_CHARACTERS);
         }
@@ -101,7 +101,7 @@ std::string stored_extra_versions(const ExtraVersions& versions)
         {
             out.push_back(LINE_END);
         }
-        out += version.m_Label;
+        out += version.label();
         out.push_back(SEPARATOR);
         out += version.m_Version.stored();
     }
@@ -130,7 +130,11 @@ Result<ExtraVersions, ExtraVersionsError> parse_extra_versions(std::string_view 
         {
             return fail(ExtraVersionsError::INVALID_VERSION);
         }
-        out.push_back(LabelledVersion{std::string(line.substr(0, separator)), *version});
+        if (line.substr(0, separator).size() > MAX_EXTRA_LABEL_LENGTH)
+        {
+            return fail(ExtraVersionsError::LABEL_TOO_LONG);
+        }
+        out.push_back(LabelledVersion{line.substr(0, separator), *version});
     }
     if (out.empty())
     {
@@ -145,7 +149,7 @@ Result<ExtraVersions, ExtraVersionsError> parse_extra_versions(std::string_view 
 
 std::string extra_version_line_label(const LabelledVersion& version)
 {
-    return version.m_Label + " Version";
+    return std::string(version.label()) + " Version";
 }
 
 std::string summarize_extra_versions(const ExtraVersions& versions)
@@ -157,7 +161,7 @@ std::string summarize_extra_versions(const ExtraVersions& versions)
         {
             out += " \xC2\xB7 ";
         }
-        out += version.m_Label + ' ' + version.m_Version.display();
+        out += std::string(version.label()) + ' ' + version.m_Version.display();
     }
     return out;
 }

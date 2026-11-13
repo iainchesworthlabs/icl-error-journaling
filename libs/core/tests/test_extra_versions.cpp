@@ -154,3 +154,9 @@ TEST_CASE("The export prints a line for each extra version after the software ve
           "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation:\nSoftware Version: v1.2.3\n"
           "Influencer Version: v4.5.0\nGateway Version: v2.0.1");
 }
+
+TEST_CASE("A stored label that is too long is refused and not cut", "[extra-versions]")
+{
+    CHECK(parse_extra_versions("123456789012345678901=1.0.0").error() == ExtraVersionsError::LABEL_TOO_LONG);
+    CHECK(parse_extra_versions("12345678901234567890=1.0.0").value().at(0).label() == "12345678901234567890");
+}

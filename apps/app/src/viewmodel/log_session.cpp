@@ -356,7 +356,7 @@ QVariantList LogSession::extra_versions() const
     for (const auto& extra : header_in_force().m_ExtraVersions)
     {
         QVariantMap row;
-        row.insert(QStringLiteral("label"), to_qstring(extra.m_Label));
+        row.insert(QStringLiteral("label"), to_qstring(std::string(extra.label())));
         row.insert(QStringLiteral("version"), to_qstring(extra.m_Version.format()));
         row.insert(QStringLiteral("commit"), to_qstring(std::string(extra.m_Version.commit())));
         rows.append(row);
@@ -1031,7 +1031,7 @@ ExtraRows read_extra_rows(const QVariantList& rows)
             continue;
         }
         const bool twice = std::ranges::any_of(out.m_Versions, [&](const LabelledVersion& other)
-                                               { return QString::fromStdString(other.m_Label).compare(to_qstring(*kept), Qt::CaseInsensitive) == 0; });
+                                               { return QString::fromStdString(std::string(other.label())).compare(to_qstring(*kept), Qt::CaseInsensitive) == 0; });
         if (twice)
         {
             fail_row(ExtraVersionsError::DUPLICATE_LABEL);
