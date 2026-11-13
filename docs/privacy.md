@@ -1,6 +1,6 @@
 # Privacy
 
-Last changed: 12 November 2026.
+Last changed: 13 November 2026.
 
 **Field Test collects no data about you.** It has no accounts, no analytics, no advertising and no crash reporting,
 and it does not send anything over the internet. This page says what that means in practice.
@@ -11,6 +11,15 @@ and it does not send anything over the internet. This page says what that means 
   your name as the facilitator).
 - **Your setup.** The error types, places and note templates you set up, and your preferences, such as the time format.
 - **A few settings of the app itself**, such as whether you have closed the tip on the Log screen.
+
+## The microphone
+
+Field Test uses the microphone for one thing: dictating a note. Nothing listens until you tap the microphone in the note
+field, and it stops when you tap it again, after a minute of silence, or when you leave the app. The first time, the
+phone asks you to allow the microphone and speech recognition. The words are recognised by your phone, on the phone:
+no sound and no text are sent to the developer, to Apple, to Google or to anyone else, and the sound is not recorded or
+kept. If your phone cannot recognise speech on the phone for your language, the microphone is not shown. You can turn
+the permission off at any time in the phone's Settings; typing keeps working.
 
 ## Where it is stored
 

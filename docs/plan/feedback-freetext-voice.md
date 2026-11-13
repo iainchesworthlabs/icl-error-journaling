@@ -63,43 +63,56 @@ A tall box that is always there would shrink the board (`roomBelowComposer`). In
 | `unit`: journal round trip | a note of 10,000 code points with `\n` and `\r\n` survives encode, decode and recovery |
 | `unit`: export | a multi-line note still exports as one line (rule 9, unchanged) |
 
-## B. Voice (optional)
+## B. Voice
 
-**Not to be implemented until the owner has reviewed this section.** Part A lands first as its own pull request.
+**Status:** approved by the owner (13 Nov 2026), including the amendment of NOTE-05. The owner's reading of NOTE-05:
+"no speech recognition of its own" means do not invent recognition or add a speech library; use the phone's facilities.
 
-### Requirement
+### What it is
 
-Add **NOTE-07** and amend **NOTE-05**: the box has a microphone button, off by default (a switch in Settings, "Voice
-input"). Tapping it starts the phone's own dictation into the box. The app does not record, keep or send audio.
+- A microphone inside the note box on the first line, at the trailing edge (the left edge in a right-to-left layout).
+  One tap starts dictation at the cursor, the microphone shows it is listening, the words appear as they are heard (each
+  guess replaces the one before it), and a second tap, **60 seconds of silence**, the app going to the background, or an
+  error ends it. The text is ordinary text afterwards.
+- There is no Settings switch: nothing listens until the person taps the microphone, and where the phone cannot
+  recognise speech on the phone for the person's language the microphone is not shown (the owner's wording).
+- PRD: NOTE-05 amended, NOTE-07 added.
 
 ### What the platforms give us
 
 | Platform | Mechanism | On device? |
 |---|---|---|
-| iOS | `SFSpeechRecognizer` with `requiresOnDeviceRecognition = true`, started from the button | Yes when the language supports it; if not, the button says dictation is not available offline and does nothing (never a silent fallback to Apple's servers) |
-| Android | `SpeechRecognizer.createOnDeviceSpeechRecognizer` (API 31+) with `EXTRA_PREFER_OFFLINE` | Yes on API 31+ with the language pack; below that the button is hidden |
-| Desktop rig | none; the button is hidden | n/a |
+| iOS | `SFSpeechRecognizer` fed by `AVAudioEngine`, `requiresOnDeviceRecognition = true` | Yes; `supportsOnDeviceRecognition` decides `available()`. Never the server |
+| Android 13 and later (API 33) | `SpeechRecognizer.createOnDeviceSpeechRecognizer`, `EXTRA_PREFER_OFFLINE` | Yes; `isOnDeviceRecognitionAvailable` decides `available()` |
+| Android 9 to 12 (the app's minimum is 28) | none: the ordinary recogniser may use a server | No: the microphone is not shown. Said here rather than shipping cloud transcription silently |
+| Desktop | none | The stub is unavailable |
 
-Open point for the owner: iOS's keyboard dictation key remains available to every user whatever we do; the button adds
-a one-tap start and the on-device guarantee. The rule "no `#if` on a platform" holds: a `dictation` interface in
-`libs/ios_bridge/include`, one implementation per `src/platform/<os>/`.
+The platform code is in `libs/ios_bridge/src/platform/<os>/dictation.*` behind `Dictation` (`dictation.hpp`), with no
+`#if`. The portable part (`QmlBridge`: one run at a time, restart when a recogniser ends a run by itself, the 60 second
+silence, the 1.5 second wait for the last words after the second tap, stop on the background) is tested with a fake.
 
-### Privacy and permissions
+### Permissions and privacy
 
-- Permission strings: iOS `NSSpeechRecognitionUsageDescription` and `NSMicrophoneUsageDescription`; Android
-  `RECORD_AUDIO`, asked on the first tap, never at launch.
-- Denied or restricted: a plain message under the box ("Voice input is off for this app in Settings"), the button stays,
-  nothing else changes.
-- `docs/privacy.md`, the privacy manifest and the store answers (`docs/plan/stage-11.md`) are updated: microphone use,
-  on device, nothing stored or sent.
+- iOS: `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription` in `Info.plist.in`; `check_ios_plist.py`
+  and `verify_app.sh` now require these two and refuse any other usage text. Android: `RECORD_AUDIO`, the only
+  permission `check_android_package.py` allows. Both are asked for at the first tap, never at launch.
+- Refusal: a sentence under the box ("Voice input is turned off for this app..."); typing is unaffected, the microphone
+  stays so the person can try again after changing the setting.
+- `docs/privacy.md`, `docs/plan/stage-11.md` (App Privacy and Data safety answers), the user guide and the changelog are
+  updated. App Privacy stays "Data Not Collected": nothing leaves the phone.
 
 ### Tasks and tests
 
-To be broken down after A merges; the interface is tested with a fake (label `unit`/`ui`): partial results replace the
-dictated span, a final result commits it, denial shows the message, the button is hidden when unsupported, off by
-default, RTL puts the button on the left.
+| # | Task | Tests |
+|---|---|---|
+| B1 | `Dictation` interface, desktop stub, iOS and Android implementations, `PlatformServices` | `unit`: platform layout check; CI builds iOS and Android |
+| B2 | `QmlBridge`: `dictationAvailable`, `dictating`, `startDictation`, `stopDictation`, signals | `unit` `dictation.*` (12 cases): unavailable, words, stop with last words, no answer after stop, restart, no spin, silence, refusals, stale callbacks, background |
+| B3 | `NoteComposer` microphone, text insertion, message; `LogScreen` wiring | `ui` `composer.mic`, `composer.dictation_text`, `composer.dictation_message`, RTL, cross-cutting; `log.dictation` |
+| B4 | Package checks: plist, manifest | `unit` Python: `test_ios_plist.py`, `test_android_package.py` |
+| B5 | Docs: PRD, privacy, stage 11, guide, changelog | `check_help_links`, precheck |
 
 ## Not run on a device
 
 Nothing in A or B has run on an iPhone, iPad or Android phone. A is checked on the desktop rig only. B's platform code
-is built in CI only (no Mac on the developer machine).
+is built in CI only (no Mac on the developer machine); the microphone permission prompts, the recogniser's accuracy, the
+language check and the on-device guarantee need a real iPhone and a real Android 13+ phone.

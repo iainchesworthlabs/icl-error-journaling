@@ -42,6 +42,8 @@ GOOD = {
     ],
     "LSSupportsOpeningDocumentsInPlace": False,
     "CADisableMinimumFrameDurationOnPhone": True,
+    "NSMicrophoneUsageDescription": "Dictation listens to you while you tap the microphone.",
+    "NSSpeechRecognitionUsageDescription": "Dictation turns what you say into text on this phone.",
 }
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -143,6 +145,11 @@ class PlistCheckTest(unittest.TestCase):
 
     def test_usage_description_fails(self) -> None:
         self.assertTrue(any("NSCameraUsageDescription" in p for p in broken(lambda p: p.update(NSCameraUsageDescription="x"))))
+
+    def test_dictation_usage_texts_are_required(self) -> None:
+        for key in ("NSMicrophoneUsageDescription", "NSSpeechRecognitionUsageDescription"):
+            self.assertTrue(any(key in p for p in broken(lambda p: p.pop(key))))
+            self.assertTrue(any(key in p for p in broken(lambda p: p.update({key: " "}))))
 
     def test_missing_constant_is_reported(self) -> None:
         self.assertTrue(plist_check.check(GOOD, {}))

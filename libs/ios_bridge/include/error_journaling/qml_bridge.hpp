@@ -9,6 +9,8 @@
 #include <QObject>
 #include <QString>
 #include <QTimer>
+#include <chrono>
+#include <cstdint>
 #include <memory>
 
 namespace ej::bridge
@@ -31,6 +33,11 @@ class QmlBridge : public QObject
     Q_PROPERTY(bool reduceMotion READ reduce_motion NOTIFY reduceMotionChanged)
     /// VoiceOver is running. For tests and diagnostics.
     Q_PROPERTY(bool voiceOverRunning READ voice_over_running NOTIFY voiceOverRunningChanged)
+    /// The device can turn speech into text on the device itself (Dictation::available). False where it cannot, and QML
+    /// then shows no microphone.
+    Q_PROPERTY(bool dictationAvailable READ dictation_available CONSTANT)
+    /// Listening now: from `startDictation` until `dictationEnded`.
+    Q_PROPERTY(bool dictating READ dictating NOTIFY dictatingChanged)
     /// The exit-gate figures as one line (launch time; last, median and worst of the recent taps), to read off the
     /// phone.
     Q_PROPERTY(QString timingSummary READ timing_summary NOTIFY timingChanged)
@@ -41,6 +48,8 @@ public:
 
     [[nodiscard]] bool share_available() const noexcept;
     [[nodiscard]] bool sharing() const noexcept;
+    [[nodiscard]] bool dictation_available() const noexcept;
+    [[nodiscard]] bool dictating() const noexcept;
     [[nodiscard]] double text_scale() const noexcept;
     [[nodiscard]] bool reduce_motion() const noexcept;
     [[nodiscard]] bool voice_over_running() const noexcept;
@@ -70,6 +79,19 @@ public:
     /// The shell's board accepts taps (the Log tab is shown and the session has loaded): the end of the launch timing.
     /// Emits `boardEnabled`, which the application connects to the launch tracker. Safe to call again.
     Q_INVOKABLE void reportBoardEnabled();
+    /// Starts dictation: asks for the microphone and speech recognition if they have not been asked for, then listens.
+    /// Does nothing while listening, or where `dictationAvailable` is false. It ends when `stopDictation` is called, when
+    /// nothing is heard for `DICTATION_SILENCE_LIMIT`, when the application goes to the background, or on an error, and
+    /// always with one `dictationEnded`. The recogniser may end a run by itself after a pause in the speech (Android
+    /// does); the bridge then starts another so that one tap covers a whole note, and `dictationSegment` marks each start.
+    Q_INVOKABLE void startDictation();
+    /// Ends dictation (the second tap on the microphone). Does nothing when not listening.
+    Q_INVOKABLE void stopDictation();
+    /// How long dictation waits in silence before it stops by itself.
+    static constexpr std::chrono::milliseconds DICTATION_SILENCE_LIMIT{60'000};
+    /// For tests: the silence limit of this bridge.
+    void set_dictation_silence_limit(std::chrono::milliseconds limit);
+
     /// Fires the impact haptic. Call it from onPressed (touch-down), never from onClicked or onReleased: the entry is
     /// recorded on the press too, and a finger sliding off must not fire a haptic without an entry. `pressTimestamp` is
     /// the touch's event timestamp in milliseconds (`point.pressTimestamp` of the pointer handler), used only for the
@@ -85,6 +107,13 @@ signals:
     /// `activityType` is empty when no activity was chosen.
     void shareFinished(const QString& outcome, const QString& activityType);
     void sharingChanged();
+    void dictatingChanged();
+    /// A new stretch of speech begins: the text that follows is separate from what came before it.
+    void dictationSegment();
+    /// The words of the current stretch so far, each call replacing the one before it.
+    void dictationText(const QString& text);
+    /// Dictation ended. `reason` is "finished", "denied", "unavailable" or "failed".
+    void dictationEnded(const QString& reason);
     /// One signal for each setting that changed, and none when the value is the same.
     void textScaleChanged();
     void reduceMotionChanged();
@@ -100,6 +129,8 @@ private:
     void queue_timing_changed();
     void refresh_accessibility();
     void deliver(const ShareResult& result);
+    void begin_dictation_segment();
+    void end_dictation(const QString& reason);
 
     PlatformServices m_Services;
     HapticPolicy m_HapticPolicy;
@@ -109,6 +140,12 @@ private:
     SharePresenter m_Presenter;
     bool m_Sharing = false;
     AccessibilityState m_Accessibility;
+    bool m_Dictating = false;
+    bool m_DictationStopping = false;
+    std::uint64_t m_DictationRun = 0; ///< Counts runs, so that a late callback of an earlier one is ignored.
+    std::chrono::milliseconds m_DictationSilenceLimit = DICTATION_SILENCE_LIMIT;
+    std::chrono::steady_clock::time_point m_DictationSegmentStart;
+    QTimer m_DictationSilence;
 };
 
 } // namespace ej::bridge

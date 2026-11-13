@@ -39,6 +39,13 @@
     <array>
         <string>arm64</string>
     </array>
+    <!-- Dictation (PRD NOTE-07): the microphone and speech recognition, asked for at the first tap on the microphone and
+         never at launch. Recognition is on the phone: no audio and no text are sent anywhere. The only usage texts the
+         application has; tools/ci/check_ios_plist.py allows no others. -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Field Test listens while you dictate a note. The audio is turned into text on this phone and is not kept or sent anywhere.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Field Test turns what you say into the text of a note, on this phone. Nothing is sent to Apple or anyone else.</string>
     <key>NSHumanReadableCopyright</key>
     <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
 

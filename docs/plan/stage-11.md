@@ -142,7 +142,7 @@ What the code shows, checked on `develop` at 92080f9:
 | Qt modules asked for | `find_package(Qt6 … COMPONENTS …)` in `apps/` and `libs/`: Core, Gui, Qml, Quick, Sql, Test (tests only) | No `Network`, `WebSockets`, `WebView`, `Positioning` or `Bluetooth` asked for. Qt QML still links Qt Network on its own (see below) |
 | Network APIs in the sources | `QNetwork*`, `QTcp*`, `QUdp*`, `QWebSocket`, `NSURLSession`, `URLSession`, `openUrlExternally` in `apps/` and `libs/` | No calls. The one hit, in `perf_marks.hpp`, is a comment that says "no network" |
 | Third-party SDKs | `vcpkg.json` | Catch2 (tests, desktop only). Tracy only with the `profiling` feature, which only the `linux-debug` preset turns on. No analytics, crash reporting or advertising SDK |
-| Permissions | `Info.plist.in` has no usage text, and `verify_app.sh` refuses any | None |
+| Permissions | `Info.plist.in` has the two usage texts of dictation (microphone, speech recognition) and no other, and `verify_app.sh` and `check_ios_plist.py` refuse any other. Android asks for `RECORD_AUDIO` only (`check_android_package.py`) | Microphone and speech recognition, at the first tap on the note field's microphone. Recognition is on the device (`requiresOnDeviceRecognition`; Android's on-device recogniser), so nothing is sent: the audio is not collected, and "Data Not Collected" stands |
 | Entitlements | `error-journaling.entitlements` | Only Data Protection. `verify_app.sh --signed` refuses iCloud, app groups and associated domains |
 | Tracking | No IDFA, no `AppTrackingTransparency` | No tracking. App Tracking Transparency not needed |
 
@@ -284,7 +284,7 @@ The drafts are in `store/play/en-AU/`, in the layout that `fastlane supply` read
 
 The drafted answers are in `store/play/app_content.md`.
 
-- **Data safety: no data collected, no data shared.** The form is required even for an app that collects nothing.
+- **Data safety: no data collected, no data shared.** The form is required even for an app that collects nothing. Dictation (NOTE-07) uses the microphone with the on-device recogniser, so the audio and its text stay on the phone: do not tick "Audio" as collected or shared; the permission list shows RECORD_AUDIO.
   Google counts data as collected when the app sends it off the device. Google's "sharing" is wider than Apple's
   "collect": it includes handing data to another app on the same device. Google exempts a transfer that the user starts
   and expects, so the share sheet export is still not "sharing". Google's page does not name the share sheet, so this

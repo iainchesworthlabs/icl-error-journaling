@@ -79,8 +79,12 @@ key() { /usr/libexec/PlistBuddy -c "Print :$1" "$plist" 2>/dev/null || true; }
 
 [ "$(key CFBundleIdentifier)" = "$bundle_id" ] || fail "CFBundleIdentifier is '$(key CFBundleIdentifier)'"
 [ "$(key CFBundleExecutable)" = "$executable" ] || fail "CFBundleExecutable is '$(key CFBundleExecutable)'"
-for usage in NSCameraUsageDescription NSMicrophoneUsageDescription NSLocationWhenInUseUsageDescription NSPhotoLibraryUsageDescription; do
-  [ -z "$(key $usage)" ] || fail "Info.plist has $usage: the application asks for no permission"
+for usage in NSCameraUsageDescription NSLocationWhenInUseUsageDescription NSPhotoLibraryUsageDescription; do
+  [ -z "$(key $usage)" ] || fail "Info.plist has $usage: the application asks for no permission but the two of dictation"
+done
+# Dictation (PRD NOTE-07) asks for the microphone and speech recognition at the first tap, and needs the texts for both.
+for usage in NSMicrophoneUsageDescription NSSpeechRecognitionUsageDescription; do
+  [ -n "$(key $usage)" ] || fail "Info.plist has no $usage (dictation asks for it)"
 done
 [ "$(key CFBundleIconName)" = "AppIcon" ] || fail "CFBundleIconName is '$(key CFBundleIconName)'"
 # The setup file type: exported, named by a document type, opened by copy and not in place, and no file sharing.

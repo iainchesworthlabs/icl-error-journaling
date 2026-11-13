@@ -129,6 +129,12 @@ Item {
     required property var settings
     required property var bridge
     property var picker: null
+    // The bridge's dictation (PRD NOTE-07): `dictationAvailable`, `dictating`, `startDictation()`, `stopDictation()` and the
+    // signals `dictationSegment`, `dictationText(text)` and `dictationEnded(reason)`. Null shows no microphone (a test of
+    // the screen alone).
+    property var dictation: null
+    // The sentence under the note box when the last dictation could not run; empty otherwise.
+    property string dictationMessage: ""
     // What the in-app help remembers (HelpState): `tipOpen`, `noteTipShown()` and `closeTip()`. Null shows no tip.
     property var help: null
     // The ShareService, for the Share log button of the log pane. Null where there is none (a test of the screen alone).
@@ -414,9 +420,44 @@ Item {
             chips: root.settings.templates
             chipIcons: root.chipIcons
             skeleton: root.loading
+            dictationAvailable: root.dictation !== null && root.dictation.dictationAvailable
+            dictating: root.dictation !== null && root.dictation.dictating
+            dictationMessage: root.dictationMessage
+            onDictationToggled: {
+                if (root.dictation.dictating) {
+                    root.dictation.stopDictation();
+                } else {
+                    root.dictationMessage = "";
+                    root.dictation.startDictation();
+                }
+            }
             onTextEdited: text => root.session.draft = text
             onSubmit: text => root.session.addNote(text)
             onChipChosen: templateId => root.chooseTemplate(templateId)
+        }
+
+        // The words of the dictation go into the note box, and why it stopped is said once, in a sentence, when it could not run.
+        Connections {
+            target: root.dictation
+
+            function onDictationSegment(): void {
+                composer.dictationSegment();
+            }
+
+            function onDictationText(text: string): void {
+                composer.dictationText(text);
+            }
+
+            function onDictationEnded(reason: string): void {
+                if (reason === "denied")
+                    root.dictationMessage = qsTr("Voice input is turned off for this app. To use it, allow Microphone and Speech Recognition for it in your phone's Settings.");
+                else if (reason === "unavailable")
+                    root.dictationMessage = qsTr("This phone cannot turn speech into text on the phone itself, so voice input is not available.");
+                else if (reason === "failed")
+                    root.dictationMessage = qsTr("Voice input stopped. Tap the microphone to try again.");
+                else
+                    root.dictationMessage = "";
+            }
         }
 
         // The first-run tip: three things to know, until it is closed or has been shown on three days. A card in the

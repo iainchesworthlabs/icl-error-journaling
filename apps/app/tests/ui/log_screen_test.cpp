@@ -114,6 +114,53 @@ private:
     FakePlatform& m_Platform;
 };
 
+/// The dictation part of the bridge, with the names of `QmlBridge`: the screen starts and stops it, and the test says the words.
+class FakeDictationBridge : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(bool dictationAvailable READ dictation_available CONSTANT)
+    Q_PROPERTY(bool dictating READ dictating NOTIFY dictatingChanged)
+
+public:
+    [[nodiscard]] bool dictation_available() const { return true; }
+    [[nodiscard]] bool dictating() const { return m_Dictating; }
+
+    Q_INVOKABLE void startDictation()
+    {
+        ++m_Starts;
+        m_Dictating = true;
+        emit dictatingChanged();
+        emit dictationSegment();
+    }
+
+    Q_INVOKABLE void stopDictation()
+    {
+        ++m_Stops;
+        m_Dictating = false;
+        emit dictatingChanged();
+        emit dictationEnded(QStringLiteral("finished"));
+    }
+
+    void end(const QString& reason)
+    {
+        m_Dictating = false;
+        emit dictatingChanged();
+        emit dictationEnded(reason);
+    }
+
+    int m_Starts = 0;
+    int m_Stops = 0;
+
+signals:
+    void dictatingChanged();
+    void dictationSegment();
+    void dictationText(const QString& text);
+    void dictationEnded(const QString& reason);
+
+private:
+    bool m_Dictating = false;
+};
+
 /// The part of the settings model the screen calls, with the names of `SettingsModel`: the templates for the chips, the
 /// unit prefix of the card, `patternToField` and `previewTemplateLine`, which writes the line as the renderer does for a value (the sample
 /// "Morning Medley" while it is blank, at the sample time 10:30).
@@ -808,6 +855,45 @@ TEST_CASE("log.note: type and Add, the entry appears after the commit, the field
     CHECK(input->property("text").toString() == QStringLiteral("The robot paused twice"));
     CHECK(input->property("cursorPosition").toInt() == input->property("length").toInt());
     CHECK(sim.session.draft() == QStringLiteral("The robot paused twice"));
+}
+
+TEST_CASE("log.dictation: the microphone starts and stops it, the words go into the note, and a refusal is said once",
+          "[ui][log][dictation]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    Screen screen(sim);
+    // Without the bridge's dictation there is no microphone.
+    CHECK_FALSE(screen.named(QStringLiteral("micButton"))->isVisible());
+
+    FakeDictationBridge dictation;
+    screen.item->setProperty("dictation", QVariant::fromValue(static_cast<QObject*>(&dictation)));
+    screen.rig.layout();
+    QQuickItem* mic = screen.named(QStringLiteral("micButton"));
+    REQUIRE(mic->isVisible());
+
+    screen.rig.tap(mic);
+    CHECK(dictation.m_Starts == 1);
+    emit dictation.dictationText(QStringLiteral("mute delay"));
+    emit dictation.dictationText(QStringLiteral("mute delay near the stage"));
+    screen.rig.layout();
+    CHECK(sim.session.draft() == QStringLiteral("mute delay near the stage"));
+    CHECK(screen.named(QStringLiteral("noteInput"))->property("text").toString() == QStringLiteral("mute delay near the stage"));
+
+    screen.rig.tap(mic);
+    CHECK(dictation.m_Stops == 1);
+    CHECK_FALSE(screen.named(QStringLiteral("dictationMessage"))->isVisible());
+
+    // A refused microphone is said in a sentence, and the next start clears it.
+    screen.rig.tap(mic);
+    dictation.end(QStringLiteral("denied"));
+    screen.rig.layout();
+    QQuickItem* message = screen.named(QStringLiteral("dictationMessage"));
+    CHECK(message->isVisible());
+    CHECK(message->property("text").toString().contains(QStringLiteral("Settings")));
+    screen.rig.tap(mic);
+    CHECK_FALSE(message->isVisible());
+    CHECK(dictation.m_Starts == 3);
 }
 
 TEST_CASE("log.note: Add adds the note, Return only starts a new line, and an empty note does nothing", "[ui][log]")

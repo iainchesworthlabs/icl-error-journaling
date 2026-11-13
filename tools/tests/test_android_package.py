@@ -85,6 +85,10 @@ class ManifestTest(unittest.TestCase):
         problems = package.manifest_problems(manifest(permissions=("com.google.android.gms.permission.AD_ID",)))
         self.assertEqual(len(problems), 1)
 
+    def test_microphone_permission_is_allowed_for_dictation_and_nothing_else_is(self) -> None:
+        self.assertEqual(package.manifest_problems(manifest(permissions=("android.permission.RECORD_AUDIO",))), [])
+        self.assertEqual(len(package.manifest_problems(manifest(permissions=("android.permission.CAMERA",)))), 1)
+
     def test_own_signature_permission_is_allowed(self) -> None:
         own = package.APPLICATION_ID + ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         self.assertEqual(package.manifest_problems(manifest(permissions=(own,))), [])
