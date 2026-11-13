@@ -9,11 +9,12 @@ import ErrorJournalingApp
 //
 //   unit number       a fixed prefix the person does not type, and the number pad. The number is checked as it is typed
 //                     with `session.validateUnit`, and a valid one is saved with `session.correctUnit`
-//   environment       optional (PRF-11), picked from a short list and never typed: the "Environment" row under the unit field
-//                     shows None, prod, dev or whatever the setup lists, and opens the Environment sheet. It is saved with
+//   environment       optional (PRF-11), picked from a short list and never typed. The screens call it the "Number suffix" (testers
+//                     read "environment" as something else); the row under the unit field says where it goes. It shows None, prod,
+//                     dev or whatever the setup lists, and opens the Number suffix sheet. It is saved with
 //                     the number, as "UNIT-27-prod"; chosen before a valid number is typed, it waits for the number
 //   location          the configured locations as a list of choices, and Other with a text field
-//   software version  a field checked the same way. A first fill, and a typo, are a Correct (HDR-07); a version that
+//   software version  the robot's, with a fixed "v" before the numbers (a typed v is accepted and not doubled), checked the same way. A first fill, and a typo, are a Correct (HDR-07); a version that
 //                     changed during the day is a Change, which the Software version sheet records. The design draws no row
 //                     for it, so the sheet opens from the check mark of the version field (its `accessory`), which is a
 //                     button, named "The version changed during the day", while the field shows the version in force
@@ -21,6 +22,7 @@ import ErrorJournalingApp
 //                     full hash by the model. It is saved with the version, as "1.4.2 (a1b2c3d)", so it follows the version
 //                     in every way; typed before a valid version, it waits for it. An empty commit is listed on the Log card
 //                     as still to fill, and nothing here or there stops anything
+//   other versions    the versions besides the robot's (HDR-10) are one row, whose sheet adds, edits and removes them
 //
 // Nothing here blocks logging (HDR-06): "Start logging" only closes the screen, and an empty or refused field is left as
 // it was. The screen holds what is typed, and the model holds what is saved; a value the model refuses is never sent.
@@ -86,7 +88,7 @@ SheetHost {
     readonly property string unitError: unitTouched ? session.validateUnit(unitDraft, environmentDraft) : ""
     readonly property string environmentLabel: environmentDraft.length > 0 ? environmentDraft : qsTr("None")
     // What is under the Environment row: nothing, unless an environment was picked before there is a number to save it with.
-    readonly property string environmentNote: environmentDraft.length > 0 && unitSaved.length === 0 ? qsTr("Saved with the number, once you have typed it.") : ""
+    readonly property string environmentNote: environmentDraft.length > 0 && unitSaved.length === 0 ? qsTr("Saved with the number, once you have typed it.") : qsTr("Added after the number, like %1-27-prod.").arg(settings.unitPrefix)
     readonly property string otherError: otherTouched ? session.validateHeaderValue("location", otherDraft) : ""
     // The version field is the three numbers; the commit has its own field and its own message.
     readonly property string versionError: versionTouched ? session.validateVersion(versionDraft, "") : ""
@@ -156,13 +158,19 @@ SheetHost {
     // The version and the commit are saved together, as one value (a Correct of "1.4.2 (a1b2c3d)"). Neither is sent while the
     // other is refused; a commit with no version yet waits.
     function commitVersion(): void {
-        const version = versionDraft.trim();
+        // A v in front is accepted and dropped: the field shows one already, so it is never doubled.
+        const typed = versionDraft.trim();
+        const version = typed.replace(/^[vV]/, "");
         const commit = commitDraft.trim();
-        if (version === versionSaved && commit === commitSaved)
+        if (version === versionSaved && commit === commitSaved) {
+            if (typed !== version && version.length > 0)
+                versionDraft = version;
             return;
+        }
         if (session.validateVersion(version, commit).length > 0)
             return;
         if (session.correctVersion(version, commit)) {
+            versionDraft = version;
             versionSaved = version;
             // The field shows what was kept: lower case, and a full hash as its first 7 characters.
             commitDraft = session.normalizeCommit(commit);
@@ -436,7 +444,7 @@ SheetHost {
 
                     ListRow {
                         objectName: "headerEnvironment"
-                        text: qsTr("Environment")
+                        text: qsTr("Number suffix")
                         value: root.environmentLabel
                         showChevron: true
                         onActivated: environmentSheet.show(root.environmentDraft)
@@ -502,11 +510,12 @@ SheetHost {
                     id: versionField
 
                     objectName: "headerVersion"
-                    label: qsTr("Software version")
+                    label: qsTr("Robot software version")
+                    prefixText: "v"
                     text: root.versionDraft
                     valueFont: Theme.font.fieldValueLarge.font
                     placeholderText: qsTr("For example 1.4.2")
-                    hint: qsTr("Format 1.4.2 – numbers only.")
+                    hint: qsTr("Numbers only, like 1.4.2. The v is added for you.")
                     errorText: root.versionError
                     valid: root.versionDraft.length > 0 && root.versionError.length === 0
                     // The check mark is the way to the Software version sheet while the field shows the version in force.
@@ -539,6 +548,22 @@ SheetHost {
                     }
                     onAccepted: root.commitVersion()
                     onHasFocusChanged: root.fieldFocusChanged(commitField, hasFocus)
+                }
+
+                // The versions besides the robot's (HDR-10) are one row, so that the screen does not grow with each of them; the
+                // sheet it opens adds, edits and removes them. The footer sums up all the versions once there is a second.
+                GroupedList {
+                    objectName: "headerOtherVersionsGroup"
+                    width: parent.width
+                    footer: root.session.extraVersionsText.length > 0 ? root.session.versionsSummary : qsTr("Add the phone app that controls the robot, or other software.")
+
+                    ListRow {
+                        objectName: "headerOtherVersions"
+                        text: qsTr("Other versions")
+                        value: root.session.extraVersionsText.length > 0 ? root.session.extraVersionsText : qsTr("None")
+                        showChevron: true
+                        onActivated: extraVersionsSheet.show()
+                    }
                 }
 
                 // The new-log group sits 8 pt further from the version field than the other groups (HeaderNewLogRow).
@@ -626,6 +651,12 @@ SheetHost {
             objectName: "environmentSheet"
             settings: root.settings
             onChosen: environment => root.chooseEnvironment(environment)
+        },
+        ExtraVersionsSheet {
+            id: extraVersionsSheet
+
+            objectName: "extraVersionsSheet"
+            session: root.session
         },
         VersionSheet {
             id: versionSheet

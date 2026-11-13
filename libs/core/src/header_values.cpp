@@ -23,6 +23,14 @@ HeaderError version_error(SoftwareVersion::Error error)
     return result;
 }
 
+HeaderError extra_versions_error(ExtraVersionsError error)
+{
+    HeaderError result;
+    result.m_Kind = HeaderError::Kind::INVALID_EXTRA_VERSIONS;
+    result.m_ExtraVersions = error;
+    return result;
+}
+
 }  // namespace
 
 std::optional<std::string> header_field_text(const HeaderValues& header, HeaderField field)
@@ -54,6 +62,9 @@ std::optional<std::string> header_field_text(const HeaderValues& header, HeaderF
             return header.m_SoftwareVersion->stored();
         }
         break;
+    case HeaderField::EXTRA_VERSIONS:
+        // Always a value: an empty list is `none`, because a correction cannot carry empty text.
+        return stored_extra_versions(header.m_ExtraVersions);
     }
     return std::nullopt;
 }
@@ -80,6 +91,16 @@ Result<void, HeaderError> set_header_field(HeaderValues& header, HeaderField fie
             return fail(version_error(parsed.error()));
         }
         header.m_SoftwareVersion = *parsed;
+        return {};
+    }
+    case HeaderField::EXTRA_VERSIONS:
+    {
+        auto parsed = parse_extra_versions(text);
+        if (!parsed)
+        {
+            return fail(extra_versions_error(parsed.error()));
+        }
+        header.m_ExtraVersions = std::move(*parsed);
         return {};
     }
     case HeaderField::LOCATION:
@@ -111,6 +132,7 @@ void clear_header_field(HeaderValues& header, HeaderField field)
     case HeaderField::UNIT_NUMBER: header.m_UnitNumber.reset(); break;
     case HeaderField::LOCATION: header.m_Location.reset(); break;
     case HeaderField::SOFTWARE_VERSION: header.m_SoftwareVersion.reset(); break;
+    case HeaderField::EXTRA_VERSIONS: header.m_ExtraVersions.clear(); break;
     }
 }
 

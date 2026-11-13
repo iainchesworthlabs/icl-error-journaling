@@ -117,6 +117,12 @@
           ]
         },
         {
+          "name": "ExtraVersionsSheet",
+          "files": [
+            "header/ExtraVersionsSheet.qml"
+          ]
+        },
+        {
           "name": "HeaderNewLogRow"
         },
         {

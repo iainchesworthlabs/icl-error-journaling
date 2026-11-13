@@ -72,7 +72,7 @@ SheetHost {
                 sheet.refusal = message;
         }
 
-        accessibleName: qsTr("Environment")
+        accessibleName: qsTr("Number suffix")
         detent: Sheet.Large
 
         NavBar {
@@ -83,7 +83,7 @@ SheetHost {
             y: -Theme.space.tileGap
             width: parent.width
             inSheet: true
-            title: qsTr("Environment")
+            title: qsTr("Number suffix")
             leadingText: qsTr("Cancel")
             trailingText: qsTr("Save")
             trailingEnabled: sheet.refusal.length === 0
@@ -140,7 +140,7 @@ SheetHost {
 
     EditorPage {
         anchors.fill: parent
-        title: qsTr("Unit environments")
+        title: qsTr("Number suffixes")
         leadingText: qsTr("Settings")
         leadingAccessibleName: qsTr("Back to Settings")
         trailingText: qsTr("Done")

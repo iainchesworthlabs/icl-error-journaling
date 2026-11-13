@@ -64,7 +64,8 @@ public:
     }
     /// What is stored, and what `parse_stored` reads back: "1.4.2" or "1.4.2+a1b2c3d".
     [[nodiscard]] std::string stored() const;
-    /// What the log prints: "1.4.2" or "1.4.2 (a1b2c3d)".
+    /// What the log prints: "v1.4.2" or "v1.4.2 (a1b2c3d)". Parsing drops one leading "v" or "V", so stored text never
+    /// has one and a typed one is never doubled.
     [[nodiscard]] std::string display() const;
 
     friend auto operator<=>(const SoftwareVersion&, const SoftwareVersion&) = default;

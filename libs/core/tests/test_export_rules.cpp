@@ -16,7 +16,7 @@ namespace
 {
 
 constexpr const char* HEADER =
-    "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: 1.4.2";
+    "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: v1.4.2";
 
 void must_add(Log& log, Entry entry)
 {
@@ -92,7 +92,7 @@ TEST_CASE("Rule 5: a header-change line names the field with its old and new val
                           on_day(12, 0), test_id<EntryId>(3)));
     REQUIRE(change_header(scenario.m_Log, HeaderField::LOCATION, "Back Room", on_day(13, 0), test_id<EntryId>(4)));
     CHECK(render(scenario)
-          == std::string(HEADER) + "\n\n10:00 Software Version changed: 1.4.2 " + ARROW + " 1.5.0\n11:00 UNIT # changed: UNIT-27 "
+          == std::string(HEADER) + "\n\n10:00 Software Version changed: v1.4.2 " + ARROW + " v1.5.0\n11:00 UNIT # changed: UNIT-27 "
                  + ARROW + " UNIT-31\n12:00 Location changed: North Site " + ARROW + " South Site\n13:00 Location changed: South Site "
                  + ARROW + " Back Room");
 
@@ -110,7 +110,7 @@ TEST_CASE("Rule 5: a first change from an empty field has an empty old side", "[
     REQUIRE(change_header(scenario.m_Log, HeaderField::SOFTWARE_VERSION, "1.4.2", on_day(10, 0), test_id<EntryId>(1)));
     const auto line = render_entry_line(scenario.m_Log, test_id<EntryId>(1), scenario.m_Context);
     REQUIRE(line.has_value());
-    CHECK(*line == std::string("10:00 Software Version changed:  ") + ARROW + " 1.4.2");
+    CHECK(*line == std::string("10:00 Software Version changed:  ") + ARROW + " v1.4.2");
 }
 
 TEST_CASE("Rule 6: each entry is shown in the zone it was captured in, in the chosen clock format", "[export][rule6]")

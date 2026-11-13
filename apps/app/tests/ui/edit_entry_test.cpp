@@ -373,20 +373,20 @@ TEST_CASE("edit.header_change_entry: a header change edits its time and its new 
     SECTION("a new value")
     {
         e.set_note(QStringLiteral("1.6.0"));
-        CHECK(e.preview() == QStringLiteral("13:15 Software Version changed: 1.4.2 → 1.6.0"));
+        CHECK(e.preview() == QStringLiteral("13:15 Software Version changed: v1.4.2 → v1.6.0"));
         e.save();
         e.commit();
-        CHECK(e.lines()[4] == QStringLiteral("13:15 Software Version changed: 1.4.2 → 1.6.0"));
+        CHECK(e.lines()[4] == QStringLiteral("13:15 Software Version changed: v1.4.2 → v1.6.0"));
     }
 
     SECTION("a new time")
     {
         e.set_time(12, 30);
         e.done_time();
-        CHECK(e.preview() == QStringLiteral("12:30 Software Version changed: 1.4.2 → 1.5.0"));
+        CHECK(e.preview() == QStringLiteral("12:30 Software Version changed: v1.4.2 → v1.5.0"));
         e.save();
         e.commit();
-        CHECK(e.lines()[4] == QStringLiteral("12:30 Software Version changed: 1.4.2 → 1.5.0"));
+        CHECK(e.lines()[4] == QStringLiteral("12:30 Software Version changed: v1.4.2 → v1.5.0"));
     }
 
     SECTION("a value the field refuses is shown with the model's words, and Save is off")

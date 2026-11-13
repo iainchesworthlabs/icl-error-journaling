@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "error_journaling/sqlite_log_repository.hpp"
 
+#include "error_journaling/extra_versions.hpp"
 #include "error_journaling/header_history.hpp"
 #include "error_journaling/iso_date.hpp"
 #include "error_journaling/utf8.hpp"
@@ -236,7 +237,10 @@ constexpr const char* SCHEMA[] = {
     " applied_seq INTEGER NOT NULL DEFAULT 0,"
     // Shared, and changed since (`LogMeta::m_ChangedSinceShare`). Last, as the migration adds it. A row from before the
     // column existed holds 0: a log that was shared reads as shared.
-    " changed_since_share INTEGER NOT NULL DEFAULT 0 CHECK (changed_since_share IN (0, 1)))",
+    " changed_since_share INTEGER NOT NULL DEFAULT 0 CHECK (changed_since_share IN (0, 1)),"
+    // The other software versions (HDR-10) as `stored_extra_versions` writes them; NULL for none. Last, as the migration
+    // adds it.
+    " extra_versions TEXT)",
     "CREATE INDEX day_log_archived ON day_log(archived)",
     // At most one log is open, enforced by the database and not only by the code (DS-05).
     "CREATE UNIQUE INDEX day_log_one_open ON day_log(archived) WHERE archived = 0",
@@ -609,6 +613,27 @@ Result<HeaderValues, StorageError> read_header(const QSqlQuery& query, int first
     return header;
 }
 
+/// The column of the other versions: NULL for none, otherwise the stored text.
+QVariant extra_versions_value(const HeaderValues& header)
+{
+    return header.m_ExtraVersions.empty() ? null_text() : QVariant(to_qt(stored_extra_versions(header.m_ExtraVersions)));
+}
+
+/// Reads the column of the other versions into `header`.
+Result<void, StorageError> read_extra_versions(const QSqlQuery& query, int column, HeaderValues& header)
+{
+    if (const auto text = optional_text(query.value(column)))
+    {
+        auto parsed = parse_extra_versions(*text);
+        if (!parsed)
+        {
+            return Failure(corrupt("a stored list of versions is not valid"));
+        }
+        header.m_ExtraVersions = std::move(*parsed);
+    }
+    return {};
+}
+
 QVariantList header_values(const HeaderValues& header)
 {
     QVariantList values;
@@ -636,7 +661,7 @@ Result<SqliteLogRepository::Impl::Loaded, StorageError> SqliteLogRepository::Imp
 {
     const QString key = to_qt(id.format());
     auto row = run(QStringLiteral("SELECT created_utc, last_shared_utc, archived, previous_log_id, applied_seq, %1,"
-                                  " changed_since_share FROM day_log WHERE id = ?")
+                                  " changed_since_share, extra_versions FROM day_log WHERE id = ?")
                        .arg(QLatin1String(HEADER_COLUMNS)),
                    {key});
     if (!row)
@@ -651,6 +676,10 @@ Result<SqliteLogRepository::Impl::Loaded, StorageError> SqliteLogRepository::Imp
     if (!header)
     {
         return Failure(header.error());
+    }
+    if (auto extra = read_extra_versions(*row, 12, *header); !extra)
+    {
+        return Failure(extra.error());
     }
     LogMeta meta;
     meta.m_Id = id;
@@ -905,9 +934,9 @@ Result<CheckResult, StorageError> SqliteLogRepository::Impl::check(const char* p
 Result<void, StorageError> SqliteLogRepository::Impl::update_header(LogId id, const HeaderValues& header) const
 {
     QVariantList values = header_values(header);
-    values << to_qt(id.format());
+    values << extra_versions_value(header) << to_qt(id.format());
     return exec(QStringLiteral("UPDATE day_log SET local_date = ?, facilitator = ?, unit_number = ?, location_id = ?,"
-                               " location_text = ?, software_version = ? WHERE id = ?"),
+                               " location_text = ?, software_version = ?, extra_versions = ? WHERE id = ?"),
                 values);
 }
 
@@ -960,9 +989,10 @@ Result<void, StorageError> SqliteLogRepository::Impl::insert_log(const StoredLog
     values << millis_value(meta.m_CreatedUtc)
            << (meta.m_LastSharedUtc ? millis_value(*meta.m_LastSharedUtc) : null_integer()) << (meta.m_Archived ? 1 : 0)
            << (meta.m_Previous ? QVariant(to_qt(meta.m_Previous->format())) : null_text())
-           << static_cast<qulonglong>(applied_seq) << (meta.m_ChangedSinceShare ? 1 : 0);
+           << static_cast<qulonglong>(applied_seq) << (meta.m_ChangedSinceShare ? 1 : 0)
+           << extra_versions_value(log.m_Log.initial_header());
     return exec(QStringLiteral("INSERT INTO day_log (id, %1, created_utc, last_shared_utc, archived, previous_log_id,"
-                               " applied_seq, changed_since_share) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                               " applied_seq, changed_since_share, extra_versions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                     .arg(QLatin1String(HEADER_COLUMNS)),
                 values);
 }
@@ -1322,7 +1352,7 @@ Result<std::vector<LogSummary>, StorageError> SqliteLogRepository::list_logs()
         QStringLiteral("SELECT d.id, d.created_utc, d.last_shared_utc, d.archived,"
                        " (SELECT count(*) FROM entry e WHERE e.day_log_id = d.id),"
                        " (SELECT count(*) FROM entry e WHERE e.day_log_id = d.id AND e.deleted = 0), %1,"
-                       " d.changed_since_share "
+                       " d.changed_since_share, d.extra_versions "
                        "FROM day_log d ORDER BY d.local_date DESC, d.created_utc DESC, d.id ASC")
             .arg(QStringLiteral("d.local_date, d.facilitator, d.unit_number, d.location_id, d.location_text, "
                                 "d.software_version")));
@@ -1335,6 +1365,13 @@ Result<std::vector<LogSummary>, StorageError> SqliteLogRepository::list_logs()
     {
         const auto id = Uuid::parse(to_std(rows->value(0).toString()));
         auto header = read_header(*rows, 6);
+        if (header)
+        {
+            if (auto extra = read_extra_versions(*rows, 13, *header); !extra)
+            {
+                return Failure(extra.error());
+            }
+        }
         if (!id || !header)
         {
             return Failure(id ? header.error() : corrupt("a stored log id is not valid"));

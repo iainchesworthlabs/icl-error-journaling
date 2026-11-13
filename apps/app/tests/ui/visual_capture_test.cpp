@@ -1203,7 +1203,7 @@ std::vector<Scene> phone_scenes()
         {QStringLiteral("Locations"), TODAY, scene_locations,
          QStringLiteral("A third location, East Depot, added, and \"West Yard\" typed in the new-location field.")},
         {QStringLiteral("UnitEnvironments"), TODAY, scene_unit_environments,
-         QStringLiteral("Settings, Unit environments (the default two), \"Staging\" typed in the new-environment field.")},
+         QStringLiteral("Settings, Number suffixes (the default two), \"Staging\" typed in the new-environment field.")},
         {QStringLiteral("Templates"), TODAY, scene_templates,
          QStringLiteral("Settings, Note templates (the sample's two).")},
         {QStringLiteral("TemplateEdit"), TODAY, scene_template_edit,
@@ -1285,6 +1285,15 @@ void scene_environment_sheet(Phone& phone)
     phone.play();
 }
 
+void scene_extra_versions(Phone& phone)
+{
+    log_with_day(phone);
+    open_details(phone);
+    phone.tap(QStringLiteral("headerOtherVersions"));
+    phone.tap(QStringLiteral("extraVersionAdd"));
+    phone.play();
+}
+
 void scene_version_time(Phone& phone)
 {
     scene_change_version(phone);
@@ -1306,7 +1315,9 @@ std::vector<Scene> extra_scenes()
          [](Phone& phone) { scene_other_search(phone, QStringLiteral("Zebra")); },
          QStringLiteral("Other, searching for a type that does not exist.")},
         {QStringLiteral("EnvironmentSheet"), TODAY, scene_environment_sheet,
-         QStringLiteral("The Environment row of Today's details tapped.")},
+         QStringLiteral("The Number suffix row of Today's details tapped.")},
+        {QStringLiteral("ExtraVersionsSheet"), TODAY, scene_extra_versions,
+         QStringLiteral("The Other versions row of Today's details tapped, then Add a version.")},
         {QStringLiteral("VersionTime"), TODAY, scene_version_time,
          QStringLiteral("The time of the version change tapped.")},
         {QStringLiteral("Facilitator"), TODAY,

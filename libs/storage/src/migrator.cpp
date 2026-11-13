@@ -454,12 +454,16 @@ std::vector<MigrationStep> product_migration_steps()
     // 1 to 2: whether a shared log has changed since its share. Every log that exists gets 0, so a log that was shared
     // reads as shared; nothing in a version 1 database says otherwise, and the person is not told of changes that
     // were made before the build could know of them.
+    // 2 to 3: the other software versions (HDR-10). Every log that exists gets NULL, which reads as none, so its single
+    // version stays the robot's and nothing is rewritten.
     return {MigrationStep{
         1, "add day_log.changed_since_share", [](MigrationConnection& sql) -> Result<void, StorageError>
         {
             return sql.exec("ALTER TABLE day_log ADD COLUMN changed_since_share INTEGER NOT NULL DEFAULT 0"
                             " CHECK (changed_since_share IN (0, 1))");
-        }}};
+        }},
+            MigrationStep{2, "add day_log.extra_versions", [](MigrationConnection& sql) -> Result<void, StorageError>
+                          { return sql.exec("ALTER TABLE day_log ADD COLUMN extra_versions TEXT"); }}};
 }
 
 std::string_view migration_outcome_name(MigrationOutcome outcome)

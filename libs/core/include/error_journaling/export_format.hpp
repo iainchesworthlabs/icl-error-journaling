@@ -12,6 +12,9 @@ inline constexpr std::string_view LABEL_FACILITATOR = "Facilitator";
 inline constexpr std::string_view LABEL_DATE = "Date";
 inline constexpr std::string_view LABEL_LOCATION = "Location";
 inline constexpr std::string_view LABEL_SOFTWARE_VERSION = "Software Version";
+/// The label of a header-change line for the other versions. Their header lines are "<Label> Version", for example
+/// "Influencer Version: v4.5.0".
+inline constexpr std::string_view LABEL_EXTRA_VERSIONS = "Other Versions";
 
 /// Between a label and its value. An empty value prints the label and this colon only.
 inline constexpr std::string_view LABEL_COLON = ":";

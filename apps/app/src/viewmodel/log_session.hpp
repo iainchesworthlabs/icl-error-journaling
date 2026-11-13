@@ -21,6 +21,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QVariantList>
 #include <QStringList>
 #include <chrono>
 #include <cstddef>
@@ -73,6 +74,12 @@ class LogSession : public QObject, public OpenLogSource
     Q_PROPERTY(QString commitText READ commit_text NOTIFY headerChanged)
     // "1.4.2" or "1.4.2 (a1b2c3d)": the version as the log prints it, or empty when there is no version.
     Q_PROPERTY(QString versionDisplayText READ version_display_text NOTIFY headerChanged)
+    // The other versions (HDR-10) as rows {label, version, commit}, version without a "v".
+    Q_PROPERTY(QVariantList extraVersions READ extra_versions NOTIFY headerChanged)
+    // "Influencer v4.5.0 · Gateway v2.0.1", or empty when there are none.
+    Q_PROPERTY(QString extraVersionsText READ extra_versions_text NOTIFY headerChanged)
+    // The robot version first, then the others: "Robot v1.2.3 · Influencer v4.5.0". Empty when there is no version at all.
+    Q_PROPERTY(QString versionsSummary READ versions_summary NOTIFY headerChanged)
     Q_PROPERTY(QString dateText READ date_text NOTIFY headerChanged) // "Sat 7 Nov"
     // HDR-06 banner: keys of empty fields. The keys are those of `header_field_key`, and `software_commit` while the
     // version has no commit (HDR-09); that one is a reminder and never stops anything.
@@ -146,6 +153,9 @@ public:
     [[nodiscard]] QString version_text() const;
     [[nodiscard]] QString commit_text() const;
     [[nodiscard]] QString version_display_text() const;
+    [[nodiscard]] QVariantList extra_versions() const;
+    [[nodiscard]] QString extra_versions_text() const;
+    [[nodiscard]] QString versions_summary() const;
     [[nodiscard]] QString date_text() const;
     [[nodiscard]] QStringList missing_fields() const;
     [[nodiscard]] int live_entry_count() const;
@@ -219,6 +229,17 @@ public:
     /// What `changeVersion` would record, as `previewHeaderChange` gives it, or the plain refusal of
     /// `validateVersion`.
     Q_INVOKABLE QString previewVersionChange(const QString& version, const QString& commit, int localSeconds) const;
+
+    /// The check of row `index` of the other versions as the person edits them (rows as `extraVersions` gives them):
+    /// its label, its version, and its label against the others. "" when the row is fine.
+    Q_INVOKABLE QString validateExtraRow(const QVariantList& rows, int index) const;
+
+    /// "label" or "version": the field of row `index` that `validateExtraRow`'s message is about, or "" for no message.
+    Q_INVOKABLE QString extraRowField(const QVariantList& rows, int index) const;
+
+    /// A Correct of the whole list of other versions. A row with an empty label and an empty version is skipped; an
+    /// empty list clears them. False when `validateExtraRow` refuses any row.
+    Q_INVOKABLE bool correctExtraVersions(const QVariantList& rows);
 
     /// HDR-07 Correct: fixes the value in force and writes no entry. A first fill of an empty field is also a Correct.
     Q_INVOKABLE bool correctHeader(const QString& fieldKey, const QString& text);

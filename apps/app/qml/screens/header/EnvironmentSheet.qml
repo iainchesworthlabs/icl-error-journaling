@@ -40,7 +40,7 @@ Sheet {
         open();
     }
 
-    accessibleName: qsTr("Environment")
+    accessibleName: qsTr("Number suffix")
     detent: Sheet.Content
     contentImplicitHeight: bar.height + list.height + Theme.space.screenMargin
 
@@ -53,7 +53,7 @@ Sheet {
             objectName: "environmentBar"
             width: parent.width
             inSheet: true
-            title: qsTr("Environment")
+            title: qsTr("Number suffix")
             leadingText: qsTr("Cancel")
             onLeadingTriggered: root.close()
         }
