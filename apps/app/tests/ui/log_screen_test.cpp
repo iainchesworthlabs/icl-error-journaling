@@ -138,7 +138,7 @@ public:
     {
         QString line = pattern;
         line.replace(QStringLiteral("{value}"), value.trimmed().isEmpty() ? QStringLiteral("Morning Medley") : value.trimmed());
-        return QStringLiteral("10:30 (Free Text) ") + line;
+        return QStringLiteral("10:30 ") + line;
     }
 
     /// How the template editor writes a stored pattern: the answer slot is "[answer]".
@@ -860,7 +860,7 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     CHECK(sheet->property("accessibleName").toString() == QStringLiteral("Played song"));
     // The line the note will have, as the settings model writes it, with the sample value while the field is blank.
     CHECK(screen.text_of(QStringLiteral("templateValuePreviewText")) ==
-          QStringLiteral("10:30 (Free Text) Played Morning Medley"));
+          QStringLiteral("10:30 Played Morning Medley"));
     // The footnote names the line as the template editor writes it: [answer], not the stored {value}.
     CHECK(screen.named(QStringLiteral("templateValuePreview"))->property("footer").toString() ==
           QStringLiteral("Saved with the template “Played song”, as “Played [answer]”."));
@@ -877,7 +877,7 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     CHECK(field->property("text").toString() == QStringLiteral("Morning Medley"));
     CHECK(field->property("errorText").toString().isEmpty());
     CHECK(screen.text_of(QStringLiteral("templateValuePreviewText")) ==
-          QStringLiteral("10:30 (Free Text) Played Morning Medley"));
+          QStringLiteral("10:30 Played Morning Medley"));
     screen.rig.tap(screen.named(QStringLiteral("navTrailing")));
     sim.gateway.run_all();
     screen.rig.settle();

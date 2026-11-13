@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include <string>
 #include <string_view>
 
 namespace ej::export_format
@@ -37,6 +38,19 @@ inline constexpr int MAX_ERROR_PREFIX_CHARACTERS = 12;
 inline constexpr std::string_view ATTACHED_NOTE_SEPARATOR = " \xE2\x80\x93 ";
 /// After the time on a note line.
 inline constexpr std::string_view NOTE_MARKER = "(Free Text)";
+
+/// A note line as the screens show it: the line without the marker ("10:30 Played Morning Medley"). The export keeps
+/// the marker (PRD, Export rules, rule 4); only what the person reads on the screen drops it. `line` must be the line of
+/// a note, whose first marker is the one the renderer wrote after the time.
+[[nodiscard]] inline std::string without_note_marker(std::string line)
+{
+    const std::string marker = " " + std::string(NOTE_MARKER);
+    if (const auto at = line.find(marker); at != std::string::npos)
+    {
+        line.erase(at, marker.size());
+    }
+    return line;
+}
 /// After the field label on a header-change line, and between the old and the new value (an arrow).
 inline constexpr std::string_view CHANGED_SUFFIX = " changed: ";
 inline constexpr std::string_view CHANGE_ARROW = " \xE2\x86\x92 ";

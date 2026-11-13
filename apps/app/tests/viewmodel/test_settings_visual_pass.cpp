@@ -140,32 +140,32 @@ TEST_CASE("A template value is previewed as the log line it would make", "[viewm
     SECTION("at a time the caller names")
     {
         CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "Morning Medley", 10 * 3600 + 30 * 60) ==
-              "10:30 (Free Text) Played Morning Medley");
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 0) == "00:00 (Free Text) Played x");
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 24 * 3600 - 1) == "23:59 (Free Text) Played x");
+              "10:30 Played Morning Medley");
+        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 0) == "00:00 Played x");
+        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 24 * 3600 - 1) == "23:59 Played x");
     }
     SECTION("now, in the zone of the device")
     {
         // The clock of the rig is 08:55 in Melbourne.
         CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "Morning Medley") ==
-              "08:55 (Free Text) Played Morning Medley");
+              "08:55 Played Morning Medley");
         rig.m_World.m_DeviceZone.set("Australia/Perth");
         CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "Morning Medley", -1) ==
-              "05:55 (Free Text) Played Morning Medley");
+              "05:55 Played Morning Medley");
     }
     SECTION("a blank value is the designs' sample, and the value is trimmed")
     {
         CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "  ", 37800) ==
-              "10:30 (Free Text) Played Morning Medley");
+              "10:30 Played Morning Medley");
         CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "  Evening Song \n", 37800) ==
-              "10:30 (Free Text) Played Evening Song");
+              "10:30 Played Evening Song");
     }
     SECTION("the time follows the time format")
     {
         REQUIRE(rig.m_Settings.setTimeFormat("12h", false, "upper").isEmpty());
         rig.commit();
         CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 15 * 3600 + 5 * 60) ==
-              "03:05 PM (Free Text) Played x");
+              "03:05 PM Played x");
     }
     SECTION("a line that is not valid has no example")
     {
@@ -202,7 +202,7 @@ TEST_CASE("The preview works at first launch, before any setup is saved", "[view
     REQUIRE_FALSE(rig.m_Settings.configured());
 
     CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "Morning Medley", 37800) ==
-          "10:30 (Free Text) Played Morning Medley");
+          "10:30 Played Morning Medley");
 }
 
 // ----------------------------------------------------------------------------------------------------- template icon
