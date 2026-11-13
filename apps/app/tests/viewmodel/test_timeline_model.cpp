@@ -1794,9 +1794,9 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         rig.start(list_of(error_at(1, 11, 2, "Mute Delay"), change_at(2, 12, 0, HeaderField::SOFTWARE_VERSION, "1.5.0"),
                           note_at(3, 13, 0, "Robot restarted")));
 
-        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on UNIT-27, version 1.4.2.");
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on UNIT-27, version v1.4.2.");
         // After the change of the version, the version of the day is the new one.
-        CHECK(rig.model().entryForEdit(text_of(3)).value("footnote") == "Logged at 13:00 on UNIT-27, version 1.5.0.");
+        CHECK(rig.model().entryForEdit(text_of(3)).value("footnote") == "Logged at 13:00 on UNIT-27, version v1.5.0.");
     }
     SECTION("the time follows the time format")
     {
@@ -1807,7 +1807,7 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         rig.config().set(configuration);
 
         CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") ==
-              "Logged at 02:05 PM on UNIT-27, version 1.4.2.");
+              "Logged at 02:05 PM on UNIT-27, version v1.4.2.");
     }
     SECTION("the unit alone, the version alone, and neither")
     {
@@ -1821,7 +1821,7 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         header.m_UnitNumber.reset();
         Rig version_only;
         version_only.start(list_of(error_at(1, 11, 2)), header);
-        CHECK(version_only.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02, version 1.4.2.");
+        CHECK(version_only.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02, version v1.4.2.");
 
         header.m_SoftwareVersion.reset();
         Rig neither;
@@ -1838,9 +1838,9 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
                   header);
 
         CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") ==
-              "Logged at 11:02 on UNIT-27-prod, version 1.4.2.");
+              "Logged at 11:02 on UNIT-27-prod, version v1.4.2.");
         CHECK(rig.model().entryForEdit(text_of(3)).value("footnote") ==
-              "Logged at 13:00 on UNIT-27-dev, version 1.4.2.");
+              "Logged at 13:00 on UNIT-27-dev, version v1.4.2.");
     }
     SECTION("the commit follows the version in brackets, and follows a change of it")
     {
@@ -1854,11 +1854,11 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
                   header);
 
         CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") ==
-              "Logged at 11:02 on UNIT-27, version 1.4.2 (a1b2c3d).");
+              "Logged at 11:02 on UNIT-27, version v1.4.2 (a1b2c3d).");
         // A new version with its own commit, then the same version with none: the footnote is what was in force.
         CHECK(rig.model().entryForEdit(text_of(2)).value("footnote") ==
-              "Logged at 12:00 on UNIT-27, version 1.5.0 (e4f5a6b).");
-        CHECK(rig.model().entryForEdit(text_of(4)).value("footnote") == "Logged at 14:00 on UNIT-27, version 1.5.0.");
+              "Logged at 12:00 on UNIT-27, version v1.5.0 (e4f5a6b).");
+        CHECK(rig.model().entryForEdit(text_of(4)).value("footnote") == "Logged at 14:00 on UNIT-27, version v1.5.0.");
     }
     SECTION("the commit with no unit")
     {
@@ -1868,7 +1868,7 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         Rig rig;
         rig.start(list_of(error_at(1, 11, 2)), header);
 
-        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02, version 1.4.2 (a1b2c3d).");
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02, version v1.4.2 (a1b2c3d).");
     }
     SECTION("with no configuration the unit is its number")
     {
@@ -1876,7 +1876,7 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         rig.start(list_of(error_at(1, 11, 2)));
         rig.config().clear();
 
-        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on 27, version 1.4.2.");
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on 27, version v1.4.2.");
     }
     SECTION("with no configuration the unit is its stored text, environment and all")
     {
@@ -1886,7 +1886,7 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         rig.start(list_of(error_at(1, 11, 2)), header);
         rig.config().clear();
 
-        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on 27-prod, version 1.4.2.");
+        CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on 27-prod, version v1.4.2.");
     }
 }
 

@@ -18,7 +18,7 @@ import ErrorJournalingApp
 //
 // Layout (EditEntry): one card with the error type (its tile colour as a swatch before the name) and the time (as a chip, the
 // way the design draws it), the note, the line as it will be in the shared log with the footnote that the model gives it
-// ("Logged at 11:02 on UNIT-27, version 1.4.2."), and "Delete entry" at the bottom.
+// ("Logged at 11:02 on UNIT-27, version v1.4.2."), and "Delete entry" at the bottom.
 //
 // The error type is chosen on a page of the same sheet that replaces the first one (Cancel and the title change with the
 // page), so there is one set of controls in front of a screen reader at a time. The time is chosen on a second, shorter sheet
@@ -84,7 +84,7 @@ Sheet {
     readonly property string refusal: hasEntry ? timeline.validateEdit(entryId, edited) : ""
     readonly property bool canSave: hasEntry && timeError.length === 0 && refusal.length === 0
     readonly property string preview: canSave ? timeline.previewLine(entryId, edited) : ""
-    // "Logged at 11:02 on UNIT-27, version 1.4.2.", from the model.
+    // "Logged at 11:02 on UNIT-27, version v1.4.2.", from the model.
     readonly property string footnote: original.footnote ?? ""
 
     objectName: "editSheet"

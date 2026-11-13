@@ -80,3 +80,18 @@ exactly where it did, then one `<Label> Version: v4.5.0` line per extra version,
 | integration | SQLite: new database at schema 3; a schema 2 database migrates with its logs intact and an empty list; round trip |
 | unit | `LogSession`: add, edit, remove, summary text, validation messages |
 | ui | header screen: label "Number suffix", fixed `v` in the version field, typed `v1.2` not doubled, summary row text, sheet add / edit / remove, large text |
+
+## What was built, and what was left
+
+Built: option 1A (relabel, in the Header, its sheet and Settings; the setup file key stays `unit_environments`), the fixed
+"v" (2) and option 3A (summary row and sheet).
+
+Left out on purpose, to keep the change small:
+
+- The extra versions are edited as a Correct only. The model accepts a Change (`changeHeader("extra_versions", ...)`)
+  and the export prints its line ("Other Versions changed: ..."), but no screen offers it; a robot update during the day
+  uses the existing Software version sheet.
+- The Software version sheet's "To" row still has no fixed "v" in it (its From row and its preview print the "v").
+- The sheet of option 3A has no mock-up. The Header mock-ups (phone, light and dark) are updated; the iPad and fold
+  variants are only relabelled.
+- The commit of an extra version is kept if it is there, but the sheet has no field for it.

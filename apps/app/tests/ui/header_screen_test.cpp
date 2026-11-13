@@ -1097,7 +1097,7 @@ TEST_CASE("details.commit_field: an optional field under the version, empty at f
     // It sits under the version field, which is the same as it was.
     CHECK(rig.geometry(commit).top() >= rig.geometry(version).bottom());
     CHECK(input_text(rig, "headerVersion") == QStringLiteral("1.4.2"));
-    CHECK(version->property("hint").toString() == QStringLiteral("Format 1.4.2 \u2013 numbers only."));
+    CHECK(version->property("hint").toString() == QStringLiteral("Numbers only, like 1.4.2. The v is added for you."));
     // The same 20 pt face as the version.
     CHECK(input_of(rig, commit)->property("font").value<QFont>().pixelSize() == 20);
     CHECK(commit->height() >= 52.0);
