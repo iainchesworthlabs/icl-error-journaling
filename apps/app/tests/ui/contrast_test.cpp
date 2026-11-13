@@ -219,7 +219,8 @@ TEST_CASE("theme.interaction_hues: the interaction tiles and the strip pass the 
     }
 }
 
-TEST_CASE("theme.interaction_hues: no interaction tile is red or green, and none is an error tile", "[ui][a11y][contrast]")
+TEST_CASE("theme.interaction_hues: no interaction tile is red or green, and none is an error tile",
+          "[ui][a11y][contrast]")
 {
     UiRig rig;
     QObject* theme = rig.theme();
@@ -263,8 +264,7 @@ TEST_CASE("theme.interaction_hues: the interaction tiles differ for a person wit
         {
             for (int b = a + 1; b <= 11; ++b)
             {
-                const double distance =
-                    deuteranopia_distance(interaction_tile(theme, a), interaction_tile(theme, b));
+                const double distance = deuteranopia_distance(interaction_tile(theme, a), interaction_tile(theme, b));
                 if (distance < closest)
                 {
                     closest = distance;

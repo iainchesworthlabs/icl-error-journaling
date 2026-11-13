@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// BoardState (Stage 14, I-5): the second board is off on a fresh install and an upgrade, the last board is remembered, and
-// turning the board off while on it goes back to Errors.
+// BoardState (Stage 14, I-5): the second board is off on a fresh install and an upgrade, the last board is remembered,
+// and turning the board off while on it goes back to Errors.
 #include "viewmodel/board_state.hpp"
 #include "viewmodel/interaction_board_model.hpp"
 

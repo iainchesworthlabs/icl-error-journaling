@@ -509,8 +509,9 @@ TEST_CASE("shell.tab_label_cap: at the largest text scale the five labels do not
             at_cap_pt = font_of(label_of(rig, QStringLiteral("tabInteractions"))).pointSizeF();
         }
     }
-    // The label never goes below its size at the default text size (the cap is a floor of the fit, not a second scale). Whether
-    // the longest label fits its fifth of 375 pt in the phone's own font is for a device: the font of the test is not it.
+    // The label never goes below its size at the default text size (the cap is a floor of the fit, not a second scale).
+    // Whether the longest label fits its fifth of 375 pt in the phone's own font is for a device: the font of the test
+    // is not it.
     rig.set_text_scale(3.1);
     rig.layout();
     const QQuickItem* longest = label_of(rig, QStringLiteral("tabInteractions"));
@@ -528,7 +529,8 @@ TEST_CASE("shell.five_tabs: four tabs keep the labels of v1 and the fifth is Int
     root->setProperty("interactionsEnabled", true);
     rig.layout();
     CHECK(label_of(rig, QStringLiteral("tabLog"))->property("text").toString() == QStringLiteral("Errors"));
-    CHECK(label_of(rig, QStringLiteral("tabInteractions"))->property("text").toString() == QStringLiteral("Interactions"));
+    CHECK(label_of(rig, QStringLiteral("tabInteractions"))->property("text").toString() ==
+          QStringLiteral("Interactions"));
     // A tap on the fifth tab selects its place in the bar (the second).
     QSignalSpy selected(root, SIGNAL(tabSelected(int)));
     rig.tap(tab_item(rig, QStringLiteral("tabInteractions")));

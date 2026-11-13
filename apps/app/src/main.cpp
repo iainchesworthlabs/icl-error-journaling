@@ -250,8 +250,9 @@ int main(int argc, char* argv[])
         {
             QObject::connect(window, &QQuickWindow::frameSwapped, &platform_bridge,
                              [&launch] { launch.frame_swapped(); });
-            // The window declares the smallest size it is laid out for (Main.qml); a desktop honours that itself, and iPadOS
-            // is told, now and each time the application becomes active (a window scene can connect after the start).
+            // The window declares the smallest size it is laid out for (Main.qml); a desktop honours that itself, and
+            // iPadOS is told, now and each time the application becomes active (a window scene can connect after the
+            // start).
             const auto forward_minimum = [&window_limits, window]
             { window_limits.set_minimum_size(window->minimumWidth(), window->minimumHeight()); };
             forward_minimum();
