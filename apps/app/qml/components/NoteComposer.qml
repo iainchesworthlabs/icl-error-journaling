@@ -70,7 +70,7 @@ Item {
     property string startDictationName: qsTr("Dictate")
     property string stopDictationName: qsTr("Stop dictating")
     readonly property bool micShown: dictationAvailable && !skeleton
-    readonly property bool rtl: Qt.application.layoutDirection === Qt.RightToLeft
+    readonly property bool rtl: Application.layoutDirection === Qt.RightToLeft
 
     signal dictationToggled
 
