@@ -39,9 +39,20 @@ Item {
     // The most lines the open box shows before it scrolls.
     property int maxLines: 5
 
+    // The height of the box at rest: one line of the text at the current text size, but never less than the field height
+    // of the design (44 pt), so that at the largest text sizes the line is not cut.
+    readonly property real restHeight: Math.max(Theme.size.fieldHeight, lineMetrics.height + 2 * Theme.space.tileGap)
+
     readonly property bool canSubmit: field.text.trim().length > 0
     // The width of the Add button, or of the shape in its place.
     readonly property real buttonWidth: skeleton && nominalMetrics ? Theme.size.tileMinimum * 8 / 11 : addButton.implicitWidth
+
+    TextMetrics {
+        id: lineMetrics
+
+        font: Theme.font.bodySmall.font
+        text: "Ag"
+    }
 
     // The user changed the text.
     signal textEdited(string text)
@@ -152,7 +163,7 @@ Item {
             width: parent.width
             spacing: Theme.space.tileGap
             // The row is as high as the one-line box, whatever the box is doing, so that what is under the card never moves.
-            height: Theme.size.fieldHeight
+            height: root.restHeight
             z: field.activeFocus ? 1 : 0
 
             // The box. At rest it is one line high and shows the first line of the note. With focus it opens downwards over
@@ -163,11 +174,10 @@ Item {
 
                 objectName: "noteBox"
 
-                readonly property real linePitch: Theme.font.bodySmall.linePitch
-                readonly property real openLimit: Math.min(Theme.size.fieldHeight + (root.maxLines - 1) * linePitch, root.Window.height > 0 ? root.Window.height / 2 : Number.MAX_VALUE)
+                readonly property real openLimit: Math.min(root.restHeight + (root.maxLines - 1) * lineMetrics.height, root.Window.height > 0 ? root.Window.height / 2 : Number.MAX_VALUE)
 
                 width: parent.width - root.buttonWidth - parent.spacing
-                height: field.activeFocus ? Math.max(Theme.size.fieldHeight, Math.min(field.implicitHeight, openLimit)) : Theme.size.fieldHeight
+                height: field.activeFocus ? Math.max(root.restHeight, Math.min(field.implicitHeight, openLimit)) : root.restHeight
                 radius: Theme.radius.field
                 color: root.skeleton ? Theme.colour.border : Theme.colour.fieldBackground
                 border.width: field.activeFocus ? Theme.border.otherWidth : Theme.border.hairline
@@ -191,7 +201,7 @@ Item {
                         topPadding: Theme.space.tileGap
                         bottomPadding: Theme.space.tileGap
                         // At least the one-line box high (a touch target), and as high as the text beyond that.
-                        implicitHeight: Math.max(Theme.size.fieldHeight, contentHeight + topPadding + bottomPadding)
+                        implicitHeight: Math.max(root.restHeight, contentHeight + topPadding + bottomPadding)
                         height: Math.max(implicitHeight, flick.height)
                         verticalAlignment: TextEdit.AlignVCenter
                         color: Theme.colour.textPrimary
@@ -239,7 +249,7 @@ Item {
                 id: addButton
 
                 objectName: "addButton"
-                height: Theme.size.fieldHeight
+                height: root.restHeight
                 compact: true
                 text: root.addText
                 visible: !root.skeleton
@@ -253,7 +263,7 @@ Item {
             Rectangle {
                 visible: root.skeleton
                 width: root.buttonWidth
-                height: Theme.size.fieldHeight
+                height: root.restHeight
                 radius: Theme.radius.field
                 color: Theme.colour.border
             }
