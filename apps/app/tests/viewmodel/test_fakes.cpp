@@ -166,7 +166,7 @@ TEST_CASE("The fake clipboard keeps the text byte for byte and the history", "[v
     CHECK(clipboard.text().empty());
     CHECK(clipboard.copies() == 0);
 
-    const std::string multi_line = "10:05 T| Wrong Response\n13:15 Software Version changed: 1.4.2 \xE2\x86\x92 1.5.0";
+    const std::string multi_line = "10:05 T| Wrong Response\n13:15 Software Version changed: v1.4.2 \xE2\x86\x92 v1.5.0";
     clipboard.set_text("first");
     clipboard.set_text(multi_line);
 

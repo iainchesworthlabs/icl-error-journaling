@@ -34,6 +34,8 @@ std::string header_message(const HeaderError& error)
         return "That is not a valid unit number.";
     case HeaderError::Kind::INVALID_SOFTWARE_VERSION:
         return "That is not a valid software version.";
+    case HeaderError::Kind::INVALID_EXTRA_VERSIONS:
+        return "That is not a valid list of versions.";
     case HeaderError::Kind::EMPTY_LOCATION:
         return "The location cannot be empty.";
     case HeaderError::Kind::UNCHANGED:

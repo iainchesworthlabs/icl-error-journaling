@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "error_journaling/export_format.hpp"
+#include "error_journaling/extra_versions.hpp"
 #include "error_journaling/header_history.hpp"
 #include "error_journaling/unit_number.hpp"
 
@@ -138,6 +139,11 @@ Result<std::string, RenderError> display_value(const ExportContext& context, Hea
         const auto version = SoftwareVersion::parse_stored(stored);
         return version ? version->display() : collapse(stored);
     }
+    case HeaderField::EXTRA_VERSIONS:
+    {
+        const auto versions = parse_extra_versions(stored);
+        return versions ? summarize_extra_versions(*versions) : collapse(stored);
+    }
     }
     return collapse(stored);  // GCOVR_EXCL_LINE unreachable: every HeaderField is handled above
 }
@@ -149,6 +155,7 @@ std::string field_label(const ExportContext& context, HeaderField field)
     case HeaderField::UNIT_NUMBER: return unit_label(context.m_UnitPrefix);
     case HeaderField::LOCATION: return std::string(export_format::LABEL_LOCATION);
     case HeaderField::SOFTWARE_VERSION: return std::string(export_format::LABEL_SOFTWARE_VERSION);
+    case HeaderField::EXTRA_VERSIONS: return std::string(export_format::LABEL_EXTRA_VERSIONS);
     }
     return {};  // GCOVR_EXCL_LINE unreachable: every HeaderField is handled above
 }
@@ -359,6 +366,12 @@ Result<std::string, RenderError> render_header(const Log& log, const ExportConte
     out += export_format::LINE_END;
     append_labelled(out, export_format::LABEL_SOFTWARE_VERSION,
                     header.m_SoftwareVersion ? header.m_SoftwareVersion->display() : std::string{});
+    // One line for each other version, after the software version; none for a log without any.
+    for (const auto& extra : header.m_ExtraVersions)
+    {
+        out += export_format::LINE_END;
+        append_labelled(out, extra_version_line_label(extra), extra.m_Version.display());
+    }
     return out;
 }
 

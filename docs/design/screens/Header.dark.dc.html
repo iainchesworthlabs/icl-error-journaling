@@ -47,12 +47,13 @@ input::placeholder{color:#93A3B0}
     <div style="font-size: 13px; color: #A7B6C3; padding: 0 4px">Type the number only.</div>
 
     <div style="margin-top: 12px; background: #18212A; border-radius: 14px; overflow: hidden">
-      <button style="width: 100%; min-height: 48px; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 0 14px; box-sizing: border-box; font-family: inherit; font-size: 16px; color: #EEF2F6; text-align: left" aria-label="Environment, None, opens a list of environments">
-        <span style="flex-grow: 1; padding: 6px 0">Environment</span>
+      <button style="width: 100%; min-height: 48px; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 0 14px; box-sizing: border-box; font-family: inherit; font-size: 16px; color: #EEF2F6; text-align: left" aria-label="Number suffix, None, opens a list of suffixes">
+        <span style="flex-grow: 1; padding: 6px 0">Number suffix</span>
         <span style="color: #A7B6C3">None</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#74869A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
       </button>
     </div>
+    <div style="font-size: 13px; color: #5A6B78; padding: 0 4px">Added after the number, like UNIT-27-prod.</div>
 
     <div style="margin-top: 12px; font-size: 12px; font-weight: 600; color: #A7B6C3; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Location</div>
     <div style="background: #18212A; border-radius: 14px; overflow: hidden">
@@ -68,19 +69,28 @@ input::placeholder{color:#93A3B0}
       </button>
     </div>
 
-    <div style="margin-top: 12px; font-size: 12px; font-weight: 600; color: #A7B6C3; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Software version</div>
+    <div style="margin-top: 12px; font-size: 12px; font-weight: 600; color: #A7B6C3; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Robot software version</div>
     <div style="background: #18212A; border-radius: 14px; display: flex; align-items: center; height: 52px; padding: 0 14px; gap: 8px">
-      <label for="ver" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Software version</label>
+      <label for="ver" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Robot software version</label>
+      <span style="font-size: 20px; font-weight: 600; color: #5A6B78">v</span>
       <input id="ver" value="1.4.2" inputmode="decimal" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 20px; font-weight: 600; color: #EEF2F6">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FC6E6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Valid version"><path d="M5 12l5 5L20 7"></path></svg>
     </div>
-    <div style="font-size: 13px; color: #A7B6C3; padding: 0 4px">Format 1.4.2 – numbers only.</div>
+    <div style="font-size: 13px; color: #A7B6C3; padding: 0 4px">Numbers only, like 1.4.2. The v is added for you.</div>
     <div style="margin-top: 12px; font-size: 12px; font-weight: 600; color: #A7B6C3; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px">Commit</div>
     <div style="background: #18212A; border-radius: 14px; display: flex; align-items: center; height: 52px; padding: 0 14px; gap: 8px">
       <label for="commit" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Commit</label>
       <input id="commit" value="" placeholder="For example a1b2c3d" autocapitalize="none" autocomplete="off" spellcheck="false" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 20px; font-weight: 600; color: #EEF2F6">
     </div>
     <div style="font-size: 13px; color: #A7B6C3; padding: 0 4px">The short code (7 to 12 letters and numbers) that identifies the exact build. Leave it empty if you can’t get it.</div>
+    <div style="margin-top: 12px; background: #18212A; border-radius: 14px; overflow: hidden">
+      <button style="width: 100%; min-height: 48px; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 0 14px; box-sizing: border-box; font-family: inherit; font-size: 16px; color: #EEF2F6; text-align: left" aria-label="Other versions, None, opens a list of versions">
+        <span style="flex-grow: 1; padding: 6px 0">Other versions</span>
+        <span style="color: #A7B6C3">None</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#74869A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+    </div>
+    <div style="font-size: 13px; color: #5A6B78; padding: 0 4px">Add the phone app that controls the robot, or other software.</div>
   </div>
   </div>
   <div style="position: absolute; left: 0; right: 0; top: 752px; bottom: 0; background: #0E141A"></div>

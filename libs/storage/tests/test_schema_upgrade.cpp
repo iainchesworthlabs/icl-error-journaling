@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The upgrade from schema version 1 to 2, which adds `day_log.changed_since_share` (the share rule: a log is unshared
+// The upgrade from schema version 1 to 2, which adds `day_log.changed_since_share` (and on to 3, `extra_versions`) (the share rule: a log is unshared
 // when it changed after its last share). A database from an earlier build has no such column: its logs must read as
 // they did, a log that was shared reads as shared, and nothing is lost. All data is synthetic.
 #include "error_journaling/clock.hpp"
@@ -42,6 +42,7 @@ public:
         RawDb raw(database());
         REQUIRE(raw.is_open());
         REQUIRE(raw.exec(QStringLiteral("PRAGMA wal_checkpoint(TRUNCATE)")));
+        REQUIRE(raw.exec(QStringLiteral("ALTER TABLE day_log DROP COLUMN extra_versions")));
         REQUIRE(raw.exec(QStringLiteral("ALTER TABLE day_log DROP COLUMN changed_since_share")));
         REQUIRE(raw.exec(QStringLiteral("PRAGMA user_version = 1")));
     }
@@ -185,17 +186,18 @@ TEST_CASE("A migrated database has the schema of a new one", "[migration][share]
     const auto expected = day_log_columns(fresh_dir.path() / "ej.db");
     REQUIRE_FALSE(expected.empty());
     CHECK(day_log_columns(migrated.database()) == expected);
-    CHECK(expected.back() == "changed_since_share INTEGER 1 0");
+    CHECK(expected.back() == "extra_versions TEXT 0 -");
+    CHECK(expected.at(expected.size() - 2) == "changed_since_share INTEGER 1 0");
 }
 
-TEST_CASE("The product's migration step is the only one between version 1 and the current schema", "[migration][share]")
+TEST_CASE("The product's migration steps are the only ones between version 1 and the current schema", "[migration][share]")
 {
     VersionOneStore store;
     ScriptedClock clock(sample_time(4000));
     const auto report = Migrator(store.location(), clock, product_migration_steps(), SQLITE_SCHEMA_VERSION).run();
     REQUIRE(report.has_value());
     CHECK(report->m_Outcome == MigrationOutcome::MIGRATED);
-    CHECK(report->m_Steps == std::vector<std::string>{"add day_log.changed_since_share"});
+    CHECK(report->m_Steps == std::vector<std::string>{"add day_log.changed_since_share", "add day_log.extra_versions"});
     RawDb raw(store.database());
     CHECK(raw.scalar(QStringLiteral("SELECT count(*) FROM day_log WHERE changed_since_share = 0")).toInt() == 1);
 }

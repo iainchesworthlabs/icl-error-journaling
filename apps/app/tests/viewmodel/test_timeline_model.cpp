@@ -608,7 +608,7 @@ TEST_CASE("The summary: count, last line, header text and title", "[viewmodel][t
         CHECK(rig.model().title_text() == "Sat 7 Nov \xC2\xB7 0 entries");
         CHECK(rig.model().header_text() ==
               "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\n"
-              "Software Version: 1.4.2");
+              "Software Version: v1.4.2");
     }
 
     SECTION("the last line follows the latest entry, and returns to the previous one after an undo")
@@ -877,7 +877,7 @@ TEST_CASE("Edit: previewLine is the saved line, and writes nothing", "[viewmodel
     // A header change: its preview shows the old side the edit would leave.
     const QVariantMap correction{{"newValue", "1.4.5"}};
     const QString preview = rig.model().previewLine(text_of(3), correction);
-    CHECK(preview == "11:30 Software Version changed: 1.4.2 \xE2\x86\x92 1.4.5");
+    CHECK(preview == "11:30 Software Version changed: v1.4.2 \xE2\x86\x92 v1.4.5");
     REQUIRE(rig.model().saveEntry(text_of(3), correction));
     rig.commit();
     CHECK(full_line(rig.model(), rig.model().rowOf(text_of(3))) == preview);
@@ -926,8 +926,8 @@ TEST_CASE("Edit: correcting a header change updates its line and the old side of
     rig.start({error_at(1, 11, 10, "A"), change_at(2, 11, 30, HeaderField::SOFTWARE_VERSION, "1.5.0"),
                change_at(3, 11, 50, HeaderField::SOFTWARE_VERSION, "1.6.0")});
     const QString header = rig.model().header_text();
-    CHECK(full_line(rig.model(), 1) == "11:30 Software Version changed: 1.4.2 \xE2\x86\x92 1.5.0");
-    CHECK(full_line(rig.model(), 2) == "11:50 Software Version changed: 1.5.0 \xE2\x86\x92 1.6.0");
+    CHECK(full_line(rig.model(), 1) == "11:30 Software Version changed: v1.4.2 \xE2\x86\x92 v1.5.0");
+    CHECK(full_line(rig.model(), 2) == "11:50 Software Version changed: v1.5.0 \xE2\x86\x92 v1.6.0");
     QSignalSpy changed(&rig.model(), &QAbstractItemModel::dataChanged);
     QSignalSpy inserted(&rig.model(), &QAbstractItemModel::rowsInserted);
     QSignalSpy reset(&rig.model(), &QAbstractItemModel::modelReset);
@@ -937,8 +937,8 @@ TEST_CASE("Edit: correcting a header change updates its line and the old side of
         REQUIRE(rig.model().saveEntry(text_of(2), QVariantMap{{"newValue", "1.4.5"}}));
         rig.commit();
 
-        CHECK(full_line(rig.model(), 1) == "11:30 Software Version changed: 1.4.2 \xE2\x86\x92 1.4.5");
-        CHECK(full_line(rig.model(), 2) == "11:50 Software Version changed: 1.4.5 \xE2\x86\x92 1.6.0");
+        CHECK(full_line(rig.model(), 1) == "11:30 Software Version changed: v1.4.2 \xE2\x86\x92 v1.4.5");
+        CHECK(full_line(rig.model(), 2) == "11:50 Software Version changed: v1.4.5 \xE2\x86\x92 v1.6.0");
         CHECK(changed.count() == 1); // one dataChanged over every row
         CHECK(changed.at(0).at(0).value<QModelIndex>().row() == 0);
         CHECK(changed.at(0).at(1).value<QModelIndex>().row() == 2);
@@ -954,8 +954,8 @@ TEST_CASE("Edit: correcting a header change updates its line and the old side of
         rig.commit();
 
         CHECK(full_lines(rig.model()) ==
-              std::vector<QString>{"11:10 T| A", "11:50 Software Version changed: 1.4.2 \xE2\x86\x92 1.6.0",
-                                   "12:00 Software Version changed: 1.6.0 \xE2\x86\x92 1.4.5"});
+              std::vector<QString>{"11:10 T| A", "11:50 Software Version changed: v1.4.2 \xE2\x86\x92 v1.6.0",
+                                   "12:00 Software Version changed: v1.6.0 \xE2\x86\x92 v1.4.5"});
         CHECK(rig.model().header_text() == header);
     }
 
@@ -963,7 +963,7 @@ TEST_CASE("Edit: correcting a header change updates its line and the old side of
     {
         REQUIRE(rig.model().deleteEntry(text_of(2)));
         rig.commit();
-        CHECK(full_line(rig.model(), 1) == "11:50 Software Version changed: 1.4.2 \xE2\x86\x92 1.6.0");
+        CHECK(full_line(rig.model(), 1) == "11:50 Software Version changed: v1.4.2 \xE2\x86\x92 v1.6.0");
     }
 }
 
@@ -985,7 +985,7 @@ TEST_CASE("Copy: copyLine and copyAll put exactly the expected bytes on the clip
     REQUIRE(rig.model().copyAll());
     CHECK(rig.clipboard().text() == expected);
     CHECK(rig.clipboard().text() ==
-          "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: 1.4.2\n"
+          "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: v1.4.2\n"
           "\n11:10 T| A\n11:20 (Free Text) B\n11:30 T| C \xE2\x80\x93 with a note\n11:40 T| D");
 
     CHECK_FALSE(rig.model().copyLine(-1));

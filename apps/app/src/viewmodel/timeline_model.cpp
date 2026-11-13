@@ -116,6 +116,8 @@ QString header_refusal(const HeaderError& error)
         return translate("That is not a valid unit number.");
     case HeaderError::Kind::INVALID_SOFTWARE_VERSION:
         return translate("That is not a valid software version.");
+    case HeaderError::Kind::INVALID_EXTRA_VERSIONS:
+        return translate("Those are not valid versions.");
     case HeaderError::Kind::EMPTY_LOCATION:
         return translate("The location cannot be empty.");
     case HeaderError::Kind::UNCHANGED:

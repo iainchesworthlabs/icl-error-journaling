@@ -146,7 +146,7 @@ TEST_CASE("SoftwareVersion rejects malformed input", "[software-version]")
     CHECK(SoftwareVersion::parse("1.4").error() == Error::WRONG_COMPONENT_COUNT);
     CHECK(SoftwareVersion::parse("1.4.2.1").error() == Error::WRONG_COMPONENT_COUNT);
     CHECK(SoftwareVersion::parse("1").error() == Error::WRONG_COMPONENT_COUNT);
-    for (const char* text : {"1.4.2-beta", "1.4.2+3", "v1.4.2", "1..2", "1.4.", ".4.2", " 1.4.2"})
+    for (const char* text : {"1.4.2-beta", "1.4.2+3", "vv1.4.2", "1..2", "1.4.", ".4.2", " 1.4.2"})
     {
         INFO(text);
         CHECK(SoftwareVersion::parse(text).error() == Error::NOT_DIGITS);
@@ -204,12 +204,12 @@ TEST_CASE("A version prints with its commit in brackets, and stores it after a p
     const auto plain = SoftwareVersion::parse("1.4.2").value();
     CHECK(plain.format() == "1.4.2");
     CHECK(plain.stored() == "1.4.2");
-    CHECK(plain.display() == "1.4.2");
+    CHECK(plain.display() == "v1.4.2");
 
     const auto with_commit = SoftwareVersion::parse("1.4.2", "A1B2C3D").value();
     CHECK(with_commit.format() == "1.4.2");
     CHECK(with_commit.stored() == "1.4.2+a1b2c3d");
-    CHECK(with_commit.display() == "1.4.2 (a1b2c3d)");
+    CHECK(with_commit.display() == "v1.4.2 (a1b2c3d)");
     CHECK(with_commit != plain);
     CHECK(SoftwareVersion::parse("1.4.2", "a1b2c3d").value() == with_commit);
 

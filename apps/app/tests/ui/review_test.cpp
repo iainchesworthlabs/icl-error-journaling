@@ -107,7 +107,7 @@ TEST_CASE("review.header_and_rows: the header block is headerText and each row i
     CHECK(text_in(s.m_Rig, QStringLiteral("reviewHeaderText")) == timeline.header_text());
     CHECK(timeline.header_text() ==
           QStringLiteral("Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\n"
-                         "Software Version: 1.4.2"));
+                         "Software Version: v1.4.2"));
     CHECK(text_in(s.m_Rig, QStringLiteral("reviewSummary")) == timeline.title_text());
     CHECK(text_in(s.m_Rig, QStringLiteral("reviewTitle")) == QStringLiteral("Today’s log"));
 

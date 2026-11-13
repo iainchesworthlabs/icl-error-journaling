@@ -29,6 +29,7 @@ add_executable(ej_storage_integration_tests
     test_sqlite_repository.cpp
     test_storage_location.cpp
     test_unit_environment.cpp
+    test_extra_versions_storage.cpp
     test_version_commit.cpp)
 target_link_libraries(ej_storage_integration_tests
     PRIVATE ej_storage Qt6::Sql Catch2::Catch2 icl::warnings icl::coverage)

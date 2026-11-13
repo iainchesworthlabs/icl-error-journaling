@@ -97,13 +97,13 @@ TEST_CASE("environment.sheet: VoiceOver names the row, the sheet and its choices
     QQuickItem* row = need(rig, QStringLiteral("headerEnvironment"));
 
     // The row reads its label and its value, and is a button-sized target.
-    CHECK(name_of_item(rig, row) == QStringLiteral("Environment, None"));
+    CHECK(name_of_item(rig, row) == QStringLiteral("Number suffix, None"));
     expect_clean(check_names(rig));
     expect_clean(check_targets(rig));
 
     open_environment_sheet(rig);
     QQuickItem* sheet = need(rig, QStringLiteral("environmentSheet"));
-    CHECK(sheet->property("accessibleName").toString() == QStringLiteral("Environment"));
+    CHECK(sheet->property("accessibleName").toString() == QStringLiteral("Number suffix"));
     CHECK(name_of_item(rig, choice(rig, "environmentNone")) == QStringLiteral("None"));
     CHECK(name_of_item(rig, choice(rig, "environment_prod")) == QStringLiteral("prod"));
     CHECK(name_of_item(rig, choice(rig, "environment_dev")) == QStringLiteral("dev"));
@@ -122,7 +122,7 @@ TEST_CASE("environment.sheet: VoiceOver names the row, the sheet and its choices
     rig.tap(choice(rig, "environment_prod"));
     play(rig, 500);
     rig.settle();
-    CHECK(name_of_item(rig, row) == QStringLiteral("Environment, prod"));
+    CHECK(name_of_item(rig, row) == QStringLiteral("Number suffix, prod"));
 }
 
 TEST_CASE("environment.sheet: large text, dark mode and the safe area hold", "[ui][environment_sheet]")

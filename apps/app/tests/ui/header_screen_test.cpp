@@ -886,7 +886,7 @@ TEST_CASE("details.environment: a row under the unit field says None until one i
     QQuickItem* row = need(rig, QStringLiteral("headerEnvironment"));
     QQuickItem* unit = need(rig, QStringLiteral("headerUnit"));
 
-    CHECK(row->property("text").toString() == QStringLiteral("Environment"));
+    CHECK(row->property("text").toString() == QStringLiteral("Number suffix"));
     CHECK(row->property("value").toString() == QStringLiteral("None"));
     CHECK(row->property("showChevron").toBool());
     CHECK(row->height() >= 44.0);
@@ -1149,7 +1149,7 @@ TEST_CASE("details.commit_field: the commit is lower-cased, a full hash is short
 
     retype(rig, commit, QStringLiteral("0123456789ab"));
     CHECK(world.session().commit_text() == QStringLiteral("0123456789ab"));
-    CHECK(world.session().version_display_text() == QStringLiteral("1.4.2 (0123456789ab)"));
+    CHECK(world.session().version_display_text() == QStringLiteral("v1.4.2 (0123456789ab)"));
 
     // Emptying the field takes the commit away, and the strip on the Log card comes back.
     retype(rig, commit, QString());

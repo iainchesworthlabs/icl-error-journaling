@@ -15,6 +15,7 @@ add_library(ej_core
     src/configuration.cpp
     src/day_prompt.cpp
     src/export_renderer.cpp
+    src/extra_versions.cpp
     src/header_history.cpp
     src/header_values.cpp
     src/iso_date.cpp

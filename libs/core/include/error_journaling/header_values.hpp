@@ -2,10 +2,12 @@
 #pragma once
 
 #include <chrono>
+#include <vector>
 #include <optional>
 #include <string>
 #include <string_view>
 
+#include "error_journaling/extra_versions.hpp"
 #include "error_journaling/header_field.hpp"
 #include "error_journaling/ids.hpp"
 #include "error_journaling/result.hpp"
@@ -30,6 +32,8 @@ struct HeaderValues
     std::optional<UnitNumber> m_UnitNumber;
     std::optional<LocationValue> m_Location;
     std::optional<SoftwareVersion> m_SoftwareVersion;
+    /// The other versions (HDR-10), such as the influencer app; the software version above is the robot's.
+    ExtraVersions m_ExtraVersions;
 };
 
 /// Why a header edit was refused. For an invalid value, the component's own error is carried along.
@@ -39,6 +43,7 @@ struct HeaderError
     {
         INVALID_UNIT_NUMBER,      // m_UnitNumber says why
         INVALID_SOFTWARE_VERSION, // m_SoftwareVersion says why
+        INVALID_EXTRA_VERSIONS,   // m_ExtraVersions says why
         EMPTY_LOCATION,
         UNCHANGED,  // the new value equals the one in force (or, for a correction, the one before the change)
         UNKNOWN_ENTRY,
@@ -49,6 +54,7 @@ struct HeaderError
     Kind m_Kind = Kind::UNCHANGED;
     std::optional<UnitNumber::Error> m_UnitNumber;
     std::optional<SoftwareVersion::Error> m_SoftwareVersion;
+    std::optional<ExtraVersionsError> m_ExtraVersions;
 
     friend bool operator==(const HeaderError&, const HeaderError&) = default;
 };

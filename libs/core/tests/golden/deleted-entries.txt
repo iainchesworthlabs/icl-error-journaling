@@ -2,11 +2,11 @@ Facilitator: Sam Example
 Date: 7 Nov 2026
 UNIT #: UNIT-27
 Location: North Site
-Software Version: 1.4.2
+Software Version: v1.4.2
 
 10:00 T| Wrong Response
 10:20 (Free Text) Robot restarted
-12:00 Software Version changed: 1.4.2 → 1.5.0
+12:00 Software Version changed: v1.4.2 → v1.5.0
 13:00 T| Wrong Response
 
 Totals: Wrong Response 2
