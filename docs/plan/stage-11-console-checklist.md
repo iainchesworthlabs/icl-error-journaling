@@ -38,7 +38,7 @@ Submitting for review and releasing are yours, at the end. Nothing here does eit
 | Name, subtitle, categories, copyright | Uploaded from `store/appstore/`. Check only |
 | Bundle ID | `com.iainchesworthlabs.fieldtest` (already chosen) |
 | SKU | Any text you will recognise, for example `field-test-1` |
-| Primary language | English (UK) |
+| Primary language | English (Australia), as the record already is. The listing is uploaded for English (Australia), named Field Test, and for English (UK), named ICL Field Test because the UK store refuses Field Test |
 | Content rights | Answer **No** to "contains, shows or accesses third-party content". The app shows only what the user enters |
 | Privacy policy URL, support URL, marketing URL | Uploaded: `https://iainchesworthlabs.github.io/icl-error-journaling/privacy/`, `.../support/` and the site root. These GitHub Pages addresses stay until the project's own domain is live; then change the three files in `store/appstore/en-GB/` and upload again |
 
