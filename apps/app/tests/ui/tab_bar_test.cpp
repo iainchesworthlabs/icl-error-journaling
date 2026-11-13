@@ -468,3 +468,70 @@ TEST_CASE("tab_bar.stacking: a page built after the bar draws nothing over it on
     CHECK(red_pixels(0, top) > 0);
     CHECK(red_pixels(top, image.height()) == 0);
 }
+
+// T-I5-3 (docs/plan/stage-14.md): five tabs on the narrowest window.
+TEST_CASE("shell.tab_label_cap: at the largest text scale the five labels do not truncate at 375 pt", "[ui][tab_bar]")
+{
+    UiRig rig;
+    QQuickItem* root = load_bar(rig);
+    root->setProperty("interactionsEnabled", true);
+    rig.set_window_size(QSize(375, 812));
+    rig.layout();
+    const QStringList tabs = {QStringLiteral("tabLog"), QStringLiteral("tabInteractions"), QStringLiteral("tabReview"),
+                              QStringLiteral("tabHistory"), QStringLiteral("tabSettings")};
+    QQuickItem* bar = rig.find(QStringLiteral("tabBar"));
+    REQUIRE(bar != nullptr);
+
+    double at_default_pt = 0;
+    double at_cap_pt = 0;
+    for (const double scale : {0.82, 1.0, 1.3, 2.0, 3.1})
+    {
+        rig.set_text_scale(scale);
+        rig.layout();
+        for (const QString& name : tabs)
+        {
+            QQuickItem* tab = tab_item(rig, name);
+            QQuickItem* label = label_of(rig, name);
+            REQUIRE(label != nullptr);
+            INFO("scale " << scale << " " << name.toStdString());
+            CHECK(rig.geometry(tab).width() == 375.0 / 5);
+            // One line, none of it cut, and inside its tab.
+            CHECK_FALSE(label->property("truncated").toBool());
+            CHECK(label->property("lineCount").toInt() == 1);
+            CHECK(rig.geometry(label).bottom() <= 812 - 34 + 0.5);
+        }
+        if (scale == 1.0)
+        {
+            at_default_pt = font_of(label_of(rig, QStringLiteral("tabInteractions"))).pointSizeF();
+        }
+        if (scale == 1.3)
+        {
+            at_cap_pt = font_of(label_of(rig, QStringLiteral("tabInteractions"))).pointSizeF();
+        }
+    }
+    // The label never goes below its size at the default text size (the cap is a floor of the fit, not a second scale). Whether
+    // the longest label fits its fifth of 375 pt in the phone's own font is for a device: the font of the test is not it.
+    rig.set_text_scale(3.1);
+    rig.layout();
+    const QQuickItem* longest = label_of(rig, QStringLiteral("tabInteractions"));
+    CHECK(font_of(const_cast<QQuickItem*>(longest)).pointSizeF() >= at_default_pt);
+    // ... and it is never larger than at the cap of the tab labels (1.3), whatever the text size.
+    CHECK(font_of(const_cast<QQuickItem*>(longest)).pointSizeF() <= at_cap_pt + 0.01);
+}
+
+TEST_CASE("shell.five_tabs: four tabs keep the labels of v1 and the fifth is Interactions", "[ui][tab_bar]")
+{
+    UiRig rig;
+    QQuickItem* root = load_bar(rig);
+    CHECK(label_of(rig, QStringLiteral("tabLog"))->property("text").toString() == QStringLiteral("Log"));
+    CHECK(rig.find_item(QStringLiteral("tabInteractions")) == nullptr);
+    root->setProperty("interactionsEnabled", true);
+    rig.layout();
+    CHECK(label_of(rig, QStringLiteral("tabLog"))->property("text").toString() == QStringLiteral("Errors"));
+    CHECK(label_of(rig, QStringLiteral("tabInteractions"))->property("text").toString() == QStringLiteral("Interactions"));
+    // A tap on the fifth tab selects its place in the bar (the second).
+    QSignalSpy selected(root, SIGNAL(tabSelected(int)));
+    rig.tap(tab_item(rig, QStringLiteral("tabInteractions")));
+    REQUIRE(selected.count() == 1);
+    CHECK(selected.at(0).at(0).toInt() == 1);
+}

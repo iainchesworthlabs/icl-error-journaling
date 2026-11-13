@@ -14,7 +14,9 @@
 #include "error_journaling/version.hpp"
 #include "qt_clipboard.hpp"
 #include "viewmodel/about_model.hpp"
+#include "viewmodel/board_state.hpp"
 #include "viewmodel/help_state.hpp"
+#include "viewmodel/interaction_board_model.hpp"
 #include "viewmodel/settings_model.hpp"
 
 #include <QCommandLineOption>
@@ -181,9 +183,17 @@ int main(int argc, char* argv[])
     ej::viewmodel::HelpState help(QDir(data_path).filePath(QStringLiteral("help-state.ini")),
                                   [] { return QDate::currentDate(); });
 
+    // Which boards there are (the optional second board is off until it is turned on in Settings) and which was used
+    // last. Its own small file beside the data, outside the store (Stage 14, I-5). The board model is the stand-in that
+    // I-6 replaces.
+    ej::viewmodel::BoardState boards(QDir(data_path).filePath(QStringLiteral("board-state.ini")));
+    ej::viewmodel::InteractionBoardModel interaction_board;
+
     QQmlApplicationEngine engine;
     QQmlEngine::setObjectOwnership(&about, QQmlEngine::CppOwnership);
     QQmlEngine::setObjectOwnership(&help, QQmlEngine::CppOwnership);
+    QQmlEngine::setObjectOwnership(&boards, QQmlEngine::CppOwnership);
+    QQmlEngine::setObjectOwnership(&interaction_board, QQmlEngine::CppOwnership);
     // The root owns the models; QML must never delete one.
     QObject* const models[] = {root.session(), root.undo(), root.board(),    root.picker(), root.timeline(),
                                root.history(), root.day(),  root.settings(), root.share()};
@@ -214,7 +224,9 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("share"), QVariant::fromValue(root.share())},
                                  {QStringLiteral("appRoot"), QVariant::fromValue(&root)},
                                  {QStringLiteral("about"), QVariant::fromValue(&about)},
-                                 {QStringLiteral("help"), QVariant::fromValue(&help)}});
+                                 {QStringLiteral("help"), QVariant::fromValue(&help)},
+                                 {QStringLiteral("boards"), QVariant::fromValue(&boards)},
+                                 {QStringLiteral("interactionBoard"), QVariant::fromValue(&interaction_board)}});
     // The shell says when the 12 tiles accept taps (the Log tab is shown and the session has loaded).
     QObject::connect(&platform_bridge, &ej::bridge::QmlBridge::boardEnabled, &platform_bridge,
                      [&launch] { launch.board_enabled(); });

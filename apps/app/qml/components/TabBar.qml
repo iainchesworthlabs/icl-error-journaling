@@ -3,7 +3,12 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import ErrorJournalingApp
 
-// The tab bar (Stage 4, package 4.4): Log, Review, History and Settings along the bottom of the window.
+// The tab bar (Stage 4, package 4.4): Log, Review, History and Settings along the bottom of the window. With the second board
+// on (`interactionsEnabled`, Stage 14, package I-5) there are five: Errors (the Log tab under its new name), Interactions,
+// Review, History and Settings. The first tab keeps its object name `tabLog` and its place whichever the count, so the four of
+// v1 are exactly what they were while the second board is off. Five labels share the width, so at a large text size the
+// label of a tab is shrunk to fit its tab, down to its size at the default text size (the cap of the tab labels), and never
+// wraps in the middle of a word.
 //
 // It is 83 pt tall on an iPhone 17, which includes the 34 pt home indicator inset: the four tabs fill the 49 pt above the
 // inset and the bar's background runs under it. The shell reads the inset from its SafeFrame (the only reader of the
@@ -20,6 +25,8 @@ Item {
 
     // The bottom safe-area inset, from the shell's SafeFrame.
     required property real bottomInset
+    // The second board is on: the fifth tab is shown, between the first tab (now called Errors) and Review.
+    property bool interactionsEnabled: false
     // The index of the selected tab, 0 for Log. A tap on another tab sets it, so a binding to it is replaced; use
     // `tabSelected` to follow the change instead.
     property int currentIndex: 0
@@ -33,7 +40,33 @@ Item {
 
     // The part of the bar above the inset.
     readonly property real contentHeight: Theme.size.tabBarHeight - Theme.frame.homeIndicator
-    readonly property var tabs: [
+    readonly property var tabs: interactionsEnabled ? [
+        {
+            "key": "Log",
+            "label": qsTr("Errors"),
+            "icon": "warning"
+        },
+        {
+            "key": "Interactions",
+            "label": qsTr("Interactions"),
+            "icon": "speech"
+        },
+        {
+            "key": "Review",
+            "label": qsTr("Review"),
+            "icon": "list"
+        },
+        {
+            "key": "History",
+            "label": qsTr("History"),
+            "icon": "calendar"
+        },
+        {
+            "key": "Settings",
+            "label": qsTr("Settings"),
+            "icon": "sun"
+        }
+    ] : [
         {
             "key": "Log",
             "label": qsTr("Log"),
@@ -107,7 +140,8 @@ Item {
                 required property int index
                 required property var modelData
                 readonly property bool current: tab.index === root.currentIndex
-                readonly property color tint: tab.current ? Theme.colour.primaryText : Theme.colour.textSecondary
+                // The Interactions tab is in the accent of its board when it is selected, as the strip over the board is.
+                readonly property color tint: tab.current ? (tab.modelData.key === "Interactions" ? Theme.colour.interactionAccent : Theme.colour.primaryText) : Theme.colour.textSecondary
                 // The icon is 8 pt below the 1 pt border. Only when a large label would otherwise reach the inset does the
                 // padding give way, as far as it must.
                 readonly property real topPadding: Math.max(Theme.border.hairline, Math.min(Theme.border.hairline + Theme.space.tileGap, root.contentHeight - Theme.size.badge - labelGap - labelHeight))
@@ -155,7 +189,12 @@ Item {
                     y: tab.topPadding + Theme.size.badge + tab.labelGap
                     width: tab.width
                     horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
+                    // Five tabs: one line, shrunk to the width of the tab and no further than the label at the default text
+                    // size. Four tabs wrap as they always have.
+                    wrapMode: root.interactionsEnabled ? Text.NoWrap : Text.WordWrap
+                    fontSizeMode: root.interactionsEnabled ? Text.HorizontalFit : Text.FixedSize
+                    minimumPointSize: Theme.font.tabLabel.basePt * 72 / Theme.fontDpi
+                    elide: Text.ElideNone
                     color: tab.tint
                     font: tab.current ? Theme.font.tabLabel.selectedFont : Theme.font.tabLabel.font
                     text: tab.modelData.label

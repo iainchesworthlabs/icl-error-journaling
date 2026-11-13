@@ -4,12 +4,19 @@ import QtQuick
 import QtQuick.Controls.Basic
 import ErrorJournalingApp
 
-// The app shell (Stage 4, package 4.15): the four tabs, the pages each tab pushes, the one SheetHost that sheets and alerts
+// The app shell (Stage 4, package 4.15): the four tabs (five with the second board on, below), the pages each tab pushes, the one SheetHost that sheets and alerts
 // are shown in, and the routing between the screens. Everything the screens ask for by signal is answered here, and nothing
 // else: a screen holds its own rules, the view models hold the data.
 //
 //     tab bar     Log, Review, History, Settings. Tab state is in memory and starts on Log. Tapping the tab that is
 //                 selected pops it to its root.
+//     second board  with `boards.interactionsEnabled` (Stage 14, package I-5; off until the person turns it on in Settings)
+//                 the bar has five tabs, Errors, Interactions, Review, History and Settings, and Interactions is the
+//                 Log screen again with `activeBoard` "interactions": one header card, one composer, one Last bar. The
+//                 tabs have stable numbers (`logIndex` and the rest, `interactionsIndex` is 4), whatever their place in
+//                 the bar, so that a switch does not move the screens. The app reopens on the board last used
+//                 (`boards.lastBoard`), and turning the board off while on it goes to Errors. Without `boards` the
+//                 shell is the shell of v1.
 //     pages       a PageStack for each tab: Log and Review push Today's details (HeaderScreen), Settings pushes the editors
 //                 of the error types, locations and note templates, and History keeps the stack of its own for the Review of a
 //                 past log (`shown()` and `hidden()` are called as the tab is chosen and left). A tab is built when it is first chosen, so the Log
@@ -56,6 +63,11 @@ Item {
     property var about: null
     // What the in-app help remembers (HelpState), for the first-run tip of the Log screen. Null shows no tip.
     property var help: null
+    // Which boards there are and which was used last (BoardState): `interactionsEnabled`, `lastBoard`. Null is the app of v1: four
+    // tabs and one board.
+    property var boards: null
+    // What the Interactions board shows (InteractionBoardModel): `boardEmpty`. Null reads as an empty board.
+    property var interactionBoard: null
     // The QmlBridge: the haptics, the share sheet and the accessibility settings.
     required property var bridge
     // The file chooser that import and export go through. The platform's own unless the test of the shell gives it another.
@@ -69,12 +81,57 @@ Item {
     readonly property int reviewIndex: 1
     readonly property int historyIndex: 2
     readonly property int settingsIndex: 3
+    // The fifth tab, the Interactions board. It is shown only with the second board on, and is fifth in number whatever its place.
+    readonly property int interactionsIndex: 4
+    // The second board is on: the bar has five tabs.
+    readonly property bool interactionsOn: boards !== null && boards.interactionsEnabled
 
     // 5.7: the board is on screen and can be tapped (the Log tab is shown, the session has loaded, the first-launch screen is
     // not covering it). The launch tracker is fed from this, and `board_enabled()` stays with it.
     readonly property bool boardEnabled: logScreen.visible && !logScreen.loading
 
-    readonly property int currentTab: tabBar.currentIndex
+    // The tab that is shown, by its number (not its place in the bar). The bar follows it.
+    property int currentTab: logIndex
+    // Where a tab is in the bar: the first tab, Errors, Interactions when it is on, then Review, History and Settings.
+    function positionOf(tab: int): int {
+        if (!interactionsOn)
+            return tab === interactionsIndex ? logIndex : tab;
+        // Errors, Interactions, Review, History, Settings.
+        switch (tab) {
+        case interactionsIndex:
+            return 1;
+        case reviewIndex:
+            return 2;
+        case historyIndex:
+            return 3;
+        case settingsIndex:
+            return 4;
+        default:
+            return 0;
+        }
+    }
+
+    function tabAt(position: int): int {
+        if (!interactionsOn)
+            return position;
+        switch (position) {
+        case 1:
+            return interactionsIndex;
+        case 2:
+            return reviewIndex;
+        case 3:
+            return historyIndex;
+        case 4:
+            return settingsIndex;
+        default:
+            return logIndex;
+        }
+    }
+
+    // The Log screen holds both boards.
+    function isBoardTab(tab: int): bool {
+        return tab === logIndex || tab === interactionsIndex;
+    }
     // The screens that a Loader makes, null until their tab has been chosen once.
     readonly property var reviewStack: reviewTab.item
     readonly property var historyScreen: historyTab.item
@@ -109,7 +166,7 @@ Item {
 
     // The Log screen shows the failures of its own models in a banner of its own, so the window's banner is for the rest.
     function logShowsFailures(): bool {
-        return currentTab === logIndex && logStack.depth === 1 && !firstLaunchShown;
+        return isBoardTab(currentTab) && logStack.depth === 1 && !firstLaunchShown;
     }
 
     // Today's details, on the stack of the tab that asked.
@@ -126,7 +183,8 @@ Item {
     }
 
     function selectTab(index: int): void {
-        tabBar.currentIndex = index;
+        // The Interactions tab is not there while the second board is off.
+        currentTab = index === interactionsIndex && !interactionsOn ? logIndex : index;
     }
 
     // The board setup in Settings, from the Log screen's empty board or an empty tile: the Settings list, and the picker
@@ -153,7 +211,7 @@ Item {
 
     // The tab that was tapped again goes back to its first page.
     function popToRoot(tab: int): void {
-        if (tab === logIndex)
+        if (isBoardTab(tab))
             logStack.pop(null);
         else if (tab === reviewIndex && reviewStack)
             root.reviewStack.pop(null);
@@ -179,6 +237,13 @@ Item {
         if (historyMade && currentTab === historyIndex)
             historyScreen.shown();
         previousTab = currentTab;
+        // The app reopens on the board that was used last.
+        if (boards !== null && isBoardTab(currentTab))
+            boards.lastBoard = currentTab === interactionsIndex ? "interactions" : "errors";
+    }
+    Component.onCompleted: {
+        if (interactionsOn && boards.lastBoard === "interactions")
+            currentTab = interactionsIndex;
     }
     onFailureMessageChanged: {
         if (failureMessage.length > 0)
@@ -222,6 +287,25 @@ Item {
         target: root.Window.window
     }
 
+    // The bar follows the tab that is shown, and the tab follows a tap on the bar (`onTabSelected` below).
+    Binding {
+        target: tabBar
+        property: "currentIndex"
+        value: root.positionOf(root.currentTab)
+        restoreMode: Binding.RestoreNone
+    }
+
+    // The second board was turned off on the board itself (or by a setup file): the app goes to Errors, and keeps everything.
+    Connections {
+        function onInteractionsEnabledChanged(): void {
+            if (!root.interactionsOn && root.currentTab === root.interactionsIndex)
+                root.currentTab = root.logIndex;
+        }
+
+        target: root.boards
+        enabled: root.boards !== null
+    }
+
     Connections {
         function onWriteFailed(operation: string, message: string): void {
             if (!root.logShowsFailures())
@@ -257,7 +341,7 @@ Item {
 
                 objectName: "logTab"
                 anchors.fill: parent
-                visible: root.currentTab === root.logIndex
+                visible: root.isBoardTab(root.currentTab)
 
                 PageStack {
                     id: logStack
@@ -283,6 +367,10 @@ Item {
                     help: root.help
                     bottomClearance: tabBar.height
                     sheetLayer: root.sheetLayer
+                    activeBoard: root.currentTab === root.interactionsIndex ? "interactions" : "errors"
+                    interactionBoard: root.interactionBoard
+                    onInteractionSetupRequested: root.showBoardSetup(0)
+                    onBoardSwitchRequested: board => root.selectTab(board === "interactions" ? root.interactionsIndex : root.logIndex)
                     onTodaysDetailsRequested: root.showDetails(logStack)
                     onReviewRequested: root.selectTab(root.reviewIndex)
                     onOtherRequested: otherPicker.open()
@@ -341,6 +429,7 @@ Item {
                 sourceComponent: SettingsScreen {
                     objectName: "settingsScreen"
                     settings: root.settings
+                    boards: root.boards
                     aboutText: root.aboutText
                     about: root.about
                     timingText: root.bridge.timingSummary
@@ -406,7 +495,9 @@ Item {
             anchors.bottom: parent.bottom
             bottomInset: safe.bottomInset
             visible: !root.detailsOpen && !root.firstLaunchShown
-            onTabReselected: index => root.popToRoot(index)
+            interactionsEnabled: root.interactionsOn
+            onTabSelected: index => root.currentTab = root.tabAt(index)
+            onTabReselected: index => root.popToRoot(root.tabAt(index))
         }
 
         // ---- first launch and the import ----

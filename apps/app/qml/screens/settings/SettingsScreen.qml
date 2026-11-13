@@ -39,6 +39,9 @@ Item {
     id: root
 
     required property var settings
+    // Which boards there are (BoardState): `interactionsEnabled`, and the way to turn it on. Null leaves the Second board group
+    // out, which is the app of v1.
+    property var boards: null
     // The foot of the list: the version and platform text, as a plain caption (Stage 4, 4.15).
     property string aboutText
     // The About pages (PRF-12): the AboutModel, and the bridge's timing line that five taps on the Version row show. Without a
@@ -134,6 +137,7 @@ Item {
 
         SettingsList {
             settings: root.settings
+            boards: root.boards
             aboutText: root.aboutText
             aboutAvailable: root.about !== null
             topInset: frame.topInset

@@ -8,7 +8,8 @@
 //
 // Cases: app.no_services_missing, app.first_frame, app.first_launch, app.import, app.navigation, app.sheets,
 // app.new_day, app.history, app.flow, app.settings, app.export, app.messages, app.theme, app.hooks, app.timing,
-// app.accessibility.
+// app.accessibility, and the second board of Stage 14 (package I-5): shell.five_tabs, shell.last_board, shell.default_off,
+// shell.toggle, shell.title_strip_swipe and shell.board_area.
 //
 // The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the
 // Windows headers behind Qt Quick define as a macro. clang-format would sort them the other way, so it is switched off.
@@ -216,6 +217,11 @@ struct App
         {
             given.insert(QStringLiteral("help"), object(*help));
         }
+        if (boards != nullptr)
+        {
+            given.insert(QStringLiteral("boards"), object(*boards));
+            given.insert(QStringLiteral("interactionBoard"), object(*interaction_board));
+        }
         return given;
     }
 
@@ -225,6 +231,20 @@ struct App
         QQmlComponent component(&ui.engine(), MODULE, "UiStubHelpState");
         help.reset(component.create());
         REQUIRE(help != nullptr);
+    }
+
+    /// The state of the boards (BoardState) and the stand-in model of the Interactions board, given to the shell: the second
+    /// board is `enabled`, and the app was last on `last`. Call it before `load()`.
+    void with_boards(bool enabled, const QString& last = QStringLiteral("errors"))
+    {
+        QQmlComponent component(&ui.engine(), MODULE, "UiStubBoardState");
+        boards.reset(component.create());
+        REQUIRE(boards != nullptr);
+        boards->setProperty("interactionsEnabled", enabled);
+        boards->setProperty("lastBoard", last);
+        QQmlComponent model_component(&ui.engine(), MODULE, "UiStubInteractionBoard");
+        interaction_board.reset(model_component.create());
+        REQUIRE(interaction_board != nullptr);
     }
 
     void load(const QVariantMap& without = {})
@@ -273,6 +293,13 @@ struct App
     {
         static const char* const NAMES[] = {"tabLog", "tabReview", "tabHistory", "tabSettings"};
         tap(QString::fromLatin1(NAMES[tab]));
+        play();
+    }
+
+    /// Taps the tab with this object name (tabLog, tabInteractions, ...).
+    void choose_tab_named(const QString& name)
+    {
+        tap(name);
         play();
     }
 
@@ -349,6 +376,8 @@ struct App
     std::unique_ptr<QObject> chooser;
     std::unique_ptr<QObject> url_opener;
     std::unique_ptr<QObject> help;
+    std::unique_ptr<QObject> boards;
+    std::unique_ptr<QObject> interaction_board;
     QQuickItem* shell = nullptr;
 };
 
@@ -2908,4 +2937,310 @@ TEST_CASE("help.first_run_tip_shell: the shell gives the Log screen the state of
     app.choose_tab(SETTINGS_TAB);
     app.choose_tab(LOG_TAB);
     CHECK(app.ui.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
+}
+
+
+// ---- the second board (Stage 14, package I-5) ----
+
+namespace
+{
+
+const QStringList FIVE_TABS = {QStringLiteral("tabLog"), QStringLiteral("tabInteractions"), QStringLiteral("tabReview"),
+                               QStringLiteral("tabHistory"), QStringLiteral("tabSettings")};
+
+/// The shell's tab number (not the place in the bar): 0 Log or Errors, 1 Review, 2 History, 3 Settings, 4 Interactions.
+int shell_tab(App& app)
+{
+    return app.shell->property("currentTab").toInt();
+}
+
+constexpr int INTERACTIONS_TAB = 4;
+
+/// Scrolls the Settings list up until the row shows, and returns the row.
+QQuickItem* reveal_in_settings(App& app, const QString& row_name)
+{
+    QQuickItem* screen = app.need(QStringLiteral("settingsScreen"));
+    for (int attempt = 0; attempt < 6; ++attempt)
+    {
+        QQuickItem* row = app.ui.find_item(row_name);
+        if (row != nullptr && app.ui.geometry(row).bottom() < app.ui.geometry(screen).bottom() - 4)
+        {
+            break;
+        }
+        app.ui.swipe(screen, QPointF(200, 600), QPointF(200, 150));
+        app.play();
+    }
+    return app.need(row_name);
+}
+
+} // namespace
+
+TEST_CASE("shell.five_tabs: Errors, Interactions, Review, History and Settings in order, on the phone and the iPad",
+          "[ui][app][shell]")
+{
+    App app(true, false);
+    app.with_boards(true);
+    app.load();
+    SECTION("phone: five equal tabs across the width, in order")
+    {
+        double left = 0;
+        for (const QString& name : FIVE_TABS)
+        {
+            CAPTURE(name.toStdString());
+            const QRectF rect = app.ui.geometry(app.need(name));
+            CHECK(rect.left() == left);
+            CHECK(rect.width() == 402.0 / 5);
+            left += rect.width();
+        }
+        const auto label_of = [&app](const QString& name)
+        {
+            for (const Node& node : app.ui.tree(app.need(name)))
+            {
+                if (node.m_Item->inherits("QQuickText"))
+                {
+                    return node.m_Item->property("text").toString();
+                }
+            }
+            return QString();
+        };
+        CHECK(label_of(QStringLiteral("tabLog")) == QStringLiteral("Errors"));
+        CHECK(label_of(QStringLiteral("tabInteractions")) == QStringLiteral("Interactions"));
+        CHECK(label_of(QStringLiteral("tabReview")) == QStringLiteral("Review"));
+    }
+    SECTION("iPad compact (a narrow window): the tabs share the whole bar")
+    {
+        app.ui.set_window_size(QSize(507, 1180));
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        CHECK(app.ui.geometry(app.need(QStringLiteral("tabLog"))).left() == 0);
+        CHECK(app.ui.geometry(app.need(QStringLiteral("tabSettings"))).right() == 507);
+        CHECK(app.ui.geometry(app.need(QStringLiteral("tabInteractions"))).left() > 0);
+    }
+    SECTION("iPad regular: five tabs in the log column, still in order")
+    {
+        app.ui.set_window_size(QSize(820, 1180));
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        const QRectF first = app.ui.geometry(app.need(QStringLiteral("tabLog")));
+        const QRectF last = app.ui.geometry(app.need(QStringLiteral("tabSettings")));
+        CHECK(first.left() > 0);
+        CHECK(last.right() < 820);
+        double previous = first.left();
+        for (const QString& name : FIVE_TABS)
+        {
+            const QRectF rect = app.ui.geometry(app.need(name));
+            CHECK(rect.left() >= previous);
+            previous = rect.left();
+            CHECK(rect.width() == first.width());
+        }
+    }
+}
+
+TEST_CASE("shell.default_off: with the second board off the shell is the shell of v1", "[ui][app][shell]")
+{
+    SECTION("no state given (an upgrade of the app that has none): four tabs, Log first")
+    {
+        App app;
+        CHECK_FALSE(app.shown(QStringLiteral("tabInteractions")));
+        CHECK(app.shown(QStringLiteral("tabLog")));
+        CHECK(app.shown(QStringLiteral("logScreen")));
+        CHECK(app.need(QStringLiteral("shellTabBar"))->property("interactionsEnabled").toBool() == false);
+        app.choose_tab(SETTINGS_TAB);
+        CHECK_FALSE(app.shown(QStringLiteral("settingsSecondBoardRow")));
+    }
+    SECTION("the state is there and off: four tabs, the first one is Log, the row is off")
+    {
+        App app(true, false);
+        app.with_boards(false);
+        app.load();
+        CHECK_FALSE(app.shown(QStringLiteral("tabInteractions")));
+        double left = 0;
+        for (const QString& name : {QStringLiteral("tabLog"), QStringLiteral("tabReview"), QStringLiteral("tabHistory"),
+                                    QStringLiteral("tabSettings")})
+        {
+            const QRectF rect = app.ui.geometry(app.need(name));
+            CHECK(rect.left() == left);
+            CHECK(rect.width() == 402.0 / 4);
+            left += rect.width();
+        }
+        // There is no title strip and no interactions card on the Log screen.
+        CHECK_FALSE(app.shown(QStringLiteral("interactionsStrip")));
+        CHECK(app.shown(QStringLiteral("logBoard")));
+        app.choose_tab(SETTINGS_TAB);
+        QQuickItem* row = reveal_in_settings(app, QStringLiteral("settingsSecondBoardRow"));
+        CHECK(row->property("checked").toBool() == false);
+    }
+}
+
+TEST_CASE("shell.last_board: the app reopens on the board last used", "[ui][app][shell]")
+{
+    SECTION("the last board was Interactions")
+    {
+        App app(true, false);
+        app.with_boards(true, QStringLiteral("interactions"));
+        app.load();
+        CHECK(shell_tab(app) == INTERACTIONS_TAB);
+        CHECK(app.shown(QStringLiteral("interactionsStrip")));
+        CHECK(app.need(QStringLiteral("shellTabBar"))->property("currentIndex").toInt() == 1);
+    }
+    SECTION("the last board was Errors, or the second board is off")
+    {
+        App app(true, false);
+        app.with_boards(true, QStringLiteral("errors"));
+        app.load();
+        CHECK(shell_tab(app) == 0);
+        CHECK_FALSE(app.shown(QStringLiteral("interactionsStrip")));
+    }
+    SECTION("a change of board is remembered")
+    {
+        App app(true, false);
+        app.with_boards(true);
+        app.load();
+        app.choose_tab_named(QStringLiteral("tabInteractions"));
+        CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("interactions"));
+        app.choose_tab_named(QStringLiteral("tabReview"));
+        // Review is not a board: the last board stays.
+        CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("interactions"));
+        app.choose_tab_named(QStringLiteral("tabLog"));
+        CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("errors"));
+    }
+}
+
+TEST_CASE("shell.toggle: the switch shows and hides the tab, an empty board offers the setup, nothing is deleted",
+          "[ui][app][shell]")
+{
+    App app(true, false);
+    app.with_boards(false);
+    app.load();
+    const QString mute = app.tile(QStringLiteral("Mute Delay"));
+    app.ui.tap(app.need(mute));
+    app.ui.tap(app.need(mute));
+    app.ui.settle();
+    const int entries = app.count_of(QStringLiteral("Mute Delay"));
+    REQUIRE(entries == 1);
+
+    // On, in Settings: the tab is there at once, and the row says what turning it off does.
+    app.choose_tab(SETTINGS_TAB);
+    QQuickItem* row = reveal_in_settings(app, QStringLiteral("settingsSecondBoardRow"));
+    app.ui.tap(row);
+    app.play();
+    CHECK(app.boards->property("interactionsEnabled").toBool());
+    CHECK(app.shown(QStringLiteral("tabInteractions")));
+    CHECK(app.need(QStringLiteral("settingsSecondBoardRow"))->property("checked").toBool());
+
+    // The empty board offers the setup, and the setup is Settings.
+    app.choose_tab_named(QStringLiteral("tabInteractions"));
+    CHECK(app.shown(QStringLiteral("interactionsEmptyBoard")));
+    CHECK(app.shown(QStringLiteral("interactionsStrip")));
+    app.tap(QStringLiteral("addInteractionTypes"));
+    app.play();
+    CHECK(shell_tab(app) == SETTINGS_TAB);
+
+    // Off while on the board: the app goes to Errors. Entries are where they were.
+    app.choose_tab_named(QStringLiteral("tabInteractions"));
+    app.boards->setProperty("interactionsEnabled", false);
+    app.ui.settle();
+    app.play();
+    CHECK(shell_tab(app) == 0);
+    CHECK_FALSE(app.shown(QStringLiteral("tabInteractions")));
+    CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("errors"));
+    CHECK(app.count_of(QStringLiteral("Mute Delay")) == entries);
+
+    // On again: the tab is back and the board is as it was.
+    app.boards->setProperty("interactionsEnabled", true);
+    app.ui.settle();
+    app.play();
+    CHECK(app.shown(QStringLiteral("tabInteractions")));
+    app.choose_tab_named(QStringLiteral("tabInteractions"));
+    CHECK(app.shown(QStringLiteral("interactionsEmptyBoard")));
+}
+
+TEST_CASE("shell.toggle: turning the board off in Settings leaves Settings where it is and the tab bar of four",
+          "[ui][app][shell]")
+{
+    App app(true, false);
+    app.with_boards(true);
+    app.load();
+    app.choose_tab(SETTINGS_TAB);
+    QQuickItem* row = reveal_in_settings(app, QStringLiteral("settingsSecondBoardRow"));
+    CHECK(row->property("checked").toBool());
+    app.ui.tap(row);
+    app.play();
+    CHECK_FALSE(app.boards->property("interactionsEnabled").toBool());
+    CHECK_FALSE(app.shown(QStringLiteral("tabInteractions")));
+    // The Settings tab is still the one shown, though it moved from the fifth place to the fourth.
+    CHECK(shell_tab(app) == SETTINGS_TAB);
+    CHECK(app.need(QStringLiteral("shellTabBar"))->property("currentIndex").toInt() == 3);
+}
+
+TEST_CASE("shell.title_strip_swipe: a swipe from the strip switches boards, a swipe on the board does not",
+          "[ui][app][shell]")
+{
+    App app(true, false);
+    app.with_boards(true, QStringLiteral("interactions"));
+    app.load();
+    QQuickItem* strip = app.need(QStringLiteral("interactionsStrip"));
+    QQuickItem* card = app.need(QStringLiteral("interactionsEmptyBoard"));
+    REQUIRE(shell_tab(app) == INTERACTIONS_TAB);
+
+    // On the board area, in both directions: nothing happens.
+    app.ui.swipe(card, QPointF(card->width() - 20, 60), QPointF(20, 60));
+    app.play();
+    CHECK(shell_tab(app) == INTERACTIONS_TAB);
+    app.ui.swipe(card, QPointF(20, 60), QPointF(card->width() - 20, 60));
+    app.play();
+    CHECK(shell_tab(app) == INTERACTIONS_TAB);
+
+    // A short drag, and a mostly vertical one, from the strip: nothing.
+    app.ui.swipe(strip, QPointF(100, 14), QPointF(120, 14));
+    app.play();
+    CHECK(shell_tab(app) == INTERACTIONS_TAB);
+    app.ui.swipe(strip, QPointF(100, 4), QPointF(160, 40));
+    app.play();
+    CHECK(shell_tab(app) == INTERACTIONS_TAB);
+
+    // From the strip, along it: Errors.
+    app.ui.swipe(strip, QPointF(strip->width() - 20, 14), QPointF(20, 14));
+    app.play();
+    CHECK(shell_tab(app) == 0);
+    CHECK_FALSE(app.shown(QStringLiteral("interactionsStrip")));
+    CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("errors"));
+}
+
+TEST_CASE("shell.board_area: the Interactions board shares the header, composer and Last bar, and its tiles are 96 pt",
+          "[ui][app][shell]")
+{
+    App app(true, false);
+    app.with_boards(true);
+    app.load();
+    app.ui.layout();
+    QQuickItem* composer = app.need(QStringLiteral("logComposer"));
+    const QRectF header_errors = app.ui.geometry(app.need(QStringLiteral("logHeaderCard")));
+    const QRectF composer_errors = app.ui.geometry(composer);
+
+    app.choose_tab_named(QStringLiteral("tabInteractions"));
+    // The same three items, in the same place, and the same draft.
+    CHECK(app.ui.geometry(app.need(QStringLiteral("logHeaderCard"))) == header_errors);
+    CHECK(app.ui.geometry(app.need(QStringLiteral("logComposer"))) == composer_errors);
+    CHECK(app.shown(QStringLiteral("logLastBar")));
+    CHECK_FALSE(app.shown(QStringLiteral("logBoard")));
+    CHECK(app.need(QStringLiteral("interactionsStripTitle"))->property("text").toString() == QStringLiteral("Interactions"));
+    CHECK(app.need(QStringLiteral("addInteractionTypes"))->isVisible());
+
+    const QQuickItem* screen = app.need(QStringLiteral("logScreen"));
+    const double tile = screen->property("interactionTileHeight").toDouble();
+    CHECK(tile == 96.0);
+    CHECK(app.ui.geometry(app.need(QStringLiteral("interactionsStrip"))).height() == 28.0);
+    // The board area is four rows of 96 pt and the gaps, and ends above the tab bar.
+    const QRectF area = app.ui.geometry(app.need(QStringLiteral("interactionBoardLoader")));
+    CHECK(area.height() == 4 * 96.0 + 3 * 8.0);
+    CHECK(area.bottom() <= app.ui.geometry(app.need(QStringLiteral("shellTabBar"))).top());
+
+    // A shorter window gives the tiles less, and never less than the 88 pt minimum.
+    app.ui.set_window_size(QSize(402, 740));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    CHECK(screen->property("interactionTileHeight").toDouble() >= 88.0);
+
+    // A draft typed on one board is still there on the other.
+    app.services.root().session()->setProperty("draft", QStringLiteral("North Site is quiet"));
+    app.choose_tab_named(QStringLiteral("tabLog"));
+    CHECK(app.need(QStringLiteral("logComposer"))->property("draft").toString() == QStringLiteral("North Site is quiet"));
 }

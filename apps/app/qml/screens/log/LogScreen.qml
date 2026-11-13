@@ -65,6 +65,14 @@ import ErrorJournalingApp
 // shows the last entry. The items are the same ones, moved: a draft, the focus, the toast and its Undo, a held tile and an
 // open sheet are all still there after a rotation. The log pane is made when the window becomes Wide.
 //
+// The second board (Stage 14, package I-5): with `activeBoard` "interactions" the screen is the Interactions board. The header
+// card, the note composer and the Last bar are the same items and keep their state (one draft, one Last bar for both kinds of
+// entry); only the 3 x 4 board under them changes. It has a 28 pt title strip ("Interactions", in the accent of its board and
+// with its own hue family for the tiles) and tiles of 96 pt, which is what the strip leaves of the 104 pt of the Errors board
+// (the 88 pt minimum of NFR-02 holds). What the board holds is the `interactionBoard` model (`boardEmpty`); until the types
+// and the board arrive (I-6) it is empty, and says "Add interaction types" and asks for the setup. A horizontal swipe that
+// starts on the strip, and only there, asks for the other board (`boardSwitchRequested`); a swipe on a tile does nothing.
+//
 // The screen fills the window. `bottomClearance` is the height of the tab bar at the foot of it, which the toast stays
 // above; the shell sets it if the screen does not extend behind the tab bar. The template value sheet is a child of
 // `sheetLayer`, which the shell sets to its SheetHost layer so that the sheet covers the tab bar as well (a sheet under
@@ -94,22 +102,35 @@ Item {
     readonly property real lastBarRoom: lastBar.implicitHeight + Theme.space.sectionGap
     // The Last bar gives way when the tiles would be under the 88 pt minimum with it: in a short window, or at a large text size,
     // or with the strip of empty fields in the header card (Stage 7, F1 and F2). The board keeps all twelve tiles above the tab bar.
-    readonly property bool lastBarHidden: wide || tipShown || fittingTile(roomBelowComposer - lastBarRoom) < Theme.size.tileMinimum
+    readonly property bool lastBarHidden: wide || tipShown || fittingTile(roomBelowComposer - lastBarRoom - stripRoom) < Theme.size.tileMinimum
     // The first-run tip (Stage 10, 10.6; LogFirstRunTip): a card in the place of the Last bar, while HelpState says it is open.
     // It is not shown on the empty board, which has its own card, nor while the board is loading, nor when the tiles would
     // have to be under the 88 pt minimum to make room for it: the board keeps all twelve tiles above the tab bar.
     // The card is made only while the tip is wanted, so a screen with no tip pays no items for it (perf.scene).
-    readonly property bool tipWanted: help !== null && help.tipOpen && !board.boardEmpty && !loading
+    readonly property bool tipWanted: help !== null && help.tipOpen && !board.boardEmpty && !loading && !onInteractions
     readonly property real tipRoom: tipLoader.item ? tipLoader.cardHeight + Theme.space.sectionGap : 0
     readonly property bool tipShown: tipWanted && tipLoader.item !== null && fittingTile(roomBelowComposer - tipRoom) >= Theme.size.tileMinimum
+    // The Interactions board is the one shown, and the room its title strip takes (the strip and the gap under it).
+    readonly property bool onInteractions: activeBoard === "interactions"
+    readonly property real stripRoom: onInteractions ? Theme.size.interactionStripHeight + Theme.space.tileGap : 0
+    // The tiles of the Interactions board: 96 pt, or less in a short window, never under the 88 pt minimum.
+    readonly property real interactionTileHeight: {
+        const room = roomBelowComposer - (tipShown ? tipRoom : lastBarHidden ? 0 : lastBarRoom) - stripRoom;
+        return Math.max(Theme.size.tileMinimum, Math.min(Theme.size.interactionTileHeight, fittingTile(room)));
+    }
+    // The height of the board area of the Interactions board: four rows of tiles.
+    readonly property real interactionBoardHeight: Theme.size.boardRows * interactionTileHeight + fittingGaps * WindowLayout.tileGap
     readonly property real tileHeight: {
         // A Wide board fills the height of its pane, to the 88 pt minimum.
         if (wide)
             return Math.max(Theme.size.tileMinimum, fittingTile(roomBelowComposer - Theme.space.screenMargin - (tipShown ? tipRoom : 0)));
         const preferred = WindowLayout.tileHeightFor(grid.tileWidth);
-        const room = roomBelowComposer - (tipShown ? tipRoom : lastBarHidden ? 0 : lastBarRoom);
+        const room = roomBelowComposer - (tipShown ? tipRoom : lastBarHidden ? 0 : lastBarRoom) - stripRoom;
         return Math.max(Theme.size.tileMinimum, Math.min(preferred, fittingTile(room)));
     }
+
+    // The gaps between the rows of the board.
+    readonly property int fittingGaps: Theme.size.boardRows - 1
 
     // The tallest tile of which four rows, with their gaps, fit in `room`.
     function fittingTile(room: real): real {
@@ -117,6 +138,12 @@ Item {
     }
 
     required property var session
+    // The board that is shown: "errors" (the Errors board, which the Log screen always was) or "interactions". The shell sets it.
+    property string activeBoard: "errors"
+    // The model of the Interactions board, as the board area reads it: `boardEmpty`. Null reads as an empty board. The
+    // real one (I-6) has the same name and adds the tiles; until then the shell gives the stand-in.
+    property var interactionBoard: null
+    readonly property bool interactionBoardEmpty: interactionBoard === null || interactionBoard.boardEmpty
 
     // The tip counts a day when it is on screen: HelpState keeps the days.
     onTipShownChanged: {
@@ -175,6 +202,10 @@ Item {
     signal reviewRequested
     signal otherRequested
     signal boardSetupRequested(int position)
+    // "Add interaction types" of the empty Interactions board: the setup of that board (Settings).
+    signal interactionSetupRequested
+    // A swipe from the title strip of the Interactions board: the board to go to, "errors".
+    signal boardSwitchRequested(string board)
 
     // A note has been typed and not added: a hold on a tile logs with it.
     readonly property bool hasDraft: session.draft.trim().length > 0
@@ -514,7 +545,7 @@ Item {
             z: 1
             width: grid.width
             height: rowsHeight
-            active: root.board.boardEmpty && !root.loading
+            active: root.board.boardEmpty && !root.loading && !root.onInteractions
             sourceComponent: emptyBoardCard
         }
 
@@ -604,6 +635,166 @@ Item {
             }
         }
 
+        // The title strip of the Interactions board, in the place the Errors board has none: the name of the board in its
+        // accent, with its icon and the way to the other board. A swipe that starts on it asks for that board.
+        Item {
+            id: strip
+
+            objectName: "interactionsStrip"
+            x: root.wide ? root.paneLeft : root.side
+            width: root.wide ? WindowLayout.boardPaneWidth : parent.width - 2 * root.side
+            height: Theme.size.interactionStripHeight
+            anchors.top: root.tipShown ? tipLoader.bottom : root.lastBarHidden ? composer.bottom : lastBar.bottom
+            anchors.topMargin: Theme.space.sectionGap
+            visible: root.onInteractions
+            Accessible.role: Accessible.Heading
+            Accessible.name: qsTr("Interactions board. Swipe here to switch to the Errors board.")
+            Accessible.onPressAction: root.boardSwitchRequested("errors")
+
+            Row {
+                x: Theme.space.tileGap / 2
+                height: parent.height
+                spacing: Theme.space.tileGap
+
+                Icon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    kind: "speech"
+                    size: Theme.size.badge * 3 / 4
+                    colour: Theme.colour.interactionAccent
+                }
+
+                Text {
+                    objectName: "interactionsStripTitle"
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: Theme.colour.interactionAccent
+                    font: Theme.font.bodySmall.selectedFont
+                    text: qsTr("Interactions")
+                    Accessible.ignored: true
+                }
+            }
+
+            Text {
+                anchors.right: parent.right
+                anchors.rightMargin: Theme.space.tileGap / 2
+                anchors.verticalCenter: parent.verticalCenter
+                color: Theme.colour.textSecondary
+                font: Theme.font.footnote.font
+                text: qsTr("Swipe here to switch to Errors")
+                elide: Text.ElideLeft
+                width: Math.min(implicitWidth, parent.width / 2)
+                horizontalAlignment: Text.AlignRight
+                Accessible.ignored: true
+            }
+
+            // The swipe: a drag that is mostly horizontal and long enough. It is on the strip and takes no tile's touch.
+            DragHandler {
+                id: stripSwipe
+
+                objectName: "interactionsStripSwipe"
+                target: null
+                enabled: root.onInteractions
+                // How far the finger went, kept while it is down: the handler resets its own translation when it lets go.
+                property real travelX: 0
+                property real travelY: 0
+                onTranslationChanged: {
+                    if (active) {
+                        travelX = translation.x;
+                        travelY = translation.y;
+                    }
+                }
+                onActiveChanged: {
+                    if (active) {
+                        travelX = 0;
+                        travelY = 0;
+                        return;
+                    }
+                    if (Math.abs(travelX) >= Theme.size.minTouchTarget && Math.abs(travelX) > 2 * Math.abs(travelY))
+                        root.boardSwitchRequested("errors");
+                }
+            }
+        }
+
+        // The empty Interactions board: a card over the whole of the board area, with the way to the setup. There are no
+        // types to show yet, so the area is one card; the tiles of I-6 take its place.
+        Loader {
+            id: interactionBoardLoader
+
+            objectName: "interactionBoardLoader"
+            x: strip.x
+            width: strip.width
+            height: root.interactionBoardHeight
+            anchors.top: strip.bottom
+            anchors.topMargin: Theme.space.tileGap
+            active: root.onInteractions && root.interactionBoardEmpty && !root.loading
+            visible: active
+            sourceComponent: Item {
+                id: emptyInteractions
+
+                objectName: "interactionsEmptyBoard"
+                Accessible.role: Accessible.Grouping
+                Accessible.name: qsTr("Your interactions board is empty")
+
+                Shadow {
+                    anchors.fill: interactionsCard
+                    radius: interactionsCard.radius
+                    token: Theme.shadow.toast
+                }
+
+                Rectangle {
+                    id: interactionsCard
+
+                    anchors.fill: parent
+                    radius: Theme.radius.headerCard
+                    color: Theme.colour.surface
+                }
+
+                Column {
+                    id: interactionsColumn
+
+                    x: Theme.space.sectionGap + Theme.space.tileGap
+                    y: Math.max(0, (parent.height - implicitHeight) / 2)
+                    width: parent.width - 2 * x
+                    spacing: Theme.space.tileGap
+
+                    Icon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        size: Theme.size.badge * 4 / 3
+                        kind: "speech"
+                        colour: Theme.colour.interactionAccent
+                    }
+
+                    Text {
+                        objectName: "interactionsEmptyTitle"
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        color: Theme.colour.textPrimary
+                        font: Theme.font.sheetTitle.font
+                        text: qsTr("Your interactions board is empty")
+                        wrapMode: Text.WordWrap
+                        Accessible.ignored: true
+                    }
+
+                    Text {
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        color: Theme.colour.textSecondary
+                        font: Theme.font.bodySmall.font
+                        text: qsTr("Add the interaction types you log. Each one becomes a tile here.")
+                        wrapMode: Text.WordWrap
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: text
+                    }
+
+                    PrimaryButton {
+                        objectName: "addInteractionTypes"
+                        width: parent.width
+                        text: qsTr("Add interaction types")
+                        onClicked: root.interactionSetupRequested()
+                    }
+                }
+            }
+        }
+
         BoardGrid {
             id: grid
 
@@ -616,6 +807,7 @@ Item {
             tileHeight: root.tileHeight
             model: root.board
             skeleton: root.loading
+            visible: !root.onInteractions
             coveredTiles: emptyBoardLoader.active ? Theme.size.boardColumns * (Theme.size.boardRows - 1) : 0
             noteAction: root.hasDraft
             onTilePressed: (row, typeId, isOther) => root.pressTile(row, typeId, isOther)

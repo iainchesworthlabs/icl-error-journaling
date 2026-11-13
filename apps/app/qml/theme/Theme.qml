@@ -66,6 +66,17 @@ QtObject {
     readonly property var tileFillsDark: ["#2E486B", "#45396A", "#63462C", "#225359", "#62375E", "#5C4E1F", "#424B57", "#333F71", "#514238", "#504835", "#5F3A48"]
     readonly property int tileSlots: tileFillsLight.length
 
+    // The fill of a tile of the Interactions board (tokens.json, interactionPalette): a second hue family, so that the two boards
+    // are told apart at a glance. `slot` is 1 to 11; a value outside that gives the Other fill, as `tileColour` does.
+    function interactionTileColour(slot: int): color {
+        const fills = dark ? interactionFillsDark : interactionFillsLight;
+        return Qt.color(slot >= 1 && slot <= fills.length ? fills[slot - 1] : colour.otherTileFill);
+    }
+
+    // The interaction fills in slot order: cornflower, iris, peach, seafoam, rose, gold, slate, indigo, clay, khaki and pink.
+    readonly property var interactionFillsLight: ["#CBE0F6", "#D6D0F1", "#F7D6B8", "#BDE3E6", "#EDC9DF", "#F6E19F", "#C6D2E2", "#C3D0F8", "#EDD3C0", "#E0D5B8", "#F0C4CF"]
+    readonly property var interactionFillsDark: ["#2A4F7E", "#473A78", "#6F4A26", "#1F5C63", "#6E3868", "#665514", "#3F4C5E", "#303F82", "#58412F", "#554A2E", "#693A4C"]
+
     // ---- colour ----
 
     component Colour: QtObject {
@@ -114,6 +125,8 @@ QtObject {
         readonly property color textOnHeaderCard: dark ? "#FFFFFF" : "#FFFFFF"
         readonly property color textOnDestructive: dark ? "#FFFFFF" : "#FFFFFF"
         readonly property color toastText: dark ? "#FFFFFF" : "#FFFFFF"
+        // The strip and the tab of the Interactions board (tokens.json, interactionPaletteRules).
+        readonly property color interactionAccent: dark ? "#7FD1D2" : "#0F6F73"
 
         // Other: a neutral tile with a dashed border (tokens.json, tile slot 12).
         readonly property color otherTileFill: dark ? "#18212A" : "#FFFFFF"
@@ -142,6 +155,9 @@ QtObject {
         readonly property real tileHeight: 104
         readonly property real tileWidth: 118
         readonly property real tileMinimum: 88
+        // The Interactions board: its tiles are 96 pt, to make room for the 28 pt title strip over them (the 88 pt minimum holds).
+        readonly property real interactionTileHeight: 96
+        readonly property real interactionStripHeight: 28
         readonly property int boardColumns: 3
         readonly property int boardRows: 4
         readonly property real minTouchTarget: 44
@@ -821,6 +837,10 @@ QtObject {
         text("Error banner text", c.textPrimary, c.bannerError);
         text("Information banner text", c.textPrimary, c.primaryTint);
         text("Other tile label", c.tileText, c.otherTileFill);
+        text("Interactions strip title", c.interactionAccent, c.background);
+        text("Interactions tab, selected", c.interactionAccent, c.surface);
+        for (let slot = 1; slot <= interactionFillsLight.length; ++slot)
+            text("Interaction tile label, slot " + slot, c.tileText, interactionTileColour(slot));
         for (let slot = 1; slot <= tileSlots; ++slot)
             text("Tile label, slot " + slot, c.tileText, tileColour(slot));
         indicator("Selected tab, check marks and the focus ring", c.primaryText, c.background);
@@ -831,6 +851,8 @@ QtObject {
         indicator("Information icon and outline", c.primaryText, c.primaryTint);
         for (let slot = 1; slot <= tileSlots; ++slot)
             indicator("Count badge on tile, slot " + slot, c.badgeBackground, tileColour(slot));
+        for (let slot = 1; slot <= interactionFillsLight.length; ++slot)
+            indicator("Count badge on interaction tile, slot " + slot, c.badgeBackground, interactionTileColour(slot));
         if (dark) {
             indicator("Other tile border on the screen", c.otherTileBorder, c.background);
             indicator("Other tile border on a card", c.otherTileBorder, c.surface);

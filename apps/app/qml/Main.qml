@@ -26,6 +26,10 @@ Window {
     required property QtObject about
     // What the in-app help remembers (HelpState): the first-run tip. Without it the tip is not shown.
     property QtObject help: null
+    // Which boards there are and which was used last (BoardState), and what the Interactions board shows. Without them the app is
+    // the one of v1: four tabs.
+    property QtObject boards: null
+    property QtObject interactionBoard: null
     required property var bridge
     // The version of the core library and which bridge and storage are linked. They are at the foot of Settings.
     required property string versionText
@@ -67,6 +71,8 @@ Window {
         bridge: root.bridge
         about: root.about
         help: root.help
+        boards: root.boards
+        interactionBoard: root.interactionBoard
         aboutText: qsTr("%1 · %2").arg(root.versionText).arg(root.platformText)
     }
 }

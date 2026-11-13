@@ -100,3 +100,7 @@ The approved light tokens are unchanged and were not re-measured.
 ## Tile hues in dark
 
 Each slot keeps the hue of its light colour, at HSL lightness 24 to 32 per cent and saturation 14 to 50 per cent. Hue angles: sky 214, lavender 255, apricot 28, aqua 187, orchid 306, butter 46, steel 214, periwinkle 228, sand 24, oat 42, blush 337. None is in the red range (345 to 15) or the green range (75 to 165). Blush at 337 is the closest to red and is the one to look at on a device (see "For the owner" in the pull request). The deuteranopia distance test of package 4.16 decides whether adjacent tiles stay distinguishable; sky, steel and periwinkle are the nearest trio, as in light.
+
+## Interactions board (Stage 14, I-5)
+
+The second board uses a second family of 11 tile fills (`interactionPalette` in `tokens.json`: cornflower, iris, peach, seafoam, rose, gold, slate, indigo, clay, khaki, pink) and one accent for its strip and tab (`interactionAccent`: `#0F6F73` in light, `#7FD1D2` in dark). `Theme.contrastPairs` runs the same rules on them as on the error tiles, in both schemes, and `tests/ui/contrast_test.cpp` (`theme.interaction_hues`) checks that no tile is red or green, that none equals an error tile, and that the closest pair under the deuteranopia simulation stays above the floors of the error tiles (0.25 light, 1.4 dark). The measured closest pairs are recorded here once the test has run (see the pull request); the label carries the meaning of a tile and never the colour.
