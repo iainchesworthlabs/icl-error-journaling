@@ -17,7 +17,7 @@ This file applies to any automated contributor. Read it before changing the repo
 
 ## Confidentiality (PRD NFR-10)
 
-- Use only the fictional stand-ins from `docs/` (Sam Example, UNIT, North Site, Wrong Response, "the robot", "the
+- Use only the fictional stand-ins from `docs/` (Sam Example, Alex Sample, UNIT, North Site, Wrong Response, "the robot", "the
   downstream ticket indexer") in code, tests, samples, docs, commits, pull requests, issues and CI output.
 - Never copy anything from the handover's `private/` folder into the repository or any text that leaves the machine.
   Do not open it unless the owner asks. The real configuration file is never committed; only

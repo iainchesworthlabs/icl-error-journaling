@@ -151,6 +151,21 @@ lines is 108 pt tall and the board would then fall under its 88 pt tile minimum 
 so at the larger text sizes it is not shown at all. And "three days" counts the days on which the tip was on screen, not the
 days on which the person logged: the days are kept in `help-state.ini` beside the data, outside the store and the setup file.
 
+### Interactions board and people (draft, November 2026)
+
+The second board of [the interactions design](../plan/stage-14.md), drawn for the owner's review. Phone only; the iPad and fold layouts are package I-8. Each has a light and a dark file. Everything shown is a placeholder (Sam Example is the facilitator, Alex Sample and the others are people the tester has saved). The tile hues of the second board are a draft second family; they are checked by the contrast test in package I-5.
+
+| # | File | Screen | Key behaviour |
+| --- | --- | --- | --- |
+| 69 | `Interactions` | Second board | Same header card, note box and Last bar as Log. A title strip ("Interactions", teal) tells the boards apart, and a swipe on it switches to Errors. Tiles are 96 pt (88 minimum) so the strip fits. A person glyph on a tile means it asks for people. Tab bar of five: Errors, Interactions, Review, History, Settings. |
+| 70 | `InteractionsPicker` | Pick people | Opens after the tile is logged: Skip leaves the entry as it is, Done (n) commits the ticked people. Recent chips for the log's location, an "Everyone at North Site" row, all people with their location, "New person…". |
+| 71 | `SecondBoardSettings` | Settings, second board on | A switch row "Second board: Interactions", then Interaction types, Interaction board layout, Interaction templates, People and Names in shared logs. Turning it off keeps everything. |
+| 72 | `SecondBoardSettingsOff` | Settings, second board off | The default. Four tabs ("Log"), and none of the second board's rows. |
+| 73 | `People` | People | Grouped by location, with when each was last used. Names stay on the device. |
+| 74 | `PersonEdit` | Person | Name, location, how the name will read in a shared log (initials by default), Retire and Forget. |
+| 75 | `InteractionTypeEdit` | Interaction type | Name, the line with Insert person and Insert answer, what it asks for, and an example line. |
+| 76 | `ReviewInteractions` | Review with both kinds | Errors and interactions interleaved in time order, black and white, with "(person not set)" and a tap-to-add hint. |
+
 ## Dark mode
 
 Decision 10 of the Stage 4 plan, drawn in `*.dark.dc.html` and held in `tokens.json` under `colour.dark` and the `darkHex` of each tile. The ratios are in [`contrast.md`](contrast.md).

@@ -199,7 +199,7 @@ and fails when a file in `golden/` has no scenario. The two daylight-saving gold
 (`export_format.hpp`): changing it means regenerating `totals-on.txt`, `totals-on-empty.txt` and `deleted-entries.txt`.
 
 A fixture is any other input file a test reads, kept in `libs/core/tests/fixtures/` and found with
-`ej::test::fixture_path(name)`. Fixtures and goldens contain only the fictional stand-ins (Sam Example, UNIT, North Site,
+`ej::test::fixture_path(name)`. Fixtures and goldens contain only the fictional stand-ins (Sam Example, Alex Sample, UNIT, North Site,
 Wrong Response); the confidentiality check runs over them.
 
 ## Tests of the view-model layer
