@@ -162,8 +162,7 @@ Item {
                 objectName: "noteBox"
 
                 readonly property real linePitch: Theme.font.bodySmall.linePitch
-                readonly property real openLimit: Math.min(Theme.size.fieldHeight + (root.maxLines - 1) * linePitch,
-                                                           root.Window.height > 0 ? root.Window.height / 2 : Number.MAX_VALUE)
+                readonly property real openLimit: Math.min(Theme.size.fieldHeight + (root.maxLines - 1) * linePitch, root.Window.height > 0 ? root.Window.height / 2 : Number.MAX_VALUE)
 
                 width: parent.width - root.buttonWidth - parent.spacing
                 height: field.activeFocus ? Math.max(Theme.size.fieldHeight, Math.min(field.implicitHeight, openLimit)) : Theme.size.fieldHeight
@@ -181,19 +180,18 @@ Item {
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: field.activeFocus && contentHeight > height
 
-                    // Shows that there is more; it takes no touch and says nothing to a screen reader.
-                    ScrollIndicator.vertical: ScrollIndicator {
-                        Accessible.ignored: true
-                    }
-
                     TextArea.flickable: TextArea {
                         id: field
 
                         objectName: "noteInput"
                         leftPadding: Theme.space.sectionGap
                         rightPadding: Theme.space.sectionGap
-                        topPadding: Math.max(Theme.space.tileGap, (Theme.size.fieldHeight - box.linePitch) / 2)
-                        bottomPadding: topPadding
+                        topPadding: Theme.space.tileGap
+                        bottomPadding: Theme.space.tileGap
+                        // At least the one-line box high (a touch target), and as high as the text beyond that.
+                        implicitHeight: Math.max(Theme.size.fieldHeight, contentHeight + topPadding + bottomPadding)
+                        height: Math.max(implicitHeight, flick.height)
+                        verticalAlignment: TextEdit.AlignVCenter
                         color: Theme.colour.textPrimary
                         font: Theme.font.bodySmall.font
                         wrapMode: TextEdit.Wrap
@@ -219,6 +217,19 @@ Item {
                                 flick.contentY = 0;
                         }
                     }
+                }
+
+                // Shows that there is more text than the box holds. It is a drawing: it takes no touch and has no name.
+                Rectangle {
+                    readonly property real room: box.height - 4 * Theme.border.hairline
+
+                    visible: field.activeFocus && flick.contentHeight > flick.height
+                    x: box.width - width - 2 * Theme.border.hairline
+                    y: 2 * Theme.border.hairline + flick.visibleArea.yPosition * room
+                    width: Theme.border.otherWidth
+                    height: flick.visibleArea.heightRatio * room
+                    radius: width / 2
+                    color: Theme.colour.borderStrong
                 }
             }
 
