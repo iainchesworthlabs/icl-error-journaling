@@ -2,11 +2,16 @@
 
 ```text
 libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespace `ej`
-  include/error_journaling/  public headers: uuid.hpp, ids.hpp (EntryId, ErrorTypeId, NoteTemplateId, LocationId, LogId),
+  include/error_journaling/  public headers: uuid.hpp, ids.hpp (EntryId, ErrorTypeId, NoteTemplateId, LocationId, InteractionTypeId, PersonId, LogId),
                              header_field.hpp, result.hpp (the std::expected conventions), version.hpp,
                              timestamp.hpp, time_zone_provider.hpp (Qt implementation in src/qt_time_zone_provider.cpp,
                              the only file that includes QTimeZone), time_format.hpp, day_prompt.hpp,
                              configuration.hpp (the configuration file: schema, import, export)
+                             The optional interactions board (docs/plan/feedback-interactions-board.md): interaction.hpp
+                             (`InteractionType`, the line patterns with {person} and {value}, the 20-person pick rule),
+                             person.hpp (`Person`, the name rules, the name levels full, initials and hidden, and the
+                             text of a {person} slot); `InteractionEntry` is in entry.hpp and its `"v":2` journal record
+                             in journal_record.hpp
                              Storage contract (Stage 2, no file or database access): log_repository.hpp (the
                              `LogRepository` interface, `DeleteConfirmation`), storage_error.hpp, clock.hpp,
                              journal_record.hpp (the journal record types, their one-line JSON encoding and CRC),
