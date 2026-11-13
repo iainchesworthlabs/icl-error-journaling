@@ -61,7 +61,7 @@ class StoreUploadGuardTest(unittest.TestCase):
     def test_workflow_calls_only_the_metadata_lanes(self) -> None:
         workflow = code(WORKFLOW)
         lanes = re.findall(r"fastlane\s+(\w+)\s+(\w+)", workflow)
-        self.assertEqual(sorted(set(lanes)), [("android", "metadata"), ("ios", "metadata")])
+        self.assertEqual(sorted(set(lanes)), [("android", "metadata"), ("ios", "inspect"), ("ios", "metadata")])
 
     def test_workflow_can_only_read_the_repository(self) -> None:
         workflow = code(WORKFLOW)

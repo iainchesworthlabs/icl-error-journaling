@@ -31,6 +31,14 @@ on:
         description: "ci.yml run (a push to develop) whose screenshots artifact holds the App Store screenshots (App Store only, optional)"
         type: string
         required: false
+      only_locale:
+        description: "Upload only this language, for example en-AU, to find which one the store refuses (App Store only, optional)"
+        type: string
+        required: false
+      inspect:
+        description: "Only print what App Store Connect holds for the app, and change nothing (App Store only)"
+        type: boolean
+        default: false
       first_release:
         description: "The app's first version: leave out What's New, which App Store Connect refuses on it"
         type: boolean
@@ -77,7 +85,7 @@ jobs:
         run: bundle install --jobs 4
 
       - name: Fetch the App Store screenshots
-        if: inputs.store == 'appstore' && inputs.screenshots_run != ''
+        if: inputs.store == 'appstore' && inputs.screenshots_run != '' && !inputs.inspect
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.screenshots_run }}
@@ -86,9 +94,31 @@ jobs:
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::screenshots_run must be a run number"; exit 1; }
           gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name screenshots --dir "$RUNNER_TEMP/screenshots"
           python3 tools/store/stage_appstore_screenshots.py "$RUNNER_TEMP/screenshots/store/appstore" store/appstore/screenshots/en-GB
+          python3 tools/store/stage_appstore_screenshots.py "$RUNNER_TEMP/screenshots/store/appstore" store/appstore/screenshots/en-AU
+
+      - name: Keep one language
+        if: inputs.store == 'appstore' && inputs.only_locale != '' && !inputs.inspect
+        env:
+          ONLY: ${{ inputs.only_locale }}
+        run: |
+          set -euo pipefail
+          [[ "$ONLY" =~ ^[A-Za-z]{2,3}(-[A-Za-z0-9]+)?$ ]] || { echo "::error::only_locale must be a language code such as en-AU"; exit 1; }
+          for dir in store/appstore/*/ store/appstore/screenshots/*/; do
+            name=$(basename "$dir")
+            case "$name" in review_information|screenshots|"$ONLY") ;; *) rm -rf "$dir" ;; esac
+          done
+          ls store/appstore
+
+      - name: Inspect the App Store record
+        if: inputs.store == 'appstore' && inputs.inspect
+        env:
+          ASC_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        run: bundle exec fastlane ios inspect
 
       - name: Upload the App Store listing
-        if: inputs.store == 'appstore'
+        if: inputs.store == 'appstore' && !inputs.inspect
         env:
           ASC_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
