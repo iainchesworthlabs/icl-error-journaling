@@ -47,11 +47,10 @@ Item {
     // The width of the Add button, or of the shape in its place.
     readonly property real buttonWidth: skeleton && nominalMetrics ? Theme.size.tileMinimum * 8 / 11 : addButton.implicitWidth
 
-    TextMetrics {
+    FontMetrics {
         id: lineMetrics
 
         font: Theme.font.bodySmall.font
-        text: "Ag"
     }
 
     // The user changed the text.
