@@ -112,6 +112,35 @@ Result<std::string, RenderError> entry_type_name(const ExportContext& context, c
     return error_type_name(context, entry.m_ErrorType);
 }
 
+/// The words of an interaction at the name level of the context. The type's name is the snapshot taken at the tap
+/// when it has one, else a lookup by id; the pattern is the type's current one (a missing one reads as the name).
+Result<std::string, RenderError> interaction_text(const ExportContext& context, const InteractionEntry& entry)
+{
+    std::string label = entry.m_TypeLabel;
+    if (label.empty())
+    {
+        const auto name =
+            context.m_InteractionTypeName ? context.m_InteractionTypeName(entry.m_Type) : std::string_view{};
+        if (name.empty())
+        {
+            return fail(RenderError::UNKNOWN_INTERACTION_TYPE);
+        }
+        label = std::string(name);
+    }
+    const std::optional<std::string> pattern =
+        context.m_InteractionPattern ? context.m_InteractionPattern(entry.m_Type) : std::nullopt;
+
+    // A person who is not in the list, or was forgotten, has no name and reads as "someone".
+    std::vector<std::optional<std::string>> names;
+    names.reserve(entry.m_People.size());
+    for (const PersonId& id : entry.m_People)
+    {
+        names.push_back(context.m_PersonName ? context.m_PersonName(id) : std::nullopt);
+    }
+    const std::string people = render_people(names, context.m_NameLevel);
+    return render_interaction_text(pattern, label, people, entry.m_Value);
+}
+
 /// A header value as the export prints it, from its stored text (empty text is an empty value).
 Result<std::string, RenderError> display_value(const ExportContext& context, HeaderField field, std::string_view stored)
 {
@@ -230,9 +259,16 @@ Result<std::string, RenderError> render_line(const Entry& entry, const HeaderHis
             line += text;
         }
     }
-    else if (std::holds_alternative<InteractionEntry>(entry.m_Body))
+    else if (const auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body))
     {
-        return fail(RenderError::UNSUPPORTED_ENTRY);
+        // The time, the label and the words, with no ticket marker: the downstream ticket indexer reads `T|` and so
+        // never sees this line.
+        const auto text = interaction_text(context, *interaction);
+        if (!text)
+        {
+            return fail(text.error());
+        }
+        return render_interaction_export_line(*time, context.m_InteractionMarker, *text, interaction->m_AttachedNote);
     }
     else
     {

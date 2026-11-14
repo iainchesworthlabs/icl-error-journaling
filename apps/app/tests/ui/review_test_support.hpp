@@ -25,6 +25,7 @@
 #include "viewmodel/environment.hpp"
 #include "viewmodel/error_picker_model.hpp"
 #include "viewmodel/log_document.hpp"
+#include "viewmodel/person_names.hpp"
 #include "viewmodel/settings_model.hpp"
 #include "viewmodel/share_service.hpp"
 #include "viewmodel/timeline_model.hpp"
@@ -188,8 +189,8 @@ public:
     static constexpr std::uint64_t OPEN_LOG = 2;
 
     explicit World(const TimeZoneProvider* zones = nullptr, Configuration configuration = test::sample_configuration(),
-                   bool share_available = true)
-        : m_Zones(zones != nullptr ? zones : &m_Fixed), m_Configuration(configuration),
+                   bool share_available = true, const viewmodel::PersonNames* people = nullptr)
+        : m_People(people), m_Zones(zones != nullptr ? zones : &m_Fixed), m_Configuration(configuration),
           m_Settings(m_Gateway, environment()), m_Registry(environment(), m_Gateway),
           m_Timeline(environment(), m_Settings, m_Clipboard), m_Undo(environment(), m_Settings),
           m_Picker(m_Settings, m_Open, m_Settings),
@@ -221,7 +222,7 @@ public:
 
     [[nodiscard]] viewmodel::Environment environment()
     {
-        return viewmodel::Environment{m_Clock, m_Clock, m_Ids, m_Device, *m_Zones};
+        return viewmodel::Environment{m_Clock, m_Clock, m_Ids, m_Device, *m_Zones, m_People};
     }
 
     /// The log of the open slot: `entries` in a log with the standard header (7 Nov 2026, UNIT-27, version 1.4.2).
@@ -322,6 +323,7 @@ public:
     }
 
 private:
+    const viewmodel::PersonNames* m_People;
     test::TestClock m_Clock;
     test::SequentialIds m_Ids;
     test::FakeDeviceZone m_Device;
@@ -484,6 +486,11 @@ struct Options
     HeaderValues header = test::sample_header();
     /// The clock format of the configuration; none given = the sample's (24-hour).
     std::optional<TimeFormat> time_format;
+    /// Interaction types in the configuration, and where the names of people come from (none: nobody has a name).
+    std::vector<InteractionType> interaction_types;
+    const viewmodel::PersonNames* people = nullptr;
+    /// The list of people the Edit entry sheet offers (a model with the roles personId and name).
+    QObject* people_model = nullptr;
 
     [[nodiscard]] static Options no_share_sheet()
     {
@@ -509,7 +516,8 @@ struct Options
 /// world, so it goes first when this is destroyed and no item outlives a model it reads.
 struct Screen
 {
-    explicit Screen(Options options = {}) : m_World(options.zones, configured(options), options.share_available)
+    explicit Screen(Options options = {})
+        : m_World(options.zones, configured(options), options.share_available, options.people)
     {
         if (options.past)
         {
@@ -519,6 +527,10 @@ struct Screen
         m_Rig.attach(m_World.clock());
         m_Rig.attach(m_World.gateway());
         QVariantMap properties = m_World.properties(options.past);
+        if (options.people_model != nullptr)
+        {
+            properties.insert(QStringLiteral("people"), QVariant::fromValue(options.people_model));
+        }
         if (options.past)
         {
             properties.insert(QStringLiteral("pastLog"), true);
@@ -541,6 +553,7 @@ struct Screen
         {
             configuration.m_TimeFormat = *options.time_format;
         }
+        configuration.m_InteractionTypes = options.interaction_types;
         return configuration;
     }
 

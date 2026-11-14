@@ -3,6 +3,7 @@
 
 #include "error_journaling/entry.hpp"
 #include "error_journaling/export_renderer.hpp"
+#include "error_journaling/interaction.hpp"
 #include "error_journaling/log.hpp"
 #include "error_journaling/note_template.hpp"
 #include "error_journaling/time_format.hpp"
@@ -12,6 +13,7 @@
 #include "viewmodel/board_model.hpp"
 #include "viewmodel/error_type_list_model.hpp"
 #include "viewmodel/import_messages.hpp"
+#include "viewmodel/interaction_type_list_model.hpp"
 #include "viewmodel/location_list_model.hpp"
 #include "viewmodel/template_list_model.hpp"
 
@@ -47,7 +49,8 @@ const QString OP_ERROR_PREFIX = QStringLiteral("error prefix");
 const QString OP_LOCATION = QStringLiteral("location");
 const QString OP_ENVIRONMENT = QStringLiteral("unit environment");
 const QString OP_ERROR_TYPE = QStringLiteral("error type");
-const QString OP_BOARD = QStringLiteral("board");
+const QString OP_INTERACTION_TYPE = QStringLiteral("interaction type");
+const QString OP_BOARD =QStringLiteral("board");
 const QString OP_TEMPLATE = QStringLiteral("template");
 const QString OP_IMPORT = QStringLiteral("import");
 
@@ -311,12 +314,16 @@ SettingsModel::SettingsModel(StorageGateway& gateway, const Environment& environ
     : QObject(parent), m_Gateway(gateway), m_Ids(environment.m_Ids), m_Clock(environment.m_Clock),
       m_Zone(environment.m_Zone), m_Zones(environment.m_Zones), m_ShownTimeFormat(Configuration{}.m_TimeFormat),
       m_ErrorTypes(new ErrorTypeListModel(this)), m_Locations(new LocationListModel(this)),
-      m_Templates(new TemplateListModel(this)), m_BoardLayout(new BoardLayoutModel(this))
+      m_Templates(new TemplateListModel(this)), m_BoardLayout(new BoardLayoutModel(this)),
+      m_InteractionLayout(new BoardLayoutModel(this, BoardLayoutModel::Board::INTERACTIONS)),
+      m_InteractionTypes(new InteractionTypeListModel(this))
 {
+    m_InteractionTypes->refresh(m_Setup);
     m_ErrorTypes->refresh(m_Setup);
     m_Locations->refresh(m_Setup);
     m_Templates->refresh(m_Setup);
     m_BoardLayout->refresh(m_Setup);
+    m_InteractionLayout->refresh(m_Setup);
 }
 
 SettingsModel::~SettingsModel() = default;
@@ -402,6 +409,16 @@ QAbstractItemModel* SettingsModel::templates() const
 QAbstractItemModel* SettingsModel::board_layout() const
 {
     return m_BoardLayout;
+}
+
+QAbstractItemModel* SettingsModel::interaction_layout() const
+{
+    return m_InteractionLayout;
+}
+
+QAbstractItemModel* SettingsModel::interaction_types() const
+{
+    return m_InteractionTypes;
 }
 
 QString SettingsModel::unit_prefix_hint() const
@@ -587,6 +604,8 @@ void SettingsModel::publish(bool in_force_changed)
     m_Locations->refresh(shown);
     m_Templates->refresh(shown);
     m_BoardLayout->refresh(shown);
+    m_InteractionLayout->refresh(shown);
+    m_InteractionTypes->refresh(shown);
     if (in_force_changed)
     {
         m_Observers.notify([this](ConfigurationObserver& observer) { observer.on_configuration_changed(*this); });
@@ -1168,6 +1187,334 @@ QString SettingsModel::assignBoardTile(int position, const QString& errorTypeId)
                               // Otherwise the tile's type is dropped from the layout, which sends it off the board.
                               tile = index;
                               write_layout(configuration, layout);
+                              return true;
+                          });
+}
+
+// ---------------------------------------------------------------------------------------------- interaction types
+
+namespace
+{
+
+using TypeLayout = std::array<std::optional<std::size_t>, CONFIG_BOARD_POSITIONS>;
+
+/// The second board's layout: the live types by position, the first in the list having a position that two claim.
+/// The first change to the interaction types copies the built-in list into the configuration, so that an edit starts from
+/// the types the board shows (Stage 14, I-6: a file with none shows the built-in ones) and the setup file then holds them.
+void materialise_interaction_defaults(Configuration& configuration)
+{
+    if (configuration.m_InteractionTypes.empty())
+    {
+        configuration.m_InteractionTypes = default_interaction_types();
+    }
+}
+
+TypeLayout type_layout(const Configuration& configuration)
+{
+    TypeLayout layout{};
+    for (std::size_t i = 0; i < configuration.m_InteractionTypes.size(); ++i)
+    {
+        const InteractionType& type = configuration.m_InteractionTypes[i];
+        if (type.m_Retired || !type.m_BoardPosition || !valid_position(*type.m_BoardPosition))
+        {
+            continue;
+        }
+        auto& tile = layout[static_cast<std::size_t>(*type.m_BoardPosition - 1)];
+        if (!tile)
+        {
+            tile = i;
+        }
+    }
+    return layout;
+}
+
+void write_type_layout(Configuration& configuration, const TypeLayout& layout)
+{
+    for (InteractionType& type : configuration.m_InteractionTypes)
+    {
+        if (!type.m_Retired)
+        {
+            type.m_BoardPosition.reset();
+        }
+    }
+    for (std::size_t position = 0; position < layout.size(); ++position)
+    {
+        if (layout[position])
+        {
+            configuration.m_InteractionTypes[*layout[position]].m_BoardPosition = static_cast<int>(position) + 1;
+        }
+    }
+}
+
+QString interaction_line_message(InteractionPatternError error)
+{
+    switch (error)
+    {
+    case InteractionPatternError::EMPTY:
+        return {};
+    case InteractionPatternError::UNBALANCED_BRACE:
+        return SettingsModel::tr("The line has a curly bracket on its own. Remove it, or type two in a row to show one in "
+                                 "the log.");
+    case InteractionPatternError::UNKNOWN_PLACEHOLDER:
+        return SettingsModel::tr("Words between curly brackets are not known. Use [person] for the person and [answer] "
+                                 "for the answer.");
+    case InteractionPatternError::REPEATED_PLACEHOLDER:
+        return SettingsModel::tr("Use [person] once and [answer] once at most.");
+    }
+    return SettingsModel::tr("The line cannot be used.");
+}
+
+/// The stored pattern for the field's text: none for an empty field.
+std::expected<std::optional<std::string>, QString> checked_interaction_line(const QString& field)
+{
+    const QString trimmed = field.trimmed();
+    if (trimmed.isEmpty())
+    {
+        return std::optional<std::string>{};
+    }
+    if (trimmed.size() > MAX_PATTERN)
+    {
+        return std::unexpected(SettingsModel::tr("The line can have up to %1 characters.").arg(MAX_PATTERN));
+    }
+    const std::string stored = InteractionTypeListModel::pattern_from_field(trimmed).toStdString();
+    if (const auto valid = validate_interaction_pattern(stored); !valid)
+    {
+        return std::unexpected(interaction_line_message(valid.error()));
+    }
+    return std::optional<std::string>{stored};
+}
+
+QString interaction_name_taken(const std::string& name)
+{
+    // The quotes are typographic (U+201C, U+201D), as in the designs.
+    return SettingsModel::tr("There is already an interaction type called \xE2\x80\x9C%1\xE2\x80\x9D. Names must be "
+                             "different.")
+        .arg(QString::fromStdString(name));
+}
+
+} // namespace
+
+QString SettingsModel::validateInteractionLine(const QString& line) const
+{
+    const auto checked = checked_interaction_line(line);
+    return checked ? QString() : checked.error();
+}
+
+QString SettingsModel::previewInteractionLine(const QString& name, const QString& line) const
+{
+    const auto checked = checked_interaction_line(line);
+    if (!checked)
+    {
+        return tr("Fix the line to see an example.");
+    }
+    const QString label = name.trimmed().isEmpty() ? tr("Interaction") : name.trimmed();
+    const QString value = tr("Morning Medley");
+    const std::optional<std::string> answer = std::string(value.toStdString());
+    return QString::fromStdString(
+        render_interaction_text(*checked, label.toStdString(), "Alex Sample", answer));
+}
+
+QString SettingsModel::addInteractionType(const QString& name, const QString& line)
+{
+    const auto text = checked_name(name);
+    if (!text)
+    {
+        return text.error();
+    }
+    const auto pattern = checked_interaction_line(line);
+    if (!pattern)
+    {
+        return pattern.error();
+    }
+    const auto id = m_Ids.next_as<InteractionTypeId>();
+    return change_message(OP_INTERACTION_TYPE,
+                          [value = *text, pattern = *pattern, id](Configuration& configuration) -> EditResult
+                          {
+                              materialise_interaction_defaults(configuration);
+                              if (configuration.m_InteractionTypes.size() >= CONFIG_MAX_ENTRIES_PER_LIST)
+                              {
+                                  return std::unexpected(list_full());
+                              }
+                              if (name_in_use(configuration.m_InteractionTypes, value,
+                                              std::optional<InteractionTypeId>{}))
+                              {
+                                  return std::unexpected(interaction_name_taken(value));
+                              }
+                              TypeLayout layout = type_layout(configuration);
+                              InteractionType type;
+                              type.m_Id = id;
+                              type.m_Name = value;
+                              type.m_LinePattern = pattern;
+                              type.m_Asks = interaction_asks_for(pattern);
+                              configuration.m_InteractionTypes.push_back(std::move(type));
+                              const auto empty = std::ranges::find(layout, std::optional<std::size_t>{});
+                              if (empty != layout.end())
+                              {
+                                  *empty = configuration.m_InteractionTypes.size() - 1;
+                                  write_type_layout(configuration, layout);
+                              }
+                              return true;
+                          });
+}
+
+QString SettingsModel::updateInteractionType(const QString& id, const QString& name, const QString& line)
+{
+    const auto text = checked_name(name);
+    if (!text)
+    {
+        return text.error();
+    }
+    const auto pattern = checked_interaction_line(line);
+    if (!pattern)
+    {
+        return pattern.error();
+    }
+    const auto type_id = parse_id<InteractionTypeId>(id);
+    if (!type_id)
+    {
+        return no_such_item();
+    }
+    return change_message(OP_INTERACTION_TYPE,
+                          [value = *text, pattern = *pattern, target = *type_id](Configuration& configuration) -> EditResult
+                          {
+                              materialise_interaction_defaults(configuration);
+                              const auto found =
+                                  std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
+                              if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
+                              {
+                                  return std::unexpected(no_such_item());
+                              }
+                              if (name_in_use(configuration.m_InteractionTypes, value,
+                                              std::optional<InteractionTypeId>(target)))
+                              {
+                                  return std::unexpected(interaction_name_taken(value));
+                              }
+                              const bool changed = found->m_Name != value || found->m_LinePattern != pattern;
+                              found->m_Name = value;
+                              found->m_LinePattern = pattern;
+                              found->m_Asks = interaction_asks_for(pattern);
+                              return changed;
+                          });
+}
+
+QString SettingsModel::retireInteractionType(const QString& id)
+{
+    const auto type_id = parse_id<InteractionTypeId>(id);
+    if (!type_id)
+    {
+        return no_such_item();
+    }
+    return change_message(OP_INTERACTION_TYPE,
+                          [target = *type_id](Configuration& configuration) -> EditResult
+                          {
+                              materialise_interaction_defaults(configuration);
+                              const auto found =
+                                  std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
+                              if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
+                              {
+                                  return std::unexpected(no_such_item());
+                              }
+                              found->m_Retired = true;
+                              return true;
+                          });
+}
+
+QString SettingsModel::moveInteractionTile(int fromPosition, int toPosition)
+{
+    if (!valid_position(fromPosition) || !valid_position(toPosition))
+    {
+        return tr("That position is not on the board.");
+    }
+    return change_message(OP_INTERACTION_TYPE,
+                          [fromPosition, toPosition](Configuration& configuration) -> EditResult
+                          {
+                              materialise_interaction_defaults(configuration);
+                              TypeLayout layout = type_layout(configuration);
+                              const auto from = static_cast<std::ptrdiff_t>(fromPosition - 1);
+                              const auto to = static_cast<std::ptrdiff_t>(toPosition - 1);
+                              if (!layout[static_cast<std::size_t>(from)])
+                              {
+                                  return std::unexpected(SettingsModel::tr("There is no tile there to move."));
+                              }
+                              if (from == to)
+                              {
+                                  return false;
+                              }
+                              if (from < to)
+                              {
+                                  std::rotate(layout.begin() + from, layout.begin() + from + 1, layout.begin() + to + 1);
+                              }
+                              else
+                              {
+                                  std::rotate(layout.begin() + to, layout.begin() + from, layout.begin() + from + 1);
+                              }
+                              write_type_layout(configuration, layout);
+                              return true;
+                          });
+}
+
+QString SettingsModel::assignInteractionTile(int position, const QString& interactionTypeId)
+{
+    if (!valid_position(position))
+    {
+        return tr("That position is not on the board.");
+    }
+    const auto type_id = parse_id<InteractionTypeId>(interactionTypeId);
+    if (!type_id)
+    {
+        return no_such_item();
+    }
+    return change_message(OP_INTERACTION_TYPE,
+                          [position, target = *type_id](Configuration& configuration) -> EditResult
+                          {
+                              materialise_interaction_defaults(configuration);
+                              const auto found =
+                                  std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
+                              if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
+                              {
+                                  return std::unexpected(no_such_item());
+                              }
+                              const auto index =
+                                  static_cast<std::size_t>(found - configuration.m_InteractionTypes.begin());
+                              TypeLayout layout = type_layout(configuration);
+                              auto& tile = layout[static_cast<std::size_t>(position - 1)];
+                              if (tile == index)
+                              {
+                                  return false;
+                              }
+                              const auto current = std::ranges::find(layout, std::optional<std::size_t>(index));
+                              if (current != layout.end())
+                              {
+                                  *current = tile;
+                              }
+                              tile = index;
+                              write_type_layout(configuration, layout);
+                              return true;
+                          });
+}
+
+QString SettingsModel::removeInteractionTile(const QString& interactionTypeId)
+{
+    const auto type_id = parse_id<InteractionTypeId>(interactionTypeId);
+    if (!type_id)
+    {
+        return no_such_item();
+    }
+    return change_message(OP_INTERACTION_TYPE,
+                          [target = *type_id](Configuration& configuration) -> EditResult
+                          {
+                              materialise_interaction_defaults(configuration);
+                              const auto found =
+                                  std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
+                              if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
+                              {
+                                  return std::unexpected(no_such_item());
+                              }
+                              if (!found->m_BoardPosition)
+                              {
+                                  return false;
+                              }
+                              found->m_BoardPosition.reset();
                               return true;
                           });
 }

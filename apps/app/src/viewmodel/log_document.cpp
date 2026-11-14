@@ -261,6 +261,17 @@ Result<void, DocumentError> LogDocument::edit_entry(EntryId id, Entry entry, Don
     return submit(std::move(command));
 }
 
+Result<void, DocumentError> LogDocument::edit_entry(EntryId id, Mutator mutate, Done done)
+{
+    Command command;
+    command.m_Op = Command::Op::EDIT_ENTRY;
+    command.m_Entry.m_Id = id;
+    command.m_Mutate = std::move(mutate);
+    command.m_Time = m_Environment.m_Clock.now();
+    command.m_Done = std::move(done);
+    return submit(std::move(command));
+}
+
 Result<void, DocumentError> LogDocument::set_deleted(EntryId id, bool deleted, Origin origin, Done done)
 {
     Command command;
@@ -388,15 +399,25 @@ Result<JournalBody, DocumentError> LogDocument::make_body(const Command& command
     }
     case Command::Op::EDIT_ENTRY:
     {
-        if (log.find(command.m_Entry.m_Id) == nullptr)
+        const Entry* current = log.find(command.m_Entry.m_Id);
+        if (current == nullptr)
         {
             return rejected_by_log(Log::Error::UNKNOWN_ENTRY, "That entry is not in this log.");
         }
-        if (auto valid = validate_entry(command.m_Entry); !valid)
+        Entry candidate = command.m_Entry;
+        if (command.m_Mutate)
+        {
+            candidate = *current;
+            if (const auto refusal = command.m_Mutate(candidate))
+            {
+                return rejected(*refusal);
+            }
+        }
+        if (auto valid = validate_entry(candidate); !valid)
         {
             return rejected(describe(valid.error()));
         }
-        JournalBody body = EditEntryBody{command.m_Entry, command.m_Time};
+        JournalBody body = EditEntryBody{candidate, command.m_Time};
         if (auto tried = trial(body); !tried)
         {
             return Failure(std::move(tried.error()));

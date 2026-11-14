@@ -465,14 +465,114 @@ TEST_CASE("journal.v2_roundtrip: the longest interaction stays under the record 
     CHECK(wide_line->size() < MAX_RECORD_BYTES);
 }
 
-TEST_CASE("interaction.line_render: an export of an interaction is not yet wired", "[interaction][export]")
+TEST_CASE("export.interaction_lines: an interaction renders at the name level of the context", "[interaction][export]")
 {
-    // Package I-4 gives the renderer the person lookup and the name level. Until then an interaction in a log stops the
-    // export rather than printing a name at the wrong level; nothing writes one yet.
     Log log(sample_header());
     REQUIRE(log.add(sample_interaction(1, 5)).has_value());
     ExportContext context;
     const FakeTimeZoneProvider zones({{"Europe/London", std::chrono::minutes(0)}});
     context.m_Zones = &zones;
-    CHECK(render_entry_line(log, sample_id<EntryId>(1), context).error() == RenderError::UNSUPPORTED_ENTRY);
+    context.m_PersonName = [](const PersonId& id) -> std::optional<std::string>
+    {
+        if (id == sample_id<PersonId>(1))
+        {
+            return std::string(ALEX);
+        }
+        if (id == sample_id<PersonId>(2))
+        {
+            return std::string(JORDAN);
+        }
+        return std::nullopt;
+    };
+    context.m_InteractionPattern = [](InteractionTypeId) -> std::optional<std::string>
+    { return std::string("Spoke with {person}"); };
+
+    const auto line_at = [&](NameLevel level)
+    {
+        context.m_NameLevel = level;
+        return render_entry_line(log, sample_id<EntryId>(1), context);
+    };
+    // The note is the attached one, and there is no ticket marker.
+    CHECK(line_at(NameLevel::FULL).value() ==
+          "00:05 (Interaction) Spoke with Alex Sample and Jordan Placeholder \xE2\x80\x93 asked about \"the schedule\"");
+    CHECK(line_at(NameLevel::INITIALS).value() ==
+          "00:05 (Interaction) Spoke with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
+    CHECK(line_at(NameLevel::HIDDEN).value() ==
+          "00:05 (Interaction) Spoke with someone \xE2\x80\x93 asked about \"the schedule\"");
+    // An empty label drops the label and its space.
+    context.m_InteractionMarker = "";
+    CHECK(line_at(NameLevel::INITIALS).value() ==
+          "00:05 Spoke with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
+}
+
+TEST_CASE("export.interaction_lines: the type is looked up only when the entry has no snapshot", "[interaction][export]")
+{
+    Log log(sample_header());
+    Entry entry = sample_interaction(1, 5);
+    std::get<InteractionEntry>(entry.m_Body).m_TypeLabel.clear();
+    REQUIRE(log.add(std::move(entry)).has_value());
+    ExportContext context;
+    const FakeTimeZoneProvider zones({{"Europe/London", std::chrono::minutes(0)}});
+    context.m_Zones = &zones;
+    CHECK(render_entry_line(log, sample_id<EntryId>(1), context).error() == RenderError::UNKNOWN_INTERACTION_TYPE);
+    context.m_InteractionTypeName = [](InteractionTypeId) -> std::string_view { return "Spoke with"; };
+    // No pattern and no person source: the line is the name, and a person nobody can name is not printed.
+    CHECK(render_entry_line(log, sample_id<EntryId>(1), context).value() ==
+          "00:05 (Interaction) Spoke with \xE2\x80\x93 asked about \"the schedule\"");
+}
+
+TEST_CASE("export.interaction_lines: error lines are byte for byte as they were without interactions",
+          "[interaction][export]")
+{
+    // The downstream ticket indexer reads the `T|` lines, so an error line must not change with the name level, the
+    // label, or an interaction beside it in the log.
+    const FakeTimeZoneProvider zones(
+        {{"Europe/London", std::chrono::minutes(0)}, {"Australia/Melbourne", std::chrono::minutes(0)}});
+    Log log(sample_header());
+    REQUIRE(log.add(sample_error(1, 3)).has_value());
+    REQUIRE(log.add(sample_interaction(2, 5)).has_value());
+    REQUIRE(log.add(sample_error(3, 20, "Mute Delay", "heard it twice")).has_value());
+
+    ExportContext context;
+    context.m_Zones = &zones;
+    const auto first = render_entry_line(log, sample_id<EntryId>(1), context);
+    const auto second = render_entry_line(log, sample_id<EntryId>(3), context);
+    REQUIRE(first.has_value());
+    REQUIRE(second.has_value());
+    CHECK(*first == "00:03 T| Wrong Response");
+    CHECK(*second == "00:20 T| Mute Delay \xE2\x80\x93 heard it twice");
+
+    for (const NameLevel level : {NameLevel::FULL, NameLevel::INITIALS, NameLevel::HIDDEN})
+    {
+        for (const std::string_view marker : {"(Interaction)", "", "(Chat)"})
+        {
+            context.m_NameLevel = level;
+            context.m_InteractionMarker = marker;
+            context.m_InteractionPattern = [](InteractionTypeId) -> std::optional<std::string>
+            { return std::string("Spoke with {person}"); };
+            CHECK(render_entry_line(log, sample_id<EntryId>(1), context).value() == *first);
+            CHECK(render_entry_line(log, sample_id<EntryId>(3), context).value() == *second);
+            CHECK(render_entry_line(log, sample_id<EntryId>(2), context).value().find("T|") == std::string::npos);
+        }
+    }
+}
+
+TEST_CASE("interaction.defaults: the built-in types are the ones of the sample setup", "[interaction]")
+{
+    const auto types = default_interaction_types();
+    REQUIRE(types.size() == 6);
+    for (std::size_t i = 0; i < types.size(); ++i)
+    {
+        CHECK(types[i].m_BoardPosition == static_cast<int>(i) + 1);
+        CHECK_FALSE(types[i].m_Retired);
+        CHECK(types[i].m_Asks == interaction_asks_for(types[i].m_LinePattern));
+        if (types[i].m_LinePattern)
+        {
+            CHECK(validate_interaction_pattern(*types[i].m_LinePattern).has_value());
+        }
+    }
+    CHECK(types[0].m_Asks == InteractionAsks::PERSON);
+    CHECK(types[1].m_Asks == InteractionAsks::TEXT);
+    CHECK(types[2].m_Asks == InteractionAsks::NOTHING);
+    CHECK(types[3].m_Asks == InteractionAsks::PERSON);
 }

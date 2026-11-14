@@ -28,6 +28,9 @@ struct World
     std::map<LocationId, std::string> m_LocationNames;
     std::map<NoteTemplateId, NoteTemplate> m_Templates;
     std::vector<ErrorTypeId> m_TotalsOrder;
+    std::map<InteractionTypeId, std::string> m_InteractionNames;
+    std::map<InteractionTypeId, std::string> m_InteractionPatterns;
+    std::map<PersonId, std::string> m_People;  // the fictional list of AGENTS.md; a forgotten person is not here
 };
 
 std::unique_ptr<World> make_world(bool real_zones)
@@ -68,6 +71,24 @@ std::unique_ptr<World> make_world(bool real_zones)
         t.m_OutputPattern = pattern;
         world->m_Templates[t.m_Id] = t;
     }
+    const std::tuple<std::uint64_t, const char*, const char*> interactions[] = {
+        {INTERACTION_GREETED, "Greeted", ""},
+        {INTERACTION_SPOKE_WITH, "Spoke with", "Spoke with {person}"},
+        {INTERACTION_PLAYED_SONG, "Played song", "Played {value}"},
+        {INTERACTION_VISITOR, "Visitor interaction", ""},
+        {INTERACTION_GAVE, "Gave", "Gave {person} {value}"}};
+    for (const auto& [number, name, pattern] : interactions)
+    {
+        const auto id = test_id<InteractionTypeId>(number);
+        world->m_InteractionNames[id] = name;
+        if (*pattern != 0)
+        {
+            world->m_InteractionPatterns[id] = pattern;
+        }
+    }
+    world->m_People[test_id<PersonId>(PERSON_ALEX)] = "Alex Sample";
+    world->m_People[test_id<PersonId>(PERSON_JORDAN)] = "Jordan Placeholder";
+    world->m_People[test_id<PersonId>(PERSON_PAT)] = "Pat Stand-in";
     return world;
 }
 
@@ -91,6 +112,21 @@ ExportContext make_context(World& world)
     {
         const auto it = world.m_Templates.find(id);
         return it == world.m_Templates.end() ? nullptr : &it->second;
+    };
+    context.m_InteractionTypeName = [&world](InteractionTypeId id) -> std::string_view
+    {
+        const auto it = world.m_InteractionNames.find(id);
+        return it == world.m_InteractionNames.end() ? std::string_view{} : std::string_view(it->second);
+    };
+    context.m_InteractionPattern = [&world](InteractionTypeId id) -> std::optional<std::string>
+    {
+        const auto it = world.m_InteractionPatterns.find(id);
+        return it == world.m_InteractionPatterns.end() ? std::nullopt : std::optional<std::string>(it->second);
+    };
+    context.m_PersonName = [&world](const PersonId& id) -> std::optional<std::string>
+    {
+        const auto it = world.m_People.find(id);
+        return it == world.m_People.end() ? std::nullopt : std::optional<std::string>(it->second);
     };
     return context;
 }
@@ -143,6 +179,8 @@ public:
     bool totals = false;
     TimeFormat time_format;
     std::string_view prefix = "UNIT";
+    std::string_view marker = export_format::DEFAULT_INTERACTION_MARKER;
+    NameLevel level = NameLevel::INITIALS;
 
     void add(Entry entry)
     {
@@ -154,6 +192,11 @@ public:
     void error(Timestamp when, std::uint64_t type, std::optional<std::string> note = std::nullopt)
     {
         add(error_entry(next_id(), std::move(when), type, std::move(note)));
+    }
+    void interaction(Timestamp when, std::uint64_t type, std::vector<std::uint64_t> people = {},
+                     std::optional<std::string> value = std::nullopt, std::optional<std::string> note = std::nullopt)
+    {
+        add(interaction_entry(next_id(), std::move(when), type, std::move(people), std::move(value), std::move(note)));
     }
     void note(Timestamp when, std::string text) { add(free_note_entry(next_id(), std::move(when), std::move(text))); }
     void templated(Timestamp when, std::uint64_t tpl, std::string value)
@@ -177,6 +220,8 @@ public:
         context.m_UnitPrefix = prefix;
         context.m_TimeFormat = time_format;
         context.m_IncludeTotals = totals;
+        context.m_InteractionMarker = marker;
+        context.m_NameLevel = level;
         return Scenario{std::move(m_Log), std::move(context), std::shared_ptr<void>(std::move(m_World))};
     }
 
@@ -211,6 +256,28 @@ void busy_day(Builder& b)
     b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(10, 40));
 }
 
+/// The log of the interaction scenarios: errors, notes and interactions interleaved, one interaction deleted, one with
+/// a person who was forgotten, one with several people. The scenarios differ only in the label and the name level.
+void interaction_day(Builder& b)
+{
+    b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);                                       // 1
+    b.interaction(on_day(10, 12), INTERACTION_SPOKE_WITH, {PERSON_ALEX});               // 2
+    b.error(on_day(10, 20), ERROR_MUTE_DELAY);                                          // 3
+    b.interaction(on_day(10, 31), INTERACTION_PLAYED_SONG, {}, "Morning Medley");       // 4
+    b.interaction(on_day(10, 40), INTERACTION_SPOKE_WITH, {PERSON_ALEX, PERSON_JORDAN, PERSON_PAT});  // 5
+    b.note(on_day(10, 45), "Robot restarted");                                          // 6
+    b.interaction(on_day(10, 48), INTERACTION_VISITOR, {}, std::nullopt, "asked about the schedule");  // 7
+    b.interaction(on_day(11, 0), INTERACTION_GAVE, {PERSON_JORDAN}, "a card");          // 8
+    b.interaction(on_day(11, 10), INTERACTION_SPOKE_WITH, {PERSON_FORGOTTEN});          // 9
+    b.interaction(on_day(11, 20), INTERACTION_SPOKE_WITH);                              // 10: nobody picked yet
+    b.interaction(on_day(11, 30), INTERACTION_GREETED);                                 // 11: deleted
+    b.error(on_day(11, 40), ERROR_WRONG_RESPONSE);                                      // 12
+    if (!b.log().set_deleted(test_id<EntryId>(11), true))
+    {
+        std::abort();
+    }
+}
+
 using Factory = std::function<Scenario()>;
 
 const std::vector<std::pair<std::string_view, Factory>>& factories()
@@ -229,6 +296,38 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              return b.finish();
          }},
         {"empty-log", [] { return Builder().finish(); }},
+        {"interactions-initials",
+         []
+         {
+             Builder b;
+             b.totals = true;  // interactions are not counted
+             interaction_day(b);
+             return b.finish();
+         }},
+        {"interactions-full",
+         []
+         {
+             Builder b;
+             b.level = NameLevel::FULL;
+             interaction_day(b);
+             return b.finish();
+         }},
+        {"interactions-hidden",
+         []
+         {
+             Builder b;
+             b.level = NameLevel::HIDDEN;
+             interaction_day(b);
+             return b.finish();
+         }},
+        {"interactions-no-label",
+         []
+         {
+             Builder b;
+             b.marker = "";
+             interaction_day(b);
+             return b.finish();
+         }},
         {"empty-header",
          []
          {
@@ -567,6 +666,33 @@ Entry free_note_entry(std::uint64_t id, Timestamp when, std::string text)
     entry.m_Id = test_id<EntryId>(id);
     entry.m_Captured = std::move(when);
     entry.m_Body = NoteEntry{std::nullopt, std::move(text)};
+    return entry;
+}
+
+Entry interaction_entry(std::uint64_t id, Timestamp when, std::uint64_t type, std::vector<std::uint64_t> people,
+                        std::optional<std::string> value, std::optional<std::string> attached_note)
+{
+    Entry entry;
+    entry.m_Id = test_id<EntryId>(id);
+    entry.m_Captured = std::move(when);
+    InteractionEntry body;
+    body.m_Type = test_id<InteractionTypeId>(type);
+    // The snapshot of the type's name, as the app writes it at the tap.
+    switch (type)
+    {
+    case INTERACTION_GREETED: body.m_TypeLabel = "Greeted"; break;
+    case INTERACTION_SPOKE_WITH: body.m_TypeLabel = "Spoke with"; break;
+    case INTERACTION_PLAYED_SONG: body.m_TypeLabel = "Played song"; break;
+    case INTERACTION_VISITOR: body.m_TypeLabel = "Visitor interaction"; break;
+    default: body.m_TypeLabel = "Gave"; break;
+    }
+    for (const auto person : people)
+    {
+        body.m_People.push_back(test_id<PersonId>(person));
+    }
+    body.m_Value = std::move(value);
+    body.m_AttachedNote = std::move(attached_note);
+    entry.m_Body = std::move(body);
     return entry;
 }
 

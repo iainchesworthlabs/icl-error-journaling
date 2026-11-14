@@ -28,6 +28,7 @@ namespace ej::viewmodel
 
 class BoardLayoutModel;
 class ErrorTypeListModel;
+class InteractionTypeListModel;
 class LocationListModel;
 class TemplateListModel;
 
@@ -79,6 +80,10 @@ class SettingsModel : public QObject, public ConfigurationSource, public Configu
     Q_PROPERTY(QAbstractItemModel* locations READ locations CONSTANT)              // PRF-03
     Q_PROPERTY(QAbstractItemModel* templates READ templates CONSTANT)              // PRF-06
     Q_PROPERTY(QAbstractItemModel* boardLayout READ board_layout CONSTANT)         // PRF-05
+    /// The miniature board of the second board: the same shape as `boardLayout`, over the interaction types in force.
+    Q_PROPERTY(QAbstractItemModel* interactionLayout READ interaction_layout CONSTANT)
+    // The interaction types of the second board that are not retired (Stage 14, 4.5).
+    Q_PROPERTY(QAbstractItemModel* interactionTypes READ interaction_types CONSTANT)
     // The line under the unit prefix field: "Added in front of the number you type each day." (FirstLaunchManual.)
     Q_PROPERTY(QString unitPrefixHint READ unit_prefix_hint CONSTANT)
     // The first board position (1 to 11) with no type on it, or 0 when the board is full: where `addErrorType` puts a
@@ -122,6 +127,8 @@ public:
     [[nodiscard]] QAbstractItemModel* locations() const;
     [[nodiscard]] QAbstractItemModel* templates() const;
     [[nodiscard]] QAbstractItemModel* board_layout() const;
+    [[nodiscard]] QAbstractItemModel* interaction_layout() const;
+    [[nodiscard]] QAbstractItemModel* interaction_types() const;
     [[nodiscard]] QString unit_prefix_hint() const;
     [[nodiscard]] int first_empty_position() const;
     [[nodiscard]] int next_colour_slot() const;
@@ -183,6 +190,25 @@ public:
     Q_INVOKABLE QString addErrorTypeAt(const QString& name, int position);
     Q_INVOKABLE QString renameErrorType(const QString& id, const QString& name);
     Q_INVOKABLE QString retireErrorType(const QString& id);
+
+    // ---- Interaction types (Stage 14, 4.5; the tiles of the second board) ----
+    // `line` is what the "Line in the log" field shows: "Spoke with [person]", "Played [answer]", or empty (the line is
+    // then the type's name). A type with [person] asks who after it is logged, one with [answer] asks a question, and
+    // the others log at once. Each call returns "" on success or the refusal in plain words. A new type goes to the first
+    // empty tile of the second board in the same save, or is in Other when the board is full.
+    Q_INVOKABLE QString addInteractionType(const QString& name, const QString& line);
+    Q_INVOKABLE QString updateInteractionType(const QString& id, const QString& name, const QString& line);
+    Q_INVOKABLE QString retireInteractionType(const QString& id);
+    /// Positions are 1 to 11, as on the error board.
+    Q_INVOKABLE QString moveInteractionTile(int fromPosition, int toPosition);
+    /// Puts the type on the tile; a type on the board elsewhere swaps places with the tile's type.
+    Q_INVOKABLE QString assignInteractionTile(int position, const QString& interactionTypeId);
+    /// Takes the type off the board; it stays in Other.
+    Q_INVOKABLE QString removeInteractionTile(const QString& interactionTypeId);
+    /// "" for a line that is valid (an empty one is), or the words to show while the person types.
+    Q_INVOKABLE QString validateInteractionLine(const QString& line) const;
+    /// The line the log would show, with a sample person and answer: "Spoke with Alex Sample".
+    Q_INVOKABLE QString previewInteractionLine(const QString& name, const QString& line) const;
 
     /// Positions are the board positions 1 to 11 (the `position` role of `boardLayout`). A drag takes the tile at
     /// `fromPosition` out and puts it at `toPosition`, the tiles between shifting by one.
@@ -323,6 +349,8 @@ private:
     LocationListModel* m_Locations;
     TemplateListModel* m_Templates;
     BoardLayoutModel* m_BoardLayout;
+    BoardLayoutModel* m_InteractionLayout;
+    InteractionTypeListModel* m_InteractionTypes;
 };
 
 } // namespace ej::viewmodel

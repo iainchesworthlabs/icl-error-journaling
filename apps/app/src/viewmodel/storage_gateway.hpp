@@ -2,6 +2,7 @@
 #pragma once
 
 #include "error_journaling/log_repository.hpp"
+#include "error_journaling/people_store.hpp"
 #include "viewmodel/config_store.hpp"
 #include "viewmodel/move_only_function.hpp"
 
@@ -26,6 +27,8 @@ struct StorageContext
 {
     LogRepository& m_Logs;
     ConfigStore& m_Config;
+    /// The list of people (Stage 14). Null when it could not be opened: the picker then says people are not available.
+    PeopleStore* m_People = nullptr;
 };
 
 /// The only way for the view-model layer to reach the store (standard 7.6: nothing that blocks runs on the GUI

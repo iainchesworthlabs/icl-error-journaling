@@ -685,7 +685,7 @@ TEST_CASE("The error prefix helpers trim spaces and judge the text", "[config][e
 TEST_CASE("config.interaction_types: read, write and refuse", "[config][interaction]")
 {
     const auto config = imported(sample());
-    REQUIRE(config.m_InteractionTypes.size() == 4);
+    REQUIRE(config.m_InteractionTypes.size() == 6);
     CHECK(config.m_InteractionTypes[0].m_Name == "Spoke with");
     CHECK(config.m_InteractionTypes[0].m_BoardPosition == 1);
     CHECK(config.m_InteractionTypes[0].m_LinePattern == "Spoke with {person}");
@@ -700,7 +700,7 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
         const auto written = ej::export_configuration(config);
         CHECK(written == sample());
         const auto again = imported(written);
-        REQUIRE(again.m_InteractionTypes.size() == 4);
+        REQUIRE(again.m_InteractionTypes.size() == 6);
         for (std::size_t i = 0; i < 4; ++i)
         {
             CHECK(again.m_InteractionTypes[i].m_Id == config.m_InteractionTypes[i].m_Id);
@@ -754,7 +754,7 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
     {
         const auto text = edited(sample(), "\"retired\": false,\n      \"board_position\": 4,",
                                  "\"retired\": true,\n      \"board_position\": 3,");
-        CHECK(imported(text).m_InteractionTypes.size() == 4);
+        CHECK(imported(text).m_InteractionTypes.size() == 6);
     }
     SECTION("a bad line is refused")
     {
@@ -813,7 +813,7 @@ TEST_CASE("config.sample_still_valid: the sample reads and keeps its old parts",
     CHECK(config.m_ErrorTypes.size() == 11);
     CHECK(config.m_Locations.size() == 2);
     CHECK(config.m_Templates.size() == 2);
-    CHECK(config.m_InteractionTypes.size() == 4);
+    CHECK(config.m_InteractionTypes.size() == 6);
     CHECK(config.m_Tester == "Sam Example");
     CHECK_FALSE(config.m_InteractionsBoardEnabled.has_value());
 }

@@ -30,6 +30,7 @@
 #include "support/test_environment.hpp"
 #include "viewmodel/board_model.hpp"
 #include "viewmodel/document_registry.hpp"
+#include "viewmodel/interaction_board_model.hpp"
 #include "viewmodel/log_session.hpp"
 #include "viewmodel/template_list_model.hpp"
 #include "viewmodel/timeline_model.hpp"
@@ -43,6 +44,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <QAbstractListModel>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -200,6 +202,115 @@ private:
     QObject* m_Templates;
 };
 
+/// The list of people, with the names of `PeopleModel`, in memory: a name is added at once and `personAdded` follows.
+class FakePeople : public QAbstractListModel
+{
+    Q_OBJECT
+    Q_PROPERTY(bool available READ available CONSTANT)
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+
+public:
+    struct Row
+    {
+        QString m_Id;
+        QString m_Name;
+        QString m_Location;
+    };
+
+    [[nodiscard]] bool available() const { return true; }
+    [[nodiscard]] int count() const { return static_cast<int>(m_Rows.size()); }
+    [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override { return parent.isValid() ? 0 : count(); }
+    [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override
+    {
+        const Row& row = m_Rows.at(static_cast<std::size_t>(index.row()));
+        return role == Qt::UserRole + 1 ? row.m_Id : role == Qt::UserRole + 2 ? row.m_Name : row.m_Location;
+    }
+    [[nodiscard]] QHash<int, QByteArray> roleNames() const override
+    {
+        return {{Qt::UserRole + 1, "personId"}, {Qt::UserRole + 2, "name"}, {Qt::UserRole + 3, "locationId"}};
+    }
+
+    Q_INVOKABLE QString matchFor(const QString& typed) const
+    {
+        for (const Row& row : m_Rows)
+        {
+            if (row.m_Name.compare(typed.simplified(), Qt::CaseInsensitive) == 0)
+            {
+                return row.m_Id;
+            }
+        }
+        return {};
+    }
+    Q_INVOKABLE void setCurrentLocation(const QString& location) { m_CurrentLocation = location; }
+    Q_INVOKABLE QStringList recentIds(int limit) const { return m_Recent.mid(0, limit); }
+    Q_INVOKABLE bool isListed(const QString& id) const { return !nameOf(id).isEmpty(); }
+    Q_INVOKABLE QString labelFor(const QString& id) const
+    {
+        const QString name = nameOf(id);
+        return name.isEmpty() ? m_Retired.value(id, QStringLiteral("someone")) : name;
+    }
+    Q_INVOKABLE QString nameOf(const QString& id) const
+    {
+        for (const Row& row : m_Rows)
+        {
+            if (row.m_Id == id)
+            {
+                return row.m_Name;
+            }
+        }
+        return {};
+    }
+    Q_INVOKABLE QStringList everyoneAt(const QString& location) const
+    {
+        QStringList out;
+        for (const Row& row : m_Rows)
+        {
+            if (!location.isEmpty() && row.m_Location == location)
+            {
+                out.append(row.m_Id);
+            }
+        }
+        return out;
+    }
+    Q_INVOKABLE bool addPerson(const QString& typed, const QString& location)
+    {
+        const QString name = typed.simplified();
+        if (name.isEmpty() || !matchFor(name).isEmpty())
+        {
+            emit addFailed(QStringLiteral("That name is in the list already."));
+            return false;
+        }
+        const QString id = QString::fromStdString(sample_id<PersonId>(100 + m_Rows.size()).format());
+        beginInsertRows({}, count(), count());
+        m_Rows.push_back({id, name, location});
+        endInsertRows();
+        emit countChanged();
+        emit personAdded(id, name);
+        return true;
+    }
+    Q_INVOKABLE void touch(const QStringList& ids) { m_Touched = ids; }
+
+    void seed(const QString& name, const QString& location = {})
+    {
+        const QString id = QString::fromStdString(sample_id<PersonId>(100 + m_Rows.size()).format());
+        beginInsertRows({}, count(), count());
+        m_Rows.push_back({id, name, location});
+        endInsertRows();
+        emit countChanged();
+    }
+
+    std::vector<Row> m_Rows;
+    QHash<QString, QString> m_Retired; // people kept by name who are not listed
+    QStringList m_Touched;
+    QStringList m_Recent;
+    QString m_CurrentLocation;
+
+signals:
+    void countChanged();
+    void personAdded(const QString& personId, const QString& name);
+    void addFailed(const QString& message);
+};
+
 /// The configuration source, with the configuration in force from the start. It is the first base of the rig, so that
 /// it is complete before any model reads it.
 struct ConfiguredSource
@@ -269,7 +380,7 @@ public:
         : ConfiguredSource(std::move(options.m_Configuration)), m_Env(world.environment()),
           storage(world.m_Clock, &events), registry(m_Env, gateway), feedback(&events), platform(&events),
           session(m_Env, gateway, registry, config, feedback, StartupResult{options.m_Recovery}),
-          board(config, session), undo(m_Env, config), clipboard(&events), timeline(m_Env, config, clipboard),
+          board(config, session), interactions(config, session), undo(m_Env, config), clipboard(&events), timeline(m_Env, config, clipboard),
           settings(&templates), bridge(platform)
     {
         if (options.m_Existing)
@@ -338,6 +449,8 @@ public:
         QVariantMap map{
             {QStringLiteral("session"), QVariant::fromValue(static_cast<QObject*>(&session))},
             {QStringLiteral("board"), QVariant::fromValue(static_cast<QObject*>(&board))},
+            {QStringLiteral("interactionBoard"), QVariant::fromValue(static_cast<QObject*>(&interactions))},
+            {QStringLiteral("people"), QVariant::fromValue(static_cast<QObject*>(&people))},
             {QStringLiteral("undo"), QVariant::fromValue(static_cast<QObject*>(&undo))},
             {QStringLiteral("timeline"), QVariant::fromValue(static_cast<QObject*>(&timeline))},
             {QStringLiteral("settings"), QVariant::fromValue(static_cast<QObject*>(&settings))},
@@ -362,6 +475,8 @@ public:
     LogId log_id = sample_id<LogId>(1);
     LogSession session;
     BoardModel board;
+    viewmodel::InteractionBoardModel interactions;
+    FakePeople people;
     UndoController undo;
     FakeClipboard clipboard;
     TimelineModel timeline;
@@ -2398,6 +2513,394 @@ TEST_CASE("layout.header_two_lines: at the largest text sizes the header card is
     CHECK_FALSE(card->property("reduced").toBool());
 }
 
+// ------------------------------------------------------------------------------------- Interactions board (Stage 14, I-6)
+
+namespace
+{
+
+constexpr int SPOKE_WITH_ROW = 0;
+constexpr int PLAYED_SONG_ROW = 1;
+constexpr int VISITOR_ROW = 2;
+const QString NORTH_SITE_ID = QStringLiteral("00000000-0000-4000-8000-0000000000b1");
+
+/// The Log screen on the Interactions board.
+struct InteractionScreen : Screen
+{
+    explicit InteractionScreen(LogRig& sim) : Screen(sim)
+    {
+        item->setProperty("activeBoard", QStringLiteral("interactions"));
+        rig.layout();
+    }
+
+    [[nodiscard]] QQuickItem* itile(int row) { return named(QStringLiteral("interactionTile%1").arg(row)); }
+    [[nodiscard]] QQuickItem* sheet(const QString& name) { return named(name); }
+    [[nodiscard]] bool open(const QString& name)
+    {
+        QQuickItem* found = rig.find_item(name);
+        return found != nullptr && found->property("isOpen").toBool();
+    }
+
+    void double_tap(LogRig& sim, QQuickItem* tile)
+    {
+        rig.tap(tile);
+        rig.advance(DOUBLE_TAP_GAP);
+        rig.tap(tile);
+        sim.gateway.run_all();
+        rig.settle();
+        rig.advance(WINDOW_RUN_OUT);
+        rig.layout();
+    }
+    void close_sheet(const QString& name)
+    {
+        QMetaObject::invokeMethod(sheet(name), "close");
+        rig.advance(600ms);
+        rig.settle();
+    }
+};
+
+std::optional<InteractionEntry> first_interaction(LogRig& sim)
+{
+    const auto entries = sim.entries();
+    if (entries.empty())
+        return std::nullopt;
+    const auto* body = std::get_if<InteractionEntry>(&entries.front().m_Body);
+    if (body == nullptr)
+        return std::nullopt;
+    return *body;
+}
+
+}  // namespace
+
+TEST_CASE("board.log_first: a double-tap logs the interaction before the picker opens, and Skip keeps it",
+          "[ui][log][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    REQUIRE(screen.itile(SPOKE_WITH_ROW)->property("label").toString() == QStringLiteral("Spoke with"));
+
+    // One tap logs nothing.
+    screen.rig.tap(screen.itile(SPOKE_WITH_ROW));
+    CHECK(sim.gateway.pending() == 0);
+    screen.rig.advance(WINDOW_RUN_OUT);
+
+    // The second tap asks for the entry; the picker is not open until it has been committed.
+    screen.rig.tap(screen.itile(SPOKE_WITH_ROW));
+    screen.rig.advance(DOUBLE_TAP_GAP);
+    screen.rig.tap(screen.itile(SPOKE_WITH_ROW));
+    CHECK(sim.gateway.pending() >= 1);
+    CHECK_FALSE(screen.open(QStringLiteral("logPersonPicker")));
+    sim.gateway.run_all();
+    screen.rig.settle();
+
+    REQUIRE(sim.entries().size() == 1);
+    const std::optional<InteractionEntry> logged = first_interaction(sim);
+    REQUIRE(logged.has_value());
+    CHECK(logged->m_TypeLabel == "Spoke with");
+    CHECK(logged->m_People.empty());
+    CHECK(screen.open(QStringLiteral("logPersonPicker")));
+    CHECK(sim.events.count(EventKind::HAPTIC, "impact") >= 1);
+    CHECK(screen.toast_text() == QStringLiteral("Spoke with logged at 08:55"));
+
+    // Skip: the entry stays as logged.
+    screen.close_sheet(QStringLiteral("logPersonPicker"));
+    REQUIRE(sim.entries().size() == 1);
+    CHECK(first_interaction(sim)->m_People.empty());
+    CHECK(sim.board.total_count() == 0);
+    CHECK(sim.interactions.data(sim.interactions.index(SPOKE_WITH_ROW), viewmodel::InteractionBoardModel::COUNT).toInt() == 1);
+}
+
+TEST_CASE("board.log_first: Undo removes the entry and closes the picker", "[ui][log][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    screen.double_tap(sim, screen.itile(SPOKE_WITH_ROW));
+    REQUIRE(screen.open(QStringLiteral("logPersonPicker")));
+
+    sim.undo.undo();
+    sim.gateway.run_all();
+    screen.rig.advance(600ms);
+    screen.rig.settle();
+    CHECK(sim.entries().empty());
+    CHECK_FALSE(screen.open(QStringLiteral("logPersonPicker")));
+}
+
+TEST_CASE("picker.search_and_add: type a name once, it is added and ticked, Done puts it on the entry",
+          "[ui][log][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    sim.people.seed("Jordan Placeholder");
+    screen.double_tap(sim, screen.itile(SPOKE_WITH_ROW));
+    QQuickItem* picker = screen.sheet(QStringLiteral("logPersonPicker"));
+    REQUIRE(screen.open(QStringLiteral("logPersonPicker")));
+
+    // A new name offers to add it; a name that is there already (by case) does not.
+    QQuickItem* search = screen.named(QStringLiteral("personPickerSearch"));
+    search->setProperty("filter", QStringLiteral("Alex Sample"));
+    screen.rig.layout();
+    QQuickItem* add = screen.named(QStringLiteral("personPickerAdd"));
+    CHECK(add->isVisible());
+    CHECK(add->property("text").toString().contains(QStringLiteral("Alex Sample")));
+    screen.rig.tap(add);
+    screen.rig.settle();
+    CHECK(sim.people.count() == 2);
+    CHECK(picker->property("picked").toStringList().size() == 1);
+
+    search->setProperty("filter", QStringLiteral("jordan placeholder"));
+    screen.rig.layout();
+    CHECK_FALSE(screen.named(QStringLiteral("personPickerAdd"))->isVisible());
+
+    // Done (1) commits one edit with the ticked person.
+    QMetaObject::invokeMethod(picker, "finish");
+    sim.gateway.run_all();
+    screen.rig.advance(600ms);
+    screen.rig.settle();
+    REQUIRE(sim.entries().size() == 1);
+    const std::optional<InteractionEntry> done = first_interaction(sim);
+    REQUIRE(done.has_value());
+    CHECK(done->m_People.size() == 1);
+    CHECK(sim.people.m_Touched.size() == 1);
+}
+
+TEST_CASE("picker.group: several people, Everyone here, and the limit of 20 is said", "[ui][log][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    for (int i = 0; i < 21; ++i)
+    {
+        sim.people.seed(QStringLiteral("Person %1").arg(i, 2, 10, QLatin1Char('0')), NORTH_SITE_ID);
+    }
+    screen.double_tap(sim, screen.itile(SPOKE_WITH_ROW));
+    QQuickItem* picker = screen.sheet(QStringLiteral("logPersonPicker"));
+    REQUIRE(screen.open(QStringLiteral("logPersonPicker")));
+
+    // Everyone at the location ticks 20 of the 21 and says why not all.
+    picker->setProperty("locationId", NORTH_SITE_ID);
+    QMetaObject::invokeMethod(picker, "tickEveryone");
+    CHECK(picker->property("picked").toStringList().size() == 20);
+    CHECK_FALSE(picker->property("notice").toString().isEmpty());
+
+    // A twenty-first tick is refused, not silent.
+    const QString last = QString::fromStdString(sample_id<PersonId>(120).format());
+    QMetaObject::invokeMethod(picker, "toggle", Q_ARG(QString, last));
+    CHECK(picker->property("picked").toStringList().size() == 20);
+    CHECK(picker->property("notice").toString().contains(QStringLiteral("20")));
+
+    // Done puts all twenty on one entry in one edit.
+    const auto before = sim.gateway.pending();
+    QMetaObject::invokeMethod(picker, "finish");
+    CHECK(sim.gateway.pending() == before + 1);
+    sim.gateway.run_all();
+    screen.rig.advance(600ms);
+    screen.rig.settle();
+    CHECK(first_interaction(sim)->m_People.size() == 20);
+}
+
+TEST_CASE("board.log_first: a type with an answer asks for it in a sheet, and Cancel keeps the entry",
+          "[ui][log][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    screen.double_tap(sim, screen.itile(PLAYED_SONG_ROW));
+    REQUIRE(sim.entries().size() == 1);
+    CHECK_FALSE(screen.open(QStringLiteral("logPersonPicker")));
+    REQUIRE(screen.open(QStringLiteral("logInteractionAnswerSheet")));
+    CHECK(screen.inside(screen.sheet(QStringLiteral("logInteractionAnswerSheet")), QStringLiteral("templateValuePreviewText"))->property("text").toString().contains(QStringLiteral("Played")));
+
+    QMetaObject::invokeMethod(screen.sheet(QStringLiteral("logInteractionAnswerSheet")), "addRequested",
+                              Q_ARG(QString, QStringLiteral("Morning Medley")));
+    sim.gateway.run_all();
+    screen.rig.advance(600ms);
+    screen.rig.settle();
+    CHECK(first_interaction(sim)->m_Value == std::optional<std::string>("Morning Medley"));
+    CHECK_FALSE(screen.open(QStringLiteral("logInteractionAnswerSheet")));
+
+    // Cancel on the next one leaves it as logged.
+    screen.double_tap(sim, screen.itile(PLAYED_SONG_ROW));
+    REQUIRE(screen.open(QStringLiteral("logInteractionAnswerSheet")));
+    screen.close_sheet(QStringLiteral("logInteractionAnswerSheet"));
+    CHECK(sim.entries().size() == 2);
+}
+
+TEST_CASE("board.hold_note: a hold with a typed note puts the note on the interaction", "[ui][log][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    sim.session.set_draft(QStringLiteral("Asked about the schedule"));
+    screen.rig.layout();
+    screen.rig.hold(screen.itile(VISITOR_ROW), 700ms);
+    sim.gateway.run_all();
+    screen.rig.settle();
+    sim.gateway.run_all();
+    screen.rig.settle();
+    REQUIRE(sim.entries().size() == 1);
+    const std::optional<InteractionEntry> held = first_interaction(sim);
+    REQUIRE(held.has_value());
+    CHECK(held->m_AttachedNote == std::optional<std::string>("Asked about the schedule"));
+    CHECK(sim.session.draft().isEmpty());
+    CHECK_FALSE(screen.open(QStringLiteral("logPersonPicker")));
+}
+
+TEST_CASE("board.voiceover: tiles are named, a screen reader activation logs once, the Other tile lists the rest",
+          "[ui][log][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    CHECK(screen.itile(SPOKE_WITH_ROW)->property("accessibleName").toString() == QStringLiteral("Spoke with"));
+    REQUIRE(accessible_press(screen.itile(VISITOR_ROW)));
+    sim.gateway.run_all();
+    screen.rig.settle();
+    CHECK(sim.entries().size() == 1);
+    CHECK(screen.itile(VISITOR_ROW)->property("accessibleName").toString() == QStringLiteral("Visitor interaction, 1 today"));
+
+    sim.undo.dismiss();
+    screen.rig.layout();
+    // Every type of the sample is on the board, so Other lists none.
+    screen.rig.tap(screen.itile(OTHER_ROW));
+    screen.rig.settle();
+    CHECK(screen.open(QStringLiteral("logOtherInteractions")));
+    CHECK(sim.entries().size() == 1);
+}
+
+
+TEST_CASE("picker.edit_mode: the people of an entry are ticked, a retired one is named and a forgotten one is someone, Cancel has no Skip, Done may be empty", "[ui][log][interaction]")
+{
+    FakePeople people;
+    people.seed("Alex Sample");
+    people.seed("Jordan Placeholder");
+    const QString alex = QString::fromStdString(sample_id<PersonId>(100).format());
+    const QString retired = QString::fromStdString(sample_id<PersonId>(200).format());
+    const QString forgotten = QString::fromStdString(sample_id<PersonId>(201).format());
+    people.m_Retired.insert(retired, QStringLiteral("Pat Stand-in"));
+
+    UiRig rig;
+    QQuickItem* picker = rig.load(QStringLiteral("PersonPicker"),
+                                  {{QStringLiteral("people"), QVariant::fromValue(static_cast<QObject*>(&people))},
+                                   {QStringLiteral("typeName"), QStringLiteral("Spoke with")}});
+    REQUIRE(picker != nullptr);
+    QSignalSpy done(picker, SIGNAL(doneRequested(QVariant)));
+    QSignalSpy skipped(picker, SIGNAL(skipped()));
+
+    QMetaObject::invokeMethod(picker, "begin", Q_ARG(QVariant, QVariant(QStringList{alex, retired, forgotten})));
+    rig.advance(600ms);
+    rig.layout();
+    CHECK(picker->property("editing").toBool());
+    CHECK(picker->property("picked").toStringList().size() == 3);
+    // Two of the three are not in the list: they are shown by name and as "someone", ticked, and can be taken off.
+    const auto rows = rig.find_items(QStringLiteral("personPickerUnlistedRow"));
+    REQUIRE(rows.size() == 2);
+    CHECK(rows[0]->property("text").toString() == QStringLiteral("Pat Stand-in"));
+    CHECK(rows[1]->property("text").toString() == QStringLiteral("someone"));
+    CHECK(rows[0]->property("checked").toBool());
+
+    // No Skip: the bar says Cancel.
+    QQuickItem* bar = rig.find_item(QStringLiteral("personPickerBar"));
+    REQUIRE(bar != nullptr);
+    CHECK(bar->property("leadingText").toString() == QStringLiteral("Cancel"));
+
+    // Everyone off, then Done: an empty list is sent.
+    QMetaObject::invokeMethod(picker, "toggle", Q_ARG(QString, alex));
+    QMetaObject::invokeMethod(picker, "toggle", Q_ARG(QString, retired));
+    QMetaObject::invokeMethod(picker, "toggle", Q_ARG(QString, forgotten));
+    CHECK(picker->property("picked").toStringList().isEmpty());
+    QMetaObject::invokeMethod(picker, "finish");
+    rig.advance(600ms);
+    REQUIRE(done.count() == 1);
+    CHECK(done.at(0).at(0).toStringList().isEmpty());
+    CHECK(skipped.count() == 0);
+}
+
+TEST_CASE("picker.recent: the people used last are chips above the list, a tap ticks them, and the location is told",
+          "[ui][log][interaction]")
+{
+    FakePeople people;
+    people.seed("Alex Sample");
+    people.seed("Jordan Placeholder");
+    people.seed("Pat Stand-in");
+    const QString alex = QString::fromStdString(sample_id<PersonId>(100).format());
+    const QString pat = QString::fromStdString(sample_id<PersonId>(102).format());
+    people.m_Recent = QStringList{pat, alex};
+
+    UiRig rig;
+    QQuickItem* picker = rig.load(QStringLiteral("PersonPicker"),
+                                  {{QStringLiteral("people"), QVariant::fromValue(static_cast<QObject*>(&people))},
+                                   {QStringLiteral("locationId"), NORTH_SITE_ID},
+                                   {QStringLiteral("typeName"), QStringLiteral("Spoke with")}});
+    REQUIRE(picker != nullptr);
+    QMetaObject::invokeMethod(picker, "begin", Q_ARG(QVariant, QVariant()));
+    rig.advance(600ms);
+    rig.layout();
+    CHECK(people.m_CurrentLocation == NORTH_SITE_ID);
+
+    const auto chips = rig.find_items(QStringLiteral("personPickerRecentChip"));
+    REQUIRE(chips.size() == 2);
+    CHECK(chips[0]->property("text").toString() == QStringLiteral("Pat Stand-in"));
+    CHECK(chips[1]->property("text").toString() == QStringLiteral("Alex Sample"));
+    rig.tap(chips[0]);
+    CHECK(picker->property("picked").toStringList() == QStringList{pat});
+    CHECK(chips[0]->property("accessibleName").toString().contains(QStringLiteral("ticked")));
+}
+
+TEST_CASE("picker.voiceover: the bar, the search field, the add row, the rows and the chips are named, and the sheet is a dialog",
+          "[ui][log][interaction]")
+{
+    FakePeople people;
+    people.seed("Alex Sample");
+    people.m_Recent = QStringList{QString::fromStdString(sample_id<PersonId>(100).format())};
+
+    UiRig rig;
+    QQuickItem* picker = rig.load(QStringLiteral("PersonPicker"),
+                                  {{QStringLiteral("people"), QVariant::fromValue(static_cast<QObject*>(&people))},
+                                   {QStringLiteral("typeName"), QStringLiteral("Spoke with")}});
+    REQUIRE(picker != nullptr);
+    QMetaObject::invokeMethod(picker, "begin", Q_ARG(QVariant, QVariant()));
+    rig.advance(600ms);
+    rig.layout();
+
+    // The sheet announces itself by its name; the chip and the row are buttons with the person's name.
+    CHECK(picker->property("accessibleName").toString() == QStringLiteral("Pick people"));
+    QQuickItem* chip = rig.find_item(QStringLiteral("personPickerRecentChip"));
+    REQUIRE(chip != nullptr);
+    CHECK(chip->property("accessibleName").toString() == QStringLiteral("Alex Sample"));
+    QQuickItem* row = rig.find_item(QStringLiteral("personPickerRow"));
+    REQUIRE(row != nullptr);
+    CHECK(row->property("accessibleName").toString() == QStringLiteral("Alex Sample"));
+    CHECK(row->property("checkable").toBool());
+
+    // A name that matches nobody offers the add row, named for what it does.
+    QQuickItem* search = rig.find_item(QStringLiteral("personPickerSearch"));
+    REQUIRE(search != nullptr);
+    CHECK(search->property("accessibleName").toString() == QStringLiteral("Search or type a name"));
+    search->setProperty("filter", QStringLiteral("Jordan Placeholder"));
+    rig.layout();
+    QQuickItem* add = rig.find_item(QStringLiteral("personPickerAdd"));
+    REQUIRE(add != nullptr);
+    CHECK(add->property("accessibleName").toString().contains(QStringLiteral("Add")));
+    CHECK(add->property("accessibleName").toString().contains(QStringLiteral("Jordan Placeholder")));
+}
+
+TEST_CASE("board.hold_note: a hold on an interaction with an empty composer opens the Edit sheet on it, and no picker",
+          "[ui][log][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    screen.rig.hold(screen.itile(SPOKE_WITH_ROW), 700ms);
+    sim.gateway.run_all();
+    screen.rig.settle();
+    screen.rig.advance(600ms);
+    REQUIRE(sim.entries().size() == 1);
+    CHECK(first_interaction(sim).has_value());
+    CHECK(edit_sheet_open(screen));
+    CHECK_FALSE(screen.open(QStringLiteral("logPersonPicker")));
+}
 #include "log_screen_test.moc"
 
 // ---- the first-run tip (Stage 10, 10.6) ----
@@ -2483,5 +2986,86 @@ TEST_CASE("help.first_run_tip: a tip that is no longer open, a missing state and
         CHECK(screen.named(QStringLiteral("logEmptyBoard"))->isVisible());
         CHECK(screen.rig.find_item(QStringLiteral("logFirstRunTip")) == nullptr);
         CHECK(screen.help->property("shownCalls").toInt() == 0);
+    }
+}
+
+// ---------------------------------------------------------------------- Interactions board in larger windows (Stage 14, I-8)
+
+namespace
+{
+constexpr double WIDE_TOP = 24.0;    // the insets of the iPad design frame
+constexpr double WIDE_BOTTOM = 20.0;
+} // namespace
+
+TEST_CASE("ipad.second_board_tiles: the twelve tiles are 88 pt or more, equal, and inside the board area",
+          "[ui][log][interaction][ipad][fold]")
+{
+    struct Window
+    {
+        QSize m_Size;
+        bool m_Wide;
+    };
+    const Window windows[] = {{QSize(744, 1133), false}, {QSize(820, 1180), false}, {QSize(1032, 1376), false},
+                              {QSize(1180, 820), true},  {QSize(1133, 744), true},  {QSize(1366, 1024), true},
+                              {QSize(701, 841), false}};
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    for (const Window& window : windows)
+    {
+        CAPTURE(window.m_Size.width(), window.m_Size.height());
+        screen.rig.set_window_size(window.m_Size);
+        screen.rig.set_safe_area(WIDE_TOP, WIDE_BOTTOM);
+        screen.rig.layout();
+        const double tile = screen.item->property("interactionTileHeight").toDouble();
+        CHECK(tile >= 88.0);
+        const QRectF area = screen.rig.geometry(screen.named(QStringLiteral("interactionsBoard")));
+        for (int row = 0; row < 12; ++row)
+        {
+            CAPTURE(row);
+            const QRectF rect = screen.rig.geometry(screen.itile(row));
+            CHECK(rect.height() >= 88.0);
+            CHECK(rect.width() >= 88.0);
+            CHECK(std::abs(rect.height() - tile) <= 1.0);
+            CHECK(rect.left() >= area.left() - 0.5);
+            CHECK(rect.right() <= area.right() + 0.5);
+            CHECK(rect.top() >= area.top() - 0.5);
+            CHECK(rect.bottom() <= area.bottom() + 0.5);
+        }
+        if (window.m_Wide)
+            CHECK(area.right() <= window.m_Size.width() * 0.7);
+    }
+}
+
+TEST_CASE("fold.state_kept: a fold or unfold with the person picker open keeps the picker, its search and the entry",
+          "[ui][log][interaction][fold]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    screen.rig.set_window_size(QSize(841, 701));
+    screen.rig.set_safe_area(WIDE_TOP, WIDE_BOTTOM);
+    screen.rig.layout();
+    screen.double_tap(sim, screen.itile(SPOKE_WITH_ROW));
+    QQuickItem* picker = screen.sheet(QStringLiteral("logPersonPicker"));
+    REQUIRE(screen.open(QStringLiteral("logPersonPicker")));
+    QQuickItem* search = screen.named(QStringLiteral("personPickerSearch"));
+    search->setProperty("filter", QStringLiteral("Alex Sample"));
+    screen.rig.layout();
+    REQUIRE(sim.entries().size() == 1);
+
+    // Half folded, tabletop, the cover screen, and open again.
+    for (const QSize size : {QSize(701, 841), QSize(344, 882), QSize(466, 678), QSize(701, 841), QSize(841, 701)})
+    {
+        CAPTURE(size.width(), size.height());
+        screen.rig.set_window_size(size);
+        screen.rig.set_safe_area(size.width() > 600 ? WIDE_TOP : 40.0, WIDE_BOTTOM);
+        screen.rig.layout();
+        CHECK(screen.open(QStringLiteral("logPersonPicker")));
+        CHECK(search->property("filter").toString() == QStringLiteral("Alex Sample"));
+        CHECK(sim.entries().size() == 1);
+        const QRectF sheet = screen.rig.geometry(picker);
+        CHECK(sheet.left() >= -0.5);
+        CHECK(sheet.right() <= size.width() + 0.5);
     }
 }

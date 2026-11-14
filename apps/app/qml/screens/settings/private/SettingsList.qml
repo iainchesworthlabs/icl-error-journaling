@@ -19,6 +19,7 @@ SettingsPage {
     required property var settings
     // BoardState, for the Second board group: `interactionsEnabled`. Null leaves the group out.
     property var boards: null
+    property var exportPreferences: null
     // The foot of the list: the version and platform text, as a plain caption. Empty hides it. The build's facts, the licence and
     // the timing line (five taps on the version) are on the About page, which the last row opens.
     property string aboutText
@@ -26,6 +27,8 @@ SettingsPage {
     property bool aboutAvailable: false
 
     signal errorTypesRequested
+    signal interactionTypesRequested
+    signal peopleRequested
     signal templatesRequested
     signal locationsRequested
     signal unitEnvironmentsRequested
@@ -33,6 +36,8 @@ SettingsPage {
     signal unitPrefixRequested
     signal errorPrefixRequested
     signal timeFormatRequested
+    // The Names in shared logs row was tapped.
+    signal namesRequested
     signal importExportRequested
     signal aboutRequested
     signal quickHelpRequested
@@ -80,6 +85,15 @@ SettingsPage {
     }
 
     // The row of the time format says what the format is.
+    // The words of the level of a name in text that leaves the device.
+    function nameLevelText(level: string): string {
+        if (level === "full")
+            return qsTr("Full name");
+        if (level === "hidden")
+            return qsTr("Someone");
+        return qsTr("Initials");
+    }
+
     function timeFormatText(style: string, seconds: bool): string {
         if (style === "12h")
             return seconds ? qsTr("12-hour with seconds") : qsTr("12-hour");
@@ -207,7 +221,42 @@ SettingsPage {
                 text: qsTr("Second board: Interactions")
                 description: qsTr("For what you did, as well as what went wrong")
                 checked: root.boards !== null && root.boards.interactionsEnabled
-                onToggled: wanted => root.boards.interactionsEnabled = wanted
+                onToggled: wanted => {
+                    root.boards.interactionsEnabled = wanted;
+                    // Turned on with nothing set up: go straight to the types (Stage 14, 4.1).
+                    if (wanted && root.settings.interactionTypes.rowCount() === 0)
+                        root.interactionTypesRequested();
+                }
+            }
+
+            // The setup of the second board is here, under its switch, and only while the board is on. A type with no
+            // [person] never opens the picker, so the People row is for those who want names.
+            ListRow {
+                objectName: "settingsInteractionTypes"
+                visible: root.boards !== null && root.boards.interactionsEnabled
+                text: qsTr("Interaction types")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.interactionTypesRequested()
+            }
+
+            ListRow {
+                objectName: "settingsPeople"
+                visible: root.boards !== null && root.boards.interactionsEnabled
+                text: qsTr("People")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.peopleRequested()
+            }
+
+            ListRow {
+                objectName: "settingsNames"
+                visible: root.boards !== null && root.boards.interactionsEnabled && root.exportPreferences !== null
+                text: qsTr("Names in shared logs")
+                value: root.nameLevelText(root.exportPreferences !== null ? root.exportPreferences.nameExport : "")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.namesRequested()
             }
         }
 

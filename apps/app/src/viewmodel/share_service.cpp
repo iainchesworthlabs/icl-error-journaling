@@ -115,7 +115,7 @@ void ShareService::acquired(LogId id, Loaded loaded)
     std::shared_ptr<LogDocument> document = std::move(*loaded);
 
     // Render on the GUI thread from the mirror: what the screen shows, which is what has committed.
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build_for_sharing();
     const Result<std::string, RenderError> text = export_text(document->log(), context);
     if (!text)
     {

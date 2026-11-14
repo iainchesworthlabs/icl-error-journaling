@@ -37,6 +37,9 @@ Item {
 
     required property var model
     property int selectedPosition: 0
+    // The words that name what a tile holds, for the empty tile and the panel: error types by default.
+    property string addText: qsTr("Add error type")
+    property string changeText: qsTr("Change error type")
     readonly property alias dragging: dragState.active
 
     signal moveRequested(int fromPosition, int toPosition)
@@ -355,7 +358,7 @@ Item {
                             objectName: "miniLabel"
                             anchors.fill: parent
                             anchors.margins: Theme.miniBoard.labelInset
-                            text: tile.isEmpty ? qsTr("Add error type") : tile.label
+                            text: tile.isEmpty ? root.addText : tile.label
                             color: tile.isOther ? Theme.colour.textSecondary : tile.isEmpty ? Theme.colour.primaryText : Theme.colour.tileText
                             font.pointSize: root.labelPoints
                             font.hintingPreference: Font.PreferNoHinting
@@ -560,7 +563,7 @@ Item {
                     PanelButton {
                         objectName: "miniReplace"
                         width: actions.buttonWidth
-                        label: qsTr("Change error type")
+                        label: root.changeText
                         glyph: "swap"
                         onActivated: root.replaceRequested(root.selectedPosition)
                     }

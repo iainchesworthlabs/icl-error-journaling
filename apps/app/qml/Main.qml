@@ -30,6 +30,12 @@ Window {
     // the one of v1: four tabs.
     property QtObject boards: null
     property QtObject interactionBoard: null
+    // The list of people for the picker of the Interactions board (PeopleModel). Null: no picker.
+    property QtObject people: null
+    // The People screen of Settings (PeopleAdminModel). Null: no People row.
+    property QtObject peopleAdmin: null
+    // How shared text is written (ExportPreferences): the level of a name (nameExport) and the label of an interaction line.
+    property QtObject exportPreferences: null
     required property var bridge
     // The version of the core library and which bridge and storage are linked. They are at the foot of Settings.
     required property string versionText
@@ -73,6 +79,9 @@ Window {
         help: root.help
         boards: root.boards
         interactionBoard: root.interactionBoard
+        exportPreferences: root.exportPreferences
+        people: root.people
+        peopleAdmin: root.peopleAdmin
         aboutText: qsTr("%1 · %2").arg(root.versionText).arg(root.platformText)
     }
 }

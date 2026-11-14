@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "viewmodel/board_layout_model.hpp"
 
+#include "viewmodel/interaction_types.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <utility>
@@ -8,7 +10,7 @@
 namespace ej::viewmodel
 {
 
-BoardLayoutModel::BoardLayoutModel(QObject* parent) : QAbstractListModel(parent)
+BoardLayoutModel::BoardLayoutModel(QObject* parent, Board board) : QAbstractListModel(parent), m_Board(board)
 {
     m_Tiles.back().m_IsOther = true;
 }
@@ -49,7 +51,8 @@ QVariant BoardLayoutModel::data(const QModelIndex& index, int role) const
         }
         if (tile.m_TypeId.isEmpty())
         {
-            return tr("Position %1, empty. Add error type").arg(index.row() + 1);
+            return m_Board == Board::INTERACTIONS ? tr("Position %1, empty. Add interaction type").arg(index.row() + 1)
+                                                  : tr("Position %1, empty. Add error type").arg(index.row() + 1);
         }
         return tile.m_Label;
     default:
@@ -67,18 +70,38 @@ void BoardLayoutModel::refresh(const Configuration& configuration)
 {
     std::array<Tile, ROWS> next;
     next.back().m_IsOther = true;
-    const BoardLayout layout = board_layout(configuration);
-    for (std::size_t position = 0; position < layout.size(); ++position)
+    if (m_Board == Board::INTERACTIONS)
     {
-        if (!layout[position])
+        const std::vector<InteractionType> types = interaction_types_in_force(configuration);
+        const InteractionLayout layout = interaction_layout(types);
+        for (std::size_t position = 0; position < layout.size(); ++position)
         {
-            continue;
+            if (!layout[position])
+            {
+                continue;
+            }
+            const InteractionType& type = types[*layout[position]];
+            Tile& tile = next[position];
+            tile.m_TypeId = QString::fromStdString(type.m_Id.format());
+            tile.m_Label = QString::fromStdString(type.m_Name);
+            tile.m_ColourSlot = tile_colour_slot(*layout[position]);
         }
-        const ErrorType& type = configuration.m_ErrorTypes[*layout[position]];
-        Tile& tile = next[position];
-        tile.m_TypeId = QString::fromStdString(type.m_Id.format());
-        tile.m_Label = QString::fromStdString(type.m_Name);
-        tile.m_ColourSlot = tile_colour_slot(*layout[position]);
+    }
+    else
+    {
+        const BoardLayout layout = board_layout(configuration);
+        for (std::size_t position = 0; position < layout.size(); ++position)
+        {
+            if (!layout[position])
+            {
+                continue;
+            }
+            const ErrorType& type = configuration.m_ErrorTypes[*layout[position]];
+            Tile& tile = next[position];
+            tile.m_TypeId = QString::fromStdString(type.m_Id.format());
+            tile.m_Label = QString::fromStdString(type.m_Name);
+            tile.m_ColourSlot = tile_colour_slot(*layout[position]);
+        }
     }
 
     int first = ROWS;

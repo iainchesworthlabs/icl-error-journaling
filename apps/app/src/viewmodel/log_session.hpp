@@ -69,6 +69,8 @@ class LogSession : public QObject, public OpenLogSource
     // "prod", or empty when the unit has no environment (and when it has no number): the environment alone (PRF-11).
     Q_PROPERTY(QString unitEnvironment READ unit_environment NOTIFY headerChanged)
     Q_PROPERTY(QString locationText READ location_text NOTIFY headerChanged) // the name, resolved from the id
+    // The id of the location in force, or empty when it was typed or is not set: for the picker's Everyone row.
+    Q_PROPERTY(QString locationId READ location_id NOTIFY headerChanged)
     Q_PROPERTY(QString versionText READ version_text NOTIFY headerChanged)   // "1.4.2": the components alone
     // "a1b2c3d", or empty when the version has no commit (HDR-09): the commit alone.
     Q_PROPERTY(QString commitText READ commit_text NOTIFY headerChanged)
@@ -150,6 +152,7 @@ public:
         return m_ChangedSinceShare;
     }
     [[nodiscard]] QString location_text() const;
+    [[nodiscard]] QString location_id() const;
     [[nodiscard]] QString version_text() const;
     [[nodiscard]] QString commit_text() const;
     [[nodiscard]] QString version_display_text() const;
@@ -183,6 +186,17 @@ public:
     /// is not `OPEN`. A draft that was changed while the commit ran is kept. The note-saved haptic follows the commit, as
     /// for a note, and `draftAttached` tells the undo toast, which then hands the draft back when it is undone.
     Q_INVOKABLE bool attachDraft(const QString& entryId);
+
+    /// Stage 14 (I-6). Logs an interaction of the type, with no people and no answer yet: log first, ask second. Returns
+    /// the entry id as `recordErrorEntry` does, or empty for a type that is unknown or retired.
+    Q_INVOKABLE QString recordInteractionEntry(const QString& typeId);
+
+    /// Puts these people (ids, in the order picked, at most 20) on the interaction entry `entryId`: one edit. Refused for
+    /// an entry that is not a live interaction entry of the open log, an id that is not an id, and more than 20 people.
+    Q_INVOKABLE bool setInteractionPeople(const QString& entryId, const QStringList& personIds);
+
+    /// Puts the answer (trimmed, not empty, at most 1,000 characters) on the interaction entry `entryId`: one edit.
+    Q_INVOKABLE bool setInteractionValue(const QString& entryId, const QString& value);
 
     /// NOTE-01. The text is trimmed; empty text and text over 10,000 characters are refused.
     Q_INVOKABLE bool addNote(const QString& text);

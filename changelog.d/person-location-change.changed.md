@@ -1,0 +1,1 @@
+**A person can be moved to another location.** In Settings, People, tap a name and choose a location under **Location** (or **No location**), then **Save**. Until now the location could only be chosen when the person was added. Entries already logged are not touched; the location only decides who **Everyone** ticks in the picker. Not yet run on a device.
