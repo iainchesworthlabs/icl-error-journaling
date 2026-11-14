@@ -142,15 +142,36 @@ Violations check_targets(UiRig& rig, const std::function<double(const Node&)>& m
     return out;
 }
 
+/// The part of the node that is on the screen: its rectangle cut by every ancestor that clips. A row at the foot of a
+/// list is cut by the list, so what lies past the cut is not where a person looks for it. Empty when none is left.
+static QRectF shown_rect(const Node& node)
+{
+    QRectF rect = node.m_Rect;
+    for (const QQuickItem* up = node.m_Item->parentItem(); up != nullptr; up = up->parentItem())
+    {
+        if (up->clip())
+        {
+            rect = rect.intersected(QRectF(up->mapToScene(QPointF(0, 0)), QSizeF(up->width(), up->height())));
+        }
+    }
+    return rect;
+}
+
 Violations check_reading_order(UiRig& rig)
 {
     Violations out;
     std::vector<Node> read;
     for (const Node& node : rig.accessible_tree())
     {
-        if (node.m_Role != QAccessible::NoRole && node.m_Visible)
+        if (node.m_Role == QAccessible::NoRole || !node.m_Visible)
         {
-            read.push_back(node);
+            continue;
+        }
+        Node shown = node;
+        shown.m_Rect = shown_rect(node);
+        if (shown.m_Rect.width() > 0 && shown.m_Rect.height() > 0)
+        {
+            read.push_back(shown);
         }
     }
     for (std::size_t i = 0; i < read.size(); ++i)
