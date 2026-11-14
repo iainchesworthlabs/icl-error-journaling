@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <vector>
 
 using namespace ej::ui;
 using namespace std::chrono_literals;
@@ -558,8 +559,22 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
     // The widths are the phone's (iPhone 17 at 118 pt, the 88 pt minimum), where a word that cannot fit may break as
     // the last resort, and widths from the runner's own measure of the word, for the case that is the report: a word
     // that is a little too wide, and one that needs the label's smallest size.
+    // The windows: an iPhone 17, and a Regular window (an iPad Air 11-inch in portrait: tiles 218.7 wide; in landscape
+    // 207; an iPad mini 198; the inner screen of a foldable about 200) whose tile label is the larger role. A tile is
+    // (column - 2 gaps) / 3 wide.
+    struct Window
+    {
+        QSize m_Size;
+        std::vector<double> m_TileWidths;
+        bool m_MustFit;
+    };
+    const std::vector<Window> windows{Window{QSize(402, 874), {118.0, 104.0, 90.7, 88.0}, false},
+                                      Window{QSize(820, 1180), {218.7, 207.0, 200.0, 198.0}, true}};
+    for (const Window& window : windows)
+    {
     for (const double scale : {1.0, 1.3, 3.1})
     {
+        rig.set_window_size(window.m_Size);
         rig.set_text_scale(scale);
         for (const QString& word : words)
         {
@@ -567,7 +582,7 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
             {
                 QQuickItem* tile = rig.load(QStringLiteral("Tile"), tile_properties(text, 2));
                 REQUIRE(tile != nullptr);
-                tile->setWidth(TILE_WIDTH);
+                tile->setWidth(window.m_TileWidths.front());
                 tile->setHeight(TILE_HEIGHT);
                 rig.layout();
                 QObject* probe = tile->findChild<QObject*>(QStringLiteral("tileWordProbe"));
@@ -575,26 +590,32 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
                 // The word at the role's size, and the tile that gives it this share of its width: a word that is
                 // 2% too wide (the report), 10% too wide, and the share at which it fits only at the smallest size.
                 const double word_width = probe->property("advanceWidth").toDouble();
-                const double padding = tile->property("padding").toDouble() * 2;
+                const double padding = tile->property("padding").toDouble() * 2; // the padding of both sides
                 const double floor_share = tile->property("wordFitFloor").toDouble();
                 struct Width
                 {
                     double m_Tile;
                     bool m_MustFit;
                 };
-                for (const Width width : {Width{word_width * 0.98 + padding, true},
+                // The last needs the sides of the label to give up to 4 pt each, 6 pt in all here.
+                std::vector<Width> widths{Width{word_width * 0.98 + padding, true},
                                           Width{word_width * 0.9 + padding, true},
                                           Width{word_width * (floor_share + 0.02) + padding, true},
-                                          Width{118.0, false},
-                                          Width{88.0, false}})
+                                          Width{word_width * floor_share + padding - 6.0, true}};
+                for (const double tile_width : window.m_TileWidths)
+                {
+                    widths.push_back(Width{tile_width, window.m_MustFit});
+                }
+                for (const Width width : widths)
                 {
                     tile->setWidth(width.m_Tile);
                     rig.layout();
                     QQuickItem* label = rig.find(QStringLiteral("tileLabel"));
                     REQUIRE(label != nullptr);
                     const int words_in_label = static_cast<int>(text.count(QLatin1Char(' '))) + 1;
-                    INFO("label " << text.toStdString() << ", tile width " << width.m_Tile << ", text scale " << scale
-                                  << ", lines " << label->property("lineCount").toInt() << ", content width "
+                    INFO("label " << text.toStdString() << ", window " << window.m_Size.width() << ", tile width "
+                                  << width.m_Tile << ", text scale " << scale << ", lines "
+                                  << label->property("lineCount").toInt() << ", content width "
                                   << label->property("contentWidth").toDouble() << " of " << label->width()
                                   << ", the word " << word_width << " at the role's size");
                     // A word that fits at the smallest size is whole: one line to a word at most, as a break inside a
@@ -612,7 +633,9 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
             }
         }
     }
+    }
     rig.set_text_scale(1.0);
+    rig.set_window_size(QSize(402, 874));
 }
 
 TEST_CASE("tile.empty: an empty position is a button with a plus that taps and never presses", "[ui][tile]")
