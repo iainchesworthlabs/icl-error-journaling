@@ -80,6 +80,8 @@ class SettingsModel : public QObject, public ConfigurationSource, public Configu
     Q_PROPERTY(QAbstractItemModel* locations READ locations CONSTANT)              // PRF-03
     Q_PROPERTY(QAbstractItemModel* templates READ templates CONSTANT)              // PRF-06
     Q_PROPERTY(QAbstractItemModel* boardLayout READ board_layout CONSTANT)         // PRF-05
+    /// The miniature board of the second board: the same shape as `boardLayout`, over the interaction types in force.
+    Q_PROPERTY(QAbstractItemModel* interactionLayout READ interaction_layout CONSTANT)
     // The interaction types of the second board that are not retired (Stage 14, 4.5).
     Q_PROPERTY(QAbstractItemModel* interactionTypes READ interaction_types CONSTANT)
     // The line under the unit prefix field: "Added in front of the number you type each day." (FirstLaunchManual.)
@@ -125,6 +127,7 @@ public:
     [[nodiscard]] QAbstractItemModel* locations() const;
     [[nodiscard]] QAbstractItemModel* templates() const;
     [[nodiscard]] QAbstractItemModel* board_layout() const;
+    [[nodiscard]] QAbstractItemModel* interaction_layout() const;
     [[nodiscard]] QAbstractItemModel* interaction_types() const;
     [[nodiscard]] QString unit_prefix_hint() const;
     [[nodiscard]] int first_empty_position() const;
@@ -346,6 +349,7 @@ private:
     LocationListModel* m_Locations;
     TemplateListModel* m_Templates;
     BoardLayoutModel* m_BoardLayout;
+    BoardLayoutModel* m_InteractionLayout;
     InteractionTypeListModel* m_InteractionTypes;
 };
 

@@ -315,6 +315,7 @@ SettingsModel::SettingsModel(StorageGateway& gateway, const Environment& environ
       m_Zone(environment.m_Zone), m_Zones(environment.m_Zones), m_ShownTimeFormat(Configuration{}.m_TimeFormat),
       m_ErrorTypes(new ErrorTypeListModel(this)), m_Locations(new LocationListModel(this)),
       m_Templates(new TemplateListModel(this)), m_BoardLayout(new BoardLayoutModel(this)),
+      m_InteractionLayout(new BoardLayoutModel(this, BoardLayoutModel::Board::INTERACTIONS)),
       m_InteractionTypes(new InteractionTypeListModel(this))
 {
     m_InteractionTypes->refresh(m_Setup);
@@ -322,6 +323,7 @@ SettingsModel::SettingsModel(StorageGateway& gateway, const Environment& environ
     m_Locations->refresh(m_Setup);
     m_Templates->refresh(m_Setup);
     m_BoardLayout->refresh(m_Setup);
+    m_InteractionLayout->refresh(m_Setup);
 }
 
 SettingsModel::~SettingsModel() = default;
@@ -407,6 +409,11 @@ QAbstractItemModel* SettingsModel::templates() const
 QAbstractItemModel* SettingsModel::board_layout() const
 {
     return m_BoardLayout;
+}
+
+QAbstractItemModel* SettingsModel::interaction_layout() const
+{
+    return m_InteractionLayout;
 }
 
 QAbstractItemModel* SettingsModel::interaction_types() const
@@ -597,6 +604,7 @@ void SettingsModel::publish(bool in_force_changed)
     m_Locations->refresh(shown);
     m_Templates->refresh(shown);
     m_BoardLayout->refresh(shown);
+    m_InteractionLayout->refresh(shown);
     m_InteractionTypes->refresh(shown);
     if (in_force_changed)
     {

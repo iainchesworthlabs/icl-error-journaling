@@ -232,3 +232,20 @@ TEST_CASE("settings.interaction_types: with no types in the file the editor show
     CHECK(names_of(types).size() == 7);
     CHECK(position_at(types, 6) == 7);
 }
+
+TEST_CASE("settings.interaction_types: the miniature layout has the 11 tiles and Other, and follows a move",
+          "[viewmodel][settings][interaction_types]")
+{
+    SettingsRig rig;
+    rig.load_sample();
+    const QAbstractItemModel& layout = *rig.m_Settings.interaction_layout();
+    REQUIRE(layout.rowCount() == 12);
+    CHECK(text_of_role(layout, 0, "label") == QStringLiteral("Spoke with"));
+    CHECK(text_of_role(layout, 6, "typeId").isEmpty());
+    CHECK(layout.data(layout.index(11, 0), role_named(layout, "isOther")).toBool());
+
+    CHECK(rig.m_Settings.moveInteractionTile(1, 7).isEmpty());
+    rig.commit();
+    CHECK(text_of_role(layout, 6, "label") == QStringLiteral("Spoke with"));
+    CHECK(text_of_role(layout, 0, "label") != QStringLiteral("Spoke with"));
+}

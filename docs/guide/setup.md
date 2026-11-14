@@ -113,7 +113,12 @@ editor at once, and turning the switch on with nothing set up opens it for you.
   log it.
 - With no line, the log shows the name of the type.
 
-The first 11 types fill the board in the order shown; drag the handle, or use the arrows, to change it. The rest are under
+The line is the template of the type: there is no separate list of interaction templates. “Spoke with [person]” with the
+name “Spoke with” writes “Spoke with Alex Sample” when you pick Alex Sample.
+
+The miniature board at the top shows the 11 tiles. Tap a tile to move it earlier or later or to change its type, tap an empty
+tile to add one, or hold and drag a tile. In the list below, the first 11 types fill the board in the order shown; drag the
+handle, or use the arrows, to change it. The rest are under
 **Other…**. A type you retire leaves the board and stays on the entries already logged.
 
 ### People
