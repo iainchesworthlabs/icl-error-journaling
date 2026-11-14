@@ -113,10 +113,15 @@ Item {
     // The Interactions board is the one shown, and the room its title strip takes (the strip and the gap under it).
     readonly property bool onInteractions: activeBoard === "interactions"
     readonly property real stripRoom: onInteractions ? Theme.size.interactionStripHeight + Theme.space.tileGap : 0
-    // The tiles of the Interactions board: 96 pt, or less in a short window, never under the 88 pt minimum.
+    // The tiles of the Interactions board (Stage 14, 4.2). On a phone: 96 pt, or less in a short window. In a larger window
+    // the same size as the Errors board's tiles (0.7 of a tile's width, up to the limit; in Wide, the height of the pane
+    // under the title strip), so that switching boards moves nothing. Never under the 88 pt minimum.
     readonly property real interactionTileHeight: {
         const room = roomBelowComposer - (tipShown ? tipRoom : lastBarHidden ? 0 : lastBarRoom) - stripRoom;
-        return Math.max(Theme.size.tileMinimum, Math.min(Theme.size.interactionTileHeight, fittingTile(room)));
+        if (wide)
+            return Math.max(Theme.size.tileMinimum, fittingTile(roomBelowComposer - Theme.space.screenMargin - stripRoom));
+        const preferred = WindowLayout.compact ? Theme.size.interactionTileHeight : WindowLayout.tileHeightFor(grid.tileWidth);
+        return Math.max(Theme.size.tileMinimum, Math.min(preferred, fittingTile(room)));
     }
     // The height of the board area of the Interactions board: four rows of tiles.
     readonly property real interactionBoardHeight: Theme.size.boardRows * interactionTileHeight + fittingGaps * WindowLayout.tileGap
