@@ -638,6 +638,87 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
     rig.set_window_size(QSize(402, 874));
 }
 
+TEST_CASE("tile.label_whole_words: the twelve tiles of the Interactions board keep each word whole", "[ui][tile]")
+{
+    // The four default interaction types ("Spoke with", "Played song", "Visitor interaction", "Gave item"), the longest
+    // words of the Errors board, and the tile that Other is, as the board draws them: a BoardGrid that names its tiles
+    // interactionTile0 to interactionTile11, 96 pt high, in a phone and in a Regular window.
+    const QStringList labels{QStringLiteral("Spoke with"),     QStringLiteral("Played song"),
+                             QStringLiteral("Visitor interaction"), QStringLiteral("Gave item"),
+                             QStringLiteral("Disconnection"),  QStringLiteral("Navigation Failure"),
+                             QStringLiteral("Sequence Out of Order"), QStringLiteral("Interaction"),
+                             QStringLiteral("Visitor Disconnection"), QStringLiteral("Navigation"),
+                             QStringLiteral("Sequence"),       QStringLiteral("Other")};
+    QString rows;
+    for (const QString& label : labels)
+    {
+        rows += QStringLiteral("ListElement { typeId: \"t\"; label: \"%1\"; colourSlot: 3; count: 0; hasCount: false; "
+                               "isOther: false; isEmpty: false; accessibleName: \"%1\" }\n")
+                    .arg(label);
+    }
+    const QByteArray source = QString::fromLatin1(R"QML(
+        import QtQuick
+        import ErrorJournalingApp
+        Item {
+            BoardGrid {
+                objectName: "grid"
+                interactions: true
+                tilePrefix: "interactionTile"
+                tileHeight: 96
+                width: %1
+                model: ListModel {
+                    %2
+                }
+            }
+        })QML")
+                                  .arg(370)
+                                  .arg(rows)
+                                  .toUtf8();
+    struct Window
+    {
+        QSize m_Size;
+        double m_GridWidth;
+        bool m_MustFit;
+    };
+    for (const Window& window : {Window{QSize(402, 874), 370.0, false}, Window{QSize(820, 1180), 680.0, true}})
+    {
+        UiRig rig(window.m_Size);
+        for (const double scale : {1.0, 1.3, 3.1})
+        {
+            rig.set_text_scale(scale);
+            QByteArray adjusted = source;
+            adjusted.replace("width: 370", QByteArray("width: ") + QByteArray::number(window.m_GridWidth));
+            QQuickItem* root = rig.load_source(adjusted);
+            REQUIRE(root != nullptr);
+            rig.layout();
+            for (int row = 0; row < labels.size(); ++row)
+            {
+                CAPTURE(window.m_Size.width(), scale, row);
+                // The tile of this row, found by its face: the object name interactionTile<row> is the delegate's.
+                const auto faces = rig.find_items(QStringLiteral("tileFace"));
+                REQUIRE(static_cast<int>(faces.size()) == labels.size());
+                QQuickItem* tile = faces.at(static_cast<std::size_t>(row))->parentItem();
+                CHECK(tile->objectName() == QStringLiteral("interactionTile%1").arg(row));
+                REQUIRE(tile != nullptr);
+                QQuickItem* label = tile->findChild<QQuickItem*>(QStringLiteral("tileLabel"));
+                REQUIRE(label != nullptr);
+                const int words = static_cast<int>(labels.at(row).count(QLatin1Char(' '))) + 1;
+                INFO("label " << labels.at(row).toStdString() << ", tile width " << tile->width() << ", lines "
+                              << label->property("lineCount").toInt());
+                if (window.m_MustFit || tile->property("wordFits").toBool())
+                {
+                    CHECK(tile->property("wordFits").toBool());
+                    CHECK(label->property("lineCount").toInt() <= words);
+                    CHECK(label->property("contentWidth").toDouble() <= label->width() + 0.5);
+                }
+                CHECK_FALSE(label->property("truncated").toBool());
+                CHECK(label->property("contentHeight").toDouble() <= label->height() + 0.5);
+            }
+        }
+        rig.set_text_scale(1.0);
+    }
+}
+
 TEST_CASE("tile.empty: an empty position is a button with a plus that taps and never presses", "[ui][tile]")
 {
     UiRig rig;
