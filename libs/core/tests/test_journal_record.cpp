@@ -139,7 +139,7 @@ TEST_CASE("A decoded record holds the values that were written", "[journal]")
     CHECK(create.m_Previous == sample_id<LogId>(8));
 }
 
-TEST_CASE("The tester of a log is written under the key facilitator, so older journals still read", "[journal]")
+TEST_CASE("The tester of a log is written under the key \"facilitator\", so older journals still read", "[journal]")
 {
     // legacy name: the journal key stays "facilitator" after the wording changed to "tester".
     const auto line = encoded(sample_record(1, CreateLogBody{sample_header(), sample_time(3), sample_id<LogId>(8)}));
