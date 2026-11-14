@@ -11,8 +11,9 @@ namespace ej::bridge
 /// (apps/app/packaging/ios/Info.plist.in). tools/ci/check_ios_plist.py reads these constants and fails when the
 /// property list differs, so there is one place to change.
 ///
-/// The identifier is the bundle identifier plus ".config"; the type conforms to public.json, and a plain ".json" file
-/// is accepted as well (the property list registers public.json as an alternate document type).
+/// The identifier is the bundle identifier plus ".config"; the type conforms to public.data and public.content and not to
+/// public.json, which the system previews instead of opening the application from AirDrop. A plain ".json" file is
+/// accepted as well (the property list registers public.json as an alternate document type).
 inline constexpr std::string_view CONFIG_TYPE_IDENTIFIER = "com.iainchesworthlabs.fieldtest.config";
 inline constexpr std::string_view CONFIG_TYPE_DESCRIPTION = "Field Test setup";
 inline constexpr std::string_view CONFIG_EXTENSION = "ejconfig";

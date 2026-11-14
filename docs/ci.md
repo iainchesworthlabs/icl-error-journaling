@@ -340,7 +340,8 @@ new submission.
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_ios_plist.py` on `apps/app/packaging/ios/Info.plist.in` (with the CMake
 placeholders stubbed). It fails when the exported type's identifier, description or extension differ from the constants
-in `libs/ios_bridge/include/error_journaling/document_types.hpp`, when the document types do not name the exported
+in `libs/ios_bridge/include/error_journaling/document_types.hpp`, when the exported type does not conform to
+`public.data` or does conform to `public.json` (the system would preview an AirDropped file), when the document types do not name the exported
 type (role Viewer, rank Owner) and `public.json` (rank Alternate), when `LSSupportsOpeningDocumentsInPlace` is not
 false, when `UIFileSharingEnabled` is on, when `CADisableMinimumFrameDurationOnPhone` is not true (a ProMotion phone
 would run the app at 60 Hz, U7), or when a usage-description key appears. It also reads the privacy manifest,

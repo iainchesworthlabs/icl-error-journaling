@@ -249,7 +249,7 @@ picker in Settings. **PRD:** PRF-08, PRF-09, NFR-10.
 | Key | Value |
 |---|---|
 | identifier | `com.iainchesworthlabs.fieldtest.config` (the bundle identifier plus `.config`) |
-| conforms to | `public.json` |
+| conforms to | `public.data`, `public.content` (not `public.json`: see [feedback-airdrop-opens-app.md](feedback-airdrop-opens-app.md)) |
 | filename extension | `ejconfig` |
 | description | Field Test setup |
 
@@ -610,7 +610,7 @@ template: no comment in it may contain a dollar sign followed by a brace, or an 
 
 | Change | Key | Value | Package |
 |---|---|---|---|
-| Exported type | `UTExportedTypeDeclarations` | identifier `com.iainchesworthlabs.fieldtest.config`, conforms to `public.json`, extension `ejconfig`, description "Field Test setup" | 5.5 |
+| Exported type | `UTExportedTypeDeclarations` | identifier `com.iainchesworthlabs.fieldtest.config`, conforms to `public.data` and `public.content`, extension `ejconfig`, description "Field Test setup" | 5.5 |
 | Document types | `CFBundleDocumentTypes` | (1) the exported type, role Viewer, `LSHandlerRank` Owner; (2) `public.json`, role Viewer, `LSHandlerRank` Alternate (open question 3) | 5.5 |
 | Copy, do not open in place | `LSSupportsOpeningDocumentsInPlace` | `false` | 5.5 |
 | Launch screen | `UILaunchScreen` | `UIColorName` `LaunchBackground`, `UIImageName` `LaunchBoard`, `UIImageRespectsSafeAreaInsets` `false` | 5.8 |
