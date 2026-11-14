@@ -71,6 +71,21 @@ public:
         return query.value(0);
     }
 
+    /// Takes the schema back to what version 3 had: the tables of the interaction schema are dropped (the `entry` table
+    /// keeps the wider CHECK, which no row of version 3 breaks). For a test that starts from a database "as an older
+    /// build left it" and has the migration build the rest.
+    bool drop_interaction_schema()
+    {
+        for (const char* table : {"interaction_entry_person", "interaction_entry", "interaction_type", "person"})
+        {
+            if (!exec(QStringLiteral("DROP TABLE %1").arg(QLatin1String(table))))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
 private:
     QString m_Name;
     QSqlDatabase m_Db;

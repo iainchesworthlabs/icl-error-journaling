@@ -3,13 +3,17 @@
 
 #include "error_journaling/clock.hpp"
 #include "error_journaling/log_repository.hpp"
+#include "error_journaling/people_journal.hpp"
+#include "error_journaling/people_store.hpp"
 #include "error_journaling/stored_log.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 /// The workload the kill harness runs (section 4.2 of docs/plan/stage-2.md). The worker process and the driver both
@@ -49,8 +53,23 @@ enum class OperationKind
     CORRECT_HEADER,
     MARK_SHARED,
     START_NEW_LOG, // archive the open log and create the next: the pair of journal records
-    SET_DRAFT
+    SET_DRAFT,
+    // People (Stage 14): written to people.jsonl, not to a log's journal, so the crash points of the database are not
+    // reached.
+    ADD_PERSON,
+    RENAME_PERSON,
+    RETIRE_PERSON,
+    TOUCH_PERSON,
+    FORGET_PERSON
 };
+
+/// A people operation: its own journal, its own crash points (after the append, after the sync).
+[[nodiscard]] constexpr bool is_people_operation(OperationKind kind)
+{
+    return kind == OperationKind::ADD_PERSON || kind == OperationKind::RENAME_PERSON ||
+           kind == OperationKind::RETIRE_PERSON || kind == OperationKind::TOUCH_PERSON ||
+           kind == OperationKind::FORGET_PERSON;
+}
 
 struct Operation
 {
@@ -62,7 +81,9 @@ struct Operation
     Entry m_Entry;              // ADD_ENTRY and EDIT_ENTRY; SET_DELETED names its entry by m_Entry.m_Id
     bool m_Deleted = false;     // SET_DELETED
     HeaderField m_Field = HeaderField::UNIT_NUMBER; // CORRECT_HEADER
-    std::string m_Text;                             // CORRECT_HEADER's value, SET_DRAFT's text
+    std::string m_Text;                             // CORRECT_HEADER's value, SET_DRAFT's text, a person's name
+    PersonId m_Person;                              // the people operations
+    bool m_Retired = true;                          // RETIRE_PERSON: retire, or bring back
     UtcMillis m_Time; // what the clock says during the call, and the edit, share or draft time
 };
 
@@ -97,6 +118,13 @@ private:
         bool m_IsNote = false;
         bool m_IsHeaderChange = false;
         bool m_Deleted = false;
+        bool m_IsInteraction = false;
+    };
+    struct TrackedPerson
+    {
+        PersonId m_Id;
+        bool m_Retired = false;
+        bool m_Forgotten = false;
     };
 
     Operation make_add(Operation base, bool header_change = false);
@@ -105,6 +133,8 @@ private:
     Operation make_correct(Operation base);
     Operation make_share(Operation base);
     Operation make_start_new_log(Operation base);
+    Operation make_add_interaction(Operation base);
+    Operation make_person_operation(Operation base);
     [[nodiscard]] LogId pick_log();
     [[nodiscard]] HeaderValues header_for_day(std::uint64_t day) const;
     [[nodiscard]] LogId next_log_id();
@@ -117,6 +147,9 @@ private:
     std::uint64_t m_EntryCounter = 0;
     std::uint64_t m_LogCounter = 0;
     std::uint64_t m_HeaderCounter = 0;
+    std::uint64_t m_PersonCounter = 0;
+    SplitMix64 m_PeopleRng; // its own stream: the people never change the operations of the logs
+    std::vector<TrackedPerson> m_People;
     std::vector<LogId> m_Logs; // oldest first; the last is open
     std::vector<Tracked> m_Entries;
 };
@@ -142,11 +175,24 @@ private:
 /// Runs one operation against a repository, setting `clock` to the operation's time first.
 [[nodiscard]] Result<void, StorageError> apply_operation(LogRepository& repository, ScriptedClock& clock,
                                                          const Operation& operation);
+/// The same with the people store, which the people operations need (without one they fail).
+[[nodiscard]] Result<void, StorageError> apply_operation(LogRepository& repository, PeopleStore* people,
+                                                         ScriptedClock& clock, const Operation& operation);
 
-/// What a store must hold after the first `operations` operations: every log's digest, which log is open, and the
-/// draft.
+/// The people a store holds: each person's name and whether they are retired, and who was forgotten. The time a person
+/// was last used is left out: a touch is not synced, so a kill may cost it.
+struct PeopleSummary
+{
+    std::map<PersonId, std::pair<std::string, bool>> m_People;
+    std::set<PersonId> m_Forgotten;
+    friend bool operator==(const PeopleSummary&, const PeopleSummary&) = default;
+};
+
+/// What a store must hold after the first `operations` operations: every log's digest, which log is open, the draft and
+/// the people.
 struct ModelState
 {
+    PeopleSummary m_People;
     std::map<LogId, StateDigest> m_Digests;
     std::optional<LogId> m_Open;
     std::optional<std::string> m_Draft;
@@ -157,7 +203,7 @@ struct ModelState
 [[nodiscard]] ModelState model_after(std::uint64_t seed, std::uint64_t forced_archive_at, std::uint64_t operations);
 
 /// The state of a store read through `repository`, in the same terms.
-[[nodiscard]] Result<ModelState, StorageError> state_of(LogRepository& repository);
+[[nodiscard]] Result<ModelState, StorageError> state_of(LogRepository& repository, const PeopleStore* people = nullptr);
 
 /// Empty when the two are the same; otherwise a plain line of counts and short ids, never entry text.
 [[nodiscard]] std::string difference(const ModelState& expected, const ModelState& actual);

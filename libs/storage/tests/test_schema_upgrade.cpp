@@ -42,6 +42,7 @@ public:
         RawDb raw(database());
         REQUIRE(raw.is_open());
         REQUIRE(raw.exec(QStringLiteral("PRAGMA wal_checkpoint(TRUNCATE)")));
+        REQUIRE(raw.drop_interaction_schema());
         REQUIRE(raw.exec(QStringLiteral("ALTER TABLE day_log DROP COLUMN extra_versions")));
         REQUIRE(raw.exec(QStringLiteral("ALTER TABLE day_log DROP COLUMN changed_since_share")));
         REQUIRE(raw.exec(QStringLiteral("PRAGMA user_version = 1")));
@@ -197,7 +198,8 @@ TEST_CASE("The product's migration steps are the only ones between version 1 and
     const auto report = Migrator(store.location(), clock, product_migration_steps(), SQLITE_SCHEMA_VERSION).run();
     REQUIRE(report.has_value());
     CHECK(report->m_Outcome == MigrationOutcome::MIGRATED);
-    CHECK(report->m_Steps == std::vector<std::string>{"add day_log.changed_since_share", "add day_log.extra_versions"});
+    CHECK(report->m_Steps == std::vector<std::string>{"add day_log.changed_since_share", "add day_log.extra_versions",
+                                                      "add interaction entries and people"});
     RawDb raw(store.database());
     CHECK(raw.scalar(QStringLiteral("SELECT count(*) FROM day_log WHERE changed_since_share = 0")).toInt() == 1);
 }

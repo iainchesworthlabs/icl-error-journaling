@@ -26,6 +26,7 @@
 #include "error_journaling/draft_store.hpp"
 #include "error_journaling/file_journal.hpp"
 #include "error_journaling/migrator.hpp"
+#include "error_journaling/people_store.hpp"
 #include "error_journaling/recovery.hpp"
 #include "error_journaling/sqlite_log_repository.hpp"
 #include "error_journaling/storage_location.hpp"
@@ -221,6 +222,17 @@ int run_workload(const Arguments& arguments)
         return 2;
     }
 
+    // The list of people, with the same crash points as a log's journal (after the append, after the sync).
+    PeopleStore::Options people_options;
+    people_options.m_Hook = crasher.hook();
+    people_options.m_Cache = repository->get();
+    auto people = PeopleStore::open(location, clock, std::move(people_options));
+    if (!people)
+    {
+        say("ERROR people: " + describe(people.error()));
+        return 2;
+    }
+
     Workload workload(arguments.m_Seed, arguments.m_ForcedArchiveAt);
     Pacer pacer(arguments.m_Seed, arguments.m_PaceUs);
     for (std::uint64_t n = 1; n <= arguments.m_MaxOperations; ++n)
@@ -228,7 +240,7 @@ int run_workload(const Arguments& arguments)
         const Operation operation = workload.next();
         say("START " + std::to_string(n));
         crasher.begin_operation(n);
-        if (auto done = apply_operation(**repository, clock, operation); !done)
+        if (auto done = apply_operation(**repository, people->get(), clock, operation); !done)
         {
             say(std::string("ERROR operation ") + std::to_string(n) + " (" + operation_name(operation.m_Kind) +
                 "): " + describe(done.error()));

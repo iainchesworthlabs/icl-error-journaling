@@ -5,6 +5,7 @@
 #include "platform/durable_sync.hpp"
 #include "protect.hpp"
 #include "quarantine.hpp"
+#include "schema_v4.hpp"
 
 #include <QCoreApplication>
 #include <QSqlDatabase>
@@ -116,6 +117,12 @@ public:
         if (auto timeout = sql->exec("PRAGMA busy_timeout = 5000"); !timeout)
         {
             return Failure(timeout.error());
+        }
+        // Off, as SQLite has it by default and as the rebuild of a table asks (a step that drops and renames a table
+        // that others refer to). `foreign_key_check` after the steps is what finds a row without its parent.
+        if (auto keys = sql->exec("PRAGMA foreign_keys = OFF"); !keys)
+        {
+            return Failure(keys.error());
         }
         return sql;
     }
@@ -449,6 +456,45 @@ Result<std::string, StorageError> read_text(const std::filesystem::path& path)
 
 } // namespace
 
+namespace
+{
+
+/// 3 to 4 (Stage 14, section 3.3): `entry.kind` may be `interaction`, and the interaction and person tables exist. A
+/// CHECK cannot be altered in place, so `entry` is built again under another name inside the migration's transaction
+/// (create, copy, drop, rename; the order the SQLite documentation gives). The rows are copied as they are, in the
+/// order they were stored. Nothing else is rewritten: no log, no entry of another kind.
+Result<void, StorageError> add_interactions(MigrationConnection& sql)
+{
+    std::string create_copy = schema::ENTRY_TABLE;
+    const std::string_view prefix = schema::ENTRY_TABLE_PREFIX;
+    create_copy.replace(0, prefix.size(), schema::ENTRY_COPY_PREFIX);
+    const std::string statements[] = {
+        create_copy,
+        "INSERT INTO entry_new (id, day_log_id, seq, kind, captured_utc, captured_tz, edited_utc, deleted)"
+        " SELECT id, day_log_id, seq, kind, captured_utc, captured_tz, edited_utc, deleted FROM entry ORDER BY rowid",
+        "DROP TABLE entry",
+        "ALTER TABLE entry_new RENAME TO entry",
+        schema::ENTRY_BY_TIME,
+    };
+    for (const std::string& statement : statements)
+    {
+        if (auto done = sql.exec(statement); !done)
+        {
+            return done;
+        }
+    }
+    for (const char* statement : schema::INTERACTION_TABLES)
+    {
+        if (auto done = sql.exec(statement); !done)
+        {
+            return done;
+        }
+    }
+    return {};
+}
+
+} // namespace
+
 std::vector<MigrationStep> product_migration_steps()
 {
     // 1 to 2: whether a shared log has changed since its share. Every log that exists gets 0, so a log that was shared
@@ -456,6 +502,7 @@ std::vector<MigrationStep> product_migration_steps()
     // were made before the build could know of them.
     // 2 to 3: the other software versions (HDR-10). Every log that exists gets NULL, which reads as none, so its single
     // version stays the robot's and nothing is rewritten.
+    // 3 to 4: the interaction entries and the person cache; `entry` is rebuilt (`add_interactions`).
     return {MigrationStep{
         1, "add day_log.changed_since_share", [](MigrationConnection& sql) -> Result<void, StorageError>
         {
@@ -463,7 +510,8 @@ std::vector<MigrationStep> product_migration_steps()
                             " CHECK (changed_since_share IN (0, 1))");
         }},
             MigrationStep{2, "add day_log.extra_versions", [](MigrationConnection& sql) -> Result<void, StorageError>
-                          { return sql.exec("ALTER TABLE day_log ADD COLUMN extra_versions TEXT"); }}};
+                          { return sql.exec("ALTER TABLE day_log ADD COLUMN extra_versions TEXT"); }},
+            MigrationStep{3, "add interaction entries and people", &add_interactions}};
 }
 
 std::string_view migration_outcome_name(MigrationOutcome outcome)

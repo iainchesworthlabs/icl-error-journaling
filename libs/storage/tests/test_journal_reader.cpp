@@ -433,3 +433,43 @@ TEST_CASE("A source that fails stops the scan with its error", "[journal-reader]
     REQUIRE_FALSE(result.has_value());
     CHECK(result.error().m_Kind == StorageErrorKind::IO);
 }
+
+// T-I2-9 (journal.unknown_v). The reader that shipped before interactions knew only `v:1`. What it does with a record
+// of a version it does not know is what a build from before this one does with a journal that holds an interaction
+// (`v:2`), and what this build does with one from a later build: the line is valid and its checksum fits, so it is
+// counted as unsupported and as a bad record, and it is not accepted. The accepted run ends in front of it, because the
+// record is missing from the sequence; whatever follows is kept aside, never applied after the hole (section 5.2 of the
+// Stage 2 plan). That is why a downgrade is not supported (Stage 14, section 3.2): the older build would read the log
+// as it was up to the first interaction and call the rest a gap.
+TEST_CASE("A record of an unknown version ends the accepted run and what follows is kept aside",
+          "[journal-reader][interaction]")
+{
+    std::vector<JournalRecord> records = records_of(2);
+    std::string bytes = bytes_of(records);
+    std::string unknown =
+        "{\"v\":3,\"seq\":3,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}";
+    char digits[16];
+    std::snprintf(digits, sizeof digits, "%08x", crc32(unknown));
+    unknown = unknown.substr(0, unknown.size() - 1) + ",\"crc\":\"" + digits + "\"}\n";
+    const JournalRecord after = sample_record(4, AddEntryBody{sample_error(4, 4)}, LOG);
+
+    const JournalScan result = scan(bytes + unknown + line_of(after));
+    CHECK(seqs_of(result.m_Records) == std::vector<std::uint64_t>{1, 2});
+    CHECK(result.m_UnsupportedRecords == 1);
+    CHECK(result.m_BadRecords >= 1);
+    CHECK(result.m_HasProblem);
+    CHECK_FALSE(result.is_clean());
+    CHECK(seqs_of(result.m_Aside) == std::vector<std::uint64_t>{4});
+}
+
+TEST_CASE("A journal with an interaction in it is read in full by this build", "[journal-reader][interaction]")
+{
+    std::vector<JournalRecord> records = records_of(2);
+    JournalRecord interaction = sample_record(3, AddEntryBody{sample_interaction_entry(3, 3)}, LOG);
+    interaction.m_Version = JOURNAL_VERSION_INTERACTIONS;
+    records.push_back(interaction);
+    const JournalScan result = scan(bytes_of(records));
+    CHECK(seqs_of(result.m_Records) == std::vector<std::uint64_t>{1, 2, 3});
+    CHECK(result.m_UnsupportedRecords == 0);
+    CHECK(result.is_clean());
+}

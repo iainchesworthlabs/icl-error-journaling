@@ -100,6 +100,7 @@ Result<void, StorageError> MemoryLogRepository::commit(LogId id, JournalBody bod
     record.m_Seq = (*slot)->m_Records.size() + 1;
     record.m_Log = id;
     record.m_Body = std::move(body);
+    record.m_Version = journal_version_for(record.m_Body);
 
     StoredLog copy = (*slot)->m_Log;
     if (auto applied = apply_record(copy, record); !applied)

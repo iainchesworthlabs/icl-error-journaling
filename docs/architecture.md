@@ -37,10 +37,16 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              (`CrashPoint` and `CrashHook`, the places the kill harness ends the process),
                              draft_store.hpp (`DraftStore` and the `DraftTimer` interface under it: the note draft,
                              written at most 300 ms after it changes), migrator.hpp (`Migrator`: schema migrations with a
-                             backup copy and a marker; the product's steps take version 1 to 2, which adds `day_log.changed_since_share`),
-                             storage_location.hpp (the folders of one store)
+                             backup copy and a marker; the product's steps take version 1 to 4: `day_log.changed_since_share`,
+                             `day_log.extra_versions`, and the interaction entries with the `person` cache, which rebuilds
+                             `entry` so that its kind may be `interaction`), people_journal.hpp (the records of
+                             `people.jsonl`: add, rename, retire, touch and forget a person, their CRC and the state they
+                             fold to) and people_store.hpp (`PeopleStore`: the list of people, a journal of its own with
+                             its own sequence numbers and lock, and `PeopleCache`, which the SQLite repository implements for
+                             its `person` table), storage_location.hpp (the folders of one store)
   src/                       one file per component; quarantine (where recovery puts what it replaces), journal_seed
-                             (a journal written again from a log)
+                             (a journal written again from a log), schema_v4.hpp (the tables version 4 adds, shared by the
+                             new database and the migration step)
   src/platform/              the pieces that differ by operating system, with one directory per system (linux, macos,
                              ios, android, windows) defining the same functions from the same headers: durable_sync
                              (`fsync`, `F_FULLFSYNC`, `FlushFileBuffers`), file_lock (an exclusive lock that refuses a
@@ -60,6 +66,9 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              (`integration`); test_migrator.cpp with migration_steps.hpp (test-only steps; `integration`); kill/ (`system`: ej_kill_worker, the child process, ej_kill_driver, the
                              Catch2 program that kills it and checks the store, and the workload they share);
                              perf/test_launch_cost.cpp (`perf`: the launch check on a year of logs);
+                             test_people_journal.cpp (`unit`), test_people_store.cpp and test_interaction_storage.cpp (the
+                             step from schema 3 to 4, recovery of interactions and people, no name in a log journal;
+                             `integration`); people_names.hpp (the stand-ins the tests use as people);
                              helpers: temp_dir.hpp, raw_db.hpp (a second connection), recording_journal.hpp
 libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one small interface per capability, namespace
                       `ej::bridge`
@@ -186,6 +195,20 @@ main.cpp                                   Rig (tests)
     -> StartedStorage                          RigStore::MEMORY: ManualStorageGateway over MemoryStorage instead
   AppRoot(Environment, AppPlatform, StartedStorage)
 ```
+
+**Interactions and people in the store** (Stage 14, `docs/plan/stage-14.md` sections 3.2 to 3.5). An interaction is an entry kind
+in the same `entry` table and the same log journal as an error or a note: tables `interaction_entry` and
+`interaction_entry_person` (the people of an entry by id and position, never a name), and the record is written at journal
+version 2 (`journal_version_for`; every other record stays at 1). The list of people is a second, small store: `people.jsonl`
+beside the database, with its own sequence numbers, CRC and lock, written by `PeopleStore`; the `person` table of the database
+is only its cache, which `Recovery::run` makes right at every launch from the journal (counts only in the report:
+`people_recovered`, `people_lost`). A people journal that is lost or damaged costs names, never entries: an entry holds the
+id, and a person the journal does not know reads "someone". Forget writes the file again without that person's records (to
+a new file that replaces the old by a rename) and blanks the table's row; entries keep the id. What the reader of a journal
+that shipped before interactions does with a `"v":2` line is what it does with any version it does not know: it counts the
+line as unsupported and bad, the accepted run ends before it, and the records after it are kept aside and not applied
+(`test_journal_reader.cpp`, T-I2-9). A build that old would therefore read a log only as far as its first interaction, which
+is why a downgrade is not supported. The same holds for a `"v":3` line, which this build does not know.
 
 **The store.** `start_sqlite_storage` starts the `ThreadedStorageGateway`. Its factory runs on the storage thread: it makes
 the folders, runs `Recovery::run`, opens the `FileJournal`, the `SqliteLogRepository` and the `FileConfigStore`, and hands the

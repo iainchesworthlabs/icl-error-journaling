@@ -4,6 +4,7 @@
 #include "error_journaling/journal.hpp"
 #include "error_journaling/journal_reader.hpp"
 #include "error_journaling/migrator.hpp"
+#include "error_journaling/people_journal.hpp"
 #include "error_journaling/sqlite_log_repository.hpp"
 #include "error_journaling/stored_log.hpp"
 #include "journal_seed.hpp"
@@ -12,6 +13,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iterator>
 #include <map>
 #include <set>
 #include <system_error>
@@ -107,6 +109,7 @@ private:
     Result<void, StorageError> heal();
     Result<void, StorageError> rebuild(const std::string& reason, bool database_existed);
     Result<void, StorageError> finish_journals(std::vector<LogPlan>& plans, SqliteLogRepository* repository);
+    Result<void, StorageError> recover_people();
 
     void note(std::string text) { m_Report.m_Notes.push_back(std::move(text)); }
     void count(const LogPlan& plan);
@@ -606,6 +609,156 @@ Result<void, StorageError> RecoveryRun::finish_journals(std::vector<LogPlan>& pl
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// People (Stage 14, sections 3.4 and 3.5)
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+
+bool same_row(const Person& a, const Person& b)
+{
+    return a.m_Id == b.m_Id && a.m_DisplayName == b.m_DisplayName && a.m_Retired == b.m_Retired &&
+           a.m_Location == b.m_Location && a.m_CreatedUtc == b.m_CreatedUtc;
+}
+
+} // namespace
+
+/// Makes the people journal and the `person` table agree, the journal being the record. An entry never depends on this:
+/// it holds a person's id, and a person the journal does not know reads "someone". So a people journal that is lost or
+/// damaged costs names and is counted (`m_PeopleLost`), and never an entry. Counts only: no name is written to the
+/// report or the notes.
+Result<void, StorageError> RecoveryRun::recover_people()
+{
+    const std::filesystem::path file = m_Location.people_path();
+    std::error_code code;
+    std::filesystem::path stale = file;
+    stale += ".tmp";
+    std::filesystem::remove(stale, code); // a rewrite that was killed before its rename: ours, and incomplete
+
+    PeopleScan scan;
+    const bool exists = std::filesystem::exists(file, code);
+    if (exists)
+    {
+        std::ifstream in(file, std::ios::binary);
+        if (!in)
+        {
+            return Failure(
+                make_error(StorageErrorKind::PERMISSION, "the people journal cannot be read and has been left alone"));
+        }
+        const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        scan = scan_people_journal(bytes);
+    }
+
+    auto cached = m_Repository->read_people();
+    if (!cached)
+    {
+        return Failure(cached.error());
+    }
+    auto referenced = m_Repository->referenced_person_ids();
+    if (!referenced)
+    {
+        return Failure(referenced.error());
+    }
+
+    PeopleState state = scan.m_State;
+    // A person the table says was forgotten stays forgotten when the journal has lost them: the name is gone either
+    // way, and the id is what keeps their entries from being counted as lost.
+    bool tombstoned = false;
+    for (const PersonId& id : cached->m_Forgotten)
+    {
+        if (!state.knows(id) && state.apply(ForgetPersonBody{id}))
+        {
+            tombstoned = true;
+        }
+    }
+
+    // The journal itself.
+    const bool damaged = exists && (scan.m_HasProblem || scan.m_BadRecords > 0);
+    if (damaged || tombstoned)
+    {
+        if (auto hooked = at_crash_point(); !hooked)
+        {
+            return hooked;
+        }
+        const std::vector<PeopleRecord> records = state.seed_records();
+        if (damaged)
+        {
+            // A copy of the file as it was goes to quarantine first: it may still be of use to the owner. A file with
+            // nothing usable in it is moved there whole.
+            const auto kept = records.empty() ? m_Quarantine.take(file) : m_Quarantine.take_copy(file);
+            if (!kept)
+            {
+                return Failure(kept.error());
+            }
+            note("the people journal was damaged and a copy was set aside");
+        }
+        if (!records.empty())
+        {
+            if (auto written = write_people_file(file, records); !written)
+            {
+                return written;
+            }
+        }
+    }
+    else if (exists && scan.m_TornTailBytes > 0)
+    {
+        if (auto cut = truncate_journal_file(file, scan.m_CompleteBytes); !cut)
+        {
+            return cut;
+        }
+        m_Report.m_DiscardedTailBytes += scan.m_TornTailBytes;
+    }
+
+    // The table, made right from the journal.
+    std::map<PersonId, const Person*> in_table;
+    for (const Person& person : cached->m_People)
+    {
+        in_table.emplace(person.m_Id, &person);
+    }
+    const std::vector<Person> people = state.people();
+    bool table_differs = cached->m_People.size() != people.size() || cached->m_Forgotten != state.forgotten();
+    for (const Person& person : people)
+    {
+        const auto row = in_table.find(person.m_Id);
+        if (row == in_table.end() || !same_row(*row->second, person))
+        {
+            ++m_Report.m_PeopleRecovered;
+            table_differs = true;
+        }
+        else if (row->second->m_LastUsedUtc != person.m_LastUsedUtc)
+        {
+            table_differs = true; // only the sort order: made right, not counted
+        }
+    }
+    if (table_differs)
+    {
+        if (auto replaced = m_Repository->replace_people(people, state.forgotten()); !replaced)
+        {
+            return replaced;
+        }
+    }
+
+    // Whoever the table or an entry names and the journal does not know is lost: their entries read "someone".
+    std::set<PersonId> wanted = *referenced;
+    for (const Person& person : cached->m_People)
+    {
+        wanted.insert(person.m_Id);
+    }
+    for (const PersonId& id : wanted)
+    {
+        if (!state.knows(id))
+        {
+            ++m_Report.m_PeopleLost;
+        }
+    }
+    if (m_Report.m_PeopleLost > 0)
+    {
+        note("some people are not in the people journal and their entries read as someone");
+    }
+    return {};
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // A healthy database
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -1043,6 +1196,11 @@ Result<RecoveryReport, StorageError> RecoveryRun::execute()
         m_Repository = std::move(*reopened);
         break;
     }
+    }
+
+    if (auto people = recover_people(); !people)
+    {
+        return Failure(people.error());
     }
 
     // The summary.

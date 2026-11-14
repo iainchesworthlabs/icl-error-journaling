@@ -21,6 +21,9 @@ public:
     [[nodiscard]] std::filesystem::path database_path() const { return m_Root / "ej.db"; }
     [[nodiscard]] std::filesystem::path journal_dir() const { return m_Root / "journal"; }
     [[nodiscard]] std::filesystem::path archived_journal_dir() const { return m_Root / "journal" / "archive"; }
+    /// The people journal (Stage 14, section 3.4): the names of the optional list of people, in a file of their own so
+    /// that no log journal ever holds one.
+    [[nodiscard]] std::filesystem::path people_path() const { return m_Root / "people.jsonl"; }
     [[nodiscard]] std::filesystem::path backup_dir() const { return m_Root / "backup"; }
     [[nodiscard]] std::filesystem::path quarantine_dir() const { return m_Root / "quarantine"; }
     [[nodiscard]] std::filesystem::path migration_marker() const { return m_Root / "migration.inprogress"; }

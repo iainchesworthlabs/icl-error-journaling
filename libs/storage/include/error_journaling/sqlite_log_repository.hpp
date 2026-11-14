@@ -5,6 +5,7 @@
 #include "error_journaling/crash_point.hpp"
 #include "error_journaling/journal.hpp"
 #include "error_journaling/log_repository.hpp"
+#include "error_journaling/people_store.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -21,10 +22,11 @@ namespace ej
 inline constexpr std::int32_t SQLITE_APPLICATION_ID = 0x454A4C47;
 
 /// The schema this build writes: `PRAGMA user_version`. A database with a higher value was written by a newer build and
-/// is refused untouched (C16, M5). Version 2 adds `day_log.changed_since_share`, version 3 `day_log.extra_versions`; an
-/// older database is migrated
+/// is refused untouched (C16, M5). Version 2 adds `day_log.changed_since_share`, version 3 `day_log.extra_versions`,
+/// version 4 the interaction entries and the `person` cache (`entry` is rebuilt so that its kind may be `interaction`);
+/// an older database is migrated
 /// (`product_migration_steps`) before it is opened.
-inline constexpr std::int32_t SQLITE_SCHEMA_VERSION = 3;
+inline constexpr std::int32_t SQLITE_SCHEMA_VERSION = 4;
 
 /// The answer of a SQLite check: `ok`, or SQLite's own description of what is wrong (pages and tables, never row
 /// content).
@@ -54,7 +56,7 @@ struct SqliteOptions
 /// (section 2.6).
 ///
 /// Use one repository from one thread: the connection belongs to the thread that opened it.
-class SqliteLogRepository final : public LogRepository
+class SqliteLogRepository final : public LogRepository, public PeopleCache
 {
 public:
     using Options = SqliteOptions;
@@ -85,6 +87,14 @@ public:
     Result<void, StorageError> hard_delete_log(LogId id, const DeleteConfirmation& confirmation) override;
     Result<void, StorageError> set_draft(std::string_view text, UtcMillis when) override;
     Result<std::optional<Draft>, StorageError> get_draft() override;
+
+    // --- the `person` table, a cache of the people journal (`PeopleStore`) ---
+    Result<void, StorageError> put_person(const Person& person) override;
+    Result<void, StorageError> forget_person(const PersonId& id) override;
+    Result<void, StorageError> replace_people(const std::vector<Person>& people,
+                                              const std::set<PersonId>& forgotten) override;
+    Result<CachedPeople, StorageError> read_people() override;
+    Result<std::set<PersonId>, StorageError> referenced_person_ids() override;
 
     /// The highest journal sequence number of `log` that is committed to this database (0 for none).
     [[nodiscard]] Result<std::uint64_t, StorageError> applied_seq(LogId log);
