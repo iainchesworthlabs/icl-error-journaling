@@ -241,6 +241,8 @@ public:
         }
         return {};
     }
+    Q_INVOKABLE void setCurrentLocation(const QString& location) { m_CurrentLocation = location; }
+    Q_INVOKABLE QStringList recentIds(int limit) const { return m_Recent.mid(0, limit); }
     Q_INVOKABLE bool isListed(const QString& id) const { return !nameOf(id).isEmpty(); }
     Q_INVOKABLE QString labelFor(const QString& id) const
     {
@@ -300,6 +302,8 @@ public:
     std::vector<Row> m_Rows;
     QHash<QString, QString> m_Retired; // people kept by name who are not listed
     QStringList m_Touched;
+    QStringList m_Recent;
+    QString m_CurrentLocation;
 
 signals:
     void countChanged();
@@ -2811,6 +2815,75 @@ TEST_CASE("picker.edit_mode: the people of an entry are ticked, a retired one is
     REQUIRE(done.count() == 1);
     CHECK(done.at(0).at(0).toStringList().isEmpty());
     CHECK(skipped.count() == 0);
+}
+
+TEST_CASE("picker.recent: the people used last are chips above the list, a tap ticks them, and the location is told",
+          "[ui][log][interaction]")
+{
+    FakePeople people;
+    people.seed("Alex Sample");
+    people.seed("Jordan Placeholder");
+    people.seed("Pat Stand-in");
+    const QString alex = QString::fromStdString(sample_id<PersonId>(100).format());
+    const QString pat = QString::fromStdString(sample_id<PersonId>(102).format());
+    people.m_Recent = QStringList{pat, alex};
+
+    UiRig rig;
+    QQuickItem* picker = rig.load(QStringLiteral("PersonPicker"),
+                                  {{QStringLiteral("people"), QVariant::fromValue(static_cast<QObject*>(&people))},
+                                   {QStringLiteral("locationId"), NORTH_SITE_ID},
+                                   {QStringLiteral("typeName"), QStringLiteral("Spoke with")}});
+    REQUIRE(picker != nullptr);
+    QMetaObject::invokeMethod(picker, "begin", Q_ARG(QVariant, QVariant()));
+    rig.advance(600ms);
+    rig.layout();
+    CHECK(people.m_CurrentLocation == NORTH_SITE_ID);
+
+    const auto chips = rig.find_items(QStringLiteral("personPickerRecentChip"));
+    REQUIRE(chips.size() == 2);
+    CHECK(chips[0]->property("text").toString() == QStringLiteral("Pat Stand-in"));
+    CHECK(chips[1]->property("text").toString() == QStringLiteral("Alex Sample"));
+    rig.tap(chips[0]);
+    CHECK(picker->property("picked").toStringList() == QStringList{pat});
+    CHECK(chips[0]->property("accessibleName").toString().contains(QStringLiteral("ticked")));
+}
+
+TEST_CASE("picker.voiceover: the bar, the search field, the add row, the rows and the chips are named, and the sheet is a dialog",
+          "[ui][log][interaction]")
+{
+    FakePeople people;
+    people.seed("Alex Sample");
+    people.m_Recent = QStringList{QString::fromStdString(sample_id<PersonId>(100).format())};
+
+    UiRig rig;
+    QQuickItem* picker = rig.load(QStringLiteral("PersonPicker"),
+                                  {{QStringLiteral("people"), QVariant::fromValue(static_cast<QObject*>(&people))},
+                                   {QStringLiteral("typeName"), QStringLiteral("Spoke with")}});
+    REQUIRE(picker != nullptr);
+    QMetaObject::invokeMethod(picker, "begin", Q_ARG(QVariant, QVariant()));
+    rig.advance(600ms);
+    rig.layout();
+
+    // The sheet announces itself by its name; the chip and the row are buttons with the person's name.
+    CHECK(picker->property("accessibleName").toString() == QStringLiteral("Pick people"));
+    QQuickItem* chip = rig.find_item(QStringLiteral("personPickerRecentChip"));
+    REQUIRE(chip != nullptr);
+    CHECK(chip->property("accessibleName").toString() == QStringLiteral("Alex Sample"));
+    QQuickItem* row = rig.find_item(QStringLiteral("personPickerRow"));
+    REQUIRE(row != nullptr);
+    CHECK(row->property("accessibleName").toString() == QStringLiteral("Alex Sample"));
+    CHECK(row->property("checkable").toBool());
+
+    // A name that matches nobody offers the add row, named for what it does.
+    QQuickItem* search = rig.find_item(QStringLiteral("personPickerSearch"));
+    REQUIRE(search != nullptr);
+    CHECK(search->property("accessibleName").toString() == QStringLiteral("Search or type a name"));
+    search->setProperty("filter", QStringLiteral("Jordan Placeholder"));
+    rig.layout();
+    QQuickItem* add = rig.find_item(QStringLiteral("personPickerAdd"));
+    REQUIRE(add != nullptr);
+    CHECK(add->property("accessibleName").toString().contains(QStringLiteral("Add")));
+    CHECK(add->property("accessibleName").toString().contains(QStringLiteral("Jordan Placeholder")));
 }
 #include "log_screen_test.moc"
 

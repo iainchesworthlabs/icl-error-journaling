@@ -90,6 +90,10 @@ public:
     Q_INVOKABLE QString matchFor(const QString& typed) const;
     /// The name of the person, or empty.
     Q_INVOKABLE QString nameOf(const QString& personId) const;
+    /// The location in force: people saved with it come first in the list. Empty for none.
+    Q_INVOKABLE void setCurrentLocation(const QString& locationId);
+    /// The ids of the people used most recently, newest first, at most `limit`; people never used are not in it.
+    Q_INVOKABLE QStringList recentIds(int limit) const;
     /// True when the person is in the list (not retired, not forgotten).
     Q_INVOKABLE bool isListed(const QString& personId) const;
     /// What to call the person on screen: the name, or "someone" for a person who is forgotten or not known. A retired
@@ -121,12 +125,14 @@ private:
 
     void apply_loaded(bool available, std::vector<Person> people);
     [[nodiscard]] int row_of(const PersonId& id) const;
+    [[nodiscard]] bool precedes(const Person& a, const Person& b) const;
 
     Environment m_Environment;
     StorageGateway& m_Gateway;
     std::vector<Person> m_People;
     std::map<PersonId, std::string> m_Names; // every person who was not forgotten, retired included
     bool m_Available = false;
+    std::optional<LocationId> m_CurrentLocation;
 
     // Completions hold a weak reference to this; a model that has gone is never called back.
     std::shared_ptr<int> m_Alive = std::make_shared<int>(0);
