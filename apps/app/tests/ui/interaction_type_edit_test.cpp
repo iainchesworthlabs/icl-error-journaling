@@ -25,7 +25,7 @@ TEST_CASE("settings.interaction_type_edit: adding a type with [person] saves it 
     World world;
     world.load("InteractionTypes");
     world.m_Ui.layout();
-    const int before = names(world).size();
+    const qsizetype before = names(world).size();
 
     world.m_Ui.tap(label_of(item(world, QStringLiteral("addRow"))));
     world.play(400);
@@ -77,7 +77,7 @@ TEST_CASE("settings.interaction_type_edit: a row opens the sheet, and retiring r
     World world;
     world.load("InteractionTypes");
     world.m_Ui.layout();
-    const int before = names(world).size();
+    const qsizetype before = names(world).size();
 
     QQuickItem* row = row_with(world, TYPES, QStringLiteral("Spoke with"));
     REQUIRE(row != nullptr);
