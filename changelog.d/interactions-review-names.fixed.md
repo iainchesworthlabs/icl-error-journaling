@@ -1,0 +1,1 @@
+**A name in Review stays right when the list of people changes.** The rows of Review and of a past log are made again when a person is added, renamed, retired or forgotten, so a name never lags behind the list. The People row of Edit entry opens the same person picker as the board (search, add a new person, Everyone here, up to 20 people).

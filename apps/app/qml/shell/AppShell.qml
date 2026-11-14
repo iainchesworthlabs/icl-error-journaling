@@ -634,6 +634,7 @@ Item {
             share: root.share
             picker: root.picker
             settings: root.settings
+            people: root.people
             bottomClearance: tabBar.height
             onHeaderRequested: root.showDetails(StackView.view)
             onHelpRequested: topic => root.showHelp(topic)

@@ -15,14 +15,21 @@ name here and is shared at the level you choose (see below). It shows the header
 ### Interactions in Review
 
 If you use the second board, an interaction shows on its own line in the same words as the export, for example
-`Spoke with Alex Sample`, with the full name. On the screen the name is always in full; what **Copy log** and **Share
-log** carry follows the name setting in Settings (initials by default). A person you have forgotten reads as
-**someone**. An interaction that asks for a person but has none shows **(person not set)**.
+`Spoke with Alex Sample`, with the full name.
+
+![Review with an error and four interactions; one reads Spoke with (person not set).](img/review-interactions.png){ width="270" }
+
+On the screen the name is always in full; what **Copy log** and **Share log** carry follows the name setting in Settings
+(initials by default). A person you have forgotten reads as **someone**. An interaction that asks for a person but has
+none shows **(person not set)**.
 
 Tap an interaction to open **Edit entry**. You can change the interaction, the people, the answer, the time and the
-note. **Save** keeps the change and **Cancel** leaves the entry as it was; nothing is saved until you tap **Save**.
-This is also how you add the people to an entry you logged with **Skip** and left without a person. Swipe, Copy, Delete
-and Undo work as for an error.
+note. **People** opens the same picker as the board: tick or untick people, search, add a new person, or tick
+**Everyone here**; people who are retired or forgotten stay on the entry until you untick them. **Save** keeps the change
+and **Cancel** leaves the entry as it was; nothing is saved until you tap **Save**. This is also how you add the people
+to an entry you logged with **Skip** and left without a person. Swipe, Copy, Delete and Undo work as for an error.
+
+![The Edit entry sheet of an interaction: the interaction, People showing (person not set), the time and the note.](img/edit-interaction.png){ width="270" }
 
 ![The Edit entry sheet: the error, the time, the note, and a Delete entry button.](img/edit-entry.png){ width="270" }
 

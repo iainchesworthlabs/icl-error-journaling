@@ -11,10 +11,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <QAbstractListModel>
+#include <QHash>
 #include <QMetaObject>
 #include <QQuickItem>
-#include <QStandardItemModel>
+#include <QSignalSpy>
 #include <QString>
+#include <QStringList>
 #include <map>
 #include <memory>
 #include <optional>
@@ -49,21 +52,133 @@ private:
     std::map<PersonId, std::string> m_Names;
 };
 
-/// The list the sheet offers: the roles personId and name, as the PeopleModel has them.
-std::unique_ptr<QStandardItemModel> people_list()
+/// The list of people, with the names of `PeopleModel`, in memory: a name is added at once and `personAdded` follows.
+class FakePeopleList : public QAbstractListModel
 {
-    auto model = std::make_unique<QStandardItemModel>();
-    model->setItemRoleNames({{Qt::UserRole + 1, "personId"}, {Qt::UserRole + 2, "name"}});
-    const auto add = [&model](std::uint64_t number, const char* name)
+    Q_OBJECT
+    Q_PROPERTY(bool available READ available CONSTANT)
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+
+public:
+    struct Row
     {
-        auto* item = new QStandardItem;
-        item->setData(QString::fromStdString(test::test_id<PersonId>(number).format()), Qt::UserRole + 1);
-        item->setData(QString::fromLatin1(name), Qt::UserRole + 2);
-        model->appendRow(item);
+        QString m_Id;
+        QString m_Name;
+        QString m_Location;
     };
-    add(test::PERSON_ALEX, "Alex Sample");
-    add(test::PERSON_JORDAN, "Jordan Placeholder");
-    return model;
+
+    [[nodiscard]] bool available() const
+    {
+        return true;
+    }
+    [[nodiscard]] int count() const
+    {
+        return static_cast<int>(m_Rows.size());
+    }
+    [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override
+    {
+        return parent.isValid() ? 0 : count();
+    }
+    [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override
+    {
+        const Row& row = m_Rows.at(static_cast<std::size_t>(index.row()));
+        return role == Qt::UserRole + 1 ? row.m_Id : role == Qt::UserRole + 2 ? row.m_Name : row.m_Location;
+    }
+    [[nodiscard]] QHash<int, QByteArray> roleNames() const override
+    {
+        return {{Qt::UserRole + 1, "personId"}, {Qt::UserRole + 2, "name"}, {Qt::UserRole + 3, "locationId"}};
+    }
+
+    Q_INVOKABLE QString matchFor(const QString& typed) const
+    {
+        for (const Row& row : m_Rows)
+        {
+            if (row.m_Name.compare(typed.simplified(), Qt::CaseInsensitive) == 0)
+            {
+                return row.m_Id;
+            }
+        }
+        return {};
+    }
+    Q_INVOKABLE bool isListed(const QString& id) const
+    {
+        return !nameOf(id).isEmpty();
+    }
+    Q_INVOKABLE QString labelFor(const QString& id) const
+    {
+        const QString name = nameOf(id);
+        return name.isEmpty() ? m_Retired.value(id, QStringLiteral("someone")) : name;
+    }
+    Q_INVOKABLE QString nameOf(const QString& id) const
+    {
+        for (const Row& row : m_Rows)
+        {
+            if (row.m_Id == id)
+            {
+                return row.m_Name;
+            }
+        }
+        return {};
+    }
+    Q_INVOKABLE QStringList everyoneAt(const QString& location) const
+    {
+        QStringList out;
+        for (const Row& row : m_Rows)
+        {
+            if (!location.isEmpty() && row.m_Location == location)
+            {
+                out.append(row.m_Id);
+            }
+        }
+        return out;
+    }
+    Q_INVOKABLE bool addPerson(const QString& typed, const QString& location)
+    {
+        const QString name = typed.simplified();
+        if (name.isEmpty() || !matchFor(name).isEmpty())
+        {
+            emit addFailed(QStringLiteral("That name is in the list already."));
+            return false;
+        }
+        const QString id = QString::fromStdString(test::sample_id<PersonId>(100 + m_Rows.size()).format());
+        beginInsertRows({}, count(), count());
+        m_Rows.push_back({id, name, location});
+        endInsertRows();
+        emit countChanged();
+        emit personAdded(id, name);
+        return true;
+    }
+    Q_INVOKABLE void touch(const QStringList& ids)
+    {
+        m_Touched = ids;
+    }
+
+    void seed(std::uint64_t number, const QString& name, const QString& location = {})
+    {
+        const QString id = QString::fromStdString(test::test_id<PersonId>(number).format());
+        beginInsertRows({}, count(), count());
+        m_Rows.push_back({id, name, location});
+        endInsertRows();
+        emit countChanged();
+    }
+
+    std::vector<Row> m_Rows;
+    QHash<QString, QString> m_Retired; // people kept by name who are not listed
+    QStringList m_Touched;
+
+signals:
+    void countChanged();
+    void personAdded(const QString& personId, const QString& name);
+    void addFailed(const QString& message);
+};
+
+/// The list of the two people of the examples.
+std::unique_ptr<FakePeopleList> people_list()
+{
+    auto list = std::make_unique<FakePeopleList>();
+    list->seed(test::PERSON_ALEX, QStringLiteral("Alex Sample"));
+    list->seed(test::PERSON_JORDAN, QStringLiteral("Jordan Placeholder"));
+    return list;
 }
 
 InteractionType make_type(std::uint64_t number, std::string name, std::optional<std::string> pattern,
@@ -150,6 +265,28 @@ struct Editor : Screen
         FAIL("no row " << row_name << " with the text " << text.toStdString());
     }
 
+    [[nodiscard]] QQuickItem* picker()
+    {
+        QQuickItem* found = named("entryPeoplePicker");
+        REQUIRE(found != nullptr);
+        return found;
+    }
+
+    /// Opens the person picker from the People row and ticks `ids` (the ones ticked already are taken off) and Done.
+    void pick(const std::vector<std::uint64_t>& toggles)
+    {
+        tap("editPeople");
+        REQUIRE(picker()->property("editing").toBool());
+        REQUIRE(picker()->property("isOpen").toBool());
+        for (const std::uint64_t number : toggles)
+        {
+            QMetaObject::invokeMethod(picker(), "toggle",
+                                      Q_ARG(QString, QString::fromStdString(test::test_id<PersonId>(number).format())));
+        }
+        QMetaObject::invokeMethod(picker(), "finish");
+        m_Rig.advance(std::chrono::milliseconds(600));
+    }
+
     [[nodiscard]] std::vector<QString> lines()
     {
         return row_lines(m_Rig);
@@ -209,11 +346,7 @@ TEST_CASE("edit.interaction: the sheet shows an interaction and Save and Cancel 
 
     SECTION("a change shows in the preview and Cancel writes nothing")
     {
-        e.tap("editPeople");
-        REQUIRE(e.page() == QStringLiteral("people"));
-        e.tap_row("personRow", QStringLiteral("Jordan Placeholder"));
-        e.tap("navLeading"); // back to the first page
-        REQUIRE(e.page() == QStringLiteral("main"));
+        e.pick({test::PERSON_JORDAN});
         CHECK(e.preview() == QStringLiteral("10:10 (Interaction) Spoke with Alex Sample and Jordan Placeholder"));
         e.tap("navLeading"); // Cancel
         e.commit();
@@ -222,11 +355,8 @@ TEST_CASE("edit.interaction: the sheet shows an interaction and Save and Cancel 
 
     SECTION("Save writes the change")
     {
-        e.tap("editPeople");
-        e.tap_row("personRow", QStringLiteral("Alex Sample")); // taken off
-        e.tap_row("personRow", QStringLiteral("Jordan Placeholder"));
-        e.tap("navLeading");
-        e.tap("navTrailing"); // Save
+        e.pick({test::PERSON_ALEX, test::PERSON_JORDAN}); // Alex off, Jordan on
+        e.tap("navTrailing");                             // Save
         e.commit();
         CHECK(e.lines()[0] == QStringLiteral("10:10 (Interaction) Spoke with Jordan Placeholder"));
     }
@@ -255,10 +385,7 @@ TEST_CASE("edit.interaction: the people are set on a skipped entry, the answer a
     {
         e.open(2);
         CHECK(e.in("editPeople")->property("value").toString() == QStringLiteral("(person not set)"));
-        e.tap("editPeople");
-        e.tap_row("personRow", QStringLiteral("Jordan Placeholder"));
-        e.tap_row("personRow", QStringLiteral("Alex Sample"));
-        e.tap("navLeading");
+        e.pick({test::PERSON_JORDAN, test::PERSON_ALEX});
         CHECK(e.in("editPeople")->property("value").toString() == QStringLiteral("Jordan Placeholder, Alex Sample"));
         e.tap("navTrailing");
         e.commit();
@@ -285,3 +412,5 @@ TEST_CASE("edit.interaction: the people are set on a skipped entry, the answer a
         CHECK_FALSE(e.in("editAnswer")->isVisible());
     }
 }
+
+#include "interaction_review_test.moc"

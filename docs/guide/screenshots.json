@@ -25,6 +25,8 @@
     {"file": "software-version", "state": "ChangeVersion", "mode": "light"},
     {"file": "review", "state": "Review", "mode": "light"},
     {"file": "edit-entry", "state": "EditEntry", "mode": "light"},
+    {"file": "review-interactions", "state": "ReviewInteractions", "mode": "light"},
+    {"file": "edit-interaction", "state": "EditInteraction", "mode": "light"},
     {"file": "new-day", "state": "NewDay", "mode": "light"},
     {"file": "history", "state": "History", "mode": "light"},
     {"file": "past-log", "state": "PastLogReview", "mode": "light"},

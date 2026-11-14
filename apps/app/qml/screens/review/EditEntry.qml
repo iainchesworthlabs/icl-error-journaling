@@ -40,14 +40,16 @@ Sheet {
     required property var timeline
     required property var picker
     required property var settings
-    // The people the person picker offers: a model with the roles personId and name (the PeopleModel), or null where there
-    // is no list of people. An interaction keeps the people it has even when they are not in it (retired, or forgotten).
+    // The list of people (the PeopleModel: `labelFor`), or null where there is none. The People row is then inert. An
+    // interaction keeps the people it has even when they are not in the list (retired, or forgotten).
     property var people: null
 
-    // The page in front: "main", "type" or "people".
+    // The page in front: "main" or "type".
     property string page: "main"
     // The time sheet is up (EditTimeSheet follows it).
     property bool timeOpen: false
+    // The person picker (declared after this sheet by the screen) is over it.
+    property bool pickerOpen: false
     // The entry being edited, as `entryForEdit` gave it when the sheet opened.
     property string entryId
     property var original: ({})
@@ -86,7 +88,6 @@ Sheet {
     readonly property bool hasEntry: entryId.length > 0
     readonly property bool showingMain: page === "main"
     readonly property bool showingType: page === "type"
-    readonly property bool showingPeople: page === "people"
     // The gap between the groups of the sheet: 22 pt in the design.
     readonly property real groupGap: Theme.space.screenMargin + Theme.space.tileGap - Theme.border.hairline * 2
 
@@ -109,12 +110,15 @@ Sheet {
     // "Logged at 11:02 on UNIT-27, version v1.4.2.", from the model.
     readonly property string footnote: original.footnote ?? ""
 
+    // The People row was tapped: the screen opens the person picker on the ordered ids, with the type's name and the location.
+    signal peopleRequested(var picks, string typeName, string locationId)
+
     objectName: "editSheet"
     accessibleName: qsTr("Edit entry")
     dismissible: false
     // The time sheet has a scrim of its own, over this sheet and what is under it: this one lets go of its own, so that the
     // screen is dimmed once, as the design draws it.
-    scrimColour: root.timeOpen ? "transparent" : Theme.colour.sheetScrim
+    scrimColour: root.timeOpen || root.pickerOpen ? "transparent" : Theme.colour.sheetScrim
     onClosed: root.timeOpen = false
     onOpened: {
         if (root.noteFirst)
@@ -145,46 +149,17 @@ Sheet {
         return edit;
     }
 
-    // The name of a person for the rows: the list's name, else the one the model gave when the sheet opened.
+    // The name of a person for the rows: the list's, which says "someone" for a person who was forgotten; else the one the model
+    // gave when the sheet opened.
     function nameOfPerson(id: string): string {
-        if (people !== null) {
-            for (let i = 0; i < people.rowCount(); ++i) {
-                const index = people.index(i, 0);
-                if (people.data(index, Qt.UserRole + 1) === id)
-                    return people.data(index, Qt.UserRole + 2);
-            }
-        }
+        if (people !== null)
+            return people.labelFor(id);
         return personNames[id] ?? qsTr("someone");
     }
 
-    // The ids of the picks that the list does not hold.
-    readonly property var outsidePeople: {
-        const inList = new Set();
-        if (people !== null) {
-            for (let i = 0; i < people.rowCount(); ++i)
-                inList.add(people.data(people.index(i, 0), Qt.UserRole + 1));
-        }
-        const outside = [];
-        for (let i = 0; i < chosenPeople.length; ++i) {
-            if (!inList.has(chosenPeople[i]))
-                outside.push(chosenPeople[i]);
-        }
-        return outside;
-    }
-
-    function hasPerson(id: string): bool {
-        return chosenPeople.indexOf(id) >= 0;
-    }
-
-    // Adds the person to the end of the picks, or takes them off.
-    function togglePerson(id: string): void {
-        const picks = chosenPeople.slice();
-        const at = picks.indexOf(id);
-        if (at >= 0)
-            picks.splice(at, 1);
-        else
-            picks.push(id);
-        chosenPeople = picks;
+    // The people chosen in the picker (ordered ids, possibly none): they replace the picks of the draft.
+    function setPeople(ids: var): void {
+        chosenPeople = ids.slice();
         saveFailed = false;
     }
 
@@ -280,9 +255,9 @@ Sheet {
 
         width: parent.width
         // While the time sheet is over this one, nothing on this one takes a touch or is reached by a screen reader.
-        enabled: !root.timeOpen
+        enabled: !root.timeOpen && !root.pickerOpen
         inSheet: true
-        title: root.showingType ? (root.isInteraction ? qsTr("Interaction") : qsTr("Error type")) : root.showingPeople ? qsTr("People") : qsTr("Edit entry")
+        title: root.showingType ? (root.isInteraction ? qsTr("Interaction") : qsTr("Error type")) : qsTr("Edit entry")
         leadingText: qsTr("Cancel")
         trailingText: root.showingMain ? qsTr("Save") : ""
         // A draft the model refuses cannot be saved.
@@ -300,7 +275,7 @@ Sheet {
         width: parent.width
         height: parent.height - y
         visible: root.showingMain
-        enabled: !root.timeOpen
+        enabled: !root.timeOpen && !root.pickerOpen
 
         Flickable {
             id: flick
@@ -341,8 +316,9 @@ Sheet {
                         text: qsTr("People")
                         value: root.peopleSummary
                         minimumHeight: Theme.size.rowHeightForm
-                        showChevron: true
-                        onActivated: root.page = "people"
+                        showChevron: root.people !== null
+                        enabled: root.people !== null
+                        onActivated: root.peopleRequested(root.chosenPeople, root.chosenTypeName, root.original.locationId ?? "")
                     }
 
                     ListRow {
@@ -615,7 +591,7 @@ Sheet {
         width: parent.width
         height: Math.max(0, parent.height - y)
         visible: root.showingType
-        enabled: !root.timeOpen
+        enabled: !root.timeOpen && !root.pickerOpen
         contentWidth: width
         contentHeight: typeColumn.height
         clip: true
@@ -669,83 +645,6 @@ Sheet {
                         onActivated: root.chooseType(typeId, label, colourSlot)
                     }
                 }
-            }
-        }
-    }
-
-    // ---- the people of an interaction ----
-
-    Flickable {
-        id: peoplePage
-
-        y: nav.height
-        width: parent.width
-        height: Math.max(0, parent.height - y)
-        visible: root.showingPeople
-        enabled: !root.timeOpen
-        contentWidth: width
-        contentHeight: peopleColumn.height
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-
-        Column {
-            id: peopleColumn
-
-            x: Theme.space.screenMargin
-            width: parent.width - 2 * Theme.space.screenMargin
-            spacing: root.groupGap
-            bottomPadding: Theme.space.sectionGap
-
-            // The people the entry has and the list does not (retired, or forgotten): they stay until taken off.
-            GroupedList {
-                width: parent.width
-                visible: root.outsidePeople.length > 0
-                surface: Theme.colour.surfaceRaised
-
-                Repeater {
-                    model: root.outsidePeople
-
-                    delegate: ListRow {
-                        required property string modelData
-
-                        objectName: "personRow"
-                        text: root.nameOfPerson(modelData)
-                        checkable: true
-                        checked: root.hasPerson(modelData)
-                        onActivated: root.togglePerson(modelData)
-                    }
-                }
-            }
-
-            GroupedList {
-                width: parent.width
-                visible: root.people !== null && root.people.rowCount() > 0
-                surface: Theme.colour.surfaceRaised
-
-                Repeater {
-                    model: root.people
-
-                    delegate: ListRow {
-                        required property string personId
-                        required property string name
-
-                        objectName: "personRow"
-                        text: name
-                        checkable: true
-                        checked: root.hasPerson(personId)
-                        onActivated: root.togglePerson(personId)
-                    }
-                }
-            }
-
-            Text {
-                x: Theme.space.tileGap / 2
-                width: parent.width - 2 * x
-                visible: root.people === null || root.people.rowCount() === 0
-                color: Theme.colour.textSecondary
-                font: Theme.font.caption.font
-                text: qsTr("There are no people in the list yet.")
-                wrapMode: Text.WordWrap
             }
         }
     }
