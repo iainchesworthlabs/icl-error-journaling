@@ -227,11 +227,11 @@ TEST_CASE("A record with a valid checksum but an invalid value is a bad field", 
               .error() == DecodeError::BAD_FIELD);
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":2,\"op\":\"void\"," + log + ",\"body\":{\"target\":0}}")).error() ==
           DecodeError::BAD_FIELD);
-    const std::string header = "{\"header\":{\"tester\":\"Sam Example\",\"date\":\"2026-02-30\",\"unit\":null,"
+    const std::string header = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026-02-30\",\"unit\":null,"
                                "\"location\":null,\"version\":null},\"created\":0,\"prev\":null}";
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + header + "}"))
               .error() == DecodeError::BAD_FIELD);
-    const std::string unit = "{\"header\":{\"tester\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":\"0x\","
+    const std::string unit = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":\"0x\","
                              "\"location\":null,\"version\":null},\"created\":0,\"prev\":null}";
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + unit + "}"))
               .error() == DecodeError::BAD_FIELD);
@@ -376,15 +376,15 @@ TEST_CASE("An entry or header with a bad part is reported, not guessed at", "[jo
     CHECK(add(entry_start + "\"deleted\":false,\"kind\":\"note\",\"template\":7,\"value\":\"x\"}").error() ==
           DecodeError::MALFORMED);
 
-    const std::string header = "{\"header\":{\"tester\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":null,"
+    const std::string header = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":null,"
                                "\"location\":null,\"version\":\"1.2\"},\"created\":0,\"prev\":null}";
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + header + "}"))
               .error() == DecodeError::BAD_FIELD);
-    const std::string shaped = "{\"header\":{\"tester\":\"Sam Example\",\"date\":\"2026/02/03\",\"unit\":null,"
+    const std::string shaped = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026/02/03\",\"unit\":null,"
                                "\"location\":null,\"version\":null},\"created\":0,\"prev\":null}";
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + shaped + "}"))
               .error() == DecodeError::BAD_FIELD);
-    const std::string fraction = "{\"header\":{\"tester\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":null,"
+    const std::string fraction = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":null,"
                                  "\"location\":null,\"version\":null},\"created\":1.5,\"prev\":null}";
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + fraction + "}"))
               .error() == DecodeError::MALFORMED);

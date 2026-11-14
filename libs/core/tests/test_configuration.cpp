@@ -228,14 +228,14 @@ TEST_CASE("Patterns, tester and prefix are validated", "[config]")
               "/note_templates/0/output_pattern"));
     CHECK(has(errors_of(edited(sample(), "Played {value}", "Played {name}")), Code::BAD_PATTERN,
               "/note_templates/0/output_pattern"));
-    CHECK(has(errors_of(edited(sample(), "\"Sam Example\"", "\"\"")), Code::OUT_OF_RANGE, "/preferences/tester"));
+    CHECK(has(errors_of(edited(sample(), "\"Sam Example\"", "\"\"")), Code::OUT_OF_RANGE, "/preferences/facilitator"));
     CHECK(has(errors_of(edited(sample(), "\"Sam Example\"", "\"   \"")), Code::OUT_OF_RANGE,
-              "/preferences/tester"));
+              "/preferences/facilitator"));
     CHECK(has(errors_of(edited(sample(), "\"UNIT\"", "\"UNIT-\"")), Code::OUT_OF_RANGE, "/preferences/unit_prefix"));
     CHECK(has(errors_of(edited(sample(), "\"UNIT\"", "\"UNIT #\"")), Code::OUT_OF_RANGE, "/preferences/unit_prefix"));
     CHECK(has(errors_of(edited(sample(), "\"UNIT\"", "\"\"")), Code::OUT_OF_RANGE, "/preferences/unit_prefix"));
-    CHECK(has(errors_of(edited(sample(), "\"tester\": \"Sam Example\",", "")), Code::MISSING_FIELD,
-              "/preferences/tester"));
+    CHECK(has(errors_of(edited(sample(), "\"facilitator\": \"Sam Example\",", "")), Code::MISSING_FIELD,
+              "/preferences/facilitator"));
 }
 
 TEST_CASE("Several faults are all reported, in file order", "[config]")
@@ -253,7 +253,7 @@ TEST_CASE("Several faults are all reported, in file order", "[config]")
         CHECK_FALSE(e.m_Message.empty());
         CHECK(e.m_Message.find(e.m_Path) != std::string::npos);
     }
-    const std::vector<std::string> expected{"/preferences/tester", "/error_types/1/name", "/locations/1/id",
+    const std::vector<std::string> expected{"/preferences/facilitator", "/error_types/1/name", "/locations/1/id",
                                             "/note_templates/1/output_pattern"};
     CHECK(paths == expected);
 }
