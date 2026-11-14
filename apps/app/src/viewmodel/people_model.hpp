@@ -90,6 +90,11 @@ public:
     Q_INVOKABLE QString matchFor(const QString& typed) const;
     /// The name of the person, or empty.
     Q_INVOKABLE QString nameOf(const QString& personId) const;
+    /// True when the person is in the list (not retired, not forgotten).
+    Q_INVOKABLE bool isListed(const QString& personId) const;
+    /// What to call the person on screen: the name, or "someone" for a person who is forgotten or not known. A retired
+    /// person keeps their name here, so that a past entry can show it.
+    Q_INVOKABLE QString labelFor(const QString& personId) const;
     /// The people of the location `locationId`, for the Everyone row. Empty for an empty location id.
     Q_INVOKABLE QStringList everyoneAt(const QString& locationId) const;
 

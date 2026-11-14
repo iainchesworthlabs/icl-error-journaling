@@ -188,6 +188,19 @@ QString PeopleModel::nameOf(const QString& personId) const
     return row < 0 ? QString() : text_of(m_People[static_cast<std::size_t>(row)].m_DisplayName);
 }
 
+bool PeopleModel::isListed(const QString& personId) const
+{
+    const auto id = parse_person(personId);
+    return id && row_of(*id) >= 0;
+}
+
+QString PeopleModel::labelFor(const QString& personId) const
+{
+    const auto id = parse_person(personId);
+    const auto name = id ? name_of(*id) : std::nullopt;
+    return name ? text_of(*name) : tr("someone");
+}
+
 QStringList PeopleModel::everyoneAt(const QString& locationId) const
 {
     QStringList ids;
