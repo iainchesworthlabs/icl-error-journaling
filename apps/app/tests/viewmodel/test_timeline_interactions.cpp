@@ -316,3 +316,57 @@ TEST_CASE("edit.interaction: what is refused", "[viewmodel][edit][interaction]")
     edit.insert("personIds", QStringList{"nonsense"});
     CHECK_FALSE(f.model().validateEdit(id_text(1), edit).isEmpty());
 }
+
+TEST_CASE("review.interaction_rows: a past log shows interactions the same way and re-shares at the current setting",
+          "[viewmodel][review][interaction][history]")
+{
+    TestEnvironment world;
+    FixedPeople people;
+    ExportPreferences preferences{QString()};
+    world.m_People = &people;
+    world.m_ExportPreferences = &preferences;
+    EventLog events;
+    MemoryStorage storage{world.m_Clock, &events};
+    ManualStorageGateway gateway{storage.context()};
+    FakeConfigurationSource config;
+    FakeClipboard clipboard{&events};
+    config.set(configuration_with_interactions());
+
+    // A past log: archived, loaded as an archived document, shown by a second timeline (History's review model).
+    const LogId id = sample_id<LogId>(1);
+    REQUIRE(storage.memory().create_log(id, sample_header()));
+    REQUIRE(storage.memory().add_entry(
+        id, interaction_entry(1, on_day(10, 10), INTERACTION_SPOKE_WITH, {PERSON_ALEX, PERSON_JORDAN})));
+    REQUIRE(storage.memory().add_entry(id, interaction_entry(2, on_day(10, 20), INTERACTION_SPOKE_WITH, {})));
+    REQUIRE(storage.memory().archive_log(id));
+    auto loaded = storage.memory().load_log(id);
+    REQUIRE(loaded.has_value());
+    auto document = std::make_shared<LogDocument>(world.environment(), gateway, std::move(*loaded));
+    document->set_archived();
+    TimelineModel model(world.environment(), config, clipboard);
+    model.bind(document);
+
+    // The screen: full names and the marker.
+    REQUIRE(model.rowCount() == 2);
+    CHECK(model.data(model.index(0), TimelineModel::FULL_LINE).toString() ==
+          QStringLiteral("10:10 (Interaction) Spoke with Alex Sample and Jordan Placeholder"));
+    CHECK(model.data(model.index(1), TimelineModel::FULL_LINE).toString() ==
+          QStringLiteral("10:20 (Interaction) Spoke with (person not set)"));
+
+    // Re-sharing: the setting in force now, not the one at the time the log was made.
+    REQUIRE(model.copyAll());
+    CHECK(clipboard.text().find("Spoke with A.S. and J.P.") != std::string::npos);
+    CHECK(clipboard.text().find("Alex") == std::string::npos);
+
+    preferences.set_name_export("full");
+    REQUIRE(model.copyAll());
+    CHECK(clipboard.text().find("Spoke with Alex Sample and Jordan Placeholder") != std::string::npos);
+
+    preferences.set_name_export("hidden");
+    REQUIRE(model.copyAll());
+    CHECK(clipboard.text().find("Spoke with someone") != std::string::npos);
+    CHECK(clipboard.text().find("Sample") == std::string::npos);
+    CHECK(clipboard.text().find("Placeholder") == std::string::npos);
+    REQUIRE(model.copyLine(0));
+    CHECK(clipboard.text() == "10:10 (Interaction) Spoke with someone");
+}
