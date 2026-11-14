@@ -8,6 +8,8 @@ Parses apps/app/packaging/ios/Info.plist.in with the CMake placeholders stubbed 
 
   * the exported type's identifier, description and extension equal the constants in
     libs/ios_bridge/include/error_journaling/document_types.hpp;
+  * the exported type conforms to public.data and not to public.json (the system would preview a JSON file instead of
+    opening the application from AirDrop);
   * a document type names the exported type (role Viewer, handler rank Owner) and one names public.json (rank Alternate);
   * LSSupportsOpeningDocumentsInPlace is false, UIFileSharingEnabled is absent or false;
   * no usage-description key (the application asks for no permission);
@@ -100,8 +102,14 @@ def check(plist: dict, constants: dict[str, str]) -> list[str]:
             problems.append(f"the exported type is '{declaration.get('UTTypeIdentifier')}', expected '{identifier}'")
         if declaration.get("UTTypeDescription") != constants["CONFIG_TYPE_DESCRIPTION"]:
             problems.append("the exported type's description differs from CONFIG_TYPE_DESCRIPTION")
-        if "public.json" not in declaration.get("UTTypeConformsTo", []):
-            problems.append("the exported type must conform to public.json")
+        conforms = declaration.get("UTTypeConformsTo", [])
+        if "public.data" not in conforms:
+            problems.append("the exported type must conform to public.data")
+        if "public.json" in conforms:
+            problems.append(
+                "the exported type must not conform to public.json (the system previews JSON, and an AirDropped setup file "
+                "would open as text instead of in the application)"
+            )
         extensions = declaration.get("UTTypeTagSpecification", {}).get("public.filename-extension", [])
         if extensions != [constants["CONFIG_EXTENSION"]]:
             problems.append(f"the exported type's extension is {extensions}, expected ['{constants['CONFIG_EXTENSION']}']")
