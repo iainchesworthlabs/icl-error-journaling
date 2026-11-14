@@ -20,7 +20,8 @@
   "not_screens": {
     "setup/SetupFile.qml": "The setup file's name and file types for the chooser; it draws nothing.",
     "settings/editors/InteractionTypes.qml": "The interaction types editor (Stage 14, I-7). Its scene waits for the mock-ups of the second board (package I-8); the cases settings.interaction_types cover it until then.",
-    "settings/editors/InteractionTypeEdit.qml": "The sheet of the interaction types editor (Stage 14, I-7). Its scene waits for package I-8; the cases settings.interaction_type_edit cover it until then."
+    "settings/editors/InteractionTypeEdit.qml": "The sheet of the interaction types editor (Stage 14, I-7). Its scene waits for package I-8; the cases settings.interaction_type_edit cover it until then.",
+    "settings/editors/People.qml": "The People screen of Settings (Stage 14, I-7), with its sheet and the Forget alert. Its scene waits for package I-8; the cases settings.people cover it until then."
   },
   "flows": [
     {

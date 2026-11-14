@@ -68,6 +68,10 @@ Item {
     property var boards: null
     // What the Interactions board shows (InteractionBoardModel): `boardEmpty`. Null reads as an empty board.
     property var interactionBoard: null
+    // The list of people (PeopleModel), for the picker of the Interactions board. Null: no picker.
+    property var people: null
+    // The People screen of Settings (PeopleAdminModel). Null leaves the People row without a page.
+    property var peopleAdmin: null
     // The QmlBridge: the haptics, the share sheet and the accessibility settings.
     required property var bridge
     // The file chooser that import and export go through. The platform's own unless the test of the shell gives it another.
@@ -381,6 +385,7 @@ Item {
                     sheetLayer: root.sheetLayer
                     activeBoard: root.currentTab === root.interactionsIndex ? "interactions" : "errors"
                     interactionBoard: root.interactionBoard
+                    people: root.people
                     onInteractionSetupRequested: root.showInteractionSetup()
                     onBoardSwitchRequested: board => root.selectTab(board === "interactions" ? root.interactionsIndex : root.logIndex)
                     onTodaysDetailsRequested: root.showDetails(logStack)
@@ -447,6 +452,7 @@ Item {
                     timingText: root.bridge.timingSummary
                     onErrorTypesRequested: pushPage(errorTypesPage, {})
                     onInteractionTypesRequested: pushPage(interactionTypesPage, {})
+                    onPeopleRequested: pushPage(peoplePage, {})
                     onTemplatesRequested: pushPage(templatesPage, {})
                     onLocationsRequested: pushPage(locationsPage, {})
                     onUnitEnvironmentsRequested: pushPage(unitEnvironmentsPage, {})
@@ -651,6 +657,19 @@ Item {
         InteractionTypes {
             settings: root.settings
             // The sheet of the editor covers the tab bar, as every sheet does.
+            sheetLayer: root.sheetLayer
+            onCloseRequested: StackView.view.pop()
+            onHelpRequested: topic => root.showHelp(topic)
+        }
+    }
+
+    Component {
+        id: peoplePage
+
+        People {
+            settings: root.settings
+            people: root.peopleAdmin
+            // The sheet of the screen covers the tab bar, as every sheet does.
             sheetLayer: root.sheetLayer
             onCloseRequested: StackView.view.pop()
             onHelpRequested: topic => root.showHelp(topic)

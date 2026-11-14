@@ -63,6 +63,10 @@ QString kind_text(const Entry& entry)
     {
         return QStringLiteral("note");
     }
+    if (std::holds_alternative<InteractionEntry>(entry.m_Body))
+    {
+        return QStringLiteral("interaction");
+    }
     return QStringLiteral("header_change");
 }
 
@@ -106,6 +110,12 @@ bool same_body(const EntryBody& a, const EntryBody& b)
     {
         const auto& y = std::get<NoteEntry>(b);
         return x->m_Template == y.m_Template && x->m_Value == y.m_Value;
+    }
+    if (const auto* x = std::get_if<InteractionEntry>(&a))
+    {
+        const auto& y = std::get<InteractionEntry>(b);
+        return x->m_Type == y.m_Type && x->m_TypeLabel == y.m_TypeLabel && x->m_People == y.m_People &&
+               x->m_Value == y.m_Value && x->m_AttachedNote == y.m_AttachedNote;
     }
     const auto& x = std::get<HeaderChangeEntry>(a);
     const auto& y = std::get<HeaderChangeEntry>(b);
@@ -775,6 +785,12 @@ QVariantMap TimelineModel::entryForEdit(const QString& entryId) const
     {
         map.insert(QStringLiteral("noteText"), text_of(note->m_Value));
         map.insert(QStringLiteral("templateId"), note->m_Template ? text_of(note->m_Template->format()) : QString());
+    }
+    else if (const auto* interaction = std::get_if<InteractionEntry>(&entry->m_Body))
+    {
+        map.insert(QStringLiteral("interactionTypeId"), text_of(interaction->m_Type.format()));
+        map.insert(QStringLiteral("interactionTypeName"), text_of(interaction->m_TypeLabel));
+        map.insert(QStringLiteral("attachedNote"), text_of(interaction->m_AttachedNote.value_or(std::string{})));
     }
     else
     {

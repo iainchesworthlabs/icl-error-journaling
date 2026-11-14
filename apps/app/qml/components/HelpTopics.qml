@@ -84,6 +84,13 @@ QtObject {
             "paragraphs": [qsTr("<b>Interaction types</b> are the tiles of the optional Interactions board: what you did around the unit. Tap <b>Add an interaction type</b> to make one."), qsTr("<b>Line in the log</b> is what gets written. Tap <b>Insert person</b> to put <b>[person]</b> where the people go, for example “Spoke with [person]”. A type with <b>[person]</b> asks who after you log it. A type without it never asks."), qsTr("Tap <b>Insert answer</b> to put <b>[answer]</b> in the line, and you are asked for an answer after you log it. With no line, the log shows the name."), qsTr("The first 11 types fill the board in the order shown. The rest are under <b>Other…</b>. A type you retire stays on the entries already logged.")],
             "page": "guide/setup/",
             "anchor": "the-second-board-interactions-optional"
+        },
+        {
+            "id": "people",
+            "title": qsTr("People"),
+            "paragraphs": [qsTr("<b>People</b> are the names an interaction such as “Spoke with [person]” can use. They are optional: a tile with no <b>[person]</b> in its line never asks who."), qsTr("Type a name under <b>New person</b> and tap <b>Add person</b>. Choose a location if the person belongs to one, and <b>Everyone</b> in the picker ticks the people of the location in force."), qsTr("Tap a name to rename it (past entries follow), to <b>Retire</b> it (it leaves the picker and stays on past entries), or to <b>Forget</b> it. Forget removes the name from this device for good, and the entries show “someone”."), qsTr("Names stay on this device. A log you share shows them as initials, in full or as “someone”, as you choose under <b>Names in shared logs</b>.")],
+            "page": "guide/setup/",
+            "anchor": "people"
         }
     ]
 

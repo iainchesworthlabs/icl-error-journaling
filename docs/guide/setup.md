@@ -92,7 +92,7 @@ setup rows). A fifth tab, **Interactions**, appears at once, and the first tab i
 - To change board, tap the tab, or swipe along the strip that says **Interactions**. A swipe anywhere else does nothing, so a
   slip over a tile never changes board.
 - The app opens on the board you used last.
-- Until you have added interaction types, the board is empty and offers **Add interaction types**.
+- The board has six interaction types to start with, so it has tiles at once. A setup file with its own `interaction_types` replaces them. If a setup file leaves the board with no types on it, the board is empty and offers **Add interaction types**.
 
 Turning the switch off hides the tab and the board. **Nothing is deleted:** the entries stay in the log and in Review and
 History, and what you set up is kept for the next time. If you were on the Interactions board, the app goes to the Errors board.
@@ -115,3 +115,18 @@ editor at once, and turning the switch on with nothing set up opens it for you.
 
 The first 11 types fill the board in the order shown; drag the handle, or use the arrows, to change it. The rest are under
 **Other…**. A type you retire leaves the board and stays on the entries already logged.
+
+### People
+
+**People** is the list of names an interaction can use. It is optional: a type with no **[person]** in its line never asks
+who. In **Settings**, **Second board**, tap **People**:
+
+- Type a name under **New person** and tap **Add person**. If you have locations, choose the one the person belongs to;
+  **Everyone** in the picker ticks the people of the location in force. A name is at most 60 characters, and two people
+  cannot share a name.
+- Tap a name to **rename** it. Entries that name the person show the new name.
+- **Retire** takes a person out of the picker. They stay on the entries already logged, and **Bring back** undoes it.
+- **Forget** removes a name for good, after you confirm. The entries stay and show “someone”.
+
+Names stay on the device and are never part of an export. A log you share shows them as you choose under **Names in
+shared logs**.
