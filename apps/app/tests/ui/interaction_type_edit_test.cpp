@@ -38,14 +38,14 @@ TEST_CASE("settings.interaction_type_edit: adding a type with [person] saves it 
     REQUIRE(sheet_is_open(world));
     CHECK_FALSE(field_error(world, QStringLiteral("nameField")).isEmpty());
 
-    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Greeted"));
+    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Waved at"));
     tap_in_sheet(world, QStringLiteral("insertPersonButton"));
     CHECK(in_sheet(world, QStringLiteral("previewText"))->property("text").toString().contains(QStringLiteral("Alex Sample")));
     CHECK(in_sheet(world, QStringLiteral("asksText"))->property("text").toString().contains(QStringLiteral("people")));
     tap_in_sheet(world, QStringLiteral("navTrailing"));
     CHECK_FALSE(sheet_is_open(world));
     CHECK(names(world).size() == before + 1);
-    CHECK(names(world).back() == QStringLiteral("Greeted"));
+    CHECK(names(world).back() == QStringLiteral("Waved at"));
 }
 
 TEST_CASE("settings.interaction_type_edit: a line with no [person] says that it asks nothing, and a bad line blocks Save",
