@@ -305,6 +305,10 @@ That is the Android convention ([decision 4](#decisions-for-the-owner)). The ada
 background and a monochrome layer (Android 13 themed icons). They are made from the existing 1024 px icon by a script,
 and the owner approves the result.
 
+*Done (the icon part of 9.7):* `tools/store/make_android_icon.py` makes the three layers from the drawing of the iOS icon
+(see [the app icon](../design/README.md#the-app-icon)), and the manifest names them. The splash colours, the theme that
+sets them, and the rest of 9.7 are not done.
+
 **Edge-to-edge.** It is enforced for target 36 and cannot be turned off. The window already has
 `Qt.ExpandedClientAreaHint`, and `SafeFrame` reads `SafeArea.margins`. Qt 6.12 fills these from Android's system-bar,
 display-cutout and gesture insets (assumption W1). Status-bar and navigation-bar icons must be dark on the light theme

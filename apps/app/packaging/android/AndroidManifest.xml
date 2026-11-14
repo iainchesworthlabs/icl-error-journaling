@@ -21,9 +21,14 @@
          copy the files directory (the store) and nothing else: res/xml/ej_data_extraction_rules.xml from Android 12,
          ej_backup_rules.xml before. The application is not direct-boot aware (no android:directBootAware), so it never
          runs, or meets its store, before the person has unlocked the phone once. -->
+    <!-- The launcher icon is the adaptive icon of res/mipmap-anydpi-v26/, with a themed layer for Android 13 and later;
+         tools/store/make_android_icon.py makes it from the drawing of the iOS icon. Android 12 and later also show it,
+         centred, on the system splash screen. The minimum SDK is 28, so every device takes the adaptive icon. -->
     <application
         android:name="org.qtproject.qt.android.bindings.QtApplication"
         android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="-- %%INSERT_APP_NAME%% --"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/ej_data_extraction_rules"

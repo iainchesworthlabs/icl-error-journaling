@@ -206,7 +206,8 @@ The owner drew it on paper: an "f" and a "t" (for Field Test) sharing a board of
 - **Colours:** leaf green `#4CAF6A` background, white "f", and the "t" and the outlines in `#1F303C`. White on the green is 2.8 to 1 and the "t" on the green is 5.0 to 1. The "f" was a thin outline at first, and it blurred into the background at small sizes, so it is solid. The green is the owner's choice for the icon only: the tile palette above has no green, by its own rule.
 - **One icon for light and dark.** The green background works in both, so there is no separate dark icon.
 - `tools/store/make_app_icon.py` draws it as a 1024 px opaque PNG into `apps/app/packaging/ios/Assets.xcassets/AppIcon.appiconset`. Change the icon in the script and run it again; do not edit the PNG. `tools/store/make_play_graphics.py` makes the Google Play icon from it.
-- Not yet made: the Android adaptive icon (foreground, background and monochrome layer) and the desktop tiles. Stage 9 (9.7) and Stage 12 make them from the same drawing.
+- **Android** has the same icon as an adaptive icon. `tools/store/make_android_icon.py` makes it in `apps/app/packaging/android/res`: a vector foreground, the leaf green as the background colour and a one-colour layer that Android 13 and later tint for themed icons. The board is 50 dp wide on the 108 dp canvas, so no launcher shape (circle, rounded square, squircle) cuts it. Run the script again to change it; do not edit those files. `--preview` draws it in the three shapes.
+- Not yet made: the desktop tiles and window icon. Desktop is v2 (Stage 12), so they wait for its packaging; they will be made from the same drawing. The Android splash screen's colour (Stage 9, 9.7) is also not done: until then Android 12 and later show this icon on the system's default splash background.
 
 ## Review of the 4.2 drafts
 
