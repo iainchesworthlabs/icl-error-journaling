@@ -831,6 +831,11 @@ QVariantMap TimelineModel::entryForEdit(const QString& entryId) const
             people.append(text_of(person.format()));
         }
         map.insert(QStringLiteral("personIds"), people);
+        // The location in force when the entry was made, for "Everyone here" in the picker; empty for none.
+        const HeaderValues header = HeaderHistory(m_Document->log()).at(entry->m_Captured.m_Utc);
+        map.insert(QStringLiteral("locationId"), header.m_Location && header.m_Location->m_Id
+                                                     ? text_of(header.m_Location->m_Id->format())
+                                                     : QString());
         // The names of the people as the screen shows them (the full name; "someone" when forgotten or unknown).
         QVariantMap names;
         for (const PersonId& person : interaction->m_People)

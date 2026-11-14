@@ -144,6 +144,13 @@ public:
     /// own type even when it is retired or gone. Each is {typeId, name}; empty for an entry that is not an interaction.
     Q_INVOKABLE QVariantList interactionTypesFor(const QString& entryId) const;
 
+    /// The list of people changed (loaded, a person added, renamed, retired or forgotten): the rows are made again, so
+    /// that a name is the one in the list now ("someone" once forgotten).
+    void refresh_names()
+    {
+        refresh_wording();
+    }
+
     /// The plain reason `edit` cannot be saved, or an empty string when it can. Nothing is written.
     Q_INVOKABLE QString validateEdit(const QString& entryId, const QVariantMap& edit) const;
 

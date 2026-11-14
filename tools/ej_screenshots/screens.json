@@ -216,6 +216,12 @@
           ]
         },
         {
+          "name": "ReviewInteractions"
+        },
+        {
+          "name": "EditInteraction"
+        },
+        {
           "name": "TimeTumbler"
         },
         {

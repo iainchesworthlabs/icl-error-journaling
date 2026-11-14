@@ -749,6 +749,12 @@ Item {
                 picker: root.picker
                 settings: root.settings
                 people: root.people
+                pickerOpen: entryPeoplePicker.isOpen
+                onPeopleRequested: (picks, typeName, locationId) => {
+                    entryPeoplePicker.typeName = typeName;
+                    entryPeoplePicker.locationId = locationId;
+                    entryPeoplePicker.begin(picks);
+                }
             },
             // The time of the entry, over the Edit entry sheet: declared after it, so that it stacks over it.
             EditTimeSheet {
@@ -757,6 +763,19 @@ Item {
                 edit: entryEditor
                 timeline: root.timeline
                 settings: root.settings
+            },
+            // The people of an interaction, over the Edit entry sheet: the picker of the board, as an editor of the picks. Done
+            // puts them in the draft of the sheet; nothing is saved until Save.
+            PersonPicker {
+                id: entryPeoplePicker
+
+                objectName: "entryPeoplePicker"
+                people: root.people
+                onDoneRequested: personIds => {
+                    entryEditor.setPeople(personIds);
+                    if (personIds.length > 0)
+                        root.people.touch(personIds);
+                }
             }
         ]
     }
@@ -767,6 +786,7 @@ Item {
             return;
         entryEditor.parent = sheetLayer;
         entryTimeSheet.parent = sheetLayer;
+        entryPeoplePicker.parent = sheetLayer;
     }
 
     onSheetLayerChanged: placeSheets()

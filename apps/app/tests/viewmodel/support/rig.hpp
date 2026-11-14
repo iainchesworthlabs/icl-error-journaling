@@ -17,6 +17,7 @@
 #include "support/test_clock.hpp"
 #include "support/test_environment.hpp"
 #include "viewmodel/environment.hpp"
+#include "viewmodel/people_model.hpp"
 #include "viewmodel/storage_gateway.hpp"
 
 #include <QString>
@@ -277,6 +278,9 @@ private:
     SharedClock m_StoreClock;
     SequentialIds m_Ids;
     FakeDeviceZone m_DeviceZone;
+    // The names of people for the export and the screens, as main.cpp wires them: the list of the root, once it is
+    // built.
+    viewmodel::PersonNamesForwarder m_PersonNames;
     FakeTimeZoneProvider m_FakeZones;
     std::unique_ptr<TimeZoneProvider> m_QtZones;
     FakePlatform m_Platform;

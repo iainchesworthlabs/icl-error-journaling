@@ -373,6 +373,20 @@ AppRoot::AppRoot(const vm::Environment& environment, const AppPlatform& platform
     m_Timeline.follow(m_Session);
     // A change on the People screen reaches the picker.
     connect(&m_PeopleAdmin, &vm::PeopleAdminModel::changed, &m_People, &vm::PeopleModel::reload);
+    // The rows of Review and of a past log say a person's name as the list has it now: made again when the list
+    // changes.
+    const auto refresh_names = [this]
+    {
+        m_Timeline.refresh_names();
+        if (auto* past = m_History.review_model(); past != nullptr)
+        {
+            past->refresh_names();
+        }
+    };
+    connect(&m_People, &QAbstractItemModel::modelReset, this, refresh_names);
+    connect(&m_People, &QAbstractItemModel::rowsInserted, this, refresh_names);
+    connect(&m_People, &QAbstractItemModel::rowsRemoved, this, refresh_names);
+    connect(&m_People, &QAbstractItemModel::dataChanged, this, refresh_names);
 
     // An undone note goes back to the composer through the session's draft. Text the facilitator has typed since is
     // kept below it, so neither is lost.
