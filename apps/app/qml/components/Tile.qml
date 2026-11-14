@@ -114,9 +114,20 @@ Item {
     // label does, so those tiles keep the type scale's size. It goes no lower than 0.75 of the role's size without the
     // text scale (the floor of 10 pt at the default size), which holds at the larger sizes, where a word needs less of it.
     readonly property real wordFitFloor: Math.min(1, labelFloor * WindowLayout.tileLabelRole.basePt / WindowLayout.tileLabelRole.size)
-    readonly property real wordFit: wordProbe.advanceWidth > 0 ? Math.max(wordFitFloor, Math.min(1, labelText.width / wordProbe.advanceWidth)) : 1
+    // The side margin of the label: the tile's padding, or, for a word that does not fit at that floor, up to four points
+    // less on each side, as much as the word needs (the bottom margin and the Other icon keep the padding).
+    readonly property real labelInset: {
+        const needed = wordProbe.advanceWidth * wordFitFloor;
+        const room = width - 2 * padding;
+        if (needed <= room + 0.5)
+            return padding;
+        return Math.max(padding - labelInsetGive, Math.min(padding, (width - needed) / 2));
+    }
+    readonly property real labelInsetGive: 4
+    readonly property real labelWidth: width - 2 * labelInset
+    readonly property real wordFit: wordProbe.advanceWidth > 0 ? Math.max(wordFitFloor, Math.min(1, labelWidth / wordProbe.advanceWidth)) : 1
     // A word that is wider than the tile even at that floor is the last resort: it is broken, and not cut off.
-    readonly property bool wordFits: wordProbe.advanceWidth * wordFitFloor <= labelText.width + 0.5
+    readonly property bool wordFits: wordProbe.advanceWidth * wordFitFloor <= labelWidth + 0.5
     readonly property bool dashed: isOther && !skeleton
     readonly property color fillColour: skeleton ? Theme.colour.swatch : (isOther ? Theme.colour.otherTileFill : (interactions ? Theme.interactionTileColour(colourSlot) : Theme.tileColour(colourSlot)))
 
@@ -239,8 +250,8 @@ Item {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            anchors.leftMargin: root.padding
-            anchors.rightMargin: root.padding
+            anchors.leftMargin: root.labelInset
+            anchors.rightMargin: root.labelInset
             anchors.bottomMargin: root.padding
             // The label is bottom-aligned and may use the whole height above its margin: four lines at the 1.3 cap are
             // 86 pt, which a 104 pt tile holds only when the top margin is not taken from them.
@@ -271,7 +282,7 @@ Item {
             verticalAlignment: Text.AlignBottom
             // The tile never grows, so a label that would not fit shrinks, down to a floor, before it is cut.
             fontSizeMode: Text.Fit
-            minimumPixelSize: Math.round(WindowLayout.tileLabelRole.size * Math.min(root.labelFloor, root.wordFit))
+            minimumPixelSize: Math.floor(WindowLayout.tileLabelRole.size * Math.min(root.labelFloor, root.wordFit))
             // A fractional size is a point size, and Fit then shrinks to the point floor.
             minimumPointSize: WindowLayout.tileLabelRole.size * Math.min(root.labelFloor, root.wordFit) * 72 / Theme.fontDpi
             Accessible.ignored: true
