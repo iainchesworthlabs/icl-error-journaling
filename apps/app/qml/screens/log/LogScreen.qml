@@ -257,15 +257,18 @@ Item {
         if (askEntry.length === 0)
             return;
         if (askLeft === "person" && people !== null) {
-            personPicker.typeName = interactionBoard.typeName(askType);
-            personPicker.locationId = session.locationId;
-            personPicker.begin();
+            personPickerLoader.active = true;
+            const picker = personPickerLoader.item as PersonPicker;
+            picker.typeName = interactionBoard.typeName(askType);
+            picker.locationId = session.locationId;
+            picker.begin();
             return;
         }
         if (askLeft === "person" && interactionBoard.hasValueSlot(askType))
             askLeft = "text";
         if (askLeft === "text") {
-            answerSheet.begin();
+            answerSheetLoader.active = true;
+            (answerSheetLoader.item as TemplateValueSheet).begin();
             return;
         }
         askEntry = "";
@@ -421,10 +424,10 @@ Item {
             if (root.undo.undoing) {
                 root.askEntry = "";
                 root.askLeft = "";
-                if (personPicker.isOpen)
-                    personPicker.close();
-                if (answerSheet.isOpen)
-                    answerSheet.close();
+                if (personPickerLoader.isOpen)
+                    (personPickerLoader.item as PersonPicker).close();
+                if (answerSheetLoader.isOpen)
+                    (answerSheetLoader.item as TemplateValueSheet).close();
             }
         }
 
@@ -909,7 +912,8 @@ Item {
             onTileSingleTapped: root.showTapHint()
             onTileTapped: (row, typeId, isOther) => {
                 if (isOther)
-                    otherInteractions.begin();
+                    otherInteractionsLoader.active = true;
+                (otherInteractionsLoader.item as InteractionOtherSheet).begin();
             }
             onEmptyTapped: position => root.interactionSetupRequested()
         }
@@ -1023,59 +1027,81 @@ Item {
         previewText: root.activeTemplate ? root.settings.previewTemplateLine(root.activeTemplate.outputPattern, templateSheet.value) : ""
         onAddRequested: value => root.addTemplated(value)
     }
-    // The people of an interaction that has a [person] slot: opens when the entry has been logged.
-    PersonPicker {
-        id: personPicker
+    // The sheets of the Interactions board are made when they are first needed, so that the screen does not pay their items
+    // (perf.scene). Each fills the sheet layer, as the sheets do.
 
-        objectName: "logPersonPicker"
+    // The people of an interaction that has a [person] slot: opens when the entry has been logged.
+    Loader {
+        id: personPickerLoader
+
+        objectName: "logPersonPickerLoader"
         parent: root.sheetLayer
-        people: root.people
-        onDoneRequested: personIds => {
-            const entryId = root.askEntry;
-            if (entryId.length > 0 && personIds.length > 0) {
-                root.session.setInteractionPeople(entryId, personIds);
-                root.people.touch(personIds);
+        anchors.fill: parent
+        active: false
+        readonly property bool isOpen: (item as PersonPicker)?.isOpen ?? false
+        sourceComponent: PersonPicker {
+            objectName: "logPersonPicker"
+            people: root.people
+            onDoneRequested: personIds => {
+                const entryId = root.askEntry;
+                if (entryId.length > 0 && personIds.length > 0) {
+                    root.session.setInteractionPeople(entryId, personIds);
+                    root.people.touch(personIds);
+                }
             }
+            onClosed: root.afterPicker()
         }
-        onClosed: root.afterPicker()
     }
 
     // The answer of an interaction that has a {value} slot ("Played [answer]"): the question sheet of the note templates.
-    TemplateValueSheet {
-        id: answerSheet
+    Loader {
+        id: answerSheetLoader
 
-        objectName: "logInteractionAnswerSheet"
+        objectName: "logInteractionAnswerLoader"
         parent: root.sheetLayer
-        templateName: root.interactionBoard !== null ? root.interactionBoard.typeName(root.askType) : ""
-        valuePrompt: qsTr("Answer")
-        outputPattern: ""
-        footerText: qsTr("Skip this with Cancel: the interaction stays in the log as it is.")
-        previewText: root.interactionBoard !== null ? root.interactionBoard.previewLine(root.askType, answerSheet.value) : ""
-        onAddRequested: value => {
-            if (root.session.setInteractionValue(root.askEntry, value)) {
+        anchors.fill: parent
+        active: false
+        readonly property bool isOpen: (item as TemplateValueSheet)?.isOpen ?? false
+        sourceComponent: TemplateValueSheet {
+            id: answerSheet
+
+            objectName: "logInteractionAnswerSheet"
+            templateName: root.interactionBoard !== null ? root.interactionBoard.typeName(root.askType) : ""
+            valuePrompt: qsTr("Answer")
+            footerText: qsTr("Cancel leaves the interaction in the log as it is.")
+            previewText: root.interactionBoard !== null ? root.interactionBoard.previewLine(root.askType, answerSheet.value) : ""
+            onAddRequested: value => {
+                if (root.session.setInteractionValue(root.askEntry, value)) {
+                    root.askEntry = "";
+                    root.askLeft = "";
+                    answerSheet.close();
+                } else {
+                    answerSheet.errorText = value.trim().length === 0 ? qsTr("Type something to add.") : qsTr("That answer could not be added.");
+                }
+            }
+            onClosed: {
                 root.askEntry = "";
                 root.askLeft = "";
-                answerSheet.close();
-            } else {
-                answerSheet.errorText = value.trim().length === 0 ? qsTr("Type something to add.") : qsTr("That answer could not be added.");
             }
-        }
-        onClosed: {
-            root.askEntry = "";
-            root.askLeft = "";
         }
     }
 
     // The interaction types that are not on the board.
-    InteractionOtherSheet {
-        id: otherInteractions
+    Loader {
+        id: otherInteractionsLoader
 
-        objectName: "logOtherInteractions"
+        objectName: "logOtherInteractionsLoader"
         parent: root.sheetLayer
-        types: root.interactionBoard !== null ? root.interactionBoard.otherTypes : []
-        onChosen: typeId => {
-            root.bridge.hapticImpact();
-            root.logInteraction(-1, typeId);
+        anchors.fill: parent
+        active: false
+        readonly property bool isOpen: (item as InteractionOtherSheet)?.isOpen ?? false
+        sourceComponent: InteractionOtherSheet {
+            objectName: "logOtherInteractions"
+            types: root.interactionBoard !== null ? root.interactionBoard.otherTypes : []
+            onChosen: typeId => {
+                root.bridge.hapticImpact();
+                root.logInteraction(-1, typeId);
+            }
         }
     }
 }

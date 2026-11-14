@@ -2523,7 +2523,11 @@ struct InteractionScreen : Screen
 
     [[nodiscard]] QQuickItem* itile(int row) { return named(QStringLiteral("interactionTile%1").arg(row)); }
     [[nodiscard]] QQuickItem* sheet(const QString& name) { return named(name); }
-    [[nodiscard]] bool open(const QString& name) { return named(name)->property("isOpen").toBool(); }
+    [[nodiscard]] bool open(const QString& name)
+    {
+        QQuickItem* found = rig.find_item(name);
+        return found != nullptr && found->property("isOpen").toBool();
+    }
 
     void double_tap(LogRig& sim, QQuickItem* tile)
     {

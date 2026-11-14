@@ -64,6 +64,11 @@ struct Snapshot
 PeopleModel::PeopleModel(const Environment& environment, StorageGateway& gateway, QObject* parent)
     : QAbstractListModel(parent), m_Environment(environment), m_Gateway(gateway)
 {
+    reload();
+}
+
+void PeopleModel::reload()
+{
     m_Gateway.run(
         [](StorageContext& context)
         {

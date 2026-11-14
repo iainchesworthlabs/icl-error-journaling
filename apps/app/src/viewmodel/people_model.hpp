@@ -76,6 +76,10 @@ public:
     /// Marks these people as used now (they move to the front). Not waited for: a lost mark costs only the order.
     Q_INVOKABLE void touch(const QStringList& personIds);
 
+public slots:
+    /// Reads the list again from the store (after a rename, retire or Forget made elsewhere).
+    void reload();
+
 signals:
     void availableChanged();
     void countChanged();
