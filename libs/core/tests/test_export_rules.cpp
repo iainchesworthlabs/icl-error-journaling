@@ -16,7 +16,7 @@ namespace
 {
 
 constexpr const char* HEADER =
-    "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: v1.4.2";
+    "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: v1.4.2";
 
 void must_add(Log& log, Entry entry)
 {
@@ -52,13 +52,13 @@ TEST_CASE("Rule 1: the header block holds the start values and the log's date, w
 TEST_CASE("Rule 2: an empty header field prints its label and a colon only", "[export][rule2]")
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam Example";
+    header.m_Tester = "Sam Example";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     auto scenario = blank_scenario();
     scenario.m_Log = Log(header);
     must_add(scenario.m_Log, error_entry(1, on_day(10, 5), ERROR_WRONG_RESPONSE));
     CHECK(render(scenario)
-          == "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation:\nSoftware Version:\n\n10:05 T| Wrong Response");
+          == "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation:\nSoftware Version:\n\n10:05 T| Wrong Response");
 }
 
 TEST_CASE("Rule 3: an error line, with an attached note after an en dash", "[export][rule3]")
@@ -103,7 +103,7 @@ TEST_CASE("Rule 5: a header-change line names the field with its old and new val
 TEST_CASE("Rule 5: a first change from an empty field has an empty old side", "[export][rule5]")
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam Example";
+    header.m_Tester = "Sam Example";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     auto scenario = blank_scenario();
     scenario.m_Log = Log(header);
@@ -193,12 +193,12 @@ TEST_CASE("Rule 9: line breaks and runs of white space in free text collapse to 
 TEST_CASE("Rule 9: the header block is one line per field too", "[export][rule9]")
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam\nExample ";
+    header.m_Tester = "Sam\nExample ";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     header.m_Location = LocationValue{std::nullopt, "North\tSite\n"};
     auto scenario = blank_scenario();
     scenario.m_Log = Log(header);
-    CHECK(render(scenario) == "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation: North Site\nSoftware Version:");
+    CHECK(render(scenario) == "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation: North Site\nSoftware Version:");
 }
 
 TEST_CASE("render_entry_line of every entry equals the matching line of render_export", "[export]")

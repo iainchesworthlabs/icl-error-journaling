@@ -172,7 +172,7 @@ public:
 ```
 
 `HeaderValues` holds the log's initial unit number, location (a location id or free text) and software version, each
-optional, plus facilitator and local date. Entries are never physically removed in the core; Stage 2 decides what
+optional, plus tester and local date. Entries are never physically removed in the core; Stage 2 decides what
 leaves the database.
 
 Tests (`unit`):
@@ -284,7 +284,7 @@ the affected golden files.
 
 Rules as implemented (the numbering is this plan's; it covers PRD rules 1 to 9 and adds line endings):
 
-1. The header block is `Facilitator`, `Date`, `<prefix> #`, `Location`, `Software Version`, one per line, from
+1. The header block is `Tester`, `Date`, `<prefix> #`, `Location`, `Software Version`, one per line, from
    `HeaderHistory::start()`. The date is the log's local date (`7 Nov 2026`), not derived from entries.
 2. An empty field prints its label and a colon with no trailing space.
 3. Error line: `<time> T| <name>`, then ` – <attached note>` (en dash, one space each side) when a note is attached.
@@ -310,7 +310,7 @@ inline constexpr int CONFIG_SCHEMA_VERSION = 1;
 
 struct Configuration
 {
-    std::string m_Facilitator;
+    std::string m_Tester;
     std::string m_UnitPrefix;
     TimeFormat m_TimeFormat;
     bool m_IncludeTotals = false;
@@ -347,7 +347,7 @@ Tests (`unit`):
 - Rejects: not JSON, a JSON array at the top, missing `schema_version`, `schema_version: 2` (`UNSUPPORTED_VERSION`, message
   says to update the app), `schema_version: 0` or a string.
 - Rejects: duplicate ids, duplicate names, two types on board position 3, position 0 and 12, a template without
-  `{value}`, a malformed UUID, an empty facilitator, a prefix of `UNIT-`.
+  `{value}`, a malformed UUID, an empty tester, a prefix of `UNIT-`.
 - Several faults in one file are all reported, in file order.
 - A retired type keeps its board position out of the layout, and still round-trips.
 - Unknown keys are rejected with `UNKNOWN_FIELD` (decided).
@@ -371,7 +371,7 @@ std::chrono::year_month_day local_date(const Timestamp&, const TimeZoneProvider&
 ```
 
 The prompt is offered when the device-local calendar date of `now` is later than the open log's local date. There is no
-grace period; a log that runs past midnight stays open until the facilitator accepts the prompt (declining is the UI's
+grace period; a log that runs past midnight stays open until the tester accepts the prompt (declining is the UI's
 job, and the next foreground raises it again). The unshared flag is Stage 3 (`DayWatcher`), because it needs
 `last_shared_utc`.
 

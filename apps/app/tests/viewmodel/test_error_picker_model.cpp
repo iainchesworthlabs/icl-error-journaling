@@ -403,7 +403,7 @@ TEST_CASE("addType does not record an entry", "[viewmodel][picker][feedback]")
     CHECK(fixture.m_Rig.events().count(EventKind::HAPTIC) == 0);
     CHECK(fixture.m_Rig.events().count(EventKind::COMMIT) == 0);
 
-    // The facilitator taps it as for any other type; the count then follows the commit.
+    // The tester taps it as for any other type; the count then follows the commit.
     const ErrorTypeId added = fixture.m_Editor.added().front().m_Id;
     fixture.tap_and_commit(added);
     CHECK(fixture.value(2, ErrorPickerModel::COUNT).toInt() == 1);
@@ -469,7 +469,7 @@ TEST_CASE("A configuration change keeps the filter and resets only when the list
     SECTION("a setting that is not on the list changes nothing")
     {
         Configuration configuration = fixture.m_Config.configuration();
-        configuration.m_Facilitator = "Sam Example";
+        configuration.m_Tester = "Sam Example";
         configuration.m_IncludeTotals = true;
         fixture.m_Config.set(std::move(configuration));
         CHECK(spies.m_Reset.isEmpty());

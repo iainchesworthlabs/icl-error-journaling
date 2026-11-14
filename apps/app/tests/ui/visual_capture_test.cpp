@@ -122,6 +122,8 @@ Item {
     required property var fileChooser
     required property var about
     required property string aboutText
+    // The list of people of the Interactions board and of the Edit entry sheet.
+    property var people: null
 
     SafeArea.additionalMargins.top: %1
     SafeArea.additionalMargins.bottom: %2
@@ -142,6 +144,7 @@ Item {
         fileChooser: wrap.fileChooser
         about: wrap.about
         aboutText: wrap.aboutText
+        people: wrap.people
     }
 }
 )";
@@ -283,6 +286,8 @@ struct Start
 {
     int m_Day = 7;
     bool m_Configured = true;
+    /// The list of people lives in the real store only (`SQLITE`); the scenes with people use it.
+    RigStore m_Store = RigStore::MEMORY;
 };
 
 /// The application as the device has it, under its insets: the services over the fakes, the shell on top, and a file
@@ -290,7 +295,7 @@ struct Start
 struct Phone
 {
     explicit Phone(const Start& start, const Device& device = PHONE)
-        : services(RigStore::MEMORY), bridge(services.platform()), ui(device.m_Size), m_Device(device)
+        : services(start.m_Store), bridge(services.platform()), ui(device.m_Size), m_Device(device)
     {
         services.go_to(start.m_Day, 8, 55);
         if (start.m_Configured)
@@ -325,7 +330,8 @@ struct Phone
                            {QStringLiteral("bridge"), object(bridge)},
                            {QStringLiteral("fileChooser"), object(*chooser)},
                            {QStringLiteral("about"), object(about)},
-                           {QStringLiteral("aboutText"), QStringLiteral("0.1.0")}};
+                           {QStringLiteral("aboutText"), QStringLiteral("0.1.0")},
+                           {QStringLiteral("people"), object(*root.people())}};
     }
 
     void load()
@@ -540,6 +546,80 @@ void review_day(Phone& phone)
     note(phone, QStringLiteral("Played Evening Song"), 7, 12, 10);
 }
 
+// ---- the second board in Review (Stage 14, I-9) ----
+
+const QString SPOKE_WITH = QStringLiteral("00000000-0000-4000-8000-0000000000d1");
+const QString PLAYED_SONG = QStringLiteral("00000000-0000-4000-8000-0000000000d2");
+const QString HELPED = QStringLiteral("00000000-0000-4000-8000-0000000000d6");
+
+/// The id of the person in the list whose name is `name`.
+QString person_named(Phone& phone, const QString& name)
+{
+    auto& people = *phone.services.root().people();
+    for (int row = 0; row < people.rowCount(); ++row)
+    {
+        const QModelIndex index = people.index(row, 0);
+        if (people.data(index, Qt::UserRole + 2).toString() == name)
+        {
+            return people.data(index, Qt::UserRole + 1).toString();
+        }
+    }
+    FAIL("no person named " << name.toStdString());
+}
+
+/// An interaction logged at `hour:minute` with the people (ids) and the answer it was given.
+void interaction(Phone& phone, const QString& type, const QStringList& people, int hour, int minute,
+                 const QString& value = {})
+{
+    phone.services.go_to(7, hour, minute, 30);
+    auto& session = *phone.services.root().session();
+    const QString entry = session.recordInteractionEntry(type);
+    REQUIRE_FALSE(entry.isEmpty());
+    phone.services.settle();
+    if (!people.isEmpty())
+    {
+        REQUIRE(session.setInteractionPeople(entry, people));
+        phone.services.settle();
+    }
+    if (!value.isEmpty())
+    {
+        REQUIRE(session.setInteractionValue(entry, value));
+        phone.services.settle();
+    }
+}
+
+/// A day with errors and interactions; the third interaction was skipped, so it has no person.
+void interaction_day(Phone& phone)
+{
+    fill_header(phone);
+    auto& people = *phone.services.root().people();
+    REQUIRE(people.addPerson(QStringLiteral("Alex Sample"), QString()));
+    phone.services.settle();
+    REQUIRE(people.addPerson(QStringLiteral("Jordan Placeholder"), QString()));
+    phone.services.settle();
+    const QString alex = person_named(phone, QStringLiteral("Alex Sample"));
+    const QString jordan = person_named(phone, QStringLiteral("Jordan Placeholder"));
+    record(phone, QStringLiteral("Wrong Response"), 7, 9, 42);
+    interaction(phone, SPOKE_WITH, {alex}, 10, 10);
+    interaction(phone, PLAYED_SONG, {}, 10, 30, QStringLiteral("Morning Medley"));
+    interaction(phone, SPOKE_WITH, {}, 11, 2);
+    interaction(phone, HELPED, {jordan, alex}, 11, 40);
+    phone.services.advance(6s);
+    phone.choose_tab(REVIEW_TAB);
+}
+
+void scene_review_interactions(Phone& phone)
+{
+    interaction_day(phone);
+}
+
+void scene_edit_interaction(Phone& phone)
+{
+    interaction_day(phone);
+    phone.tap_item(phone.nth(QStringLiteral("reviewSwipe"), 3));
+    phone.play();
+}
+
 /// The day of the board mock-ups with the longest label: "Sequence Out of Order" three times, Mute Delay once.
 void label_day(Phone& phone)
 {
@@ -553,7 +633,7 @@ void label_day(Phone& phone)
 }
 
 /// Ends the open log: shared at `hour:minute` of `day` when asked, and a new log started on `next_day` at 08:50 (the
-/// facilitator carries over; the rest of the header is filled again).
+/// tester carries over; the rest of the header is filled again).
 void close_log(Phone& phone, int day, int hour, int minute, bool shared, int next_day)
 {
     if (shared)
@@ -1139,11 +1219,12 @@ void scene_first_launch_manual(Phone& phone)
 {
     phone.tap(QStringLiteral("manualCard"));
     phone.play();
-    phone.type_into(QStringLiteral("facilitatorField"), QStringLiteral("Sam Example"));
+    phone.type_into(QStringLiteral("testerField"), QStringLiteral("Sam Example"));
     phone.play();
 }
 
 const Start TODAY;
+const Start TODAY_WITH_PEOPLE{7, true, RigStore::SQLITE};
 const Start FIRST_LAUNCH{7, false};
 const Start FOUR_DAYS_BACK{2, true};
 
@@ -1305,6 +1386,10 @@ void scene_version_time(Phone& phone)
 std::vector<Scene> extra_scenes()
 {
     return {
+        {QStringLiteral("ReviewInteractions"), TODAY_WITH_PEOPLE, scene_review_interactions,
+         QStringLiteral("Review with errors and interactions; the third interaction was skipped and has no person.")},
+        {QStringLiteral("EditInteraction"), TODAY_WITH_PEOPLE, scene_edit_interaction,
+         QStringLiteral("The Edit entry sheet of the skipped interaction: type, People (person not set), time, note.")},
         {QStringLiteral("TapHint"), TODAY, scene_tap_hint, QStringLiteral("One tap on Wrong Response.")},
         {QStringLiteral("HoldNote"), TODAY, scene_hold_note,
          QStringLiteral("A hold on Wrong Response with an empty composer.")},
@@ -1320,9 +1405,9 @@ std::vector<Scene> extra_scenes()
          QStringLiteral("The Other versions row of Today's details tapped, then Add a version.")},
         {QStringLiteral("VersionTime"), TODAY, scene_version_time,
          QStringLiteral("The time of the version change tapped.")},
-        {QStringLiteral("Facilitator"), TODAY,
-         [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsFacilitator")); },
-         QStringLiteral("Settings, Facilitator.")},
+        {QStringLiteral("Tester"), TODAY,
+         [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsTester")); },
+         QStringLiteral("Settings, Tester.")},
         {QStringLiteral("TimeFormat"), TODAY,
          [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsTimeFormat")); },
          QStringLiteral("Settings, Time format.")},

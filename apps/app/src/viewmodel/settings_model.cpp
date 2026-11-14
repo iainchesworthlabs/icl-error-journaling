@@ -41,7 +41,7 @@ constexpr int MAX_PATTERN = 500;
 const QString ANSWER_TOKEN = QStringLiteral("[answer]");
 constexpr int MAX_SORT_ORDER = 1'000'000;
 
-const QString OP_FACILITATOR = QStringLiteral("facilitator");
+const QString OP_TESTER = QStringLiteral("tester");
 const QString OP_PREFIX = QStringLiteral("unit prefix");
 const QString OP_TIME_FORMAT = QStringLiteral("time format");
 const QString OP_TOTALS = QStringLiteral("totals");
@@ -263,7 +263,7 @@ QString message_of(const std::expected<void, ConfigEditError>& result)
 
 bool is_complete(const Configuration& configuration)
 {
-    return !configuration.m_Facilitator.empty() && !configuration.m_UnitPrefix.empty();
+    return !configuration.m_Tester.empty() && !configuration.m_UnitPrefix.empty();
 }
 
 /// Writes `layout` back: the types in it get their position, the other live types are off the board. A retired type
@@ -315,6 +315,7 @@ SettingsModel::SettingsModel(StorageGateway& gateway, const Environment& environ
       m_Zone(environment.m_Zone), m_Zones(environment.m_Zones), m_ShownTimeFormat(Configuration{}.m_TimeFormat),
       m_ErrorTypes(new ErrorTypeListModel(this)), m_Locations(new LocationListModel(this)),
       m_Templates(new TemplateListModel(this)), m_BoardLayout(new BoardLayoutModel(this)),
+      m_InteractionLayout(new BoardLayoutModel(this, BoardLayoutModel::Board::INTERACTIONS)),
       m_InteractionTypes(new InteractionTypeListModel(this))
 {
     m_InteractionTypes->refresh(m_Setup);
@@ -322,15 +323,16 @@ SettingsModel::SettingsModel(StorageGateway& gateway, const Environment& environ
     m_Locations->refresh(m_Setup);
     m_Templates->refresh(m_Setup);
     m_BoardLayout->refresh(m_Setup);
+    m_InteractionLayout->refresh(m_Setup);
 }
 
 SettingsModel::~SettingsModel() = default;
 
 // ---------------------------------------------------------------------------------------------------------- reading
 
-QString SettingsModel::facilitator() const
+QString SettingsModel::tester() const
 {
-    return QString::fromStdString(view().m_Facilitator);
+    return QString::fromStdString(view().m_Tester);
 }
 
 QString SettingsModel::unit_prefix() const
@@ -407,6 +409,11 @@ QAbstractItemModel* SettingsModel::templates() const
 QAbstractItemModel* SettingsModel::board_layout() const
 {
     return m_BoardLayout;
+}
+
+QAbstractItemModel* SettingsModel::interaction_layout() const
+{
+    return m_InteractionLayout;
 }
 
 QAbstractItemModel* SettingsModel::interaction_types() const
@@ -529,7 +536,7 @@ std::expected<void, ConfigEditError> SettingsModel::commit(Configuration candida
     {
         if (m_Configured)
         {
-            return fail(refused(tr("The facilitator and the unit prefix cannot be empty.")));
+            return fail(refused(tr("The tester and the unit prefix cannot be empty.")));
         }
         // A set-up in progress: kept in memory until it has what the importer needs.
         m_Setup = std::move(candidate);
@@ -597,6 +604,7 @@ void SettingsModel::publish(bool in_force_changed)
     m_Locations->refresh(shown);
     m_Templates->refresh(shown);
     m_BoardLayout->refresh(shown);
+    m_InteractionLayout->refresh(shown);
     m_InteractionTypes->refresh(shown);
     if (in_force_changed)
     {
@@ -612,18 +620,18 @@ void SettingsModel::publish(bool in_force_changed)
 
 // -------------------------------------------------------------------------------------------------------- the lists
 
-QString SettingsModel::setFacilitator(const QString& name)
+QString SettingsModel::setTester(const QString& name)
 {
     const auto text = checked_name(name);
     if (!text)
     {
         return text.error();
     }
-    return change_message(OP_FACILITATOR,
+    return change_message(OP_TESTER,
                           [value = *text](Configuration& configuration) -> EditResult
                           {
-                              const bool changed = configuration.m_Facilitator != value;
-                              configuration.m_Facilitator = value;
+                              const bool changed = configuration.m_Tester != value;
+                              configuration.m_Tester = value;
                               return changed;
                           });
 }
@@ -1191,6 +1199,16 @@ namespace
 using TypeLayout = std::array<std::optional<std::size_t>, CONFIG_BOARD_POSITIONS>;
 
 /// The second board's layout: the live types by position, the first in the list having a position that two claim.
+/// The first change to the interaction types copies the built-in list into the configuration, so that an edit starts from
+/// the types the board shows (Stage 14, I-6: a file with none shows the built-in ones) and the setup file then holds them.
+void materialise_interaction_defaults(Configuration& configuration)
+{
+    if (configuration.m_InteractionTypes.empty())
+    {
+        configuration.m_InteractionTypes = default_interaction_types();
+    }
+}
+
 TypeLayout type_layout(const Configuration& configuration)
 {
     TypeLayout layout{};
@@ -1312,6 +1330,7 @@ QString SettingsModel::addInteractionType(const QString& name, const QString& li
     return change_message(OP_INTERACTION_TYPE,
                           [value = *text, pattern = *pattern, id](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               if (configuration.m_InteractionTypes.size() >= CONFIG_MAX_ENTRIES_PER_LIST)
                               {
                                   return std::unexpected(list_full());
@@ -1358,6 +1377,7 @@ QString SettingsModel::updateInteractionType(const QString& id, const QString& n
     return change_message(OP_INTERACTION_TYPE,
                           [value = *text, pattern = *pattern, target = *type_id](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               const auto found =
                                   std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
                               if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
@@ -1387,6 +1407,7 @@ QString SettingsModel::retireInteractionType(const QString& id)
     return change_message(OP_INTERACTION_TYPE,
                           [target = *type_id](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               const auto found =
                                   std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
                               if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
@@ -1407,6 +1428,7 @@ QString SettingsModel::moveInteractionTile(int fromPosition, int toPosition)
     return change_message(OP_INTERACTION_TYPE,
                           [fromPosition, toPosition](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               TypeLayout layout = type_layout(configuration);
                               const auto from = static_cast<std::ptrdiff_t>(fromPosition - 1);
                               const auto to = static_cast<std::ptrdiff_t>(toPosition - 1);
@@ -1445,6 +1467,7 @@ QString SettingsModel::assignInteractionTile(int position, const QString& intera
     return change_message(OP_INTERACTION_TYPE,
                           [position, target = *type_id](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               const auto found =
                                   std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
                               if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
@@ -1480,6 +1503,7 @@ QString SettingsModel::removeInteractionTile(const QString& interactionTypeId)
     return change_message(OP_INTERACTION_TYPE,
                           [target = *type_id](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               const auto found =
                                   std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
                               if (found == configuration.m_InteractionTypes.end() || found->m_Retired)

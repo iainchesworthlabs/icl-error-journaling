@@ -49,18 +49,18 @@ TEST_CASE("A new log holds its header and nothing else", "[stored-log]")
     CHECK_FALSE(log.m_Meta.m_Archived);
     CHECK_FALSE(log.m_Meta.m_LastSharedUtc.has_value());
     CHECK(log.m_Log.entries().empty());
-    CHECK(log.m_Log.initial_header().m_Facilitator == "Sam Example");
+    CHECK(log.m_Log.initial_header().m_Tester == "Sam Example");
 }
 
 TEST_CASE("A header that breaks a limit does not make a log", "[stored-log]")
 {
     HeaderValues header = sample_header();
-    header.m_Facilitator = std::string(MAX_HEADER_TEXT_CODE_POINTS + 1, 'x');
+    header.m_Tester = std::string(MAX_HEADER_TEXT_CODE_POINTS + 1, 'x');
     CHECK(make_stored_log(sample_id<LogId>(1), CreateLogBody{header, sample_time(0), std::nullopt}).error().m_Kind ==
           StorageErrorKind::LIMIT_EXCEEDED);
 
     header = sample_header();
-    header.m_Facilitator = "broken \xC3";
+    header.m_Tester = "broken \xC3";
     CHECK(make_stored_log(sample_id<LogId>(1), CreateLogBody{header, sample_time(0), std::nullopt}).error().m_Kind ==
           StorageErrorKind::INVALID_ARGUMENT);
 

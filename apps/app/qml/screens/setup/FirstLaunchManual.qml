@@ -2,8 +2,8 @@
 import QtQuick
 import ErrorJournalingApp
 
-// First launch, by hand (docs/design/screens/FirstLaunchManual.dc.html, PRF-09): the facilitator and the UNIT prefix, then
-// Continue. The two values are given to `setFacilitator` and `setUnitPrefix`. While either is missing the view model
+// First launch, by hand (docs/design/screens/FirstLaunchManual.dc.html, PRF-09): the tester and the UNIT prefix, then
+// Continue. The two values are given to `setTester` and `setUnitPrefix`. While either is missing the view model
 // holds what it has in memory, and when both are set it saves the setup and `configured` becomes true; the shell then
 // shows the Log screen. A refusal of either (an empty name, a prefix with a dash) is shown under its field, with a red
 // border, and the page stays.
@@ -22,18 +22,18 @@ EditorPage {
 
     required property var settings
 
-    property string facilitator: root.settings.facilitator
+    property string tester: root.settings.tester
     property string prefix: root.settings.unitPrefix
-    property string facilitatorRefusal: ""
+    property string testerRefusal: ""
     property string prefixRefusal: ""
 
     signal backRequested
     signal completed
 
     function accept(): void {
-        root.facilitatorRefusal = root.settings.setFacilitator(root.facilitator);
+        root.testerRefusal = root.settings.setTester(root.tester);
         root.prefixRefusal = root.settings.setUnitPrefix(root.prefix);
-        if (root.facilitatorRefusal.length === 0 && root.prefixRefusal.length === 0)
+        if (root.testerRefusal.length === 0 && root.prefixRefusal.length === 0)
             root.completed();
     }
 
@@ -72,16 +72,16 @@ EditorPage {
             }
 
             FormField {
-                objectName: "facilitatorField"
-                label: qsTr("Facilitator")
+                objectName: "testerField"
+                label: qsTr("Tester")
                 compact: true
                 border: true
-                text: root.facilitator
-                errorText: root.facilitatorRefusal
+                text: root.tester
+                errorText: root.testerRefusal
                 inputMethodHints: Qt.ImhNoPredictiveText
                 onTextEdited: text => {
-                    root.facilitator = text;
-                    root.facilitatorRefusal = "";
+                    root.tester = text;
+                    root.testerRefusal = "";
                 }
             }
 

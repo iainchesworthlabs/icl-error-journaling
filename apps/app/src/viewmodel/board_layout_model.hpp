@@ -44,7 +44,14 @@ public:
     };
     // roleNames(): typeId, label, colourSlot, position, isOther, isEmpty, accessibleName
 
-    explicit BoardLayoutModel(QObject* parent = nullptr);
+    /// Which board the miniature shows: the error types, or the types of the optional second board.
+    enum class Board
+    {
+        ERRORS,
+        INTERACTIONS
+    };
+
+    explicit BoardLayoutModel(QObject* parent = nullptr, Board board = Board::ERRORS);
 
     [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override;
     [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;
@@ -64,6 +71,7 @@ private:
         friend bool operator==(const Tile&, const Tile&) = default;
     };
 
+    Board m_Board;
     std::array<Tile, ROWS> m_Tiles;
 };
 

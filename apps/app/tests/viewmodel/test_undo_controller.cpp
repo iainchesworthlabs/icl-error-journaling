@@ -518,7 +518,7 @@ TEST_CASE("A later action replaces the toast while an undo is in flight, and the
     UndoRig rig;
     rig.commit(tap(1, melbourne(10, 20)));
     REQUIRE(rig.controller.undo());
-    // The facilitator taps again before the undo has committed: queued behind it, so it opens its toast afterwards.
+    // The tester taps again before the undo has committed: queued behind it, so it opens its toast afterwards.
     REQUIRE(rig.document->add_entry(tap(2, melbourne(10, 21)), Origin::USER, rig.count(rig.m_Done)));
     rig.gateway().run_all();
 
@@ -861,4 +861,38 @@ TEST_CASE("A controller that is gone is not called back by a late commit", "[vie
 
     CHECK(rig.deleted(1));                            // it committed all the same
     CHECK(rig.world().m_Clock.pending_timers() == 1); // only the rig's own controller still has a timer
+}
+
+TEST_CASE("A tap on the Interactions board opens a toast with its label, and its undo removes the entry",
+          "[viewmodel][undo][interaction]")
+{
+    UndoRig rig;
+    rig.commit(sample_interaction_entry(1, melbourne(10, 20)));
+    REQUIRE(rig.controller.active());
+    CHECK(rig.text() == "Spoke with logged at 10:20");
+    CHECK(rig.toasts_opened() == 1);
+
+    REQUIRE(rig.controller.undo());
+    rig.gateway().run_all();
+    CHECK(rig.deleted(1));
+    CHECK_FALSE(rig.controller.active());
+}
+
+TEST_CASE("A second tap on the Interactions board does not count as a repeat, and an error tap replaces its toast",
+          "[viewmodel][undo][interaction]")
+{
+    UndoRig rig;
+    rig.commit(sample_interaction_entry(1, melbourne(10, 20)));
+    rig.advance(1s);
+    rig.commit(sample_interaction_entry(2, melbourne(10, 21)));
+    REQUIRE(rig.controller.active());
+    CHECK(rig.text() == "Spoke with logged at 10:21");
+
+    rig.advance(1s);
+    rig.commit(tap(3, melbourne(10, 22)));
+    CHECK(rig.text() == "Wrong Response logged at 10:22");
+    CHECK(rig.controller.undo());
+    rig.gateway().run_all();
+    CHECK(rig.deleted(3));
+    CHECK_FALSE(rig.deleted(2));
 }

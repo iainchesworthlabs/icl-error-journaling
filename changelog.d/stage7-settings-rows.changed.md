@@ -1,1 +1,1 @@
-**The unit prefix and the totals line are on the Settings list.** "Unit prefix" and "Include a totals line" are rows under Facilitator, so nobody has to guess that they are behind it. They are still on the Facilitator page too.
+**The unit prefix and the totals line are on the Settings list.** "Unit prefix" and "Include a totals line" are rows under Tester, so nobody has to guess that they are behind it. They are still on the Tester page too.

@@ -9,6 +9,7 @@
 #include "error_journaling/log_repository.hpp"
 #include "error_journaling/utf8.hpp"
 #include "viewmodel/export_context_builder.hpp"
+#include "viewmodel/interaction_types.hpp"
 #include "viewmodel/recovery_notice.hpp"
 
 #include <algorithm>
@@ -164,7 +165,7 @@ void LogSession::start_load()
     if (m_Configuration.configured())
     {
         HeaderValues header;
-        header.m_Facilitator = m_Configuration.configuration().m_Facilitator;
+        header.m_Tester = m_Configuration.configuration().m_Tester;
         header.m_LocalDate = today();
         plan = Plan{m_Environment.m_Ids.next_as<LogId>(), std::move(header)};
     }
@@ -260,9 +261,9 @@ HeaderValues LogSession::header_in_force() const
     return HeaderHistory(m_Document->log()).at(m_Environment.m_Clock.now());
 }
 
-QString LogSession::facilitator() const
+QString LogSession::tester() const
 {
-    return to_qstring(header_in_force().m_Facilitator);
+    return to_qstring(header_in_force().m_Tester);
 }
 
 QString LogSession::unit_text() const
@@ -490,13 +491,13 @@ std::chrono::year_month_day LogSession::today() const
     return std::chrono::year_month_day{std::chrono::floor<std::chrono::days>(now.m_Utc)};
 }
 
-std::string LogSession::facilitator_for_new_log() const
+std::string LogSession::tester_for_new_log() const
 {
     if (m_Configuration.configured())
     {
-        return m_Configuration.configuration().m_Facilitator;
+        return m_Configuration.configuration().m_Tester;
     }
-    return m_Document ? m_Document->log().initial_header().m_Facilitator : std::string{};
+    return m_Document ? m_Document->log().initial_header().m_Tester : std::string{};
 }
 
 // -------------------------------------------------------------------------------------------------- commands
@@ -643,13 +644,36 @@ bool LogSession::attachDraft(const QString& entryId)
     {
         return false;
     }
-    const auto* error = std::get_if<ErrorEntry>(&found->m_Body);
-    if (error == nullptr || error->m_AttachedNote.has_value())
+    // Worked out against the entry as it is when the command is reached, so an edit still in flight is not overwritten.
+    const auto attach = [text](Entry& entry) -> std::optional<std::string>
     {
-        return false;
+        if (auto* error = std::get_if<ErrorEntry>(&entry.m_Body))
+        {
+            if (error->m_AttachedNote.has_value())
+            {
+                return "That entry has a note already.";
+            }
+            error->m_AttachedNote = text;
+            return std::nullopt;
+        }
+        if (auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body))
+        {
+            if (interaction->m_AttachedNote.has_value())
+            {
+                return "That entry has a note already.";
+            }
+            interaction->m_AttachedNote = text;
+            return std::nullopt;
+        }
+        return "Only an error or an interaction takes a note.";
+    };
+    {
+        Entry probe = *found;
+        if (attach(probe))
+        {
+            return false;
+        }
     }
-    Entry edited = *found;
-    std::get<ErrorEntry>(edited.m_Body).m_AttachedNote = text;
 
     const QString submitted = m_Draft;
     const std::uint64_t revision = m_DraftRevision;
@@ -663,7 +687,7 @@ bool LogSession::attachDraft(const QString& entryId)
                                   draft_attached(to_qstring(entry.format()), to_qstring(text), submitted, revision);
                               }
                           });
-    return settle(OPERATION, m_Document->edit_entry(*id, std::move(edited), std::move(done)));
+    return settle(OPERATION, m_Document->edit_entry(*id, LogDocument::Mutator(attach), std::move(done)));
 }
 
 void LogSession::draft_attached(const QString& entry_id, const QString& text, const QString& submitted,
@@ -677,6 +701,137 @@ void LogSession::draft_attached(const QString& entry_id, const QString& text, co
         write_draft_now();
     }
     emit draftAttached(entry_id, text);
+}
+
+QString LogSession::location_id() const
+{
+    const HeaderValues header = header_in_force();
+    if (!header.m_Location || !header.m_Location->m_Id)
+    {
+        return {};
+    }
+    return to_qstring(header.m_Location->m_Id->format());
+}
+
+QString LogSession::recordInteractionEntry(const QString& typeId)
+{
+    constexpr const char* OPERATION = "recordInteraction";
+    if (!can_write(OPERATION))
+    {
+        return {};
+    }
+    const auto id = parse_id<InteractionTypeId>(typeId);
+    if (!id)
+    {
+        return {};
+    }
+    const auto types = interaction_types_in_force(m_Configuration.configuration());
+    const auto type = std::ranges::find_if(types, [&id](const InteractionType& t) { return t.m_Id == *id; });
+    if (type == types.end() || type->m_Retired)
+    {
+        return {};
+    }
+    Entry entry;
+    entry.m_Id = m_Environment.m_Ids.next_as<EntryId>();
+    entry.m_Captured = now_timestamp();
+    entry.m_Body = InteractionEntry{type->m_Id, type->m_Name, {}, std::nullopt, std::nullopt};
+    const EntryId entry_id = entry.m_Id;
+
+    ++m_OwnPending;
+    const QString type_id = to_qstring(type->m_Id.format());
+    const QString type_name = to_qstring(type->m_Name);
+    auto done = make_done(OPERATION,
+                          [this, entry_id, type_id, type_name](bool succeeded)
+                          {
+                              if (succeeded)
+                              {
+                                  m_Feedback.entry_recorded(entry_id);
+                                  emit entryRecorded(to_qstring(entry_id.format()));
+                              }
+                              else
+                              {
+                                  announce_record_failed(type_id, type_name);
+                              }
+                          });
+    if (!settle(OPERATION, m_Document->add_entry(std::move(entry), LogChange::Origin::USER, std::move(done))))
+    {
+        announce_record_failed(type_id, type_name);
+        return {};
+    }
+    return to_qstring(entry_id.format());
+}
+
+bool LogSession::setInteractionPeople(const QString& entryId, const QStringList& personIds)
+{
+    constexpr const char* OPERATION = "setInteractionPeople";
+    if (!can_write(OPERATION))
+    {
+        return false;
+    }
+    const auto id = parse_id<EntryId>(entryId);
+    if (!id)
+    {
+        return false;
+    }
+    const Entry* found = m_Document->log().find(*id);
+    if (found == nullptr || found->m_Deleted || !std::holds_alternative<InteractionEntry>(found->m_Body))
+    {
+        return false;
+    }
+    std::vector<PersonId> people;
+    for (const QString& text : personIds)
+    {
+        const auto person = parse_id<PersonId>(text);
+        if (!person || !add_person_pick(people, *person))
+        {
+            return false;
+        }
+    }
+    ++m_OwnPending;
+    const auto put = [people = std::move(people)](Entry& entry) -> std::optional<std::string>
+    {
+        auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body);
+        if (interaction == nullptr)
+        {
+            return "That entry is not an interaction.";
+        }
+        interaction->m_People = people;
+        return std::nullopt;
+    };
+    return settle(OPERATION, m_Document->edit_entry(*id, LogDocument::Mutator(put), make_done(OPERATION, {})));
+}
+
+bool LogSession::setInteractionValue(const QString& entryId, const QString& value)
+{
+    constexpr const char* OPERATION = "setInteractionValue";
+    if (!can_write(OPERATION))
+    {
+        return false;
+    }
+    const auto id = parse_id<EntryId>(entryId);
+    const std::string text = to_utf8(value.trimmed());
+    const auto length = utf8_code_points(text);
+    if (!id || text.empty() || !length || *length > MAX_INTERACTION_VALUE_CODE_POINTS)
+    {
+        return false;
+    }
+    const Entry* found = m_Document->log().find(*id);
+    if (found == nullptr || found->m_Deleted || !std::holds_alternative<InteractionEntry>(found->m_Body))
+    {
+        return false;
+    }
+    ++m_OwnPending;
+    const auto put = [text](Entry& entry) -> std::optional<std::string>
+    {
+        auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body);
+        if (interaction == nullptr)
+        {
+            return "That entry is not an interaction.";
+        }
+        interaction->m_Value = text;
+        return std::nullopt;
+    };
+    return settle(OPERATION, m_Document->edit_entry(*id, LogDocument::Mutator(put), make_done(OPERATION, {})));
 }
 
 bool LogSession::addNote(const QString& text)
@@ -1247,9 +1402,9 @@ bool LogSession::startNewLog()
     m_StartingNewLog = true;
     emit pendingWritesChanged();
 
-    // The new log's header: the facilitator and today's date, nothing else (HDR-05).
+    // The new log's header: the tester and today's date, nothing else (HDR-05).
     HeaderValues header;
-    header.m_Facilitator = facilitator_for_new_log();
+    header.m_Tester = tester_for_new_log();
     header.m_LocalDate = today();
     attempt_new_log(m_Environment.m_Ids.next_as<LogId>(), std::move(header));
     return true;

@@ -9,7 +9,7 @@ namespace ej::export_format
 
 // The export is a contract with the downstream ticket indexer (PRD, Export format). Each constant is defined once here.
 
-inline constexpr std::string_view LABEL_FACILITATOR = "Facilitator";
+inline constexpr std::string_view LABEL_TESTER = "Tester";
 inline constexpr std::string_view LABEL_DATE = "Date";
 inline constexpr std::string_view LABEL_LOCATION = "Location";
 inline constexpr std::string_view LABEL_SOFTWARE_VERSION = "Software Version";
@@ -28,7 +28,7 @@ inline constexpr char LINE_END = '\n';
 
 // Timeline lines. <time> is formatted by format_time.
 
-/// The text between the time and the error name on an error line when the facilitator has not chosen another (PRF-13;
+/// The text between the time and the error name on an error line when the tester has not chosen another (PRF-13;
 /// accepted: "10:05 T| Wrong Response"). The space after the prefix is part of the line format and is written only when
 /// the prefix is not empty.
 inline constexpr std::string_view DEFAULT_ERROR_PREFIX = "T|";

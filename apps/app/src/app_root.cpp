@@ -179,7 +179,18 @@ public:
             m_Failed = std::make_unique<FailedRepository>(*failure);
             repository = m_Failed.get();
         }
-        m_Context.emplace(vm::StorageContext{*repository, m_Config});
+        if (!failure && m_Sqlite)
+        {
+            // The list of people (Stage 14): its own journal, cached in the database. A list that cannot be opened is
+            // not fatal: the log works and the picker says people are not available.
+            PeopleStoreOptions people_options;
+            people_options.m_Cache = m_Sqlite.get();
+            if (auto people = PeopleStore::open(m_Location, clock, std::move(people_options)); people)
+            {
+                m_People = std::move(*people);
+            }
+        }
+        m_Context.emplace(vm::StorageContext{*repository, m_Config, m_People.get()});
         handshake.publish(vm::StartupResult{std::move(report)});
     }
 
@@ -194,6 +205,7 @@ private:
     vm::FileConfigStore m_Config;
     std::unique_ptr<FileJournal> m_Journal;
     std::unique_ptr<SqliteLogRepository> m_Sqlite;
+    std::unique_ptr<PeopleStore> m_People; // after the repository it caches into: destroyed first
     std::unique_ptr<LogRepository> m_Wrapped;
     std::unique_ptr<FailedRepository> m_Failed;
     std::optional<vm::StorageContext> m_Context;
@@ -351,15 +363,32 @@ AppRoot::AppRoot(const vm::Environment& environment, const AppPlatform& platform
       m_Registry(environment, *m_Gateway), m_Feedback(platform.m_Haptics),
       m_Session(environment, *m_Gateway, m_Registry, m_Settings, m_Feedback, std::move(storage.m_Startup)),
       m_Undo(environment, m_Settings), m_UndoFollower(std::make_unique<UndoFollower>(m_Session, m_Undo)),
-      m_Board(m_Settings, m_Session), m_Picker(m_Settings, m_Session, m_Settings),
-      m_Timeline(environment, m_Settings, platform.m_Clipboard),
+      m_Board(m_Settings, m_Session), m_InteractionBoard(m_Settings, m_Session), m_People(environment, *m_Gateway),
+      m_PeopleAdmin(environment, *m_Gateway),
+      m_Picker(m_Settings, m_Session, m_Settings), m_Timeline(environment, m_Settings, platform.m_Clipboard),
       m_Share(environment, m_Session, m_Registry, m_Settings, platform.m_Share, platform.m_ShareAvailable),
       m_Day(environment, m_Session, m_Share),
       m_History(environment, *m_Gateway, m_Registry, m_Settings, m_Session, platform.m_Clipboard, m_Share)
 {
     m_Timeline.follow(m_Session);
+    // A change on the People screen reaches the picker.
+    connect(&m_PeopleAdmin, &vm::PeopleAdminModel::changed, &m_People, &vm::PeopleModel::reload);
+    // The rows of Review and of a past log say a person's name as the list has it now: made again when the list
+    // changes.
+    const auto refresh_names = [this]
+    {
+        m_Timeline.refresh_names();
+        if (auto* past = m_History.review_model(); past != nullptr)
+        {
+            past->refresh_names();
+        }
+    };
+    connect(&m_People, &QAbstractItemModel::modelReset, this, refresh_names);
+    connect(&m_People, &QAbstractItemModel::rowsInserted, this, refresh_names);
+    connect(&m_People, &QAbstractItemModel::rowsRemoved, this, refresh_names);
+    connect(&m_People, &QAbstractItemModel::dataChanged, this, refresh_names);
 
-    // An undone note goes back to the composer through the session's draft. Text the facilitator has typed since is
+    // An undone note goes back to the composer through the session's draft. Text the tester has typed since is
     // kept below it, so neither is lost.
     m_Undo.set_note_undo_target(
         [this](const std::string& text)

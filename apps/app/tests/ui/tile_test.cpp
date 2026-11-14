@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <vector>
 
 using namespace ej::ui;
 using namespace std::chrono_literals;
@@ -543,6 +544,179 @@ TEST_CASE("tile.label: a label with a very long word wraps inside the word inste
     CHECK_FALSE(label->property("truncated").toBool());
     CHECK(label->property("contentWidth").toDouble() <= label->width() + 0.5);
     CHECK(label->property("contentHeight").toDouble() <= label->height() + 0.5);
+}
+
+TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone width, the smallest tile or any text size",
+          "[ui][tile]")
+{
+    UiRig rig;
+    // The longest words of the sample configuration (error types and interaction types) and "Disconnection", which a
+    // tester reported wrapping its last letter. Each is alone and with a short word before it.
+    const QStringList words{QStringLiteral("Disconnection"), QStringLiteral("Navigation"), QStringLiteral("Sequence"),
+                            QStringLiteral("interaction"), QStringLiteral("Interaction")};
+
+    // The runner's font is wider than the phone's, so a tile of the phone's width may not hold "Disconnection" in it.
+    // The widths are the phone's (iPhone 17 at 118 pt, the 88 pt minimum), where a word that cannot fit may break as
+    // the last resort, and widths from the runner's own measure of the word, for the case that is the report: a word
+    // that is a little too wide, and one that needs the label's smallest size.
+    // The windows: an iPhone 17, and a Regular window (an iPad Air 11-inch in portrait: tiles 218.7 wide; in landscape
+    // 207; an iPad mini 198; the inner screen of a foldable about 200) whose tile label is the larger role. A tile is
+    // (column - 2 gaps) / 3 wide.
+    struct Window
+    {
+        QSize m_Size;
+        std::vector<double> m_TileWidths;
+        bool m_MustFit;
+    };
+    const std::vector<Window> windows{Window{QSize(402, 874), {118.0, 104.0, 90.7, 88.0}, false},
+                                      Window{QSize(820, 1180), {218.7, 207.0, 200.0, 198.0}, true}};
+    for (const Window& window : windows)
+    {
+    for (const double scale : {1.0, 1.3, 3.1})
+    {
+        rig.set_window_size(window.m_Size);
+        rig.set_text_scale(scale);
+        for (const QString& word : words)
+        {
+            for (const QString& text : {word, QStringLiteral("Visitor ") + word})
+            {
+                QQuickItem* tile = rig.load(QStringLiteral("Tile"), tile_properties(text, 2));
+                REQUIRE(tile != nullptr);
+                tile->setWidth(window.m_TileWidths.front());
+                tile->setHeight(TILE_HEIGHT);
+                rig.layout();
+                QObject* probe = tile->findChild<QObject*>(QStringLiteral("tileWordProbe"));
+                REQUIRE(probe != nullptr);
+                // The word at the role's size, and the tile that gives it this share of its width: a word that is
+                // 2% too wide (the report), 10% too wide, and the share at which it fits only at the smallest size.
+                const double word_width = probe->property("advanceWidth").toDouble();
+                const double padding = tile->property("padding").toDouble() * 2; // the padding of both sides
+                const double floor_share = tile->property("wordFitFloor").toDouble();
+                struct Width
+                {
+                    double m_Tile;
+                    bool m_MustFit;
+                };
+                // The last needs the sides of the label to give up to 4 pt each, 6 pt in all here.
+                std::vector<Width> widths{Width{word_width * 0.98 + padding, true},
+                                          Width{word_width * 0.9 + padding, true},
+                                          Width{word_width * (floor_share + 0.02) + padding, true},
+                                          Width{word_width * floor_share + padding - 6.0, true}};
+                for (const double tile_width : window.m_TileWidths)
+                {
+                    widths.push_back(Width{tile_width, window.m_MustFit});
+                }
+                for (const Width width : widths)
+                {
+                    tile->setWidth(width.m_Tile);
+                    rig.layout();
+                    QQuickItem* label = rig.find(QStringLiteral("tileLabel"));
+                    REQUIRE(label != nullptr);
+                    const int words_in_label = static_cast<int>(text.count(QLatin1Char(' '))) + 1;
+                    INFO("label " << text.toStdString() << ", window " << window.m_Size.width() << ", tile width "
+                                  << width.m_Tile << ", text scale " << scale << ", lines "
+                                  << label->property("lineCount").toInt() << ", content width "
+                                  << label->property("contentWidth").toDouble() << " of " << label->width()
+                                  << ", the word " << word_width << " at the role's size");
+                    // A word that fits at the smallest size is whole: one line to a word at most, as a break inside a
+                    // word would make one more, and within the label. Where the tile is too narrow even for that, the
+                    // word breaks and nothing is cut off.
+                    if (width.m_MustFit || tile->property("wordFits").toBool())
+                    {
+                        CHECK(tile->property("wordFits").toBool());
+                        CHECK(label->property("lineCount").toInt() <= words_in_label);
+                        CHECK(label->property("contentWidth").toDouble() <= label->width() + 0.5);
+                    }
+                    CHECK_FALSE(label->property("truncated").toBool());
+                    CHECK(label->property("contentHeight").toDouble() <= label->height() + 0.5);
+                }
+            }
+        }
+    }
+    }
+    rig.set_text_scale(1.0);
+    rig.set_window_size(QSize(402, 874));
+}
+
+TEST_CASE("tile.label_whole_words: the twelve tiles of the Interactions board keep each word whole", "[ui][tile]")
+{
+    // The four default interaction types ("Spoke with", "Played song", "Visitor interaction", "Gave item"), the longest
+    // words of the Errors board, and the tile that Other is, as the board draws them: a BoardGrid that names its tiles
+    // interactionTile0 to interactionTile11, 96 pt high, in a phone and in a Regular window.
+    const QStringList labels{QStringLiteral("Spoke with"),     QStringLiteral("Played song"),
+                             QStringLiteral("Visitor interaction"), QStringLiteral("Gave item"),
+                             QStringLiteral("Disconnection"),  QStringLiteral("Navigation Failure"),
+                             QStringLiteral("Sequence Out of Order"), QStringLiteral("Interaction"),
+                             QStringLiteral("Visitor Disconnection"), QStringLiteral("Navigation"),
+                             QStringLiteral("Sequence"),       QStringLiteral("Other")};
+    QString rows;
+    for (const QString& label : labels)
+    {
+        rows += QStringLiteral("ListElement { typeId: \"t\"; label: \"%1\"; colourSlot: 3; count: 0; hasCount: false; "
+                               "isOther: false; isEmpty: false; accessibleName: \"%1\" }\n")
+                    .arg(label);
+    }
+    const QByteArray source = QString::fromLatin1(R"QML(
+        import QtQuick
+        import ErrorJournalingApp
+        Item {
+            BoardGrid {
+                objectName: "grid"
+                interactions: true
+                tilePrefix: "interactionTile"
+                tileHeight: 96
+                width: %1
+                model: ListModel {
+                    %2
+                }
+            }
+        })QML")
+                                  .arg(370)
+                                  .arg(rows)
+                                  .toUtf8();
+    struct Window
+    {
+        QSize m_Size;
+        double m_GridWidth;
+        bool m_MustFit;
+    };
+    for (const Window& window : {Window{QSize(402, 874), 370.0, false}, Window{QSize(820, 1180), 680.0, true}})
+    {
+        UiRig rig(window.m_Size);
+        for (const double scale : {1.0, 1.3, 3.1})
+        {
+            rig.set_text_scale(scale);
+            QByteArray adjusted = source;
+            adjusted.replace("width: 370", QByteArray("width: ") + QByteArray::number(window.m_GridWidth));
+            QQuickItem* root = rig.load_source(adjusted);
+            REQUIRE(root != nullptr);
+            rig.layout();
+            for (int row = 0; row < labels.size(); ++row)
+            {
+                CAPTURE(window.m_Size.width(), scale, row);
+                // The tile of this row, found by its face: the object name interactionTile<row> is the delegate's.
+                const auto faces = rig.find_items(QStringLiteral("tileFace"));
+                REQUIRE(static_cast<int>(faces.size()) == labels.size());
+                QQuickItem* tile = faces.at(static_cast<std::size_t>(row))->parentItem();
+                CHECK(tile->objectName() == QStringLiteral("interactionTile%1").arg(row));
+                REQUIRE(tile != nullptr);
+                QQuickItem* label = tile->findChild<QQuickItem*>(QStringLiteral("tileLabel"));
+                REQUIRE(label != nullptr);
+                const int words = static_cast<int>(labels.at(row).count(QLatin1Char(' '))) + 1;
+                INFO("label " << labels.at(row).toStdString() << ", tile width " << tile->width() << ", lines "
+                              << label->property("lineCount").toInt());
+                if (window.m_MustFit || tile->property("wordFits").toBool())
+                {
+                    CHECK(tile->property("wordFits").toBool());
+                    CHECK(label->property("lineCount").toInt() <= words);
+                    CHECK(label->property("contentWidth").toDouble() <= label->width() + 0.5);
+                }
+                CHECK_FALSE(label->property("truncated").toBool());
+                CHECK(label->property("contentHeight").toDouble() <= label->height() + 0.5);
+            }
+        }
+        rig.set_text_scale(1.0);
+    }
 }
 
 TEST_CASE("tile.empty: an empty position is a button with a plus that taps and never presses", "[ui][tile]")
