@@ -2845,3 +2845,84 @@ TEST_CASE("help.first_run_tip: a tip that is no longer open, a missing state and
         CHECK(screen.help->property("shownCalls").toInt() == 0);
     }
 }
+
+// ---------------------------------------------------------------------- Interactions board in larger windows (Stage 14, I-8)
+
+namespace
+{
+constexpr double WIDE_TOP = 24.0;    // the insets of the iPad design frame
+constexpr double WIDE_BOTTOM = 20.0;
+} // namespace
+
+TEST_CASE("ipad.second_board_tiles: the twelve tiles are 88 pt or more, equal, and inside the board area",
+          "[ui][log][interaction][ipad][fold]")
+{
+    struct Window
+    {
+        QSize m_Size;
+        bool m_Wide;
+    };
+    const Window windows[] = {{QSize(744, 1133), false}, {QSize(820, 1180), false}, {QSize(1032, 1376), false},
+                              {QSize(1180, 820), true},  {QSize(1133, 744), true},  {QSize(1366, 1024), true},
+                              {QSize(701, 841), false}};
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    for (const Window& window : windows)
+    {
+        CAPTURE(window.m_Size.width(), window.m_Size.height());
+        screen.rig.set_window_size(window.m_Size);
+        screen.rig.set_safe_area(WIDE_TOP, WIDE_BOTTOM);
+        screen.rig.layout();
+        const double tile = screen.item->property("interactionTileHeight").toDouble();
+        CHECK(tile >= 88.0);
+        const QRectF area = screen.rig.geometry(screen.named(QStringLiteral("interactionsBoard")));
+        for (int row = 0; row < 12; ++row)
+        {
+            CAPTURE(row);
+            const QRectF rect = screen.rig.geometry(screen.itile(row));
+            CHECK(rect.height() >= 88.0);
+            CHECK(rect.width() >= 88.0);
+            CHECK(std::abs(rect.height() - tile) <= 1.0);
+            CHECK(rect.left() >= area.left() - 0.5);
+            CHECK(rect.right() <= area.right() + 0.5);
+            CHECK(rect.top() >= area.top() - 0.5);
+            CHECK(rect.bottom() <= area.bottom() + 0.5);
+        }
+        if (window.m_Wide)
+            CHECK(area.right() <= window.m_Size.width() * 0.7);
+    }
+}
+
+TEST_CASE("fold.state_kept: a fold or unfold with the person picker open keeps the picker, its search and the entry",
+          "[ui][log][interaction][fold]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    screen.rig.set_window_size(QSize(841, 701));
+    screen.rig.set_safe_area(WIDE_TOP, WIDE_BOTTOM);
+    screen.rig.layout();
+    screen.double_tap(sim, screen.itile(SPOKE_WITH_ROW));
+    QQuickItem* picker = screen.sheet(QStringLiteral("logPersonPicker"));
+    REQUIRE(screen.open(QStringLiteral("logPersonPicker")));
+    QQuickItem* search = screen.named(QStringLiteral("personPickerSearch"));
+    search->setProperty("filter", QStringLiteral("Alex Sample"));
+    screen.rig.layout();
+    REQUIRE(sim.entries().size() == 1);
+
+    // Half folded, tabletop, the cover screen, and open again.
+    for (const QSize size : {QSize(701, 841), QSize(344, 882), QSize(466, 678), QSize(701, 841), QSize(841, 701)})
+    {
+        CAPTURE(size.width(), size.height());
+        screen.rig.set_window_size(size);
+        screen.rig.set_safe_area(size.width() > 600 ? WIDE_TOP : 40.0, WIDE_BOTTOM);
+        screen.rig.layout();
+        CHECK(screen.open(QStringLiteral("logPersonPicker")));
+        CHECK(search->property("filter").toString() == QStringLiteral("Alex Sample"));
+        CHECK(sim.entries().size() == 1);
+        const QRectF sheet = screen.rig.geometry(picker);
+        CHECK(sheet.left() >= -0.5);
+        CHECK(sheet.right() <= size.width() + 0.5);
+    }
+}
