@@ -8,6 +8,7 @@ The facilitator approved the eight light-mode screens (1 to 8 below) on 7 Nov 20
 | --- | --- |
 | `tokens.json` | Colours (light and dark), tile palette (light and dark), type scale, spacing, radii, sizes and motion values taken from the screens. |
 | `contrast.md` | The hand-checked contrast ratios of every dark text and non-text pair, and the hue check of the dark tiles. |
+| App icon | Not a file here: `tools/store/make_app_icon.py` draws it (see [The app icon](#the-app-icon)). |
 | `screens/Name.dc.html` | Mock-up source for each screen in light mode: plain HTML with inline styles at iPhone 17 size (402 × 874 pt). |
 | `screens/Name.dark.dc.html` | The same screen in dark mode. Every screen below has both files. |
 | `screens/Name.ipad-portrait.dc.html`, `screens/Name.ipad-landscape.dc.html` | The iPad layouts of Stage 8, with a `.dark` version of each (see [iPad screens](#ipad-screens-stage-8-drafts-november-2026)). |
@@ -196,6 +197,16 @@ Decision 10 of the Stage 4 plan, drawn in `*.dark.dc.html` and held in `tokens.j
 - **Scrims** are near-black in dark mode, so a sheet or alert is lighter than the dimmed screen behind it.
 
 How the dark variants of the original eight screens were made: each light colour was replaced by the dark token with the same role (screen, card, sheet card, text, secondary text, border, link, tile slot), with no layout change.
+
+## The app icon
+
+The owner drew it on paper: an "f" and a "t" (for Field Test) sharing a board of tiles, 4 × 4. It was redrawn in the style of the tiles (rounded squares with a small gap) and the colours were chosen by the owner from options built on the app's palette.
+
+- **The "f"** is a solid white letter (a stem in the left column, arms on the first and third rows). **The "t"** is the seven filled tiles, one of them in the notch between the arms of the "f". **Three outlined squares** are the empty tiles, one in the notch below the arms.
+- **Colours:** leaf green `#4CAF6A` background, white "f", and the "t" and the outlines in `#1F303C`. White on the green is 2.8 to 1 and the "t" on the green is 5.0 to 1. The "f" was a thin outline at first, and it blurred into the background at small sizes, so it is solid. The green is the owner's choice for the icon only: the tile palette above has no green, by its own rule.
+- **One icon for light and dark.** The green background works in both, so there is no separate dark icon.
+- `tools/store/make_app_icon.py` draws it as a 1024 px opaque PNG into `apps/app/packaging/ios/Assets.xcassets/AppIcon.appiconset`. Change the icon in the script and run it again; do not edit the PNG. `tools/store/make_play_graphics.py` makes the Google Play icon from it.
+- Not yet made: the Android adaptive icon (foreground, background and monochrome layer) and the desktop tiles. Stage 9 (9.7) and Stage 12 make them from the same drawing.
 
 ## Review of the 4.2 drafts
 

@@ -1,0 +1,1 @@
+**The app has its own icon.** The placeholder (a dark square on yellow) is replaced by the owner's drawing of an "f" and a "t" on a board of tiles: a white "f" and a dark "t" on leaf green, the same in light and dark appearance. The Google Play icon is made from it. Not yet run on a device.
