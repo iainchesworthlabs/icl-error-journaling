@@ -32,6 +32,8 @@ Item {
     required property var share
     required property var picker
     required property var settings
+    // The list of people for the Edit entry sheet (the PeopleModel); null where there is none.
+    property var people: null
     // The big title: "Today’s log", or the date of a past log.
     property string title: qsTr("Today’s log")
     // A past log of History: back control, "<n> entries · Shared <date> at <time>" and "Share log again".
@@ -746,6 +748,7 @@ Item {
                 timeline: root.timeline
                 picker: root.picker
                 settings: root.settings
+                people: root.people
             },
             // The time of the entry, over the Edit entry sheet: declared after it, so that it stacks over it.
             EditTimeSheet {

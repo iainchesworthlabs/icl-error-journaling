@@ -12,6 +12,7 @@
 #include "error_journaling/time_zone_provider.hpp"
 #include "viewmodel/board_model.hpp"
 #include "viewmodel/export_context_builder.hpp"
+#include "viewmodel/person_names.hpp"
 
 #include <QByteArray>
 #include <QCoreApplication>
@@ -741,6 +742,40 @@ bool TimelineModel::deleteEntry(const QString& entryId)
 
 // ------------------------------------------------------------------------------------------------------------ edit
 
+QVariantList TimelineModel::interactionTypesFor(const QString& entryId) const
+{
+    QVariantList list;
+    const auto id = parse_id(entryId);
+    const Entry* entry = id ? m_Document->log().find(*id) : nullptr;
+    const auto* interaction = entry != nullptr ? std::get_if<InteractionEntry>(&entry->m_Body) : nullptr;
+    if (interaction == nullptr)
+    {
+        return list;
+    }
+    bool own_listed = false;
+    for (const InteractionType& type : m_Configuration.configuration().m_InteractionTypes)
+    {
+        const bool own = type.m_Id == interaction->m_Type;
+        if (type.m_Retired && !own)
+        {
+            continue;
+        }
+        own_listed = own_listed || own;
+        QVariantMap item;
+        item.insert(QStringLiteral("typeId"), text_of(type.m_Id.format()));
+        item.insert(QStringLiteral("name"), text_of(type.m_Name));
+        list.append(item);
+    }
+    if (!own_listed)
+    {
+        QVariantMap item;
+        item.insert(QStringLiteral("typeId"), text_of(interaction->m_Type.format()));
+        item.insert(QStringLiteral("name"), text_of(interaction->m_TypeLabel));
+        list.append(item);
+    }
+    return list;
+}
+
 QVariantMap TimelineModel::entryForEdit(const QString& entryId) const
 {
     const auto id = parse_id(entryId);
@@ -796,6 +831,15 @@ QVariantMap TimelineModel::entryForEdit(const QString& entryId) const
             people.append(text_of(person.format()));
         }
         map.insert(QStringLiteral("personIds"), people);
+        // The names of the people as the screen shows them (the full name; "someone" when forgotten or unknown).
+        QVariantMap names;
+        for (const PersonId& person : interaction->m_People)
+        {
+            const auto name =
+                m_Environment.m_People != nullptr ? m_Environment.m_People->name_of(person) : std::nullopt;
+            names.insert(text_of(person.format()), name ? text_of(*name) : tr("someone"));
+        }
+        map.insert(QStringLiteral("personNames"), names);
         const auto& types = m_Configuration.configuration().m_InteractionTypes;
         const auto type = std::ranges::find(types, interaction->m_Type, &InteractionType::m_Id);
         const InteractionAsks asks = type == types.end() ? InteractionAsks::NOTHING : type->m_Asks;
@@ -991,7 +1035,7 @@ Result<TimelineModel::Edit, QString> TimelineModel::work_out_edit(EntryId id, co
             {
                 const auto type = std::ranges::find(configuration.m_InteractionTypes, InteractionTypeId(*uuid),
                                                     &InteractionType::m_Id);
-                if (type == configuration.m_InteractionTypes.end() || type->m_Name.empty())
+                if (type == configuration.m_InteractionTypes.end() || type->m_Retired || type->m_Name.empty())
                 {
                     return fail(tr("That interaction type is not known."));
                 }
@@ -1030,14 +1074,14 @@ Result<TimelineModel::Edit, QString> TimelineModel::work_out_edit(EntryId id, co
         }
         if (edit.contains(QStringLiteral("attachedNote")))
         {
-            const QString note = edit.value(QStringLiteral("attachedNote")).toString();
-            if (note.trimmed().isEmpty())
+            const QString typed_note = edit.value(QStringLiteral("attachedNote")).toString();
+            if (typed_note.trimmed().isEmpty())
             {
                 interaction->m_AttachedNote.reset();
             }
             else
             {
-                interaction->m_AttachedNote = utf8_of(note);
+                interaction->m_AttachedNote = utf8_of(typed_note);
             }
         }
     }
