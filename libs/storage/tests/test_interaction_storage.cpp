@@ -241,7 +241,10 @@ TEST_CASE("M1: the step from 3 to 4 keeps every row of entry, in its order, and 
     std::size_t backups = 0;
     for (const auto& file : std::filesystem::directory_iterator(store.location().backup_dir()))
     {
-        backups += file.path().filename().string().starts_with("ej-v3-") ? 1 : 0;
+        if (file.path().filename().string().starts_with("ej-v3-"))
+        {
+            ++backups;
+        }
     }
     CHECK(backups == 1);
 }
