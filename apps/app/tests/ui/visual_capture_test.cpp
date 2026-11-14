@@ -553,7 +553,7 @@ void label_day(Phone& phone)
 }
 
 /// Ends the open log: shared at `hour:minute` of `day` when asked, and a new log started on `next_day` at 08:50 (the
-/// facilitator carries over; the rest of the header is filled again).
+/// tester carries over; the rest of the header is filled again).
 void close_log(Phone& phone, int day, int hour, int minute, bool shared, int next_day)
 {
     if (shared)
@@ -1139,7 +1139,7 @@ void scene_first_launch_manual(Phone& phone)
 {
     phone.tap(QStringLiteral("manualCard"));
     phone.play();
-    phone.type_into(QStringLiteral("facilitatorField"), QStringLiteral("Sam Example"));
+    phone.type_into(QStringLiteral("testerField"), QStringLiteral("Sam Example"));
     phone.play();
 }
 
@@ -1320,9 +1320,9 @@ std::vector<Scene> extra_scenes()
          QStringLiteral("The Other versions row of Today's details tapped, then Add a version.")},
         {QStringLiteral("VersionTime"), TODAY, scene_version_time,
          QStringLiteral("The time of the version change tapped.")},
-        {QStringLiteral("Facilitator"), TODAY,
-         [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsFacilitator")); },
-         QStringLiteral("Settings, Facilitator.")},
+        {QStringLiteral("Tester"), TODAY,
+         [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsTester")); },
+         QStringLiteral("Settings, Tester.")},
         {QStringLiteral("TimeFormat"), TODAY,
          [](Phone& phone) { open_settings_page(phone, QStringLiteral("settingsTimeFormat")); },
          QStringLiteral("Settings, Time format.")},

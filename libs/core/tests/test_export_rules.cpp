@@ -52,7 +52,7 @@ TEST_CASE("Rule 1: the header block holds the start values and the log's date, w
 TEST_CASE("Rule 2: an empty header field prints its label and a colon only", "[export][rule2]")
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam Example";
+    header.m_Tester = "Sam Example";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     auto scenario = blank_scenario();
     scenario.m_Log = Log(header);
@@ -103,7 +103,7 @@ TEST_CASE("Rule 5: a header-change line names the field with its old and new val
 TEST_CASE("Rule 5: a first change from an empty field has an empty old side", "[export][rule5]")
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam Example";
+    header.m_Tester = "Sam Example";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     auto scenario = blank_scenario();
     scenario.m_Log = Log(header);
@@ -193,7 +193,7 @@ TEST_CASE("Rule 9: line breaks and runs of white space in free text collapse to 
 TEST_CASE("Rule 9: the header block is one line per field too", "[export][rule9]")
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam\nExample ";
+    header.m_Tester = "Sam\nExample ";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     header.m_Location = LocationValue{std::nullopt, "North\tSite\n"};
     auto scenario = blank_scenario();

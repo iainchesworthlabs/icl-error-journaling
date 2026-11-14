@@ -588,9 +588,9 @@ void read_preferences(Reader& r, const QJsonObject& root, Configuration& out)
     const auto object = value->toObject();
     const std::string path = "/preferences";
 
-    if (const auto facilitator = r.text(object, "facilitator", path, true, MAX_NAME))
+    if (const auto tester = r.text(object, "facilitator", path, true, MAX_NAME)) // legacy name: the setup file key stays "facilitator"
     {
-        out.m_Facilitator = facilitator->toStdString();
+        out.m_Tester = tester->toStdString();
     }
     if (const auto prefix = r.text(object, "unit_prefix", path, true, MAX_PREFIX))
     {
@@ -1124,7 +1124,7 @@ std::string export_configuration(const Configuration& configuration)
     std::string out;
     out += "{\n  \"schema_version\": " + std::to_string(CONFIG_SCHEMA_VERSION) + ",\n";
     out += "  \"preferences\": {\n    \"facilitator\": ";
-    write_string(out, configuration.m_Facilitator);
+    write_string(out, configuration.m_Tester);
     out += ",\n    \"unit_prefix\": ";
     write_string(out, configuration.m_UnitPrefix);
     if (configuration.m_UnitEnvironments != default_unit_environments())

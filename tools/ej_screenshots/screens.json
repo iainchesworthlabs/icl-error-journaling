@@ -258,7 +258,7 @@
       "title": "Settings and its editors",
       "states": [
         {
-          "name": "Facilitator"
+          "name": "Tester"
         },
         {
           "name": "TimeFormat"

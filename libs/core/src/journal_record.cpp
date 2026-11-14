@@ -268,8 +268,8 @@ void write_date(Writer& w, std::chrono::year_month_day date)
 void write_header(Writer& w, const HeaderValues& header)
 {
     w.raw("{");
-    w.key("facilitator");
-    w.string(header.m_Facilitator);
+    w.key("facilitator"); // legacy name: the journal key stays "facilitator"
+    w.string(header.m_Tester);
     w.raw(",");
     w.key("date");
     write_date(w, header.m_LocalDate);
@@ -754,7 +754,7 @@ std::chrono::year_month_day parse_date(const Fields& fields, const std::string& 
 HeaderValues read_header(const Fields& fields)
 {
     HeaderValues header;
-    header.m_Facilitator = fields.string("facilitator");
+    header.m_Tester = fields.string("facilitator"); // legacy name
     header.m_LocalDate = parse_date(fields, fields.string("date"));
     if (const auto unit = fields.optional_string("unit"))
     {

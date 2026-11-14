@@ -60,7 +60,7 @@ TEST_CASE("Until the saved file has been read the model is loading and offers no
     CHECK(rig.m_Settings.loading());
     CHECK_FALSE(rig.m_Settings.configured());
     CHECK(rig.m_Settings.error_types()->rowCount() == 0);
-    CHECK_FALSE(rig.m_Settings.setFacilitator("Sam Example").isEmpty());
+    CHECK_FALSE(rig.m_Settings.setTester("Sam Example").isEmpty());
     CHECK(rig.m_Gateway.pending() == 0);
 }
 
@@ -88,7 +88,7 @@ TEST_CASE("A valid saved file puts the configuration in force and tells the obse
     rig.load();
 
     CHECK(rig.m_Settings.configured());
-    CHECK(rig.m_Settings.facilitator() == "Sam Example");
+    CHECK(rig.m_Settings.tester() == "Sam Example");
     CHECK(rig.m_Settings.unit_prefix() == "UNIT");
     CHECK(rig.m_Settings.time_style() == "24h");
     CHECK_FALSE(rig.m_Settings.time_seconds());
@@ -163,12 +163,12 @@ TEST_CASE("A setting changes the mirror only after the save has succeeded", "[vi
     QSignalSpy changed(&rig.m_Settings, &SettingsModel::configurationChanged);
     const std::size_t told = rig.m_Observer.changes();
 
-    CHECK(rig.m_Settings.setFacilitator("Alex Example").isEmpty());
+    CHECK(rig.m_Settings.setTester("Alex Example").isEmpty());
 
     // Asked, not yet saved.
     CHECK(rig.m_Settings.saving());
-    CHECK(rig.m_Settings.configuration().m_Facilitator == "Sam Example");
-    CHECK(rig.m_Settings.facilitator() == "Sam Example");
+    CHECK(rig.m_Settings.configuration().m_Tester == "Sam Example");
+    CHECK(rig.m_Settings.tester() == "Sam Example");
     CHECK(rig.store().saves().empty());
     CHECK(changed.count() == 0);
     CHECK(rig.m_Observer.changes() == told);
@@ -176,8 +176,8 @@ TEST_CASE("A setting changes the mirror only after the save has succeeded", "[vi
     rig.commit();
 
     CHECK_FALSE(rig.m_Settings.saving());
-    CHECK(rig.m_Settings.configuration().m_Facilitator == "Alex Example");
-    CHECK(rig.m_Settings.facilitator() == "Alex Example");
+    CHECK(rig.m_Settings.configuration().m_Tester == "Alex Example");
+    CHECK(rig.m_Settings.tester() == "Alex Example");
     CHECK(rig.store().saves().size() == 1);
     CHECK(changed.count() == 1);
     CHECK(rig.m_Observer.changes() == told + 1);
@@ -229,7 +229,7 @@ TEST_CASE("A change that arrives while a save is in flight is refused, not built
 {
     SettingsRig rig;
     rig.load_sample();
-    REQUIRE(rig.m_Settings.setFacilitator("Alex Example").isEmpty());
+    REQUIRE(rig.m_Settings.setTester("Alex Example").isEmpty());
 
     CHECK_FALSE(rig.m_Settings.setUnitPrefix("DEMO").isEmpty());
     const auto added = rig.m_Settings.add_error_type("Late Greeting");
@@ -246,7 +246,7 @@ TEST_CASE("A change to the value already in force saves nothing", "[viewmodel][s
     SettingsRig rig;
     rig.load_sample();
 
-    CHECK(rig.m_Settings.setFacilitator("Sam Example").isEmpty());
+    CHECK(rig.m_Settings.setTester("Sam Example").isEmpty());
     CHECK(rig.m_Settings.setUnitPrefix("UNIT").isEmpty());
     CHECK(rig.m_Settings.setTimeFormat("24h", false, "upper").isEmpty());
     CHECK(rig.m_Settings.setIncludeTotals(false).isEmpty());
@@ -257,23 +257,23 @@ TEST_CASE("A change to the value already in force saves nothing", "[viewmodel][s
 
 // ------------------------------------------------------------------------------------------------------ preferences
 
-TEST_CASE("The facilitator is trimmed and must be 1 to 200 characters", "[viewmodel][settings]")
+TEST_CASE("The tester is trimmed and must be 1 to 200 characters", "[viewmodel][settings]")
 {
     SettingsRig rig;
     rig.load_sample();
 
-    CHECK_FALSE(rig.m_Settings.setFacilitator("").isEmpty());
-    CHECK_FALSE(rig.m_Settings.setFacilitator("   ").isEmpty());
-    CHECK_FALSE(rig.m_Settings.setFacilitator(QString(201, 'x')).isEmpty());
+    CHECK_FALSE(rig.m_Settings.setTester("").isEmpty());
+    CHECK_FALSE(rig.m_Settings.setTester("   ").isEmpty());
+    CHECK_FALSE(rig.m_Settings.setTester(QString(201, 'x')).isEmpty());
     CHECK(rig.m_Gateway.pending() == 0);
 
-    CHECK(rig.m_Settings.setFacilitator("  Alex Example  ").isEmpty());
+    CHECK(rig.m_Settings.setTester("  Alex Example  ").isEmpty());
     rig.commit();
-    CHECK(rig.m_Settings.configuration().m_Facilitator == "Alex Example");
+    CHECK(rig.m_Settings.configuration().m_Tester == "Alex Example");
 
-    CHECK(rig.m_Settings.setFacilitator(QString(200, 'x')).isEmpty());
+    CHECK(rig.m_Settings.setTester(QString(200, 'x')).isEmpty());
     rig.commit();
-    CHECK(rig.m_Settings.configuration().m_Facilitator.size() == 200);
+    CHECK(rig.m_Settings.configuration().m_Tester.size() == 200);
     // The longest accepted value is a file the importer accepts.
     CHECK(import_configuration(*rig.store().saved()).has_value());
 }
@@ -393,23 +393,23 @@ TEST_CASE("The error prefix is refused when it is too long or has a line break o
 
 // ----------------------------------------------------------------------------------------------------- first launch
 
-TEST_CASE("A manual setup is held until it has a facilitator and a prefix, then saved as one", "[viewmodel][settings]")
+TEST_CASE("A manual setup is held until it has a tester and a prefix, then saved as one", "[viewmodel][settings]")
 {
     SettingsRig rig;
     rig.load();
     QSignalSpy changed(&rig.m_Settings, &SettingsModel::configurationChanged);
 
-    CHECK(rig.m_Settings.setFacilitator("Sam Example").isEmpty());
+    CHECK(rig.m_Settings.setTester("Sam Example").isEmpty());
     CHECK(rig.m_Settings.addLocation("North Site").isEmpty());
     CHECK(rig.m_Settings.addErrorType("Wrong Response").isEmpty());
 
     // Shown, not saved, not in force.
     CHECK(rig.m_Gateway.pending() == 0);
     CHECK_FALSE(rig.m_Settings.configured());
-    CHECK(rig.m_Settings.facilitator() == "Sam Example");
+    CHECK(rig.m_Settings.tester() == "Sam Example");
     CHECK(rig.m_Settings.locations()->rowCount() == 1);
     CHECK(rig.m_Settings.error_types()->rowCount() == 1);
-    CHECK(rig.m_Settings.configuration().m_Facilitator.empty());
+    CHECK(rig.m_Settings.configuration().m_Tester.empty());
     CHECK(rig.store().saves().empty());
     CHECK(rig.m_Observer.changes() == 0);
     CHECK(changed.count() == 3);
@@ -427,21 +427,21 @@ TEST_CASE("A manual setup is held until it has a facilitator and a prefix, then 
     const auto read_back = import_configuration(rig.store().saves().front());
     REQUIRE(read_back.has_value());
     CHECK(read_back->m_ErrorTypes.size() == 1);
-    CHECK(read_back->m_Facilitator == "Sam Example");
+    CHECK(read_back->m_Tester == "Sam Example");
 }
 
 TEST_CASE("A setup whose first save fails stays a setup", "[viewmodel][settings]")
 {
     SettingsRig rig;
     rig.load();
-    REQUIRE(rig.m_Settings.setFacilitator("Sam Example").isEmpty());
+    REQUIRE(rig.m_Settings.setTester("Sam Example").isEmpty());
     rig.store().fail_next_save(disk_full());
     REQUIRE(rig.m_Settings.setUnitPrefix("UNIT").isEmpty());
 
     rig.commit();
 
     CHECK_FALSE(rig.m_Settings.configured());
-    CHECK(rig.m_Settings.facilitator() == "Sam Example");
+    CHECK(rig.m_Settings.tester() == "Sam Example");
     CHECK(rig.m_Settings.unit_prefix().isEmpty());
     CHECK(rig.m_Observer.changes() == 0);
 
@@ -853,7 +853,7 @@ TEST_CASE("A change of time format emits timeFormatChanged; other changes do not
     QSignalSpy format_changed(&rig.m_Settings, &SettingsModel::timeFormatChanged);
     const QString before = rig.m_Settings.time_format_key();
 
-    REQUIRE(rig.m_Settings.setFacilitator("Alex Example").isEmpty());
+    REQUIRE(rig.m_Settings.setTester("Alex Example").isEmpty());
     REQUIRE(rig.m_Gateway.run_next());
     CHECK(format_changed.count() == 0);
 

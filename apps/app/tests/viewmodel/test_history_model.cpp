@@ -1247,7 +1247,7 @@ TEST_CASE("A change that alters no row emits nothing", "[viewmodel][history][uni
     fixture.load();
     QSignalSpy changed(&fixture.history(), &QAbstractItemModel::dataChanged);
 
-    CHECK(fixture.settings().setFacilitator("Pat Example").isEmpty());
+    CHECK(fixture.settings().setTester("Pat Example").isEmpty());
     fixture.settle();
 
     CHECK(changed.count() == 0);

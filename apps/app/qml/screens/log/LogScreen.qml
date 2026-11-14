@@ -4,7 +4,7 @@ import QtQuick
 import QtQml
 import ErrorJournalingApp
 
-// The Log screen (Stage 4, package 4.7): the main board, the screen the facilitator lives in. From the top: the header card,
+// The Log screen (Stage 4, package 4.7): the main board, the screen the tester lives in. From the top: the header card,
 // the note composer with its template chips, the "Last" bar and the board of 12 tiles. The undo toast floats over the
 // bottom of the board, the write-failed and recovery banners float over the header card (so nothing moves when one
 // appears), and the template value prompt is a small sheet. docs/design/screens/Main, LogBanner, TemplateValue,
@@ -384,12 +384,12 @@ Item {
             locationText: root.session.locationText
             versionText: root.session.versionText
             dateText: root.session.dateText
-            facilitatorText: root.session.facilitator
+            testerText: root.session.tester
             missingFields: root.session.missingFields
             unitPrompt: root.loading ? root.loadingMark : qsTr("%1 —").arg(root.settings.unitPrefix)
             locationPrompt: root.loading ? root.loadingMark : qsTr("Location not set")
             versionPrompt: root.loading ? root.loadingMark : qsTr("v —")
-            facilitatorPrompt: root.loading ? root.loadingMark : qsTr("Facilitator not set")
+            testerPrompt: root.loading ? root.loadingMark : qsTr("Tester not set")
             skeleton: root.loading
             onClicked: root.todaysDetailsRequested()
         }

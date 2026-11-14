@@ -26,7 +26,7 @@ constexpr auto FULL = R"(
         locationText: "North Site"
         versionText: "1.4.2"
         dateText: "Sat 7 Nov"
-        facilitatorText: "Sam Example"
+        testerText: "Sam Example"
         missingFields: []
     })";
 
@@ -40,7 +40,7 @@ constexpr auto EMPTY = R"(
         locationText: ""
         versionText: ""
         dateText: "Sat 7 Nov"
-        facilitatorText: "Sam Example"
+        testerText: "Sam Example"
         missingFields: ["unit_number", "location", "software_version"]
     })";
 

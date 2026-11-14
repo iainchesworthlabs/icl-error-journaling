@@ -4,7 +4,7 @@ import QtQuick.Controls.Basic
 import ErrorJournalingApp
 
 // The Software version sheet (Stage 4, package 4.9; design `ChangeVersion.dc.html`, HDR-07 and DAY-03): what happened to
-// the version, in the facilitator's words.
+// the version, in the tester's words.
 //
 //   "It changed during the day"   a Change: `session.changeHeader` records a timed entry in the log, at a time that
 //                                 starts at now and may be earlier (the tumbler gives local seconds; the model turns

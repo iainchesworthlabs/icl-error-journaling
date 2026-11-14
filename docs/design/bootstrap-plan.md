@@ -34,7 +34,7 @@ Invocation: `MODE=new NAME=icl-error-journaling KIND=app+lib UI=qt PLATFORMS=ios
 | 4 Build system, vcpkg fork, toolchain pins | Yes | Qt 6.12.0 from the shared pin, `C:\Repos\common` locally and aqtinstall in CI. |
 | 5 Style | Yes | Template `.clang-format` and `.clang-tidy`; camelCase only for QML-facing names (D9). |
 | 6 Tests, sanitizers, coverage | Yes | Kill and corruption tests (plan, Stage 2) are `integration`; the 1,000-iteration kill run is nightly. |
-| 7 Qt, localisation, fonts | Partly | v1 is English only for one facilitator; D3 languages are deferred and recorded here as a deviation. Right-to-left follows when languages are added. |
+| 7 Qt, localisation, fonts | Partly | v1 is English only for one tester; D3 languages are deferred and recorded here as a deviation. Right-to-left follows when languages are added. |
 | 7.7 Phones and tablets | Yes | iPhone first. Orientation: portrait only (board is 3 x 4 in portrait, design README). |
 | 8 Tracy | Desktop debug only | Off on iOS (section 8). |
 | 9 SIMD | No | Nothing compute-bound. |
@@ -48,13 +48,13 @@ Invocation: `MODE=new NAME=icl-error-journaling KIND=app+lib UI=qt PLATFORMS=ios
 
 - **Platforms.** iOS is the product. macOS desktop exists to iterate on the UI (plan, Stage 4). Linux is the CI test host.
   Windows, Android and desktop packaging are out of scope for v1.
-- **Languages (D3).** English only in v1: a single named facilitator, and the log text is consumed by a downstream ticket
+- **Languages (D3).** English only in v1: a single named tester, and the log text is consumed by a downstream ticket
   indexer that expects English wording. Revisit if the app is shared with colleagues (PRD, open items).
 - **WebAssembly.** Not in Stage 0. Added later as a demo and test target once the services exist.
 
 ## Confidentiality (PRD NFR-10)
 
-The real facilitator, sites, unit prefix, robot, error types and tools are not in this repository and must never be.
+The real tester, sites, unit prefix, robot, error types and tools are not in this repository and must never be.
 Code, tests, samples and docs use only the stand-ins from `docs/` (Sam Example, UNIT, North Site, Wrong Response and so
 on). Stage 0 adds a CI check that fails when a confidential term appears in the tree; its term list comes from a CI
 secret, not from the repository. A `.gitignore` rule and a check reject any `*-config.json` other than

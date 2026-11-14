@@ -318,7 +318,7 @@ QString preferences_message(const ConfigError& error)
     }
     if (field == "facilitator" || field == "unit_prefix")
     {
-        const QString name = field == "facilitator" ? translate("facilitator") : translate("unit prefix");
+        const QString name = field == "facilitator" ? translate("tester") : translate("unit prefix");
         if (error.m_Problem == Problem::EMPTY)
         {
             return translate("The %1 is missing.").arg(name);

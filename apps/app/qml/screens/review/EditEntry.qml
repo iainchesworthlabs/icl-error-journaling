@@ -5,7 +5,7 @@ import QtQuick.Controls.Basic
 import ErrorJournalingApp
 
 // The Edit entry sheet (Stage 4, package 4.10; REV-02, NOTE-06): Cancel and Save, the error type, the time, the note, the line
-// as it will be in the shared log, and "Delete entry". The facilitator chose a separate sheet over editing in place.
+// as it will be in the shared log, and "Delete entry". The tester chose a separate sheet over editing in place.
 //
 //   timeline    the TimelineModel of the entry (entryForEdit, validateEdit, previewLine, saveEntry, deleteEntry, localToUtc)
 //   picker      the ErrorPickerModel, the list of error types an error entry can be given

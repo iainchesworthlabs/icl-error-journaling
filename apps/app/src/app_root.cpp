@@ -359,7 +359,7 @@ AppRoot::AppRoot(const vm::Environment& environment, const AppPlatform& platform
 {
     m_Timeline.follow(m_Session);
 
-    // An undone note goes back to the composer through the session's draft. Text the facilitator has typed since is
+    // An undone note goes back to the composer through the session's draft. Text the tester has typed since is
     // kept below it, so neither is lost.
     m_Undo.set_note_undo_target(
         [this](const std::string& text)

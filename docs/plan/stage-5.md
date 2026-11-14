@@ -487,7 +487,7 @@ backstop, as it is for a kill.
 The property list already has a `UILaunchScreen` with a colour (`LaunchBackground` in the asset catalogue). The colour is
 a placeholder (`#FFC93C`). The real screen is the **Log screen's skeleton**: the background, the header card, the note
 composer, the "Last" bar, the 12 tiles in their 3 by 4 grid, and the tab bar, as plain shapes in neutral surface colours,
-with no text, no badges and no colour per type (the board order and colours are the facilitator's configuration, which
+with no text, no badges and no colour per type (the board order and colours are the tester's configuration, which
 the launch screen cannot know). The design package gives the frame (402 x 874 pt, a 59 pt top safe area, a 34 pt bottom
 inset), the 8 pt tile gap, the 16 pt radius and the colours (`docs/design/tokens.json`); the dark values are designed in
 Stage 4.
@@ -552,7 +552,7 @@ that part. M1 runs from process creation to the first frame in which the board i
 
 **The readout.** `QmlBridge.timingSummary` is one line, `launch 812 ms; tap 41 ms (last of 12), median 38 ms, worst
 77 ms`, kept by `TimingStats` over the last 50 taps. The shell shows it behind a discreet affordance (five quick taps on
-the version text of the spike window; the real shell chooses its own), so it is not in the facilitator's way. There is no
+the version text of the spike window; the real shell chooses its own), so it is not in the tester's way. There is no
 shareable diagnostics text yet; when Stage 4 adds one it includes this line. The same figures go to the log (`launch:` line,
 Console) and to Points of Interest.
 
@@ -866,7 +866,7 @@ pull request.
 | O1 | Apple Developer portal: on the App ID `com.iainchesworthlabs.fieldtest`, enable the Data Protection capability set to Complete Until First User Authentication; regenerate the App Store profile; update the repository secret `IOS_PROVISIONING_PROFILE_BASE64` | 5.4b, and every signed build after it | Before 5.4b merges |
 | O2 | (Dropped, 2026-11-07: there is no Mac, so no Instruments, no development profile and no registered device.) | | |
 | O3 | A private Slack test channel and the Slack app signed in on the iPhone 17. Only the fictional log is posted | S3 | Before 5.9 |
-| O4 | A Mac and AirDrop between it and the phone. The test file is the fictional sample renamed, not the facilitator's real setup, which is used in Stage 6 | C1 to C3 | Before 5.9 |
+| O4 | A Mac and AirDrop between it and the phone. The test file is the fictional sample renamed, not the tester's real setup, which is used in Stage 6 | C1 to C3 | Before 5.9 |
 | O5 | Answered on 2026-11-07: all twelve decisions below are accepted as recommended. Nothing further is needed, except O1 for decision 5 | 5.7, 5.5, 5.8, 5.4b | Done |
 | O6 | Run, or be present for, the checklist; sign the gate | 5.9 | After 5.8 |
 | O7 | A TestFlight build of the final commit (Stage 0.6 pipeline, `SIGN_IOS_UPLOAD` already true) | B | Before 5.9 |

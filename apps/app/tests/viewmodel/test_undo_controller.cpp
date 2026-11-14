@@ -518,7 +518,7 @@ TEST_CASE("A later action replaces the toast while an undo is in flight, and the
     UndoRig rig;
     rig.commit(tap(1, melbourne(10, 20)));
     REQUIRE(rig.controller.undo());
-    // The facilitator taps again before the undo has committed: queued behind it, so it opens its toast afterwards.
+    // The tester taps again before the undo has committed: queued behind it, so it opens its toast afterwards.
     REQUIRE(rig.document->add_entry(tap(2, melbourne(10, 21)), Origin::USER, rig.count(rig.m_Done)));
     rig.gateway().run_all();
 

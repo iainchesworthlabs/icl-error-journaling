@@ -98,7 +98,7 @@ ExportContext make_context(World& world)
 HeaderValues standard_header()
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam Example";
+    header.m_Tester = "Sam Example";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     header.m_UnitNumber = UnitNumber::parse("27").value();
     header.m_Location = LocationValue{test_id<LocationId>(LOCATION_NORTH_SITE), {}};
