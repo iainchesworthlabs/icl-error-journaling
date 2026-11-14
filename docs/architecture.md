@@ -40,7 +40,7 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              backup copy and a marker; the product's steps take version 1 to 4: `day_log.changed_since_share`,
                              `day_log.extra_versions`, and the interaction entries with the `person` cache, which rebuilds
                              `entry` so that its kind may be `interaction`), people_journal.hpp (the records of
-                             `people.jsonl`: add, rename, retire, touch and forget a person, their CRC and the state they
+                             `people.jsonl`: add, rename, retire, touch, move (`set_person_location`) and forget a person, their CRC and the state they
                              fold to) and people_store.hpp (`PeopleStore`: the list of people, a journal of its own with
                              its own sequence numbers and lock, and `PeopleCache`, which the SQLite repository implements for
                              its `person` table), storage_location.hpp (the folders of one store)
