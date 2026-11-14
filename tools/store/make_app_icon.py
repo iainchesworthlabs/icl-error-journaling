@@ -4,21 +4,22 @@
 
     python3 tools/store/make_app_icon.py [--out apps/app/packaging/ios/Assets.xcassets/AppIcon.appiconset]
 
-Writes two opaque 1024 x 1024 PNGs, the light icon and the dark one that iOS 18 shows in dark appearance:
-
-  AppIcon-1024.png        the drawing's colours on white
-  AppIcon-1024-dark.png   the same board on the dark text colour of docs/design/tokens.json
+Writes one opaque 1024 x 1024 PNG, AppIcon-1024.png, which iOS uses in light and in dark appearance, and which
+tools/store/make_play_graphics.py and tools/store/make_android_icon.py take the Google Play and Android icons from.
 
 The design is the owner's drawing, redrawn in the style of the board's tiles (rounded squares with a small gap):
 
-  * the "t" is the seven filled tiles: a column down the middle, a bar across the second row and a foot on the fourth;
-  * the "f" is the thin outline of the letter (a stem in the left column, arms on the first and third rows), with the
-    "t"'s left tile and a gold square in the notches between and below its arms;
-  * three gold outlined squares are the empty tiles of the board.
+  * the "f" is a solid white letter: a stem in the left column, arms on the first and third rows;
+  * the "t" is the seven filled tiles: a column down the middle, a bar across the second row and a foot on the fourth,
+    one of them in the notch between the arms of the "f";
+  * three outlined squares are the empty tiles of the board, one in the notch below the arms of the "f".
+
+On leaf green, with the "t" and the outlines in a deep blue-grey. The owner chose the green and a "t" a little softer
+than the app's near-black after looking at the options, and a solid "f" because a thin outline blurred into the
+background at small sizes.
 
 Everything is drawn at four times the size and scaled down, so the edges are smooth. The output depends only on this
-file and on the Pillow version (requirements/store.txt). The Google Play icon is made from AppIcon-1024.png by
-tools/store/make_play_graphics.py.
+file and on the Pillow version (requirements/store.txt).
 """
 
 from __future__ import annotations
@@ -37,25 +38,25 @@ SIZE = 1024
 SUPERSAMPLE = 4
 CELL = 160  # the board is 4 x 4 cells, 640 px, centred
 GAP = 4  # each tile is inset this much, so tiles are 2 * GAP apart
-RADIUS = 22  # corner of a tile and of the "f" outline
-LINE = 7  # the "f" outline and the gold squares
+RADIUS = 22  # corner of a tile and of the "f"
+LINE = 9  # the outlines of the empty squares
 
 # (row, column) of the cells, from the drawing.
 FILLED = [(0, 2), (1, 1), (1, 2), (1, 3), (2, 2), (3, 2), (3, 3)]
-GOLD = [(0, 3), (2, 3), (3, 1)]
-# The outline of the "f", in cell units (x is the column, y is the row), clockwise from the top left.
-F_OUTLINE = [(0, 0), (2, 0), (2, 1), (1, 1), (1, 2), (2, 2), (2, 3), (1, 3), (1, 4), (0, 4)]
+EMPTY = [(0, 3), (2, 3), (3, 1)]
+# The "f", in cell units (x is the column, y is the row), clockwise from the top left: the stem is the left column and
+# the arms are the first and third rows.
+F_SHAPE = [(0, 0), (2, 0), (2, 1), (1, 1), (1, 2), (2, 2), (2, 3), (1, 3), (1, 4), (0, 4)]
 
 
 @dataclass(frozen=True)
 class Palette:
     background: str
-    tile: str
-    gold: str
+    tile: str  # the "t", and the outline of the empty squares
+    letter: str  # the "f"
 
 
-LIGHT = Palette(background="#FFFFFF", tile="#2F8FBF", gold="#F0B429")
-DARK = Palette(background="#14212B", tile="#4DB2E0", gold="#FFC93C")  # background is textPrimary in tokens.json
+LEAF = Palette(background="#4CAF6A", tile="#1F303C", letter="#FFFFFF")
 
 
 def inset_polygon(points: list[tuple[float, float]], distance: float) -> list[tuple[float, float]]:
@@ -100,7 +101,7 @@ def rounded_outline(points: list[tuple[float, float]], radius: float, steps: int
     return path
 
 
-def draw_icon(palette: Palette) -> Image.Image:
+def draw_icon(palette: Palette = LEAF) -> Image.Image:
     scale = SUPERSAMPLE
     origin = (SIZE - 4 * CELL) // 2
     image = Image.new("RGB", (SIZE * scale, SIZE * scale), palette.background)
@@ -110,30 +111,29 @@ def draw_icon(palette: Palette) -> Image.Image:
         left, top = origin + column * CELL + GAP, origin + row * CELL + GAP
         return [left * scale, top * scale, (left + CELL - 2 * GAP) * scale - 1, (top + CELL - 2 * GAP) * scale - 1]
 
-    # The "f": the outline sits where a tile's edge would, with the line inside it.
-    outline = inset_polygon([(x * CELL, y * CELL) for x, y in F_OUTLINE], GAP + LINE / 2)
-    outline = [((origin + x) * scale, (origin + y) * scale) for x, y in outline]
-    draw.line(rounded_outline(outline, RADIUS * scale), fill=palette.tile, width=LINE * scale, joint="curve")
+    # The "f": solid, with its edge where a tile's edge would be.
+    shape = inset_polygon([(x * CELL, y * CELL) for x, y in F_SHAPE], GAP)
+    shape = [((origin + x) * scale, (origin + y) * scale) for x, y in shape]
+    draw.polygon(rounded_outline(shape, RADIUS * scale), fill=palette.letter)
 
     for row, column in FILLED:
         draw.rounded_rectangle(tile_box(row, column), radius=RADIUS * scale, fill=palette.tile)
-    for row, column in GOLD:
-        draw.rounded_rectangle(tile_box(row, column), radius=RADIUS * scale, outline=palette.gold, width=LINE * scale)
+    for row, column in EMPTY:
+        draw.rounded_rectangle(tile_box(row, column), radius=RADIUS * scale, outline=palette.tile, width=LINE * scale)
 
     return image.resize((SIZE, SIZE), Image.Resampling.LANCZOS)
 
 
 def make_all(out: Path = DEFAULT_OUT) -> dict[str, Path]:
     out.mkdir(parents=True, exist_ok=True)
-    paths = {"light": out / "AppIcon-1024.png", "dark": out / "AppIcon-1024-dark.png"}
-    draw_icon(LIGHT).save(paths["light"], format="PNG")
-    draw_icon(DARK).save(paths["dark"], format="PNG")
+    paths = {"icon": out / "AppIcon-1024.png"}
+    draw_icon(LEAF).save(paths["icon"], format="PNG")
     return paths
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="the folder to write the two PNGs into")
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="the folder to write the PNG into")
     args = parser.parse_args(argv)
     for name, path in make_all(args.out).items():
         print(f"{name}: {path}")

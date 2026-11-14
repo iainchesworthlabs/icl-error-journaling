@@ -200,11 +200,12 @@ How the dark variants of the original eight screens were made: each light colour
 
 ## The app icon
 
-The owner drew it on paper: an "f" and a "t" (for Field Test) sharing a board of tiles, 4 × 4. It was redrawn in the style of the tiles (rounded squares with a small gap) and approved by the owner in light and dark.
+The owner drew it on paper: an "f" and a "t" (for Field Test) sharing a board of tiles, 4 × 4. It was redrawn in the style of the tiles (rounded squares with a small gap) and the colours were chosen by the owner from options built on the app's palette.
 
-- **The "t"** is the seven filled tiles. **The "f"** is a thin outline of the letter, with the "t"'s left tile and a gold square in the notches of its arms. **Three gold outlined squares** are the empty tiles.
-- **Light:** blue `#2F8FBF` and gold `#F0B429` on white. **Dark** (iOS 18 dark appearance): blue `#4DB2E0` and gold `#FFC93C` on `#14212B`. The owner chose these over a version with the pale "sky" tile colour on dark.
-- `tools/store/make_app_icon.py` draws both as 1024 px opaque PNGs into `apps/app/packaging/ios/Assets.xcassets/AppIcon.appiconset`. Change the icon in the script and run it again; do not edit the PNGs. `tools/store/make_play_graphics.py` makes the Google Play icon from the light one.
+- **The "f"** is a solid white letter (a stem in the left column, arms on the first and third rows). **The "t"** is the seven filled tiles, one of them in the notch between the arms of the "f". **Three outlined squares** are the empty tiles, one in the notch below the arms.
+- **Colours:** leaf green `#4CAF6A` background, white "f", and the "t" and the outlines in `#1F303C`. White on the green is 2.8 to 1 and the "t" on the green is 5.0 to 1. The "f" was a thin outline at first, and it blurred into the background at small sizes, so it is solid. The green is the owner's choice for the icon only: the tile palette above has no green, by its own rule.
+- **One icon for light and dark.** The green background works in both, so there is no separate dark icon.
+- `tools/store/make_app_icon.py` draws it as a 1024 px opaque PNG into `apps/app/packaging/ios/Assets.xcassets/AppIcon.appiconset`. Change the icon in the script and run it again; do not edit the PNG. `tools/store/make_play_graphics.py` makes the Google Play icon from it.
 - Not yet made: the Android adaptive icon (foreground, background and monochrome layer) and the desktop tiles. Stage 9 (9.7) and Stage 12 make them from the same drawing.
 
 ## Review of the 4.2 drafts
