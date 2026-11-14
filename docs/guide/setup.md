@@ -97,3 +97,21 @@ setup rows). A fifth tab, **Interactions**, appears at once, and the first tab i
 Turning the switch off hides the tab and the board. **Nothing is deleted:** the entries stay in the log and in Review and
 History, and what you set up is kept for the next time. If you were on the Interactions board, the app goes to the Errors board.
 
+
+### Setting up the Interactions board
+
+With the second board on, **Settings** shows two more rows in the **Second board** group: **Interaction types** and
+**People**. The **Interactions** tab leads there too: while the board is empty, **Add interaction types** opens the
+editor at once, and turning the switch on with nothing set up opens it for you.
+
+**Interaction types** works like **Error types**. Tap **Add an interaction type**, give it a name and, if you want, a
+**Line in the log**:
+
+- Tap **Insert person** to put **[person]** in the line, for example “Spoke with [person]”. A type with **[person]** asks who
+  after you log it. A type without it never asks, so a tile such as “Played song” logs at once.
+- Tap **Insert answer** to put **[answer]** in the line, for example “Played [answer]”. You are asked for the answer after you
+  log it.
+- With no line, the log shows the name of the type.
+
+The first 11 types fill the board in the order shown; drag the handle, or use the arrows, to change it. The rest are under
+**Other…**. A type you retire leaves the board and stays on the entries already logged.

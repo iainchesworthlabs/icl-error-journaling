@@ -105,3 +105,17 @@ TEST_CASE("The list of people is kept across a restart, last used first", "[view
     REQUIRE(again.count() == 2);
     CHECK(again.data(again.index(0), PeopleModel::NAME).toString() == "Jordan Placeholder");
 }
+
+TEST_CASE("The export asks the list of people for a name by id", "[viewmodel][people][integration]")
+{
+    Rig rig(RigStore::SQLITE);
+    rig.import_sample_configuration();
+    rig.settle();
+    const QString id = add(rig, "Alex Sample");
+    viewmodel::PersonNamesForwarder forwarder;
+    const PersonId person(*Uuid::parse(id.toStdString()));
+    CHECK_FALSE(forwarder.name_of(person).has_value());
+    forwarder.set(rig.root().people());
+    CHECK(forwarder.name_of(person) == std::optional<std::string>("Alex Sample"));
+    CHECK_FALSE(forwarder.name_of(PersonId(Uuid::from_random(1, 2))).has_value());
+}

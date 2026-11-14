@@ -125,6 +125,11 @@ QHash<int, QByteArray> PeopleModel::roleNames() const
 
 void PeopleModel::apply_loaded(bool available, std::vector<Person> people)
 {
+    m_Names.clear();
+    for (const Person& person : people)
+    {
+        m_Names.emplace(person.m_Id, person.m_DisplayName);
+    }
     std::erase_if(people, [](const Person& person) { return person.m_Retired; });
     std::ranges::sort(people, before);
     beginResetModel();
@@ -142,6 +147,16 @@ int PeopleModel::row_of(const PersonId& id) const
 {
     const auto it = std::ranges::find(m_People, id, &Person::m_Id);
     return it == m_People.end() ? -1 : static_cast<int>(it - m_People.begin());
+}
+
+std::optional<std::string> PeopleModel::name_of(const PersonId& id) const
+{
+    const auto it = m_Names.find(id);
+    if (it == m_Names.end())
+    {
+        return std::nullopt;
+    }
+    return it->second;
 }
 
 QString PeopleModel::validateName(const QString& typed) const
@@ -232,6 +247,7 @@ bool PeopleModel::addPerson(const QString& typed, const QString& locationId)
                 return;
             }
             Person person = std::move(*result);
+            m_Names[person.m_Id] = person.m_DisplayName;
             const QString id_text = text_of(person.m_Id.format());
             const QString name_text = text_of(person.m_DisplayName);
             const auto at = std::ranges::lower_bound(m_People, person, before);

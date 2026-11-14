@@ -32,9 +32,13 @@ struct TestEnvironment
     FakeDeviceZone m_DeviceZone;
     FakeTimeZoneProvider m_Zones = make_fixed_zones();
 
+    /// Where a name comes from and how shared text is written; none unless a test sets them.
+    const viewmodel::PersonNames* m_People = nullptr;
+    const viewmodel::ExportPreferences* m_ExportPreferences = nullptr;
+
     [[nodiscard]] viewmodel::Environment environment()
     {
-        return viewmodel::Environment{m_Clock, m_Clock, m_Ids, m_DeviceZone, m_Zones};
+        return viewmodel::Environment{m_Clock, m_Clock, m_Ids, m_DeviceZone, m_Zones, m_People, m_ExportPreferences};
     }
 };
 

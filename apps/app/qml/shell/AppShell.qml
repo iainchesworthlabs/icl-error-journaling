@@ -203,6 +203,18 @@ Item {
         });
     }
 
+    // The setup of the Interactions board, from its empty state: the Settings tab with the interaction types editor open, so
+    // that a tester who asks "where is the setup?" lands on it and not on the list (Stage 14, 4.1).
+    function showInteractionSetup(): void {
+        selectTab(settingsIndex);
+        Qt.callLater(() => {
+            if (!settingsScreen)
+                return;
+            settingsScreen.popToRoot();
+            settingsScreen.pushPage(interactionTypesPage, {});
+        });
+    }
+
     // The keyboard is up and no text field has the focus: it is put away. Pages and sheets that have just closed move the
     // focus to a screen or to nothing, and the platform's keyboard does not always follow (it stayed over the Log screen after
     // Today's details was left); this is the catch-all, and the PageStack, the Sheet and the tab bar dismiss it themselves.
@@ -372,7 +384,7 @@ Item {
                     activeBoard: root.currentTab === root.interactionsIndex ? "interactions" : "errors"
                     interactionBoard: root.interactionBoard
                     people: root.people
-                    onInteractionSetupRequested: root.showBoardSetup(0)
+                    onInteractionSetupRequested: root.showInteractionSetup()
                     onBoardSwitchRequested: board => root.selectTab(board === "interactions" ? root.interactionsIndex : root.logIndex)
                     onTodaysDetailsRequested: root.showDetails(logStack)
                     onReviewRequested: root.selectTab(root.reviewIndex)
@@ -437,6 +449,7 @@ Item {
                     about: root.about
                     timingText: root.bridge.timingSummary
                     onErrorTypesRequested: pushPage(errorTypesPage, {})
+                    onInteractionTypesRequested: pushPage(interactionTypesPage, {})
                     onTemplatesRequested: pushPage(templatesPage, {})
                     onLocationsRequested: pushPage(locationsPage, {})
                     onUnitEnvironmentsRequested: pushPage(unitEnvironmentsPage, {})
@@ -627,6 +640,18 @@ Item {
         id: errorTypesPage
 
         ErrorTypes {
+            settings: root.settings
+            // The sheet of the editor covers the tab bar, as every sheet does.
+            sheetLayer: root.sheetLayer
+            onCloseRequested: StackView.view.pop()
+            onHelpRequested: topic => root.showHelp(topic)
+        }
+    }
+
+    Component {
+        id: interactionTypesPage
+
+        InteractionTypes {
             settings: root.settings
             // The sheet of the editor covers the tab bar, as every sheet does.
             sheetLayer: root.sheetLayer

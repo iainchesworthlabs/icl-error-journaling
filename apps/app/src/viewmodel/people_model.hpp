@@ -15,18 +15,39 @@
 
 #include "error_journaling/person.hpp"
 #include "viewmodel/environment.hpp"
+#include "viewmodel/person_names.hpp"
 #include "viewmodel/storage_gateway.hpp"
 
 #include <QAbstractListModel>
 #include <QString>
 #include <QStringList>
+#include <map>
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 
 namespace ej::viewmodel
 {
 
-class PeopleModel final : public QAbstractListModel
+/// Hands the export the list of people although the list is built after the environment is: set it once the models exist.
+class PersonNamesForwarder final : public PersonNames
+{
+public:
+    void set(const PersonNames* target)
+    {
+        m_Target = target;
+    }
+    [[nodiscard]] std::optional<std::string> name_of(const PersonId& id) const override
+    {
+        return m_Target != nullptr ? m_Target->name_of(id) : std::nullopt;
+    }
+
+private:
+    const PersonNames* m_Target = nullptr;
+};
+
+class PeopleModel final : public QAbstractListModel, public PersonNames
 {
     Q_OBJECT
     /// The list of people could be opened. False: the picker says so and offers nothing to add.
@@ -57,6 +78,10 @@ public:
     {
         return static_cast<int>(m_People.size());
     }
+
+    /// The name of a person who is known and not forgotten, retired people included (a past entry still shows them).
+    /// For the export, which asks at the moment it renders a line.
+    [[nodiscard]] std::optional<std::string> name_of(const PersonId& id) const override;
 
     /// The inline check of a typed name: empty when it is a valid name, else the reason ("Type a name.", "That name is
     /// too long.").
@@ -95,6 +120,7 @@ private:
     Environment m_Environment;
     StorageGateway& m_Gateway;
     std::vector<Person> m_People;
+    std::map<PersonId, std::string> m_Names; // every person who was not forgotten, retired included
     bool m_Available = false;
 
     // Completions hold a weak reference to this; a model that has gone is never called back.

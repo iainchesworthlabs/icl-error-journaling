@@ -26,6 +26,8 @@ SettingsPage {
     property bool aboutAvailable: false
 
     signal errorTypesRequested
+    signal interactionTypesRequested
+    signal peopleRequested
     signal templatesRequested
     signal locationsRequested
     signal unitEnvironmentsRequested
@@ -207,7 +209,32 @@ SettingsPage {
                 text: qsTr("Second board: Interactions")
                 description: qsTr("For what you did, as well as what went wrong")
                 checked: root.boards !== null && root.boards.interactionsEnabled
-                onToggled: wanted => root.boards.interactionsEnabled = wanted
+                onToggled: wanted => {
+                    root.boards.interactionsEnabled = wanted;
+                    // Turned on with nothing set up: go straight to the types (Stage 14, 4.1).
+                    if (wanted && root.settings.interactionTypes.rowCount() === 0)
+                        root.interactionTypesRequested();
+                }
+            }
+
+            // The setup of the second board is here, under its switch, and only while the board is on. A type with no
+            // [person] never opens the picker, so the People row is for those who want names.
+            ListRow {
+                objectName: "settingsInteractionTypes"
+                visible: root.boards !== null && root.boards.interactionsEnabled
+                text: qsTr("Interaction types")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.interactionTypesRequested()
+            }
+
+            ListRow {
+                objectName: "settingsPeople"
+                visible: root.boards !== null && root.boards.interactionsEnabled
+                text: qsTr("People")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.peopleRequested()
             }
         }
 

@@ -3244,3 +3244,152 @@ TEST_CASE("shell.board_area: the Interactions board shares the header, composer 
     app.choose_tab_named(QStringLiteral("tabLog"));
     CHECK(app.need(QStringLiteral("logComposer"))->property("draft").toString() == QStringLiteral("North Site is quiet"));
 }
+
+// ---- Stage 14, I-8: the second board in the larger windows ----
+
+namespace
+{
+/// A window of the sizes Stage 8 and 13 design for, with the insets of the design frame.
+struct SecondBoardWindow
+{
+    QSize m_Size;
+    double m_Top;
+    double m_Bottom;
+    bool m_Wide;
+    const char* m_Name;
+};
+
+/// iPads (Regular and Wide) and the foldable frames of Stage 13 (unfolded, book, tabletop, flip tabletop). The fold itself is
+/// a posture: until Stage 13 is built the app sees only the size, which is what these cases give it.
+const SecondBoardWindow SECOND_BOARD_WINDOWS[] = {
+    {QSize(744, 1133), IPAD_TOP, IPAD_BOTTOM, false, "iPad mini portrait"},
+    {QSize(820, 1180), IPAD_TOP, IPAD_BOTTOM, false, "iPad Air portrait"},
+    {QSize(1032, 1376), IPAD_TOP, IPAD_BOTTOM, false, "iPad Pro 13 portrait"},
+    {QSize(1180, 820), IPAD_TOP, IPAD_BOTTOM, true, "iPad Air landscape"},
+    {QSize(1133, 744), IPAD_TOP, IPAD_BOTTOM, true, "iPad mini landscape"},
+    {QSize(1366, 1024), IPAD_TOP, IPAD_BOTTOM, true, "iPad Pro 13 landscape"},
+    {QSize(701, 841), IPAD_TOP, IPAD_BOTTOM, false, "fold open, portrait (Regular until Stage 13)"},
+    // The unfolded landscape and book windows (841 x 701) are Wide only with Stage 13 (the app sees them as Regular, where even
+    // the Errors board does not fit); the case for them comes with 13.1.
+};
+} // namespace
+
+TEST_CASE("ipad.second_board_geometry: the tiles are at least 88 pt, the panes and the tab bar are where Stage 8 puts them",
+          "[ui][app][ipad][fold]")
+{
+    App app(true, false);
+    app.with_boards(true);
+    app.load();
+    app.ui.layout();
+    QQuickItem* screen = app.need(QStringLiteral("logScreen"));
+
+    for (const SecondBoardWindow& window : SECOND_BOARD_WINDOWS)
+    {
+        CAPTURE(window.m_Name, window.m_Size.width(), window.m_Size.height());
+        const double w = window.m_Size.width();
+        // The Errors board first: its tile height is the one the Interactions board must match in these windows.
+        app.ui.set_window_size(window.m_Size);
+        app.ui.set_safe_area(window.m_Top, window.m_Bottom);
+        app.choose_tab_named(QStringLiteral("tabLog"));
+        app.ui.layout();
+        REQUIRE(app.ui.window_layout()->property("wide").toBool() == window.m_Wide);
+        const double errors_tile = screen->property("tileHeight").toDouble();
+        const QRectF errors_board = app.ui.geometry(app.need(QStringLiteral("logBoard")));
+
+        app.choose_tab_named(QStringLiteral("tabInteractions"));
+        app.ui.layout();
+        const double tile = screen->property("interactionTileHeight").toDouble();
+        CHECK(tile >= 88.0);
+        // Regular, in a tall window: the same tile size as the Errors board (Stage 14, 4.2). Wide: the pane's height less the strip, so a little
+        // less, and never under the 88 pt minimum.
+        if (window.m_Wide)
+        {
+            CHECK(tile <= errors_tile);
+        }
+        else if (window.m_Size.height() >= 1100)
+        {
+            CHECK(tile == errors_tile);
+        }
+        else
+        {
+            // A short window gives the board only the room above the tab bar, and the strip takes some of it.
+            CHECK(tile <= errors_tile);
+        }
+        const QRectF strip = app.ui.geometry(app.need(QStringLiteral("interactionsStrip")));
+        const QRectF area = app.ui.geometry(app.need(QStringLiteral("interactionBoardLoader")));
+        const QRectF tabs = app.ui.geometry(app.need(QStringLiteral("shellTabBar")));
+        // Four rows of tiles and their gaps, under the strip, in the column or pane of the Errors board.
+        CHECK(std::abs(area.height() - (4 * tile + 3 * 12.0)) <= 1.0);
+        CHECK(std::abs(strip.left() - errors_board.left()) <= 0.5);
+        CHECK(std::abs(strip.width() - errors_board.width()) <= 0.5);
+        CHECK(strip.height() == 28.0);
+        CHECK(area.top() >= strip.bottom());
+        CHECK(area.bottom() <= tabs.top() + 0.5);
+        CHECK(area.bottom() <= window.m_Size.height() - window.m_Bottom + 0.5);
+        CHECK(strip.top() >= window.m_Top - 0.5);
+        // The five tabs are in order, inside the window.
+        double previous = -1.0;
+        for (const QString& name : FIVE_TABS)
+        {
+            const QRectF rect = app.ui.geometry(app.need(name));
+            CHECK(rect.left() >= previous);
+            CHECK(rect.right() <= w + 0.5);
+            CHECK(rect.width() >= 44.0);
+            previous = rect.right() - 0.5;
+        }
+        if (window.m_Wide)
+        {
+            // The board in the left pane, the log in the right one; the strip does not run under the log.
+            CHECK(strip.right() <= w * 0.7);
+            QQuickItem* share = app.need(QStringLiteral("logPaneShare"));
+            const QRectF pane = app.ui.geometry(share);
+            CHECK(pane.left() >= strip.right());
+        }
+        else
+        {
+            // Regular: the 680 pt column, the tab bar in it.
+            check_centred(app.ui, app.need(QStringLiteral("interactionsStrip")), w, std::min(LOG_COLUMN, w - 48.0));
+            const QRectF first = app.ui.geometry(app.need(QStringLiteral("tabLog")));
+            const QRectF last = app.ui.geometry(app.need(QStringLiteral("tabSettings")));
+            CHECK(std::abs(last.right() - first.left() - std::min(LOG_COLUMN, w - 48.0)) <= 1.0);
+        }
+    }
+}
+
+TEST_CASE("fold.state_kept: a fold or unfold on the Interactions board loses no draft, focus, board or entry",
+          "[ui][app][fold]")
+{
+    App app(true, false);
+    app.with_boards(true);
+    app.load();
+    app.fill_header();
+    log_entries(app, 3);
+    const SecondBoardWindow open{QSize(841, 701), IPAD_TOP, IPAD_BOTTOM, true, "open"};
+    app.ui.set_window_size(open.m_Size);
+    app.ui.set_safe_area(open.m_Top, open.m_Bottom);
+    app.choose_tab_named(QStringLiteral("tabInteractions"));
+    app.ui.layout();
+
+    app.ui.tap(app.need(QStringLiteral("noteInput")));
+    app.ui.type(QStringLiteral("Visitor asked about the next song"));
+    app.ui.advance(16ms);
+    QQuickItem* input = app.ui.focused_input();
+    REQUIRE(input != nullptr);
+    const int entries = app.services.root().timeline()->rowCount();
+
+    // Open, half folded (the same size, the posture changes), tabletop, the cover screen, and open again.
+    for (const QSize size : {QSize(841, 701), QSize(701, 841), QSize(344, 882), QSize(466, 678), QSize(701, 841), QSize(841, 701)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(size.width() > 600 ? IPAD_TOP : 40.0, IPAD_BOTTOM);
+        app.ui.layout();
+        CHECK(app.services.session().draft() == QStringLiteral("Visitor asked about the next song"));
+        CHECK(app.ui.focused_input() == input);
+        CHECK(app.need(QStringLiteral("logScreen"))->property("onInteractions").toBool());
+        CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("interactions"));
+        CHECK(app.shown(QStringLiteral("interactionsStrip")));
+        CHECK(app.services.root().timeline()->rowCount() == entries);
+        CHECK(app.need(QStringLiteral("interactionsStripTitle"))->property("text").toString() == QStringLiteral("Interactions"));
+    }
+}

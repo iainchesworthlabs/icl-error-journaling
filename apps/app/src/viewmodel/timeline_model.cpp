@@ -245,7 +245,7 @@ void TimelineModel::switch_document(LogDocument* document)
     {
         m_Document->add_observer(static_cast<LogObserver&>(*this));
     }
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build();
     m_Rows = make_rows(context);
     endResetModel();
     update_summary();
@@ -347,7 +347,7 @@ TimelineModel::Summary TimelineModel::make_summary(const ExportContext& context)
 
 void TimelineModel::update_summary()
 {
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build();
     Summary summary = make_summary(context);
     if (summary == m_Summary)
     {
@@ -475,7 +475,7 @@ int TimelineModel::find_row(EntryId id) const
 
 void TimelineModel::reset_rows()
 {
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build();
     beginResetModel();
     m_Rows = make_rows(context);
     endResetModel();
@@ -497,7 +497,7 @@ void TimelineModel::insert_row(EntryId id)
         return;
     }
     const int position = static_cast<int>(it - order.begin());
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build();
     Row row = make_row(log, **it, context);
     beginInsertRows({}, position, position);
     m_Rows.insert(m_Rows.begin() + position, std::move(row));
@@ -550,7 +550,7 @@ void TimelineModel::edit_row(EntryId id)
         }
         endMoveRows();
     }
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build();
     m_Rows[static_cast<std::size_t>(to)] = make_row(log, *entry, context);
     const QModelIndex changed = index(to);
     emit dataChanged(changed, changed);
@@ -558,7 +558,7 @@ void TimelineModel::edit_row(EntryId id)
 
 void TimelineModel::refresh_all_rows()
 {
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build();
     std::vector<Row> rows = make_rows(context);
     if (rows.size() != m_Rows.size())
     {
@@ -574,7 +574,7 @@ void TimelineModel::refresh_all_rows()
 
 void TimelineModel::refresh_wording()
 {
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build();
     std::vector<Row> rows = make_rows(context);
     if (rows.size() != m_Rows.size())
     {
@@ -667,7 +667,17 @@ bool TimelineModel::copyLine(int row)
     {
         return false;
     }
-    const std::string text = utf8_of(selected.m_Full);
+    std::string text = utf8_of(selected.m_Full);
+    // The row shows the full name of a person; the line that leaves the device is written at the level of the
+    // preference `name_export` (Stage 14, 3.6). The wording of every other kind of line is the same in both.
+    if (m_Document != nullptr && m_Document->ready())
+    {
+        const ExportContext sharing = ExportContextBuilder(m_Configuration, m_Environment).build_for_sharing();
+        if (const auto line = render_entry_line(m_Document->log(), selected.m_Id, sharing))
+        {
+            text = *line;
+        }
+    }
     m_Clipboard.set_text(text);
     return true;
 }
@@ -678,7 +688,7 @@ bool TimelineModel::copyAll()
     {
         return false;
     }
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build_for_sharing();
     const auto text = export_text(m_Document->log(), context);
     if (!text)
     {
@@ -1012,7 +1022,7 @@ QString TimelineModel::previewLine(const QString& entryId, const QVariantMap& ed
     {
         return {};
     }
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build();
     const auto line = render_entry_line(scratch, *id, context);
     if (!line)
     {

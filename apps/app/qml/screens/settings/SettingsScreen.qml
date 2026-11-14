@@ -50,6 +50,9 @@ Item {
     property string timingText
 
     signal errorTypesRequested
+    // The interaction types editor and the People screen (Stage 14, 4.5): the second board's setup.
+    signal interactionTypesRequested
+    signal peopleRequested
     signal templatesRequested
     signal locationsRequested
     signal unitEnvironmentsRequested
@@ -142,6 +145,8 @@ Item {
             aboutAvailable: root.about !== null
             topInset: frame.topInset
             onErrorTypesRequested: root.errorTypesRequested()
+            onInteractionTypesRequested: root.interactionTypesRequested()
+            onPeopleRequested: root.peopleRequested()
             onTemplatesRequested: root.templatesRequested()
             onLocationsRequested: root.locationsRequested()
             onUnitEnvironmentsRequested: root.unitEnvironmentsRequested()
