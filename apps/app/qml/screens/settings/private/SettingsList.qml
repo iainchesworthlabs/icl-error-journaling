@@ -19,6 +19,7 @@ SettingsPage {
     required property var settings
     // BoardState, for the Second board group: `interactionsEnabled`. Null leaves the group out.
     property var boards: null
+    property var exportPreferences: null
     // The foot of the list: the version and platform text, as a plain caption. Empty hides it. The build's facts, the licence and
     // the timing line (five taps on the version) are on the About page, which the last row opens.
     property string aboutText
@@ -35,6 +36,8 @@ SettingsPage {
     signal unitPrefixRequested
     signal errorPrefixRequested
     signal timeFormatRequested
+    // The Names in shared logs row was tapped.
+    signal namesRequested
     signal importExportRequested
     signal aboutRequested
     signal quickHelpRequested
@@ -82,6 +85,15 @@ SettingsPage {
     }
 
     // The row of the time format says what the format is.
+    // The words of the level of a name in text that leaves the device.
+    function nameLevelText(level: string): string {
+        if (level === "full")
+            return qsTr("Full name");
+        if (level === "hidden")
+            return qsTr("Someone");
+        return qsTr("Initials");
+    }
+
     function timeFormatText(style: string, seconds: bool): string {
         if (style === "12h")
             return seconds ? qsTr("12-hour with seconds") : qsTr("12-hour");
@@ -235,6 +247,16 @@ SettingsPage {
                 minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.peopleRequested()
+            }
+
+            ListRow {
+                objectName: "settingsNames"
+                visible: root.boards !== null && root.boards.interactionsEnabled && root.exportPreferences !== null
+                text: qsTr("Names in shared logs")
+                value: root.nameLevelText(root.exportPreferences !== null ? root.exportPreferences.nameExport : "")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.namesRequested()
             }
         }
 

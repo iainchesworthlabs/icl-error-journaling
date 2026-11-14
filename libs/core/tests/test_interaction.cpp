@@ -556,3 +556,23 @@ TEST_CASE("export.interaction_lines: error lines are byte for byte as they were 
         }
     }
 }
+
+TEST_CASE("interaction.defaults: the built-in types are the ones of the sample setup", "[interaction]")
+{
+    const auto types = default_interaction_types();
+    REQUIRE(types.size() == 6);
+    for (std::size_t i = 0; i < types.size(); ++i)
+    {
+        CHECK(types[i].m_BoardPosition == static_cast<int>(i) + 1);
+        CHECK_FALSE(types[i].m_Retired);
+        CHECK(types[i].m_Asks == interaction_asks_for(types[i].m_LinePattern));
+        if (types[i].m_LinePattern)
+        {
+            CHECK(validate_interaction_pattern(*types[i].m_LinePattern).has_value());
+        }
+    }
+    CHECK(types[0].m_Asks == InteractionAsks::PERSON);
+    CHECK(types[1].m_Asks == InteractionAsks::TEXT);
+    CHECK(types[2].m_Asks == InteractionAsks::NOTHING);
+    CHECK(types[3].m_Asks == InteractionAsks::PERSON);
+}

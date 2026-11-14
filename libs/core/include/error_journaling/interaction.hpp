@@ -65,6 +65,10 @@ enum class InteractionPatternError
                                                   std::string_view type_label, std::string_view people_text,
                                                   const std::optional<std::string>& value);
 
+/// The interaction types the app shows on the board when the setup file has none (so the board works out of the box).
+/// Positions 1 to 6, fixed ids. The same list is in `config/sample-config.json`. Stand-in wording only (NFR-10).
+[[nodiscard]] std::vector<InteractionType> default_interaction_types();
+
 enum class PickError
 {
     TOO_MANY_PEOPLE
