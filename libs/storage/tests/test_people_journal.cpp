@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The people journal's records and the state they fold to (Stage 14, section 3.4; T-I2-4). All names are stand-ins.
+#include "error_journaling/journal_record.hpp"
 #include "error_journaling/people_journal.hpp"
 #include "people_names.hpp"
 #include "storage_samples.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -72,6 +74,8 @@ TEST_CASE("Every people record encodes to one line and decodes to the same recor
         record(4, RetirePersonBody{person(1), false}),
         record(5, TouchPersonBody{person(1), sample_time(30)}),
         record(6, ForgetPersonBody{person(1)}),
+        record(7, SetPersonLocationBody{person(1), sample_id<LocationId>(4)}),
+        record(8, SetPersonLocationBody{person(1), std::nullopt}),
     };
     Person located = make_person(2, JORDAN);
     located.m_Location = sample_id<LocationId>(9);
@@ -88,6 +92,26 @@ TEST_CASE("Every people record encodes to one line and decodes to the same recor
     const auto with_location = decode_people_record(line_of(record(7, AddPersonBody{located})));
     REQUIRE(with_location.has_value());
     CHECK(std::get<AddPersonBody>(with_location->m_Body).m_Person.m_Location == sample_id<LocationId>(9));
+}
+
+TEST_CASE("A location change is v:2, the other records stay v:1, and a mismatch does not decode", "[people][journal]")
+{
+    const std::string set = line_of(record(3, SetPersonLocationBody{person(1), sample_id<LocationId>(4)}));
+    CHECK(set.find("\"v\":2") != std::string::npos);
+    CHECK(set.find("\"op\":\"set_person_location\"") != std::string::npos);
+    const auto cleared = decode_people_record(line_of(record(4, SetPersonLocationBody{person(1), std::nullopt})));
+    REQUIRE(cleared.has_value());
+    CHECK_FALSE(std::get<SetPersonLocationBody>(cleared->m_Body).m_Location.has_value());
+    const auto located = decode_people_record(set);
+    REQUIRE(located.has_value());
+    CHECK(located->m_Version == 2);
+    CHECK(std::get<SetPersonLocationBody>(located->m_Body).m_Location == sample_id<LocationId>(4));
+    CHECK(line_of(record(1, AddPersonBody{make_person(1, ALEX)})).find("\"v\":1") != std::string::npos);
+
+    // The same line claiming v:1 is not what the encoder writes for it (and its checksum no longer matches).
+    std::string old_claim = set;
+    old_claim.replace(old_claim.find("\"v\":2"), 5, "\"v\":1");
+    CHECK_FALSE(decode_people_record(old_claim).has_value());
 }
 
 TEST_CASE("A people record names its own version, its sequence number and its checksum", "[people][journal]")
@@ -161,6 +185,20 @@ TEST_CASE("The state folds the records and refuses what cannot be", "[people][jo
         REQUIRE(state.apply(TouchPersonBody{person(2), sample_time(77)}).has_value());
         CHECK(state.find(person(2))->m_LastUsedUtc == sample_time(77));
         CHECK_FALSE(state.find(person(1))->m_LastUsedUtc.has_value());
+    }
+    SECTION("a location is set, changed and cleared, and only for a person who is there")
+    {
+        const LocationId north = sample_id<LocationId>(4);
+        REQUIRE(state.apply(SetPersonLocationBody{person(1), north}).has_value());
+        CHECK(state.find(person(1))->m_Location == north);
+        CHECK_FALSE(state.find(person(2))->m_Location.has_value());
+        REQUIRE(state.apply(SetPersonLocationBody{person(1), sample_id<LocationId>(5)}).has_value());
+        CHECK(state.find(person(1))->m_Location == sample_id<LocationId>(5));
+        REQUIRE(state.apply(SetPersonLocationBody{person(1), std::nullopt}).has_value());
+        CHECK_FALSE(state.find(person(1))->m_Location.has_value());
+        CHECK(state.apply(SetPersonLocationBody{person(9), north}).error().m_Kind == StorageErrorKind::NOT_FOUND);
+        REQUIRE(state.apply(ForgetPersonBody{person(2)}).has_value());
+        CHECK(state.apply(SetPersonLocationBody{person(2), north}).error().m_Kind == StorageErrorKind::NOT_FOUND);
     }
     SECTION("forget keeps the id and nothing else, and a forgotten person cannot be changed")
     {
@@ -282,4 +320,89 @@ TEST_CASE("The seed of a state rebuilds the same state, and holds a forgotten pe
     CHECK_FALSE(scan.m_State.find(person(4))->m_Retired);
     CHECK(scan.m_State.find(person(4))->m_DisplayName == ALEX);
     CHECK(scan.m_State.find(person(2))->m_LastUsedUtc == sample_time(90));
+}
+
+TEST_CASE("A location change is replayed by a scan and kept by the seed, and a forgotten person keeps none",
+          "[people][journal]")
+{
+    const LocationId north = sample_id<LocationId>(4);
+    const std::vector<PeopleRecord> records = {
+        record(1, AddPersonBody{make_person(1, ALEX)}),
+        record(2, AddPersonBody{make_person(2, JORDAN, 2)}),
+        record(3, SetPersonLocationBody{person(1), north}),
+        record(4, SetPersonLocationBody{person(2), north}),
+        record(5, SetPersonLocationBody{person(2), std::nullopt}),
+        record(6, ForgetPersonBody{person(1)}),
+    };
+    const PeopleScan scan = scan_people_journal(file_of(records));
+    REQUIRE(scan.is_clean());
+    CHECK(scan.m_State.is_forgotten(person(1)));
+    CHECK_FALSE(scan.m_State.find(person(2))->m_Location.has_value());
+
+    PeopleState state;
+    REQUIRE(state.apply(AddPersonBody{make_person(1, ALEX)}).has_value());
+    REQUIRE(state.apply(AddPersonBody{make_person(2, JORDAN, 2)}).has_value());
+    REQUIRE(state.apply(SetPersonLocationBody{person(2), north}).has_value());
+    REQUIRE(state.apply(SetPersonLocationBody{person(1), north}).has_value());
+    REQUIRE(state.apply(ForgetPersonBody{person(1)}).has_value());
+    const std::string bytes = file_of(state.seed_records());
+    CHECK(bytes.find("set_person_location") == std::string::npos); // the seed holds the location in the add
+    CHECK(bytes.find("\"v\":2") == std::string::npos);             // so a journal that was reseeded is v:1 throughout
+    const PeopleScan again = scan_people_journal(bytes);
+    REQUIRE(again.is_clean());
+    CHECK(again.m_State.find(person(2))->m_Location == north);
+    CHECK(again.m_State.is_forgotten(person(1)));
+}
+
+namespace
+{
+
+/// A whole line with a good checksum, as a later build might write it: any op and version.
+std::string foreign_line(std::uint64_t seq, std::string_view op, int version)
+{
+    const std::string head = "{\"body\":{\"id\":\"" + person(1).format() + "\"},";
+    const std::string tail = ",\"op\":\"" + std::string(op) + "\",\"seq\":" + std::to_string(seq) +
+                             ",\"v\":" + std::to_string(version) + "}";
+    char digits[16];
+    std::snprintf(digits, sizeof digits, "%08x", crc32(head.substr(0, head.size() - 1) + tail.substr(0)));
+    return head + "\"crc\":\"" + digits + "\"" + tail;
+}
+
+} // namespace
+
+TEST_CASE("A record of an op this build does not have is skipped and counted, and what is around it is kept",
+          "[people][journal]")
+{
+    const std::string bytes = line_of(record(1, AddPersonBody{make_person(1, ALEX)})) + "\n" +
+                              foreign_line(2, "future_op", 2) + "\n" +
+                              line_of(record(3, AddPersonBody{make_person(2, JORDAN, 2)})) + "\n" +
+                              line_of(record(4, RenamePersonBody{person(1), std::string(PAT)})) + "\n";
+    const PeopleScan scan = scan_people_journal(bytes);
+    CHECK(scan.is_clean());
+    CHECK(scan.m_UnknownRecords == 1);
+    CHECK(scan.m_BadRecords == 0);
+    CHECK(scan.m_Records.size() == 3);
+    CHECK(scan.last_seq() == 4); // the skipped record keeps its number, so the next append is 5
+    CHECK(scan.m_State.size() == 2);
+    CHECK(scan.m_State.find(person(1))->m_DisplayName == PAT);
+    CHECK(scan.m_State.find(person(2))->m_DisplayName == JORDAN);
+
+    // Out of place, it is not trusted: a gap is a gap.
+    const PeopleScan gap = scan_people_journal(line_of(record(1, AddPersonBody{make_person(1, ALEX)})) + "\n" +
+                                               foreign_line(5, "future_op", 2) + "\n");
+    CHECK(gap.m_HasProblem);
+    CHECK(gap.m_UnknownRecords == 0);
+}
+
+TEST_CASE("A record of a version this build does not read ends the accepted run", "[people][journal]")
+{
+    // The one thing that says "this needs a newer app": the journal is not used and recovery sets a copy aside.
+    const std::string bytes = line_of(record(1, AddPersonBody{make_person(1, ALEX)})) + "\n" +
+                              foreign_line(2, "set_person_location", 3) + "\n" +
+                              line_of(record(3, AddPersonBody{make_person(2, JORDAN, 2)})) + "\n";
+    const PeopleScan scan = scan_people_journal(bytes);
+    CHECK(scan.m_Records.size() == 1);
+    CHECK(scan.m_HasProblem);
+    CHECK_FALSE(scan.is_clean());
+    CHECK(decode_people_record(foreign_line(2, "future_op", 3)).error() == PeopleDecodeError::UNSUPPORTED_VERSION);
 }
