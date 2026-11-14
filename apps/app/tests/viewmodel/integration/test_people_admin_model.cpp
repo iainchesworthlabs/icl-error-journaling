@@ -155,7 +155,7 @@ TEST_CASE("settings.people_model: Forget removes the person from both lists and 
             std::size_t found = 0;
             for (const Person& person : context.m_People->people())
             {
-                found += person.m_DisplayName == "Alex Sample" ? 1 : 0;
+                found += person.m_DisplayName == "Alex Sample" ? std::size_t{1} : std::size_t{0};
             }
             return found;
         });
