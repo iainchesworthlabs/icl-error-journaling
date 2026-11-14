@@ -11,6 +11,18 @@ The **Review** tab is today's log, in the same words that you share. It shows th
 - **Copy or delete an entry:** swipe it left for **Copy** and **Delete**.
 - **Copy log** at the top copies the whole log.
 
+### Interactions in Review
+
+If you use the second board, an interaction shows on its own line in the same words as the export, for example
+`Spoke with Alex Sample`, with the full name. On the screen the name is always in full; what **Copy log** and **Share
+log** carry follows the name setting in Settings (initials by default). A person you have forgotten reads as
+**someone**. An interaction that asks for a person but has none shows **(person not set)**.
+
+Tap an interaction to open **Edit entry**. You can change the interaction, the people, the answer, the time and the
+note. **Save** keeps the change and **Cancel** leaves the entry as it was; nothing is saved until you tap **Save**.
+This is also how you add the people to an entry you logged with **Skip** and left without a person. Swipe, Copy, Delete
+and Undo work as for an error.
+
 ![The Edit entry sheet: the error, the time, the note, and a Delete entry button.](img/edit-entry.png){ width="270" }
 
 ## Share the log

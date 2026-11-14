@@ -140,6 +140,9 @@ public:
     /// `fieldKey` and `newValue` (the stored text). Empty for an entry that is not in the bound log. A deleted entry is
     /// described too.
     Q_INVOKABLE QVariantMap entryForEdit(const QString& entryId) const;
+    /// The interaction types an interaction entry can be changed to: the types that are not retired, and the entry's
+    /// own type even when it is retired or gone. Each is {typeId, name}; empty for an entry that is not an interaction.
+    Q_INVOKABLE QVariantList interactionTypesFor(const QString& entryId) const;
 
     /// The plain reason `edit` cannot be saved, or an empty string when it can. Nothing is written.
     Q_INVOKABLE QString validateEdit(const QString& entryId, const QVariantMap& edit) const;
