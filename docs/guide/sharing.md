@@ -2,7 +2,8 @@
 
 ## Review
 
-The **Review** tab is today's log, in the same words that you share. It shows the header and every entry in time order.
+The **Review** tab is today's log, in the same words that you share, except that an interaction shows the person's full
+name here and is shared at the level you choose (see below). It shows the header and every entry in time order.
 
 ![Review: the log header and the entries, one per line with its time, and a Share log button.](img/review.png){ width="270" }
 

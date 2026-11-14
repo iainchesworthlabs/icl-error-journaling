@@ -520,3 +520,39 @@ TEST_CASE("export.interaction_lines: the type is looked up only when the entry h
     CHECK(render_entry_line(log, sample_id<EntryId>(1), context).value() ==
           "00:05 (Interaction) Spoke with \xE2\x80\x93 asked about \"the schedule\"");
 }
+
+TEST_CASE("export.interaction_lines: error lines are byte for byte as they were without interactions",
+          "[interaction][export]")
+{
+    // The downstream ticket indexer reads the `T|` lines, so an error line must not change with the name level, the
+    // label, or an interaction beside it in the log.
+    const FakeTimeZoneProvider zones(
+        {{"Europe/London", std::chrono::minutes(0)}, {"Australia/Melbourne", std::chrono::minutes(0)}});
+    Log log(sample_header());
+    REQUIRE(log.add(sample_error(1, 3)).has_value());
+    REQUIRE(log.add(sample_interaction(2, 5)).has_value());
+    REQUIRE(log.add(sample_error(3, 20, "Mute Delay", "heard it twice")).has_value());
+
+    ExportContext context;
+    context.m_Zones = &zones;
+    const auto first = render_entry_line(log, sample_id<EntryId>(1), context);
+    const auto second = render_entry_line(log, sample_id<EntryId>(3), context);
+    REQUIRE(first.has_value());
+    REQUIRE(second.has_value());
+    CHECK(*first == "00:03 T| Wrong Response");
+    CHECK(*second == "00:20 T| Mute Delay \xE2\x80\x93 heard it twice");
+
+    for (const NameLevel level : {NameLevel::FULL, NameLevel::INITIALS, NameLevel::HIDDEN})
+    {
+        for (const std::string_view marker : {"(Interaction)", "", "(Chat)"})
+        {
+            context.m_NameLevel = level;
+            context.m_InteractionMarker = marker;
+            context.m_InteractionPattern = [](InteractionTypeId) -> std::optional<std::string>
+            { return std::string("Spoke with {person}"); };
+            CHECK(render_entry_line(log, sample_id<EntryId>(1), context).value() == *first);
+            CHECK(render_entry_line(log, sample_id<EntryId>(3), context).value() == *second);
+            CHECK(render_entry_line(log, sample_id<EntryId>(2), context).value().find("T|") == std::string::npos);
+        }
+    }
+}
