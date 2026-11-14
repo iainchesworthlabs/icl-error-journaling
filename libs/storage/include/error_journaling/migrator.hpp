@@ -45,8 +45,9 @@ struct MigrationStep
 };
 
 /// The steps of the product, in order. Version 1 is the schema of Stage 2; version 2 adds
-/// `day_log.changed_since_share`. A later schema adds its step here and raises `SQLITE_SCHEMA_VERSION`. `Recovery::run`
-/// migrates a database to the current version before it opens it.
+/// `day_log.changed_since_share`, version 3 `day_log.extra_versions`, version 4 the interaction entries and the person
+/// cache (the `entry` table is rebuilt). A later schema adds its step here and raises `SQLITE_SCHEMA_VERSION`.
+/// `Recovery::run` migrates a database to the current version before it opens it.
 [[nodiscard]] std::vector<MigrationStep> product_migration_steps();
 
 struct MigrationOptions

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "error_journaling/clock.hpp"
+#include "error_journaling/interaction.hpp"
 #include "error_journaling/log_repository.hpp"
 #include "storage_samples.hpp"
 
@@ -700,4 +701,149 @@ TEMPLATE_LIST_TEST_CASE("Adding a note clears the draft in the same step; other 
     require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_note(2, 12, "typed note")));
     CHECK_FALSE(f.repo().get_draft().value().has_value());
     CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Log.entries().size() == 2);
+}
+
+// --- interactions (Stage 14): the memory and the SQLite repository keep them the same way (T-I2-3)
+// ---------------------
+
+namespace
+{
+
+PersonId person_id(std::uint64_t n)
+{
+    return sample_id<PersonId>(n);
+}
+
+} // namespace
+
+TEMPLATE_LIST_TEST_CASE("An interaction entry comes back whole, with its people in the order they were picked",
+                        "[contract][repository][interaction]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 30)));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG),
+                                  sample_interaction_entry(2, 20, {person_id(7), person_id(3), person_id(9)},
+                                                           "Morning Medley", "asked about the schedule")));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_interaction_entry(3, 10)));
+
+    const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(time_order(log) == std::vector<EntryId>{entry_id(3), entry_id(2), entry_id(1)});
+    const auto& named = std::get<InteractionEntry>(log.m_Log.find(entry_id(2))->m_Body);
+    CHECK(named.m_Type == sample_id<InteractionTypeId>(1));
+    CHECK(named.m_TypeLabel == "Spoke with");
+    CHECK(named.m_People == std::vector<PersonId>{person_id(7), person_id(3), person_id(9)});
+    CHECK(named.m_Value == "Morning Medley");
+    CHECK(named.m_AttachedNote == "asked about the schedule");
+    const auto& nobody = std::get<InteractionEntry>(log.m_Log.find(entry_id(3))->m_Body);
+    CHECK(nobody.m_People.empty());
+    CHECK_FALSE(nobody.m_Value.has_value());
+    CHECK_FALSE(nobody.m_AttachedNote.has_value());
+    CHECK(f.repo().list_logs().value().front().m_TotalEntryCount == 3);
+}
+
+TEMPLATE_LIST_TEST_CASE("Editing an interaction sets, reorders and clears its people and keeps the entry in place",
+                        "[contract][repository][interaction]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_interaction_entry(1, 10))); // logged first, named second
+    require_ok(f.repo().edit_entry(log_id(FIRST_LOG), sample_interaction_entry(1, 10, {person_id(5), person_id(4)}),
+                                   sample_time(50)));
+    auto log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(std::get<InteractionEntry>(log.m_Log.find(entry_id(1))->m_Body).m_People ==
+          std::vector<PersonId>{person_id(5), person_id(4)});
+    CHECK(log.m_Log.find(entry_id(1))->m_EditedUtc == sample_time(50));
+
+    require_ok(f.repo().edit_entry(
+        log_id(FIRST_LOG), sample_interaction_entry(1, 10, {person_id(4), person_id(5)}, "x"), sample_time(51)));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(std::get<InteractionEntry>(log.m_Log.find(entry_id(1))->m_Body).m_People ==
+          std::vector<PersonId>{person_id(4), person_id(5)});
+    CHECK(std::get<InteractionEntry>(log.m_Log.find(entry_id(1))->m_Body).m_Value == "x");
+
+    require_ok(f.repo().edit_entry(log_id(FIRST_LOG), sample_interaction_entry(1, 10), sample_time(52)));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(std::get<InteractionEntry>(log.m_Log.find(entry_id(1))->m_Body).m_People.empty());
+    CHECK(log.m_Log.entries().size() == 1);
+}
+
+TEMPLATE_LIST_TEST_CASE("An interaction can be changed into another kind of entry and back",
+                        "[contract][repository][interaction]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_interaction_entry(1, 10, {person_id(5)})));
+    require_ok(f.repo().edit_entry(log_id(FIRST_LOG), sample_note(1, 10, "now a note"), sample_time(20)));
+    auto log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(std::holds_alternative<NoteEntry>(log.m_Log.find(entry_id(1))->m_Body));
+    require_ok(
+        f.repo().edit_entry(log_id(FIRST_LOG), sample_interaction_entry(1, 10, {person_id(6)}), sample_time(21)));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(std::get<InteractionEntry>(log.m_Log.find(entry_id(1))->m_Body).m_People ==
+          std::vector<PersonId>{person_id(6)});
+}
+
+TEMPLATE_LIST_TEST_CASE("A deleted interaction is hidden and restored with its people",
+                        "[contract][repository][interaction]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_interaction_entry(1, 10, {person_id(5), person_id(6)})));
+    require_ok(f.repo().set_entry_deleted(log_id(FIRST_LOG), entry_id(1), true));
+    auto log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(time_order(log).empty());
+    CHECK(time_order(log, true) == std::vector<EntryId>{entry_id(1)});
+    CHECK(f.repo().list_logs().value().front().m_LiveEntryCount == 0);
+
+    require_ok(f.repo().set_entry_deleted(log_id(FIRST_LOG), entry_id(1), false));
+    log = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(std::get<InteractionEntry>(log.m_Log.find(entry_id(1))->m_Body).m_People ==
+          std::vector<PersonId>{person_id(5), person_id(6)});
+}
+
+TEMPLATE_LIST_TEST_CASE("An interaction that breaks a rule is refused and leaves the log as it was",
+                        "[contract][repository][interaction]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_interaction_entry(1, 10, {person_id(5)})));
+    const auto before = f.repo().load_log(log_id(FIRST_LOG)).value();
+
+    std::vector<PersonId> twenty_one;
+    for (std::uint64_t n = 1; n <= MAX_PEOPLE_PER_INTERACTION + 1; ++n)
+    {
+        twenty_one.push_back(person_id(n));
+    }
+    CHECK(failure_of(f.repo().add_entry(log_id(FIRST_LOG), sample_interaction_entry(2, 11, twenty_one))) ==
+          StorageErrorKind::LIMIT_EXCEEDED);
+    CHECK(failure_of(
+              f.repo().add_entry(log_id(FIRST_LOG), sample_interaction_entry(2, 11, {person_id(5), person_id(5)}))) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(failure_of(f.repo().add_entry(log_id(FIRST_LOG),
+                                        sample_interaction_entry(2, 11, {}, std::nullopt, std::nullopt, ""))) ==
+          StorageErrorKind::INVALID_ARGUMENT);
+    CHECK(failure_of(f.repo().edit_entry(log_id(FIRST_LOG), sample_interaction_entry(1, 10, twenty_one),
+                                         sample_time(50))) == StorageErrorKind::LIMIT_EXCEEDED);
+
+    const auto after = f.repo().load_log(log_id(FIRST_LOG)).value();
+    CHECK(digest_of(after) == digest_of(before));
+
+    // Twenty is the most there can be.
+    twenty_one.pop_back();
+    require_ok(f.repo().edit_entry(log_id(FIRST_LOG), sample_interaction_entry(1, 10, twenty_one), sample_time(51)));
+    CHECK(std::get<InteractionEntry>(f.repo().load_log(log_id(FIRST_LOG)).value().m_Log.find(entry_id(1))->m_Body)
+              .m_People.size() == MAX_PEOPLE_PER_INTERACTION);
+}
+
+TEMPLATE_LIST_TEST_CASE("An archived log keeps its interactions and a new log starts without them",
+                        "[contract][repository][interaction]", Fixtures)
+{
+    TestType f;
+    start_log(f);
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_interaction_entry(1, 10, {person_id(5)})));
+    require_ok(f.repo().start_new_log(log_id(FIRST_LOG), log_id(2), sample_header()));
+    CHECK(std::get<InteractionEntry>(f.repo().load_log(log_id(FIRST_LOG)).value().m_Log.find(entry_id(1))->m_Body)
+              .m_People == std::vector<PersonId>{person_id(5)});
+    CHECK(f.repo().open_log().value()->m_Log.entries().empty());
 }

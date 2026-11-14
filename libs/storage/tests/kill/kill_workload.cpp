@@ -81,6 +81,16 @@ const char* operation_name(OperationKind kind)
         return "start_new_log";
     case OperationKind::SET_DRAFT:
         return "set_draft";
+    case OperationKind::ADD_PERSON:
+        return "add_person";
+    case OperationKind::RENAME_PERSON:
+        return "rename_person";
+    case OperationKind::RETIRE_PERSON:
+        return "retire_person";
+    case OperationKind::TOUCH_PERSON:
+        return "touch_person";
+    case OperationKind::FORGET_PERSON:
+        return "forget_person";
     }
     return "unknown";
 }
@@ -90,7 +100,8 @@ const char* operation_name(OperationKind kind)
 // ---------------------------------------------------------------------------------------------------------------------
 
 Workload::Workload(std::uint64_t seed, std::uint64_t forced_archive_at)
-    : m_Seed(seed), m_ForcedArchiveAt(forced_archive_at), m_Rng(mix(seed ^ 0x4F50ULL))
+    : m_Seed(seed), m_ForcedArchiveAt(forced_archive_at), m_Rng(mix(seed ^ 0x4F50ULL)),
+      m_PeopleRng(mix(seed ^ 0x5045ULL))
 {
 }
 
@@ -139,9 +150,16 @@ Operation Workload::next()
         return make_start_new_log(std::move(base));
     }
     const std::uint64_t roll = m_Rng.below(100);
+    // Every ninth operation is about the people (the roll is drawn all the same, so the logs' own stream is not
+    // shifted).
+    if (base.m_Number % 9 == 0)
+    {
+        return make_person_operation(std::move(base));
+    }
     if (roll < 60)
     {
-        return make_add(std::move(base));
+        // Every fourth of the adds is an interaction, logged with nobody named (log first, name second, Stage 14).
+        return base.m_Number % 4 == 3 ? make_add_interaction(std::move(base)) : make_add(std::move(base));
     }
     if (roll < 75)
     {
@@ -154,7 +172,7 @@ Operation Workload::next()
         // A note is captured when it is committed, which is after every draft typed before it: a note replayed from the
         // journal takes out a draft written no later than that (docs/plan/stage-2.md, section 11).
         base.m_Entry.m_Captured.m_Utc = base.m_Time;
-        m_Entries.push_back(Tracked{base.m_Log, id, base.m_Entry.m_Captured, true, false, false});
+        m_Entries.push_back(Tracked{base.m_Log, id, base.m_Entry.m_Captured, true, false, false, false});
         return base;
     }
     if (roll < 83)
@@ -217,7 +235,64 @@ Operation Workload::make_add(Operation base, bool header_change)
         base.m_Entry = sample_error(0, minute_of(base.m_Number), "Wrong Response");
     }
     base.m_Entry.m_Id = id;
-    m_Entries.push_back(Tracked{base.m_Log, id, base.m_Entry.m_Captured, false, header_change, false});
+    m_Entries.push_back(Tracked{base.m_Log, id, base.m_Entry.m_Captured, false, header_change, false, false});
+    return base;
+}
+
+Operation Workload::make_add_interaction(Operation base)
+{
+    base.m_Kind = OperationKind::ADD_ENTRY;
+    base.m_Log = m_Logs.back();
+    const EntryId id = next_entry_id();
+    base.m_Entry = sample_interaction_entry(0, minute_of(base.m_Number));
+    base.m_Entry.m_Id = id;
+    m_Entries.push_back(Tracked{base.m_Log, id, base.m_Entry.m_Captured, false, false, false, true});
+    return base;
+}
+
+Operation Workload::make_person_operation(Operation base)
+{
+    std::vector<std::size_t> live;
+    for (std::size_t i = 0; i < m_People.size(); ++i)
+    {
+        if (!m_People[i].m_Forgotten)
+        {
+            live.push_back(i);
+        }
+    }
+    const std::uint64_t roll = m_PeopleRng.below(100);
+    const PersonId fresh = sample_id<PersonId>(m_Seed % 1000003ULL * 1000ULL + m_PersonCounter + 1);
+    // The names are all different, so that no add or rename is refused for matching another person's.
+    if (live.empty() || (roll < 35 && live.size() < 10))
+    {
+        base.m_Kind = OperationKind::ADD_PERSON;
+        base.m_Person = fresh;
+        base.m_Text = "Alex Sample " + std::to_string(++m_PersonCounter);
+        m_People.push_back(TrackedPerson{fresh, false, false});
+        return base;
+    }
+    TrackedPerson& target = m_People[live[static_cast<std::size_t>(m_PeopleRng.below(live.size()))]];
+    base.m_Person = target.m_Id;
+    if (roll < 55)
+    {
+        base.m_Kind = OperationKind::RENAME_PERSON;
+        base.m_Text = "Pat Stand-in " + std::to_string(++m_PersonCounter);
+    }
+    else if (roll < 80)
+    {
+        base.m_Kind = OperationKind::TOUCH_PERSON;
+    }
+    else if (roll < 92)
+    {
+        base.m_Kind = OperationKind::RETIRE_PERSON;
+        target.m_Retired = !target.m_Retired;
+        base.m_Retired = target.m_Retired;
+    }
+    else
+    {
+        base.m_Kind = OperationKind::FORGET_PERSON;
+        target.m_Forgotten = true;
+    }
     return base;
 }
 
@@ -239,7 +314,21 @@ Operation Workload::make_edit(Operation base)
     const Tracked& target = m_Entries[candidates[static_cast<std::size_t>(m_Rng.below(candidates.size()))]];
     base.m_Kind = OperationKind::EDIT_ENTRY;
     base.m_Log = log;
-    if (target.m_IsNote)
+    if (target.m_IsInteraction)
+    {
+        // The name comes second: up to three of the people there are, in an order that depends on the operation, the
+        // way the picker sets them. Forgotten people are among them: an entry keeps the id.
+        std::vector<PersonId> picked;
+        for (std::size_t k = 0; k < m_People.size() && picked.size() < 3; ++k)
+        {
+            picked.push_back(m_People[(k + base.m_Number) % m_People.size()].m_Id);
+        }
+        base.m_Entry = sample_interaction_entry(
+            0, 0, std::move(picked),
+            base.m_Number % 2 == 0 ? std::optional<std::string>("edit " + std::to_string(base.m_Number))
+                                   : std::nullopt);
+    }
+    else if (target.m_IsNote)
     {
         base.m_Entry =
             sample_note(0, 0, "Edited, the robot took the song for Sam Example, edit " + std::to_string(base.m_Number));
@@ -351,7 +440,33 @@ std::uint64_t Pacer::next_delay_us()
 
 Result<void, StorageError> apply_operation(LogRepository& repository, ScriptedClock& clock, const Operation& operation)
 {
+    return apply_operation(repository, nullptr, clock, operation);
+}
+
+Result<void, StorageError> apply_operation(LogRepository& repository, PeopleStore* people, ScriptedClock& clock,
+                                           const Operation& operation)
+{
     clock.set(operation.m_Time);
+    if (is_people_operation(operation.m_Kind))
+    {
+        if (people == nullptr)
+        {
+            return fail(make_error(StorageErrorKind::INTERNAL, "a people operation without a people store"));
+        }
+        switch (operation.m_Kind)
+        {
+        case OperationKind::ADD_PERSON:
+            return people->add_person(operation.m_Person, operation.m_Text).transform([](const Person&) {});
+        case OperationKind::RENAME_PERSON:
+            return people->rename_person(operation.m_Person, operation.m_Text);
+        case OperationKind::RETIRE_PERSON:
+            return people->retire_person(operation.m_Person, operation.m_Retired);
+        case OperationKind::TOUCH_PERSON:
+            return people->touch_person(operation.m_Person);
+        default:
+            return people->forget_person(operation.m_Person);
+        }
+    }
     switch (operation.m_Kind)
     {
     case OperationKind::CREATE_LOG:
@@ -370,13 +485,23 @@ Result<void, StorageError> apply_operation(LogRepository& repository, ScriptedCl
         return repository.start_new_log(operation.m_Log, operation.m_NewLog, operation.m_Header);
     case OperationKind::SET_DRAFT:
         return repository.set_draft(operation.m_Text, operation.m_Time);
+    default:
+        break;
     }
     return fail(make_error(StorageErrorKind::INTERNAL, "an operation of a kind the workload does not make"));
 }
 
-Result<ModelState, StorageError> state_of(LogRepository& repository)
+Result<ModelState, StorageError> state_of(LogRepository& repository, const PeopleStore* people)
 {
     ModelState state;
+    if (people != nullptr)
+    {
+        for (const Person& person : people->people())
+        {
+            state.m_People.m_People.emplace(person.m_Id, std::make_pair(person.m_DisplayName, person.m_Retired));
+        }
+        state.m_People.m_Forgotten = people->forgotten();
+    }
     auto summaries = repository.list_logs();
     if (!summaries)
     {
@@ -418,10 +543,37 @@ ModelState model_after(std::uint64_t seed, std::uint64_t forced_archive_at, std:
     ScriptedClock clock;
     MemoryLogRepository repository(clock);
     Workload workload(seed, forced_archive_at);
+    PeopleState people; // the people, folded by the rules of the journal, with no file
     for (std::uint64_t i = 0; i < operations; ++i)
     {
         const Operation operation = workload.next();
-        const auto applied = apply_operation(repository, clock, operation);
+        Result<void, StorageError> applied;
+        switch (operation.m_Kind)
+        {
+        case OperationKind::ADD_PERSON:
+        {
+            Person person;
+            person.m_Id = operation.m_Person;
+            person.m_DisplayName = operation.m_Text;
+            applied = people.apply(AddPersonBody{person});
+            break;
+        }
+        case OperationKind::RENAME_PERSON:
+            applied = people.apply(RenamePersonBody{operation.m_Person, operation.m_Text});
+            break;
+        case OperationKind::RETIRE_PERSON:
+            applied = people.apply(RetirePersonBody{operation.m_Person, operation.m_Retired});
+            break;
+        case OperationKind::TOUCH_PERSON:
+            applied = people.apply(TouchPersonBody{operation.m_Person, operation.m_Time});
+            break;
+        case OperationKind::FORGET_PERSON:
+            applied = people.apply(ForgetPersonBody{operation.m_Person});
+            break;
+        default:
+            applied = apply_operation(repository, clock, operation);
+            break;
+        }
         if (!applied)
         {
             // The workload only makes valid operations, so this is a bug in the workload or the model. Say so loudly:
@@ -433,7 +585,16 @@ ModelState model_after(std::uint64_t seed, std::uint64_t forced_archive_at, std:
         }
     }
     auto state = state_of(repository);
-    return state ? std::move(*state) : ModelState{};
+    if (!state)
+    {
+        return ModelState{};
+    }
+    for (const Person& person : people.people())
+    {
+        state->m_People.m_People.emplace(person.m_Id, std::make_pair(person.m_DisplayName, person.m_Retired));
+    }
+    state->m_People.m_Forgotten = people.forgotten();
+    return std::move(*state);
 }
 
 std::string difference(const ModelState& expected, const ModelState& actual)
@@ -463,6 +624,13 @@ std::string difference(const ModelState& expected, const ModelState& actual)
     {
         add("the open log is " + (actual.m_Open ? short_id(*actual.m_Open) : std::string("none")) + ", expected " +
             (expected.m_Open ? short_id(*expected.m_Open) : std::string("none")));
+    }
+    if (!(expected.m_People == actual.m_People))
+    {
+        add("the people are " + std::to_string(actual.m_People.m_People.size()) + " and " +
+            std::to_string(actual.m_People.m_Forgotten.size()) + " forgotten, expected " +
+            std::to_string(expected.m_People.m_People.size()) + " and " +
+            std::to_string(expected.m_People.m_Forgotten.size()) + " forgotten");
     }
     if (expected.m_Draft != actual.m_Draft)
     {

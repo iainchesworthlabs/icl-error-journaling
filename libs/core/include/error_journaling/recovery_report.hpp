@@ -31,6 +31,8 @@ struct RecoveryReport
     std::size_t m_VoidedRecords = 0;      // writes that were rolled back by a void
     std::size_t m_ArchivedLogsLost = 0;   // archived logs that could not be recovered
     bool m_DraftRecovered = false;
+    std::size_t m_PeopleRecovered = 0; // people the `person` table was made right for from the people journal
+    std::size_t m_PeopleLost = 0; // people whose records are gone (their entries read "someone"); a count, never a name
     std::vector<std::string> m_QuarantinedPaths; // paths only, no content
     std::string m_IntegrityMessage;              // SQLite's own text, never user data
     std::vector<std::string> m_Notes;            // plain remarks such as "the journal was seeded from the database"

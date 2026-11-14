@@ -9,8 +9,23 @@ and it does not send anything over the internet. This page says what that means 
 
 - **Your logs.** Each day's entries, the notes you type and the day's details (unit, place, software versions (the robot's and any others you add), date and
   your name as the facilitator).
+- **People you name.** Only if you turn on the second board and choose to type a name (see below).
 - **Your setup.** The error types, places and note templates you set up, and your preferences, such as the time format.
 - **A few settings of the app itself**, such as whether you have closed the tip on the Log screen, whether the optional second board is on, and which board you used last. They are a switch and a word in a small file of their own; they are not in your logs and not in a setup file.
+
+## People you choose to name
+
+If you turn on the second board (Interactions), you can keep a short list of people, so that you type a name once and pick it
+later. The list is yours: the app never fills it in, and a log that names nobody has no names in it.
+
+- **Where the names are.** In a file of their own in the app's storage, and in the app's database. A log's own record holds
+  only a number for each person, never the name, so a name you remove is gone from the app (Settings, People, Forget).
+  Entries that named that person stay and then read "someone".
+- **What leaves the device.** Only what you share or copy, at the level of detail you choose in Settings (the default is
+  initials). The setup file you can export holds no people, and there is no way to export the list itself.
+- **Your device backup** holds the list with the rest of the app's files, as described below. Forgetting a person does not
+  change a backup that was made before.
+- The developer receives none of it: the app sends nothing over the internet.
 
 ## The microphone
 

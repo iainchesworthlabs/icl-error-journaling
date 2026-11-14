@@ -25,6 +25,7 @@
 // every shard; `[points]` ones kill at each named crash point and give the same result every time, so a run needs them
 // once.
 #include "error_journaling/migrator.hpp"
+#include "error_journaling/people_store.hpp"
 #include "error_journaling/recovery.hpp"
 #include "kill_workload.hpp"
 #include "migration_steps.hpp"
@@ -477,7 +478,14 @@ Verdict verify_store(const std::filesystem::path& dir, std::uint64_t seed, std::
             return failed("integrity_check after recovery: " +
                           (integrity ? integrity->m_Message : describe(integrity.error())));
         }
-        auto actual = state_of(**repository);
+        PeopleStore::Options people_options;
+        people_options.m_Cache = repository->get();
+        auto people = PeopleStore::open(location, clock, std::move(people_options));
+        if (!people)
+        {
+            return failed("the people journal does not open after recovery: " + describe(people.error()));
+        }
+        auto actual = state_of(**repository, people->get());
         if (!actual)
         {
             return failed("the recovered store cannot be read: " + describe(actual.error()));
@@ -508,11 +516,11 @@ Verdict verify_store(const std::filesystem::path& dir, std::uint64_t seed, std::
         {
             next = workload.next();
         }
-        if (auto applied = apply_operation(**repository, clock, next); !applied)
+        if (auto applied = apply_operation(**repository, people->get(), clock, next); !applied)
         {
             return failed("the next operation after recovery failed: " + describe(applied.error()));
         }
-        auto after = state_of(**repository);
+        auto after = state_of(**repository, people->get());
         if (!after)
         {
             return failed("the store cannot be read after one more operation: " + describe(after.error()));
@@ -752,7 +760,9 @@ std::uint64_t seed_for(std::uint64_t master, std::uint64_t index, const CrashCas
         {
             operation = workload.next();
         }
-        const bool journalled = operation.m_Kind != OperationKind::SET_DRAFT;
+        // A draft writes neither journal and a person writes the people journal only, which has the two journal crash
+        // points and not those of the database.
+        const bool journalled = operation.m_Kind != OperationKind::SET_DRAFT && !is_people_operation(operation.m_Kind);
         const bool archive = operation.m_Kind == OperationKind::START_NEW_LOG;
         if (std::string_view(item.m_Point) == "after_ack_before_next" ||
             (journalled && archive == (item.m_Operation == FORCED_ARCHIVE)))
@@ -1267,11 +1277,28 @@ TEST_CASE("kill: seed 0x35b5989d25a5fd6c, iteration 5: a note in flight with a d
     // draft out. The random kill depends on scheduling; this runs the same operations and kills at the point every
     // time.
     constexpr std::uint64_t MASTER = 0x35b5989d25a5fd6cULL;
-    constexpr std::uint64_t ITERATION = 5;
     constexpr std::uint64_t OPERATION = 365;
-    const std::uint64_t seed = iteration_seed(MASTER, ITERATION);
+    // The failing run was iteration 5 of this master seed. The workload has since gained interactions and people, which
+    // moves every operation, so the iteration is the first one from 5 on whose operation 365 is what the failure was
+    // about: a note, with a draft pending before it.
+    std::uint64_t seed = 0;
+    for (std::uint64_t iteration = 5;; ++iteration)
+    {
+        seed = iteration_seed(MASTER, iteration);
+        Workload candidate(seed);
+        Operation operation;
+        for (std::uint64_t n = 0; n < OPERATION; ++n)
+        {
+            operation = candidate.next();
+        }
+        if (operation.m_Kind == OperationKind::ADD_ENTRY &&
+            std::holds_alternative<NoteEntry>(operation.m_Entry.m_Body) &&
+            model_after(seed, 0, OPERATION - 1).m_Draft.has_value())
+        {
+            break;
+        }
+    }
 
-    // The workload still makes the operation the failure was about: a note, with a draft pending before it.
     Workload workload(seed);
     Operation in_flight;
     for (std::uint64_t n = 0; n < OPERATION; ++n)

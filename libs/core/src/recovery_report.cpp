@@ -65,6 +65,14 @@ std::string describe(const RecoveryReport& report)
     {
         text += ", note draft recovered";
     }
+    if (report.m_PeopleRecovered != 0)
+    {
+        text += ", " + plural(report.m_PeopleRecovered, "person", "people") + " recovered";
+    }
+    if (report.m_PeopleLost != 0)
+    {
+        text += ", " + plural(report.m_PeopleLost, "person", "people") + " lost";
+    }
     if (!report.m_QuarantinedPaths.empty())
     {
         text += ", " + plural(report.m_QuarantinedPaths.size(), "file", "files") + " quarantined";

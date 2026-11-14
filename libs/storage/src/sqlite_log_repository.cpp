@@ -6,6 +6,7 @@
 #include "error_journaling/iso_date.hpp"
 #include "error_journaling/utf8.hpp"
 #include "protect.hpp"
+#include "schema_v4.hpp"
 
 #include <QByteArray>
 #include <QCoreApplication>
@@ -19,6 +20,8 @@
 #include <atomic>
 #include <filesystem>
 #include <functional>
+#include <map>
+#include <set>
 #include <system_error>
 #include <utility>
 
@@ -217,8 +220,10 @@ Result<FileIdentity, StorageError> probe_file(const std::filesystem::path& path,
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// The schema (section 2.3): version 1, and version 2 which adds `day_log.changed_since_share`. A new database is made
-// at the current version in one go; a version 1 database gets the one column from the migration step in `migrator.cpp`.
+// The schema (section 2.3): version 1, version 2 which adds `day_log.changed_since_share`, version 3 which adds
+// `day_log.extra_versions` and version 4 which adds the interaction tables and lets `entry.kind` be `interaction`
+// (`schema_v4.hpp`). A new database is made at the current version in one go; an older database gets its steps from
+// `migrator.cpp`.
 // ---------------------------------------------------------------------------------------------------------------------
 
 constexpr const char* SCHEMA[] = {
@@ -244,17 +249,8 @@ constexpr const char* SCHEMA[] = {
     "CREATE INDEX day_log_archived ON day_log(archived)",
     // At most one log is open, enforced by the database and not only by the code (DS-05).
     "CREATE UNIQUE INDEX day_log_one_open ON day_log(archived) WHERE archived = 0",
-    "CREATE TABLE entry ("
-    " id TEXT PRIMARY KEY NOT NULL,"
-    " day_log_id TEXT NOT NULL REFERENCES day_log(id) ON DELETE RESTRICT,"
-    " seq INTEGER NOT NULL,"
-    " kind TEXT NOT NULL CHECK (kind IN ('error', 'note', 'header_change')),"
-    " captured_utc INTEGER NOT NULL,"
-    " captured_tz TEXT NOT NULL,"
-    " edited_utc INTEGER,"
-    " deleted INTEGER NOT NULL DEFAULT 0 CHECK (deleted IN (0, 1)),"
-    " UNIQUE (day_log_id, seq))",
-    "CREATE INDEX entry_by_time ON entry(day_log_id, captured_utc, seq)",
+    ej::schema::ENTRY_TABLE,
+    ej::schema::ENTRY_BY_TIME,
     "CREATE TABLE error_entry ("
     " entry_id TEXT PRIMARY KEY NOT NULL REFERENCES entry(id) ON DELETE RESTRICT,"
     " error_type_id TEXT NOT NULL,"
@@ -506,6 +502,8 @@ Result<void, StorageError> SqliteLogRepository::Impl::apply_settings(int busy_ti
     } settings[] = {
         {"journal_mode", QStringLiteral("PRAGMA journal_mode=WAL"), QStringLiteral("PRAGMA journal_mode"), "wal"},
         {"synchronous", QStringLiteral("PRAGMA synchronous=FULL"), QStringLiteral("PRAGMA synchronous"), 2},
+        // A name that is forgotten is blanked in the `person` table; with this the page it was in is overwritten.
+        {"secure_delete", QStringLiteral("PRAGMA secure_delete=ON"), QStringLiteral("PRAGMA secure_delete"), 1},
         {"foreign_keys", QStringLiteral("PRAGMA foreign_keys=ON"), QStringLiteral("PRAGMA foreign_keys"), 1},
         {"busy_timeout", QStringLiteral("PRAGMA busy_timeout=") + timeout, QStringLiteral("PRAGMA busy_timeout"),
          busy_timeout_ms},
@@ -539,6 +537,14 @@ Result<void, StorageError> SqliteLogRepository::Impl::initialise_schema() const
         {
             break;
         }
+    }
+    for (const char* statement : ej::schema::INTERACTION_TABLES)
+    {
+        if (!done)
+        {
+            break;
+        }
+        done = exec(QString::fromLatin1(statement));
     }
     if (done)
     {
@@ -652,6 +658,10 @@ std::string_view kind_name(const EntryBody& body)
     {
         return "error";
     }
+    if (std::holds_alternative<InteractionEntry>(body))
+    {
+        return "interaction";
+    }
     return std::holds_alternative<NoteEntry>(body) ? "note" : "header_change";
 }
 
@@ -701,13 +711,37 @@ Result<SqliteLogRepository::Impl::Loaded, StorageError> SqliteLogRepository::Imp
     }
     Loaded loaded{StoredLog{meta, Log(std::move(*header))}, row->value(4).toULongLong()};
 
+    // The people of the interactions of this log, by entry, in the order they were picked.
+    std::map<std::string, std::vector<PersonId>> people_of;
+    {
+        auto people = run(QStringLiteral("SELECT p.entry_id, p.person_id FROM interaction_entry_person p"
+                                         " JOIN entry e ON e.id = p.entry_id WHERE e.day_log_id = ?"
+                                         " ORDER BY p.entry_id, p.position"),
+                          {key});
+        if (!people)
+        {
+            return Failure(people.error());
+        }
+        while (people->next())
+        {
+            const auto person = Uuid::parse(to_std(people->value(1).toString()));
+            if (!person)
+            {
+                return Failure(corrupt("a stored person id is not valid"));
+            }
+            people_of[to_std(people->value(0).toString())].push_back(PersonId{*person});
+        }
+    }
+
     auto entries = run(QStringLiteral("SELECT e.id, e.kind, e.captured_utc, e.captured_tz, e.edited_utc, e.deleted,"
                                       " x.error_type_id, x.error_type_label, x.attached_note,"
-                                      " n.template_id, n.value_text, h.field, h.new_value "
+                                      " n.template_id, n.value_text, h.field, h.new_value,"
+                                      " i.interaction_type_id, i.interaction_type_label, i.value_text, i.attached_note "
                                       "FROM entry e"
                                       " LEFT JOIN error_entry x ON x.entry_id = e.id"
                                       " LEFT JOIN note_entry n ON n.entry_id = e.id"
-                                      " LEFT JOIN header_change_entry h ON h.entry_id = e.id "
+                                      " LEFT JOIN header_change_entry h ON h.entry_id = e.id"
+                                      " LEFT JOIN interaction_entry i ON i.entry_id = e.id "
                                       "WHERE e.day_log_id = ? ORDER BY e.seq"),
                        {key});
     if (!entries)
@@ -755,6 +789,24 @@ Result<SqliteLogRepository::Impl::Loaded, StorageError> SqliteLogRepository::Imp
             }
             note.m_Value = to_std(entries->value(10).toString());
             entry.m_Body = std::move(note);
+        }
+        else if (kind == "interaction")
+        {
+            const auto type = Uuid::parse(to_std(entries->value(13).toString()));
+            if (!type || entries->value(14).isNull())
+            {
+                return Failure(corrupt("a stored interaction entry is not valid"));
+            }
+            InteractionEntry interaction;
+            interaction.m_Type = InteractionTypeId{*type};
+            interaction.m_TypeLabel = to_std(entries->value(14).toString());
+            interaction.m_Value = optional_text(entries->value(15));
+            interaction.m_AttachedNote = optional_text(entries->value(16));
+            if (const auto found = people_of.find(to_std(entries->value(0).toString())); found != people_of.end())
+            {
+                interaction.m_People = found->second;
+            }
+            entry.m_Body = std::move(interaction);
         }
         else
         {
@@ -897,6 +949,8 @@ Result<void, StorageError> SqliteLogRepository::Impl::delete_log_rows(const QStr
         "DELETE FROM error_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
         "DELETE FROM note_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
         "DELETE FROM header_change_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
+        "DELETE FROM interaction_entry_person WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
+        "DELETE FROM interaction_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
         "DELETE FROM entry WHERE day_log_id = ?1",
         "DELETE FROM day_log WHERE id = ?1",
     };
@@ -956,6 +1010,31 @@ Result<void, StorageError> SqliteLogRepository::Impl::insert_kind(const Entry& e
         return exec(
             QStringLiteral("INSERT INTO note_entry (entry_id, template_id, value_text) VALUES (?, ?, ?)"),
             {id, note->m_Template ? QVariant(to_qt(note->m_Template->format())) : null_text(), to_qt(note->m_Value)});
+    }
+    if (const auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body))
+    {
+        if (auto inserted = exec(QStringLiteral("INSERT INTO interaction_entry (entry_id, interaction_type_id,"
+                                                " interaction_type_label, value_text, attached_note) "
+                                                "VALUES (?, ?, ?, ?, ?)"),
+                                 {id, to_qt(interaction->m_Type.format()), to_qt(interaction->m_TypeLabel),
+                                  text_or_null(interaction->m_Value), text_or_null(interaction->m_AttachedNote)});
+            !inserted)
+        {
+            return inserted;
+        }
+        // By id and by position only: the entry tables never hold a name.
+        int position = 0;
+        for (const PersonId person : interaction->m_People)
+        {
+            if (auto linked = exec(QStringLiteral("INSERT INTO interaction_entry_person (entry_id, person_id, position)"
+                                                  " VALUES (?, ?, ?)"),
+                                   {id, to_qt(person.format()), position++});
+                !linked)
+            {
+                return linked;
+            }
+        }
+        return {};
     }
     const auto& change = std::get<HeaderChangeEntry>(entry.m_Body);
     return exec(QStringLiteral("INSERT INTO header_change_entry (entry_id, field, old_value, new_value) "
@@ -1030,7 +1109,8 @@ Result<void, StorageError> SqliteLogRepository::Impl::persist(const JournalRecor
             {
                 return updated;
             }
-            for (const char* table : {"error_entry", "note_entry", "header_change_entry"})
+            for (const char* table :
+                 {"interaction_entry_person", "interaction_entry", "error_entry", "note_entry", "header_change_entry"})
             {
                 if (auto removed = m_Impl.exec(
                         QStringLiteral("DELETE FROM %1 WHERE entry_id = ?").arg(QLatin1String(table)), {id});
@@ -1130,6 +1210,7 @@ Result<void, StorageError> SqliteLogRepository::Impl::mutate(LogId id, JournalBo
             record.m_Seq = *seq;
             record.m_Log = id;
             record.m_Body = std::move(body);
+            record.m_Version = journal_version_for(record.m_Body); // an interaction is written at version 2
 
             StoredLog after = before->m_Stored;
             if (auto applied = apply_record(after, record); !applied)
@@ -1495,6 +1576,155 @@ Result<std::optional<Draft>, StorageError> SqliteLogRepository::get_draft()
         return std::optional<Draft>{};
     }
     return std::optional<Draft>{Draft{to_std(row->value(0).toString()), millis_of(row->value(1))}};
+}
+
+// --- people (the cache of the people journal) ------------------------------------------------------------------------
+
+namespace
+{
+
+QVariantList person_values(const Person& person)
+{
+    return {to_qt(person.m_Id.format()),
+            to_qt(person.m_DisplayName),
+            person.m_Retired ? 1 : 0,
+            person.m_Location ? QVariant(to_qt(person.m_Location->format())) : null_text(),
+            person.m_LastUsedUtc ? millis_value(*person.m_LastUsedUtc) : null_integer(),
+            millis_value(person.m_CreatedUtc)};
+}
+
+constexpr const char* PUT_PERSON =
+    "INSERT INTO person (id, display_name, retired, location_id, last_used_utc, created_utc, forgotten)"
+    " VALUES (?, ?, ?, ?, ?, ?, 0)"
+    " ON CONFLICT (id) DO UPDATE SET display_name = excluded.display_name, retired = excluded.retired,"
+    " location_id = excluded.location_id, last_used_utc = excluded.last_used_utc,"
+    " created_utc = excluded.created_utc, forgotten = 0";
+
+constexpr const char* BLANK_PERSON =
+    "INSERT INTO person (id, display_name, retired, location_id, last_used_utc, created_utc, forgotten)"
+    " VALUES (?, '', 1, NULL, NULL, 0, 1)"
+    " ON CONFLICT (id) DO UPDATE SET display_name = '', retired = 1, location_id = NULL, last_used_utc = NULL,"
+    " forgotten = 1";
+
+} // namespace
+
+Result<void, StorageError> SqliteLogRepository::put_person(const Person& person)
+{
+    return m_Impl->exec(QString::fromLatin1(PUT_PERSON), person_values(person));
+}
+
+Result<void, StorageError> SqliteLogRepository::forget_person(const PersonId& id)
+{
+    if (auto blanked = m_Impl->exec(QString::fromLatin1(BLANK_PERSON), {to_qt(id.format())}); !blanked)
+    {
+        return blanked;
+    }
+    // The name was in a page of the file and, until the log is folded in, in the write-ahead log. `secure_delete` has
+    // the page overwritten; the checkpoint takes the old frames out. Best effort: the journal no longer holds the name,
+    // and the next launch rebuilds this table from it.
+    (void)m_Impl->exec(QStringLiteral("PRAGMA wal_checkpoint(TRUNCATE)"));
+    return {};
+}
+
+Result<void, StorageError> SqliteLogRepository::replace_people(const std::vector<Person>& people,
+                                                               const std::set<PersonId>& forgotten)
+{
+    if (auto begun = m_Impl->exec(QStringLiteral("BEGIN IMMEDIATE")); !begun)
+    {
+        return begun;
+    }
+    Result<void, StorageError> done = m_Impl->exec(QStringLiteral("DELETE FROM person"));
+    for (const Person& person : people)
+    {
+        if (!done)
+        {
+            break;
+        }
+        done = m_Impl->exec(QString::fromLatin1(PUT_PERSON), person_values(person));
+    }
+    for (const PersonId& id : forgotten)
+    {
+        if (!done)
+        {
+            break;
+        }
+        done = m_Impl->exec(QString::fromLatin1(BLANK_PERSON), {to_qt(id.format())});
+    }
+    if (done)
+    {
+        done = m_Impl->exec(QStringLiteral("COMMIT"));
+    }
+    if (!done)
+    {
+        m_Impl->rollback();
+        return done;
+    }
+    (void)m_Impl->exec(QStringLiteral("PRAGMA wal_checkpoint(TRUNCATE)"));
+    return {};
+}
+
+Result<CachedPeople, StorageError> SqliteLogRepository::read_people()
+{
+    auto rows = m_Impl->run(QStringLiteral(
+        "SELECT id, display_name, retired, location_id, last_used_utc, created_utc, forgotten FROM person"));
+    if (!rows)
+    {
+        return Failure(rows.error());
+    }
+    CachedPeople cached;
+    while (rows->next())
+    {
+        const auto id = Uuid::parse(to_std(rows->value(0).toString()));
+        if (!id)
+        {
+            return Failure(corrupt("a stored person id is not valid"));
+        }
+        if (rows->value(6).toInt() != 0)
+        {
+            cached.m_Forgotten.insert(PersonId{*id});
+            continue;
+        }
+        Person person;
+        person.m_Id = PersonId{*id};
+        person.m_DisplayName = to_std(rows->value(1).toString());
+        person.m_Retired = rows->value(2).toInt() != 0;
+        if (const auto location = optional_text(rows->value(3)))
+        {
+            const auto parsed = Uuid::parse(*location);
+            if (!parsed)
+            {
+                return Failure(corrupt("a stored person location is not valid"));
+            }
+            person.m_Location = LocationId{*parsed};
+        }
+        if (!rows->value(4).isNull())
+        {
+            person.m_LastUsedUtc = millis_of(rows->value(4));
+        }
+        person.m_CreatedUtc = millis_of(rows->value(5));
+        cached.m_People.push_back(std::move(person));
+    }
+    return cached;
+}
+
+Result<std::set<PersonId>, StorageError> SqliteLogRepository::referenced_person_ids()
+{
+    auto rows = m_Impl->run(QStringLiteral("SELECT DISTINCT person_id FROM interaction_entry_person"));
+    if (!rows)
+    {
+        return Failure(rows.error());
+    }
+    std::set<PersonId> ids;
+    while (rows->next())
+    {
+        const auto id = Uuid::parse(to_std(rows->value(0).toString()));
+        if (!id)
+        {
+            return Failure(corrupt("a stored person id is not valid"));
+        }
+        ids.insert(PersonId{*id});
+    }
+    return ids;
 }
 
 Result<std::uint64_t, StorageError> SqliteLogRepository::applied_seq(LogId log)

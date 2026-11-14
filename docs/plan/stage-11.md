@@ -145,6 +145,7 @@ What the code shows, checked on `develop` at 92080f9:
 | Permissions | `Info.plist.in` has the two usage texts of dictation (microphone, speech recognition) and no other, and `verify_app.sh` and `check_ios_plist.py` refuse any other. Android asks for `RECORD_AUDIO` only (`check_android_package.py`) | Microphone and speech recognition, at the first tap on the note field's microphone. Recognition is on the device (`requiresOnDeviceRecognition`; Android's on-device recogniser), so nothing is sent: the audio is not collected, and "Data Not Collected" stands |
 | Entitlements | `error-journaling.entitlements` | Only Data Protection. `verify_app.sh --signed` refuses iCloud, app groups and associated domains |
 | Tracking | No IDFA, no `AppTrackingTransparency` | No tracking. App Tracking Transparency not needed |
+| Names the user types (Stage 14, the optional list of people) | `people.jsonl` and the `person` table in the app's storage under Data Protection; no network call reads either (`docs/plan/stage-14.md`, section 5) | Stays on the device: not collected in Apple's or Google's sense, not sent anywhere, not in the setup file, no export of the list. "Data Not Collected" stands; the privacy page says what the list holds and how to forget a person |
 
 Two things the sources alone cannot prove. 11.2 turns both into checks:
 

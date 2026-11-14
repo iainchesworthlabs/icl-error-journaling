@@ -7,6 +7,7 @@ add_executable(ej_storage_tests
     test_draft_store.cpp
     test_journal_reader.cpp
     test_journal_writer.cpp
+    test_people_journal.cpp
     test_storage.cpp)
 target_link_libraries(ej_storage_tests
     PRIVATE ej_storage Catch2::Catch2WithMain icl::warnings icl::coverage)
@@ -21,7 +22,9 @@ add_executable(ej_storage_integration_tests
     test_contract_sqlite.cpp
     test_draft_store_sqlite.cpp
     test_file_journal.cpp
+    test_interaction_storage.cpp
     test_migrator.cpp
+    test_people_store.cpp
     test_platform_files.cpp
     test_protect.cpp
     test_recovery.cpp

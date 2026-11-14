@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 /// Sample data for the storage tests, built only from the fictional stand-ins (Sam Example, UNIT, North Site, Wrong
 /// Response). Shared by the core tests of the journal format and the storage tests.
@@ -46,6 +47,22 @@ template <typename Id>
     entry.m_Id = sample_id<EntryId>(number);
     entry.m_Captured = Timestamp{sample_time(minute), "Australia/Melbourne"};
     entry.m_Body = ErrorEntry{sample_id<ErrorTypeId>(1), std::move(note), std::move(label)};
+    return entry;
+}
+
+/// An interaction entry of the type "Spoke with" (type id 1 of the interaction types), with the people it names by id.
+/// The label is a snapshot, as an error entry's is; there is no name anywhere in it.
+[[nodiscard]] inline Entry sample_interaction_entry(std::uint64_t number, std::int64_t minute,
+                                                    std::vector<PersonId> people = {},
+                                                    std::optional<std::string> value = std::nullopt,
+                                                    std::optional<std::string> note = std::nullopt,
+                                                    std::string label = "Spoke with")
+{
+    Entry entry;
+    entry.m_Id = sample_id<EntryId>(number);
+    entry.m_Captured = Timestamp{sample_time(minute), "Australia/Melbourne"};
+    entry.m_Body = InteractionEntry{sample_id<InteractionTypeId>(1), std::move(label), std::move(people),
+                                    std::move(value), std::move(note)};
     return entry;
 }
 

@@ -79,6 +79,7 @@ TEST_CASE("A database from before the column existed migrates and keeps its log 
     {
         // The database as the schema 2 build left it: no extra_versions column.
         RawDb raw(dir.path() / "ej.db");
+        REQUIRE(raw.drop_interaction_schema());
         REQUIRE(raw.exec(QStringLiteral("ALTER TABLE day_log DROP COLUMN extra_versions")));
         REQUIRE(raw.exec(QStringLiteral("PRAGMA user_version=2")));
     }

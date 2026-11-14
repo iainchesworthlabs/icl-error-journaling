@@ -445,6 +445,7 @@ StateDigest digest_of(const StoredLog& log)
         record.m_Seq = seq;
         record.m_Log = log.m_Meta.m_Id;
         record.m_Body = std::move(body);
+        record.m_Version = journal_version_for(record.m_Body);
         const auto line = encode_record(record);
         feed(line ? std::string_view(*line) : std::string_view("unencodable"));
     };

@@ -22,6 +22,7 @@ std::vector<JournalRecord> seed_records(const StoredLog& log)
         record.m_Seq = seq++;
         record.m_Log = log.m_Meta.m_Id;
         record.m_Body.template emplace<Body>(std::forward<decltype(arguments)>(arguments)...);
+        record.m_Version = journal_version_for(record.m_Body); // an interaction is written at version 2
         records.push_back(std::move(record));
     };
     add(std::in_place_type<CreateLogBody>, log.m_Log.initial_header(), log.m_Meta.m_CreatedUtc, log.m_Meta.m_Previous);
