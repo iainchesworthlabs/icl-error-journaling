@@ -2885,6 +2885,22 @@ TEST_CASE("picker.voiceover: the bar, the search field, the add row, the rows an
     CHECK(add->property("accessibleName").toString().contains(QStringLiteral("Add")));
     CHECK(add->property("accessibleName").toString().contains(QStringLiteral("Jordan Placeholder")));
 }
+
+TEST_CASE("board.hold_note: a hold on an interaction with an empty composer opens the Edit sheet on it, and no picker",
+          "[ui][log][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    screen.rig.hold(screen.itile(SPOKE_WITH_ROW), 700ms);
+    sim.gateway.run_all();
+    screen.rig.settle();
+    screen.rig.advance(600ms);
+    REQUIRE(sim.entries().size() == 1);
+    CHECK(first_interaction(sim).has_value());
+    CHECK(edit_sheet_open(screen));
+    CHECK_FALSE(screen.open(QStringLiteral("logPersonPicker")));
+}
 #include "log_screen_test.moc"
 
 // ---- the first-run tip (Stage 10, 10.6) ----

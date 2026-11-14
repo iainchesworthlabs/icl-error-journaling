@@ -1,0 +1,1 @@
+**Holding an interaction tile with an empty note box opens the Edit entry sheet**, as it does on the Errors board, with the cursor in the note. The sheet also has the people and the answer, so the person list does not open as well. Not yet run on a device.
