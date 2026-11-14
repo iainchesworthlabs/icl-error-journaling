@@ -115,3 +115,7 @@ editor at once, and turning the switch on with nothing set up opens it for you.
 
 The first 11 types fill the board in the order shown; drag the handle, or use the arrows, to change it. The rest are under
 **Other…**. A type you retire leaves the board and stays on the entries already logged.
+
+**Names in shared logs** (also in the **Second board** group) sets how a person's name is written when a log leaves the app,
+in Copy, Share and a re-shared past log: **Initials** (the default, for example “A.S.”), **Full name**, or **Someone** for no
+name at all. **Review** and the **Interactions** board always show the full name, because that stays on the device.
