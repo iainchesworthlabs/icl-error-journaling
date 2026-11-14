@@ -9,6 +9,7 @@
 #include "error_journaling/log_repository.hpp"
 #include "error_journaling/utf8.hpp"
 #include "viewmodel/export_context_builder.hpp"
+#include "viewmodel/interaction_types.hpp"
 #include "viewmodel/recovery_notice.hpp"
 
 #include <algorithm>
@@ -643,13 +644,27 @@ bool LogSession::attachDraft(const QString& entryId)
     {
         return false;
     }
-    const auto* error = std::get_if<ErrorEntry>(&found->m_Body);
-    if (error == nullptr || error->m_AttachedNote.has_value())
+    Entry edited = *found;
+    if (const auto* error = std::get_if<ErrorEntry>(&found->m_Body))
+    {
+        if (error->m_AttachedNote.has_value())
+        {
+            return false;
+        }
+        std::get<ErrorEntry>(edited.m_Body).m_AttachedNote = text;
+    }
+    else if (const auto* interaction = std::get_if<InteractionEntry>(&found->m_Body))
+    {
+        if (interaction->m_AttachedNote.has_value())
+        {
+            return false;
+        }
+        std::get<InteractionEntry>(edited.m_Body).m_AttachedNote = text;
+    }
+    else
     {
         return false;
     }
-    Entry edited = *found;
-    std::get<ErrorEntry>(edited.m_Body).m_AttachedNote = text;
 
     const QString submitted = m_Draft;
     const std::uint64_t revision = m_DraftRevision;
@@ -677,6 +692,121 @@ void LogSession::draft_attached(const QString& entry_id, const QString& text, co
         write_draft_now();
     }
     emit draftAttached(entry_id, text);
+}
+
+QString LogSession::location_id() const
+{
+    const HeaderValues header = header_in_force();
+    if (!header.m_Location || !header.m_Location->m_Id)
+    {
+        return {};
+    }
+    return to_qstring(header.m_Location->m_Id->format());
+}
+
+QString LogSession::recordInteractionEntry(const QString& typeId)
+{
+    constexpr const char* OPERATION = "recordInteraction";
+    if (!can_write(OPERATION))
+    {
+        return {};
+    }
+    const auto id = parse_id<InteractionTypeId>(typeId);
+    if (!id)
+    {
+        return {};
+    }
+    const auto types = interaction_types_in_force(m_Configuration.configuration());
+    const auto type = std::ranges::find_if(types, [&id](const InteractionType& t) { return t.m_Id == *id; });
+    if (type == types.end() || type->m_Retired)
+    {
+        return {};
+    }
+    Entry entry;
+    entry.m_Id = m_Environment.m_Ids.next_as<EntryId>();
+    entry.m_Captured = now_timestamp();
+    entry.m_Body = InteractionEntry{type->m_Id, type->m_Name, {}, std::nullopt, std::nullopt};
+    const EntryId entry_id = entry.m_Id;
+
+    ++m_OwnPending;
+    const QString type_id = to_qstring(type->m_Id.format());
+    const QString type_name = to_qstring(type->m_Name);
+    auto done = make_done(OPERATION,
+                          [this, entry_id, type_id, type_name](bool succeeded)
+                          {
+                              if (succeeded)
+                              {
+                                  m_Feedback.entry_recorded(entry_id);
+                                  emit entryRecorded(to_qstring(entry_id.format()));
+                              }
+                              else
+                              {
+                                  announce_record_failed(type_id, type_name);
+                              }
+                          });
+    if (!settle(OPERATION, m_Document->add_entry(std::move(entry), LogChange::Origin::USER, std::move(done))))
+    {
+        announce_record_failed(type_id, type_name);
+        return {};
+    }
+    return to_qstring(entry_id.format());
+}
+
+bool LogSession::setInteractionPeople(const QString& entryId, const QStringList& personIds)
+{
+    constexpr const char* OPERATION = "setInteractionPeople";
+    if (!can_write(OPERATION))
+    {
+        return false;
+    }
+    const auto id = parse_id<EntryId>(entryId);
+    if (!id)
+    {
+        return false;
+    }
+    const Entry* found = m_Document->log().find(*id);
+    if (found == nullptr || found->m_Deleted || !std::holds_alternative<InteractionEntry>(found->m_Body))
+    {
+        return false;
+    }
+    std::vector<PersonId> people;
+    for (const QString& text : personIds)
+    {
+        const auto person = parse_id<PersonId>(text);
+        if (!person || !add_person_pick(people, *person))
+        {
+            return false;
+        }
+    }
+    Entry edited = *found;
+    std::get<InteractionEntry>(edited.m_Body).m_People = std::move(people);
+    ++m_OwnPending;
+    return settle(OPERATION, m_Document->edit_entry(*id, std::move(edited), make_done(OPERATION, {})));
+}
+
+bool LogSession::setInteractionValue(const QString& entryId, const QString& value)
+{
+    constexpr const char* OPERATION = "setInteractionValue";
+    if (!can_write(OPERATION))
+    {
+        return false;
+    }
+    const auto id = parse_id<EntryId>(entryId);
+    const std::string text = to_utf8(value.trimmed());
+    const auto length = utf8_code_points(text);
+    if (!id || text.empty() || !length || *length > MAX_INTERACTION_VALUE_CODE_POINTS)
+    {
+        return false;
+    }
+    const Entry* found = m_Document->log().find(*id);
+    if (found == nullptr || found->m_Deleted || !std::holds_alternative<InteractionEntry>(found->m_Body))
+    {
+        return false;
+    }
+    Entry edited = *found;
+    std::get<InteractionEntry>(edited.m_Body).m_Value = text;
+    ++m_OwnPending;
+    return settle(OPERATION, m_Document->edit_entry(*id, std::move(edited), make_done(OPERATION, {})));
 }
 
 bool LogSession::addNote(const QString& text)

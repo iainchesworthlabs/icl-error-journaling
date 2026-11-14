@@ -144,6 +144,13 @@ Item {
     // real one (I-6) has the same name and adds the tiles; until then the shell gives the stand-in.
     property var interactionBoard: null
     readonly property bool interactionBoardEmpty: interactionBoard === null || interactionBoard.boardEmpty
+    // The list of people (PeopleModel) for the picker. Null reads as no picker: an interaction with a [person] slot stays as logged.
+    property var people: null
+    // The interaction that has just been logged and is waiting to be asked about: its entry, its type and what is left to ask,
+    // "person" then "text". Empty when none. Log first, ask second: the sheets open when the entry is committed.
+    property string askEntry: ""
+    property string askType: ""
+    property string askLeft: ""
 
     // The tip counts a day when it is on screen: HelpState keeps the days.
     onTipShownChanged: {
@@ -223,6 +230,69 @@ Item {
             return;
         bridge.hapticImpact();
         pressedEntries[row] = session.recordErrorEntry(typeId);
+    }
+
+    // The impact, then the entry, when a tile of the Interactions board asks for it. The sheets that ask about it open when the
+    // entry has been committed (`entryRecorded`), so the entry is in the log whatever happens to them.
+    function pressInteractionTile(row: int, typeId: string, isOther: bool): void {
+        if (isOther)
+            return;
+        bridge.hapticImpact();
+        logInteraction(row, typeId);
+    }
+
+    function logInteraction(row: int, typeId: string): void {
+        const entryId = session.recordInteractionEntry(typeId);
+        pressedEntries[row] = entryId;
+        if (entryId.length === 0)
+            return;
+        const asks = interactionBoard.asksFor(typeId);
+        askEntry = entryId;
+        askType = typeId;
+        askLeft = asks === "nothing" ? "" : asks;
+    }
+
+    // The next question about the entry that was logged: the picker for people, then the sheet for the answer.
+    function askNext(): void {
+        if (askEntry.length === 0)
+            return;
+        if (askLeft === "person" && people !== null) {
+            personPicker.typeName = interactionBoard.typeName(askType);
+            personPicker.locationId = session.locationId;
+            personPicker.begin();
+            return;
+        }
+        if (askLeft === "person" && interactionBoard.hasValueSlot(askType))
+            askLeft = "text";
+        if (askLeft === "text") {
+            answerSheet.begin();
+            return;
+        }
+        askEntry = "";
+        askLeft = "";
+    }
+
+    // The picker was left (Done or Skip). A type with an answer slot as well goes on to ask for the answer.
+    function afterPicker(): void {
+        if (askEntry.length > 0 && interactionBoard.hasValueSlot(askType)) {
+            askLeft = "text";
+            askNext();
+        } else {
+            askEntry = "";
+            askLeft = "";
+        }
+    }
+
+    // The finger stayed on a tile of the Interactions board. A typed draft goes on the entry as its note; with an empty composer
+    // there is nothing to add (the Edit entry sheet for interactions comes with Review, Stage 14 package I-9).
+    function holdInteractionTile(row: int): void {
+        const entryId = pressedEntries[row] ?? "";
+        if (entryId.length === 0 || !hasDraft)
+            return;
+        if (timeline.rowOf(entryId) >= 0)
+            session.attachDraft(entryId);
+        else
+            waitingHolds[entryId] = "draft";
     }
 
     // The finger stayed on a tile (or VoiceOver chose "Log with note"). The tile has asked for the entry already (`pressTile`,
@@ -327,12 +397,14 @@ Item {
             root.failureMessage = message;
         }
         function onWriteFailed(operation: string, message: string): void {
-            if (operation !== "recordError")
+            if (operation !== "recordError" && operation !== "recordInteraction")
                 root.fail(message);
         }
         // The next entry that is saved clears the old complaint.
         function onEntryRecorded(entryId: string): void {
             root.failureMessage = "";
+            if (entryId === root.askEntry)
+                root.askNext();
             const how = root.waitingHolds[entryId];
             if (how !== undefined) {
                 delete root.waitingHolds[entryId];
@@ -343,6 +415,18 @@ Item {
 
     Connections {
         target: root.undo
+
+        // An undo takes the entry the sheets are about: they close, and nothing is written to it.
+        function onToastChanged(): void {
+            if (root.undo.undoing) {
+                root.askEntry = "";
+                root.askLeft = "";
+                if (personPicker.isOpen)
+                    personPicker.close();
+                if (answerSheet.isOpen)
+                    answerSheet.close();
+            }
+        }
 
         function onWriteFailed(operation: string, message: string): void {
             root.fail(message);
@@ -802,6 +886,34 @@ Item {
             }
         }
 
+        // The tiles of the Interactions board, under its title strip: the same board as the Errors board over the model of the
+        // interaction types, with the second hue family. Shown when the board has types (with none it is the card above).
+        BoardGrid {
+            id: interactionGrid
+
+            objectName: "interactionsBoard"
+            x: strip.x
+            width: strip.width
+            anchors.top: strip.bottom
+            anchors.topMargin: Theme.space.tileGap
+            gap: WindowLayout.tileGap
+            tileHeight: root.interactionTileHeight
+            interactions: true
+            tilePrefix: "interactionTile"
+            model: root.onInteractions && root.interactionBoard !== null && !root.interactionBoardEmpty ? root.interactionBoard : 0
+            skeleton: root.loading
+            visible: root.onInteractions && !root.interactionBoardEmpty
+            noteAction: root.hasDraft
+            onTilePressed: (row, typeId, isOther) => root.pressInteractionTile(row, typeId, isOther)
+            onTileHeld: row => root.holdInteractionTile(row)
+            onTileSingleTapped: root.showTapHint()
+            onTileTapped: (row, typeId, isOther) => {
+                if (isOther)
+                    otherInteractions.begin();
+            }
+            onEmptyTapped: position => root.interactionSetupRequested()
+        }
+
         BoardGrid {
             id: grid
 
@@ -910,5 +1022,60 @@ Item {
         outputPattern: root.activeTemplate ? root.settings.patternToField(root.activeTemplate.outputPattern) : ""
         previewText: root.activeTemplate ? root.settings.previewTemplateLine(root.activeTemplate.outputPattern, templateSheet.value) : ""
         onAddRequested: value => root.addTemplated(value)
+    }
+    // The people of an interaction that has a [person] slot: opens when the entry has been logged.
+    PersonPicker {
+        id: personPicker
+
+        objectName: "logPersonPicker"
+        parent: root.sheetLayer
+        people: root.people
+        onDoneRequested: personIds => {
+            const entryId = root.askEntry;
+            if (entryId.length > 0 && personIds.length > 0) {
+                root.session.setInteractionPeople(entryId, personIds);
+                root.people.touch(personIds);
+            }
+        }
+        onClosed: root.afterPicker()
+    }
+
+    // The answer of an interaction that has a {value} slot ("Played [answer]"): the question sheet of the note templates.
+    TemplateValueSheet {
+        id: answerSheet
+
+        objectName: "logInteractionAnswerSheet"
+        parent: root.sheetLayer
+        templateName: root.interactionBoard !== null ? root.interactionBoard.typeName(root.askType) : ""
+        valuePrompt: qsTr("Answer")
+        outputPattern: ""
+        footerText: qsTr("Skip this with Cancel: the interaction stays in the log as it is.")
+        previewText: root.interactionBoard !== null ? root.interactionBoard.previewLine(root.askType, answerSheet.value) : ""
+        onAddRequested: value => {
+            if (root.session.setInteractionValue(root.askEntry, value)) {
+                root.askEntry = "";
+                root.askLeft = "";
+                answerSheet.close();
+            } else {
+                answerSheet.errorText = value.trim().length === 0 ? qsTr("Type something to add.") : qsTr("That answer could not be added.");
+            }
+        }
+        onClosed: {
+            root.askEntry = "";
+            root.askLeft = "";
+        }
+    }
+
+    // The interaction types that are not on the board.
+    InteractionOtherSheet {
+        id: otherInteractions
+
+        objectName: "logOtherInteractions"
+        parent: root.sheetLayer
+        types: root.interactionBoard !== null ? root.interactionBoard.otherTypes : []
+        onChosen: typeId => {
+            root.bridge.hapticImpact();
+            root.logInteraction(-1, typeId);
+        }
     }
 }

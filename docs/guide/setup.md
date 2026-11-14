@@ -92,7 +92,7 @@ setup rows). A fifth tab, **Interactions**, appears at once, and the first tab i
 - To change board, tap the tab, or swipe along the strip that says **Interactions**. A swipe anywhere else does nothing, so a
   slip over a tile never changes board.
 - The app opens on the board you used last.
-- Until you have added interaction types, the board is empty and offers **Add interaction types**.
+- The board has six interaction types to start with, so it has tiles at once. A setup file with its own `interaction_types` replaces them. If a setup file leaves the board with no types on it, the board is empty and offers **Add interaction types**.
 
 Turning the switch off hides the tab and the board. **Nothing is deleted:** the entries stay in the log and in Review and
 History, and what you set up is kept for the next time. If you were on the Interactions board, the app goes to the Errors board.

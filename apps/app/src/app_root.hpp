@@ -14,8 +14,10 @@
 #include "viewmodel/error_picker_model.hpp"
 #include "viewmodel/feedback_sink.hpp"
 #include "viewmodel/history_model.hpp"
+#include "viewmodel/interaction_board_model.hpp"
 #include "viewmodel/log_session.hpp"
 #include "viewmodel/open_log_source.hpp"
+#include "viewmodel/people_model.hpp"
 #include "viewmodel/settings_model.hpp"
 #include "viewmodel/share_service.hpp"
 #include "viewmodel/storage_gateway.hpp"
@@ -157,6 +159,8 @@ class AppRoot final : public QObject
     Q_PROPERTY(ej::viewmodel::LogSession* session READ session CONSTANT)
     Q_PROPERTY(ej::viewmodel::UndoController* undo READ undo CONSTANT)
     Q_PROPERTY(ej::viewmodel::BoardModel* board READ board CONSTANT)
+    Q_PROPERTY(ej::viewmodel::InteractionBoardModel* interactionBoard READ interaction_board CONSTANT)
+    Q_PROPERTY(ej::viewmodel::PeopleModel* people READ people CONSTANT)
     Q_PROPERTY(ej::viewmodel::ErrorPickerModel* picker READ picker CONSTANT)
     Q_PROPERTY(ej::viewmodel::TimelineModel* timeline READ timeline CONSTANT)
     Q_PROPERTY(ej::viewmodel::HistoryModel* history READ history CONSTANT)
@@ -183,6 +187,14 @@ public:
     [[nodiscard]] viewmodel::BoardModel* board()
     {
         return &m_Board;
+    }
+    [[nodiscard]] viewmodel::InteractionBoardModel* interaction_board()
+    {
+        return &m_InteractionBoard;
+    }
+    [[nodiscard]] viewmodel::PeopleModel* people()
+    {
+        return &m_People;
     }
     [[nodiscard]] viewmodel::ErrorPickerModel* picker()
     {
@@ -244,6 +256,8 @@ private:
     // Between the undo controller and the models: it keeps the controller on the open document, and goes first.
     std::unique_ptr<UndoFollower> m_UndoFollower;
     viewmodel::BoardModel m_Board;
+    viewmodel::InteractionBoardModel m_InteractionBoard;
+    viewmodel::PeopleModel m_People;
     viewmodel::ErrorPickerModel m_Picker;
     viewmodel::TimelineModel m_Timeline;
     viewmodel::ShareService m_Share;

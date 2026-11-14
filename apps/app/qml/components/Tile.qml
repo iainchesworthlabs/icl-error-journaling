@@ -61,6 +61,8 @@ Item {
     required property bool isEmpty
     required property string accessibleName
     property bool skeleton: false
+    // A tile of the Interactions board: its fill is from the second hue family (Theme.interactionTileColour).
+    property bool interactions: false
     // Under the empty-board card of the Log screen: drawn, but out of the screen reader's way (the card is read instead).
     property bool covered: false
     // How long the finger has to stay down for held() (BRD-07, docs/plan/stage-4.md, 4.17), and the longest gap between the lift of
@@ -100,7 +102,7 @@ Item {
     // The floor of the label's fit (fontSizeMode), as a share of its size: the label wraps and shrinks to this, never elides.
     readonly property real labelFloor: 0.75
     readonly property bool dashed: isOther && !skeleton
-    readonly property color fillColour: skeleton ? Theme.colour.swatch : (isOther ? Theme.colour.otherTileFill : Theme.tileColour(colourSlot))
+    readonly property color fillColour: skeleton ? Theme.colour.swatch : (isOther ? Theme.colour.otherTileFill : (interactions ? Theme.interactionTileColour(colourSlot) : Theme.tileColour(colourSlot)))
 
     implicitWidth: Theme.size.tileWidth
     implicitHeight: Theme.size.tileHeight
