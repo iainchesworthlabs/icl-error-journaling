@@ -21,9 +21,11 @@
 namespace ej
 {
 
-/// The version of a people journal line. Its own number: the people journal is a different file with a different record
-/// set from a log's journal (Stage 14, section 3.4).
-inline constexpr std::uint32_t PEOPLE_JOURNAL_VERSION = 1;
+/// The newest version of a people journal line this build reads. Its own number: the people journal is a different file
+/// with a different record set from a log's journal (Stage 14, section 3.4). A line is written with the lowest version
+/// that has its record: `set_person_location` is `v:2`, the others stay `v:1`, so a journal that never changed a
+/// person's location is still readable by an older build.
+inline constexpr std::uint32_t PEOPLE_JOURNAL_VERSION = 2;
 
 enum class PeopleOp
 {
@@ -31,7 +33,8 @@ enum class PeopleOp
     RENAME_PERSON,
     RETIRE_PERSON,
     TOUCH_PERSON,
-    FORGET_PERSON
+    FORGET_PERSON,
+    SET_PERSON_LOCATION
 };
 
 struct AddPersonBody
@@ -62,19 +65,29 @@ struct ForgetPersonBody
     PersonId m_Id;
 };
 
-using PeopleBody = std::variant<AddPersonBody, RenamePersonBody, RetirePersonBody, TouchPersonBody, ForgetPersonBody>;
+struct SetPersonLocationBody
+{
+    PersonId m_Id;
+    std::optional<LocationId> m_Location; // empty: the person belongs to no location
+};
+
+using PeopleBody = std::variant<AddPersonBody, RenamePersonBody, RetirePersonBody, TouchPersonBody, ForgetPersonBody,
+                                SetPersonLocationBody>;
 
 /// One line of `people.jsonl`: `{"body":{..},"crc":"xxxxxxxx","op":"..","seq":n,"v":1}`. The checksum covers the object
-/// without the `crc` key, as in a log's journal.
+/// without the `crc` key, as in a log's journal. `m_Version` is what a decoded line said; the encoder writes the
+/// version the body needs (`people_record_version`).
 struct PeopleRecord
 {
-    std::uint32_t m_Version = PEOPLE_JOURNAL_VERSION;
+    std::uint32_t m_Version = 1;
     std::uint64_t m_Seq = 0; // gapless, starting at 1
     PeopleBody m_Body;
 };
 
 [[nodiscard]] PeopleOp people_op(const PeopleBody& body);
 [[nodiscard]] std::string_view people_op_name(PeopleOp op);
+/// The version a record of this body is written with.
+[[nodiscard]] std::uint32_t people_record_version(const PeopleBody& body);
 [[nodiscard]] Result<std::string, StorageError> encode_people_record(const PeopleRecord& record);
 
 enum class PeopleDecodeError
@@ -93,7 +106,8 @@ class PeopleState
 {
 public:
     /// Applies one record. Refused (and the state left as it was) for an id that is added twice, a name that is not
-    /// valid or matches another person who is not retired, or a change to a person who is not there or was forgotten.
+    /// valid or matches another person who is not retired, or a change to a person who is not there or was forgotten. A
+    /// location is not checked against the setup: the store's caller knows the locations.
     [[nodiscard]] Result<void, StorageError> apply(const PeopleBody& body);
 
     /// The people who were not forgotten, in no particular order.

@@ -142,11 +142,20 @@ app. A name written into them could never be erased. So:
 
 - Names are held in **`people.jsonl`**, a second small journal with its own `seq`, CRC and exclusive lock, written
   by the same `JournalWriter` code with a different record set: `add_person`, `rename_person`, `retire_person`,
-  `touch_person` (last used; not durable-synced, a miss costs only the sort order), `forget_person`.
+  `touch_person` (last used; not durable-synced, a miss costs only the sort order), `forget_person`, and `set_person_location`
+  (the person id and a location id, or null to clear it; added by I-7 so that a person can move to another location).
 - The database's `person` table is a cache of that journal, rebuilt the same way as a log is.
 - **Forget** removes the name: the record is appended, the table row's name is blanked, and the journal is rewritten
   atomically without that person's earlier records (the one place an app action rewrites a journal; it works on a copy
   and renames, like recovery). Entries keep the id. Everything that shows or exports the entry then says "someone".
+- **`set_person_location`** is the one record of this journal written at `v:2`; the others stay `v:1`, so a journal
+  in which nobody was moved stays readable by the build before. An older build that reads the new line stops at it
+  (`UNSUPPORTED_VERSION`, which the scan treats like any line it cannot read): the people journal "needs recovery",
+  recovery sets a copy aside in quarantine and writes the journal again from the people it did read. That costs the
+  moves and the people added after them (shown as "someone"), never an entry; downgrade is unsupported anyway
+  (decision 9). The record is durable before the call returns, setting the value a person already has writes nothing,
+  and Forget needs no extra step: the rewrite seeds each person from their state (the location is part of the
+  `add_person` record there), so no record that names a forgotten person's location is left.
 - Because entries hold ids, **renaming** someone corrects every past entry, like a header correction. Tester typos
   are fixable once.
 
