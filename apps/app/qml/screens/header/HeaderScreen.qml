@@ -4,7 +4,7 @@ import QtQuick
 import ErrorJournalingApp
 
 // Today's details (Stage 4, package 4.9; design `Header.dc.html`, `HeaderNewLogRow.dc.html` and
-// `StartNewLogConfirm.dc.html`; HDR-01 to HDR-07 and DAY-02): the facilitator and the date, read only, then the three
+// `StartNewLogConfirm.dc.html`; HDR-01 to HDR-07 and DAY-02): the tester and the date, read only, then the three
 // fields of the day's header, then the way to start a new log, and "Start logging" at the foot.
 //
 //   unit number       a fixed prefix the person does not type, and the number pad. The number is checked as it is typed
@@ -107,7 +107,7 @@ SheetHost {
         return qsTr("Today’s log");
     }
     readonly property bool canShareFirst: session.unshared && share !== null && share.available
-    readonly property string newLogMessage: session.changedSinceShare ? qsTr("%1 has %2 and has changed since it was last shared. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator) : session.unshared ? qsTr("%1 has %2 and hasn’t been shared. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator) : qsTr("%1 has %2. It stays in History. The new log starts empty, with %3 as facilitator.").arg(logLabel).arg(entriesText).arg(session.facilitator)
+    readonly property string newLogMessage: session.changedSinceShare ? qsTr("%1 has %2 and has changed since it was last shared. It stays in History. The new log starts empty, with %3 as tester.").arg(logLabel).arg(entriesText).arg(session.tester) : session.unshared ? qsTr("%1 has %2 and hasn’t been shared. It stays in History. The new log starts empty, with %3 as tester.").arg(logLabel).arg(entriesText).arg(session.tester) : qsTr("%1 has %2. It stays in History. The new log starts empty, with %3 as tester.").arg(logLabel).arg(entriesText).arg(session.tester)
     // The field being typed in, kept in view above the keyboard.
     property Item activeField: null
     // The height of the collapsed bar: its row and the divider under it.
@@ -404,9 +404,9 @@ SheetHost {
                     width: parent.width
 
                     ListRow {
-                        objectName: "headerFacilitator"
-                        text: qsTr("Facilitator")
-                        value: root.session.facilitator
+                        objectName: "headerTester"
+                        text: qsTr("Tester")
+                        value: root.session.tester
                         tappable: false
                     }
 
@@ -578,7 +578,7 @@ SheetHost {
                         y: Theme.space.tileGap
                         width: parent.width
                         title: qsTr("Another unit or site")
-                        footer: qsTr("Keeps today’s log in History and opens an empty one. Only the facilitator carries over.")
+                        footer: qsTr("Keeps today’s log in History and opens an empty one. Only the tester carries over.")
 
                         ListRow {
                             objectName: "headerNewLogRow"

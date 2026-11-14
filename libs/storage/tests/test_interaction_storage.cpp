@@ -718,7 +718,7 @@ TEST_CASE("After adding, renaming and forgetting people, no log journal and no e
         REQUIRE(store.repo().checkpoint().has_value());
     }
 
-    // (Sam Example is the facilitator of the sample header, so he is not one of them.)
+    // (Sam Example is the tester of the sample header, so he is not one of them.)
     const std::vector<std::string_view> every_name = {ALEX, JORDAN, PAT, "Pat Stand-in Senior",
                                                       "Jordan Placeholder Junior"};
 

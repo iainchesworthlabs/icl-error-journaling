@@ -44,7 +44,7 @@ public:
 struct LogSummary
 {
     LogId m_Id;
-    HeaderValues m_Header;  // the values the log started with: date, facilitator, unit number, location
+    HeaderValues m_Header;  // the values the log started with: date, tester, unit number, location
     UtcMillis m_CreatedUtc;
     std::optional<UtcMillis> m_LastSharedUtc;
     bool m_ChangedSinceShare = false; // `LogMeta::m_ChangedSinceShare`

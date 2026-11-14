@@ -352,7 +352,7 @@ struct Unbinder
 Configuration configuration_for(const ExportContext& context)
 {
     Configuration configuration;
-    configuration.m_Facilitator = "Sam Example";
+    configuration.m_Tester = "Sam Example";
     configuration.m_UnitPrefix = std::string(context.m_UnitPrefix);
     configuration.m_TimeFormat = context.m_TimeFormat;
     configuration.m_IncludeTotals = context.m_IncludeTotals;
@@ -1216,7 +1216,7 @@ TEST_CASE("A change of the time format is one dataChanged, and a change that add
     SECTION("a change that touches nothing the model shows")
     {
         Configuration configuration = sample_configuration();
-        configuration.m_Facilitator = "Someone Else";
+        configuration.m_Tester = "Someone Else";
         rig.config().set(configuration);
 
         CHECK(changed.count() == 0);

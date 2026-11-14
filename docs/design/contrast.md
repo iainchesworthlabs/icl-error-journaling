@@ -26,7 +26,7 @@ Recorded by hand for Stage 4 package 4.2, with the WCAG 2.x relative-luminance f
 | Primary button label | `#FFFFFF` | `#2A6F96` | 5.51 | 4.5 | pass |
 | Primary button label, pressed | `#FFFFFF` | `#1E5B7A` | 7.41 | 4.5 | pass |
 | Header card unit and date | `#FFFFFF` | `#5B2A63` | 10.74 | 4.5 | pass |
-| Header card site, version, facilitator | `#EBDDF0` | `#5B2A63` | 8.25 | 4.5 | pass |
+| Header card site, version, tester | `#EBDDF0` | `#5B2A63` | 8.25 | 4.5 | pass |
 | Delete label on a card | `#FF8F85` | `#18212A` | 7.38 | 4.5 | pass |
 | Delete label in a sheet | `#FF8F85` | `#212C37` | 6.43 | 4.5 | pass |
 | Error text on the screen | `#FF8F85` | `#0E141A` | 8.40 | 4.5 | pass |

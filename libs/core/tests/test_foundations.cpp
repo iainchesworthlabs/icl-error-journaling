@@ -43,7 +43,7 @@ TEST_CASE("HeaderField keys round-trip", "[header-field]")
     {
         CHECK(ej::header_field_from_key(ej::header_field_key(f)) == f);
     }
-    CHECK_FALSE(ej::header_field_from_key("facilitator").has_value());
+    CHECK_FALSE(ej::header_field_from_key("tester").has_value());
 }
 
 TEST_CASE("first_difference names the first differing line", "[golden]")

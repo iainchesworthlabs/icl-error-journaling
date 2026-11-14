@@ -3,7 +3,7 @@
 Everything that makes the app yours is in **Settings**: the tiles on the board, your error types, places and note
 templates, and your name and unit prefix.
 
-![The Settings screen. At the top is Your board, a miniature of the tiles. Below are Error types, Note templates, Locations, Number suffixes, Facilitator, Unit prefix and a switch for a totals line.](img/board-settings.png){ width="270" }
+![The Settings screen. At the top is Your board, a miniature of the tiles. Below are Error types, Note templates, Locations, Number suffixes, Tester, Unit prefix and a switch for a totals line.](img/board-settings.png){ width="270" }
 
 ## Your board
 
@@ -51,7 +51,7 @@ Each template has three parts:
 
 ## Your name, prefix and totals
 
-- **Facilitator** and **Unit prefix** are the two things asked on first launch. They head every log.
+- **Tester** and **Unit prefix** are the two things asked on first launch. They head every log.
 - **Include a totals line** adds a line at the end of a shared log with the count of each error type.
 - **Time format** and **Error prefix** are further down the list. The error prefix is the marker before each error line
   (`T|` unless you change it). Change it only if the tool that reads your log expects something else.

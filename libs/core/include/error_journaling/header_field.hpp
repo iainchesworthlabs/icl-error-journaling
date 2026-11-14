@@ -7,7 +7,7 @@
 namespace ej
 {
 
-/// The header fields that can change during the day (HDR-05). Facilitator and date are fixed for a log.
+/// The header fields that can change during the day (HDR-05). Tester and date are fixed for a log.
 enum class HeaderField
 {
     UNIT_NUMBER,

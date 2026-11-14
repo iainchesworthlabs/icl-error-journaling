@@ -21,10 +21,10 @@ before it changes anything. See [Importing and exporting](setup.md#importing-and
 
 **If you set up on your own**, tap **Set up by hand**. The app asks two things, which head every log you share:
 
-- **Facilitator**: your name.
+- **Tester**: your name.
 - **Unit prefix**: the letters before a unit's number, for example `UNIT`. You type only the number each day.
 
-![The About you screen, with Facilitator and Unit prefix filled in and a Continue button.](img/first-launch-by-hand.png){ width="270" }
+![The About you screen, with Tester and Unit prefix filled in and a Continue button.](img/first-launch-by-hand.png){ width="270" }
 
 Tap **Continue**. The Log screen opens with an empty board and a button, **Add error types**. Add the types you log. Each
 one becomes a tile. [Setting up the board](setup.md) shows how.

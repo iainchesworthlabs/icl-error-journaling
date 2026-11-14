@@ -165,7 +165,7 @@ void LogSession::start_load()
     if (m_Configuration.configured())
     {
         HeaderValues header;
-        header.m_Facilitator = m_Configuration.configuration().m_Facilitator;
+        header.m_Tester = m_Configuration.configuration().m_Tester;
         header.m_LocalDate = today();
         plan = Plan{m_Environment.m_Ids.next_as<LogId>(), std::move(header)};
     }
@@ -261,9 +261,9 @@ HeaderValues LogSession::header_in_force() const
     return HeaderHistory(m_Document->log()).at(m_Environment.m_Clock.now());
 }
 
-QString LogSession::facilitator() const
+QString LogSession::tester() const
 {
-    return to_qstring(header_in_force().m_Facilitator);
+    return to_qstring(header_in_force().m_Tester);
 }
 
 QString LogSession::unit_text() const
@@ -491,13 +491,13 @@ std::chrono::year_month_day LogSession::today() const
     return std::chrono::year_month_day{std::chrono::floor<std::chrono::days>(now.m_Utc)};
 }
 
-std::string LogSession::facilitator_for_new_log() const
+std::string LogSession::tester_for_new_log() const
 {
     if (m_Configuration.configured())
     {
-        return m_Configuration.configuration().m_Facilitator;
+        return m_Configuration.configuration().m_Tester;
     }
-    return m_Document ? m_Document->log().initial_header().m_Facilitator : std::string{};
+    return m_Document ? m_Document->log().initial_header().m_Tester : std::string{};
 }
 
 // -------------------------------------------------------------------------------------------------- commands
@@ -1402,9 +1402,9 @@ bool LogSession::startNewLog()
     m_StartingNewLog = true;
     emit pendingWritesChanged();
 
-    // The new log's header: the facilitator and today's date, nothing else (HDR-05).
+    // The new log's header: the tester and today's date, nothing else (HDR-05).
     HeaderValues header;
-    header.m_Facilitator = facilitator_for_new_log();
+    header.m_Tester = tester_for_new_log();
     header.m_LocalDate = today();
     attempt_new_log(m_Environment.m_Ids.next_as<LogId>(), std::move(header));
     return true;

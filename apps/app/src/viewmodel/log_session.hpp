@@ -63,7 +63,7 @@ class LogSession : public QObject, public OpenLogSource
     Q_PROPERTY(State state READ state NOTIFY stateChanged)
     // The header in force now (HeaderHistory::at(now)), for the header card. The export's header block is the start
     // values.
-    Q_PROPERTY(QString facilitator READ facilitator NOTIFY headerChanged)
+    Q_PROPERTY(QString tester READ tester NOTIFY headerChanged)
     Q_PROPERTY(QString unitText READ unit_text NOTIFY headerChanged)         // "UNIT-27" or "UNIT-27-prod", or empty
     Q_PROPERTY(QString unitDigits READ unit_digits NOTIFY headerChanged)     // "27", or empty: the number alone
     // "prod", or empty when the unit has no environment (and when it has no number): the environment alone (PRF-11).
@@ -131,7 +131,7 @@ public:
     LogSession& operator=(const LogSession&) = delete;
 
     /// Reads the open log and the draft through the gateway; the state is `LOADING` until that has completed. With no
-    /// open log and a valid configuration it starts today's log (HDR-01: the facilitator of the preferences, today's
+    /// open log and a valid configuration it starts today's log (HDR-01: the tester of the preferences, today's
     /// local date, three empty fields); with no configuration the state becomes `NEEDS_SETUP` and the first log is
     /// started when the configuration comes. Not QML-facing: the composition root calls it.
     void load();
@@ -139,7 +139,7 @@ public:
     // Properties.
 
     [[nodiscard]] State state() const;
-    [[nodiscard]] QString facilitator() const;
+    [[nodiscard]] QString tester() const;
     [[nodiscard]] QString unit_text() const;
     [[nodiscard]] QString unit_digits() const;
     [[nodiscard]] QString unit_environment() const;
@@ -272,7 +272,7 @@ public:
     /// writes nothing and makes no id. The line shows the old value, the new value and the time of the change.
     Q_INVOKABLE QString previewHeaderChange(const QString& fieldKey, const QString& text, int localSeconds) const;
 
-    /// DAY-01 and DAY-02: archives the open log and starts one with the facilitator and today's local date and no
+    /// DAY-01 and DAY-02: archives the open log and starts one with the tester and today's local date and no
     /// other value, in one repository call (`start_new_log`), after the writes that are waiting. It is the entry point
     /// for a log for another unit or site as well as the answer to the new-day prompt. While it is in progress every
     /// other command is refused (`writeFailed`), because a tap would otherwise land in the log being archived. The
@@ -348,7 +348,7 @@ private:
 
     [[nodiscard]] Timestamp now_timestamp() const;
     [[nodiscard]] std::chrono::year_month_day today() const;
-    [[nodiscard]] std::string facilitator_for_new_log() const;
+    [[nodiscard]] std::string tester_for_new_log() const;
 
     Environment m_Environment;
     StorageGateway& m_Gateway;

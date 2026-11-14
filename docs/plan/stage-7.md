@@ -30,7 +30,7 @@ tests) and then on the phone.
 | W7 | Review | Review, swipe Copy and Delete, Copy whole log, EditEntry, EditTimeSheet, TimeTumbler12 | REV-01 to REV-04, NOTE-02 |
 | W8 | Share, then the next day | Share log, share sheet (device), shared state, NewDay, Keep / Share first / Start | REV-05, DAY-01 |
 | W9 | History | History, HistoryEmpty, PastLogReview, Share again, DeleteLog, changed since sharing | DAY-04, DAY-05 |
-| W10 | Settings and its editors | Settings list, Facilitator page (unit prefix, totals), Time format, Locations, Note templates, TemplateEdit, TemplateEditInvalid | PRF-01 to PRF-07, PRF-10, PRF-11 |
+| W10 | Settings and its editors | Settings list, Tester page (unit prefix, totals), Time format, Locations, Note templates, TemplateEdit, TemplateEditInvalid | PRF-01 to PRF-07, PRF-10, PRF-11 |
 | W11 | Import and export from Settings | ImportExport, export to Files, ImportConfirm, ImportErrors | PRF-08 |
 | W12 | About | The About page of PR #130 (version, commit, licence, components) | NFR-09 |
 
@@ -38,7 +38,7 @@ Each screen is checked for the eight things the owner asked for:
 
 | Check | Desktop evidence | Phone evidence |
 |---|---|---|
-| Clarity and discoverability: can a first-time user find it without being told | The walk, by reading each screen cold | Owner's walk; facilitator's comments |
+| Clarity and discoverability: can a first-time user find it without being told | The walk, by reading each screen cold | Owner's walk; tester's comments |
 | Wording: plain, consistent, the same word for the same thing on every screen, no internal terms (`{value}`, `T|` explained or hidden) | String sweep of `qsTr` in `apps/app/qml` and the model messages | — |
 | Consistency with the approved mock-ups in `docs/design/screens/` | `tools/visual/run_capture.py` pairs | V1, V2 of the Stage 4 checklist |
 | Dark mode | Dark pairs; `dark.all_screens` | D1 |
@@ -73,7 +73,7 @@ drives the real shell into 39 mock-up states.
 - **Screen list.** A file, `tools/ej_screenshots/screens.json`, names every screen state to render, the flow it belongs to
   and the scene that builds it. It is the 39 mock-up states plus the screens that have no mock-up: EnvironmentSheet,
   VersionTimeSheet, EditTimeSheet, the hold-to-log Edit sheet, the Other picker with a search and with no match, the
-  Facilitator page, Time format, SetupFile, the About page and the double-tap states once they are merged.
+  Tester page, Time format, SetupFile, the About page and the double-tap states once they are merged.
 - **Modes.** Each state in three modes: `light`, `dark`, and `large` (light, at a text scale of 3.1, the largest iOS
   accessibility size). The size and the 402 × 874 pt frame of an iPhone 17 are fixed; the scale factor is 2.
 - **Program.** A visible Catch2 case, `screenshots.render`, labelled `ui`. It writes the PNGs into `EJ_SCREENSHOT_DIR`
@@ -105,7 +105,7 @@ New tests (label `ui` unless stated). Each fix adds its own test as well, named 
 
 First pass, 9 Nov 2026, from the desktop captures of `develop` at `92080f9`: 39 mock-up pairs in light and dark, and the
 same states at text scales 1.76 and 3.1. Not yet looked at: the double-tap tiles (`feature/double-tap-to-log`, not merged),
-the About page (#130, not merged), the screens with no capture state (EnvironmentSheet, VersionTimeSheet, the Facilitator
+the About page (#130, not merged), the screens with no capture state (EnvironmentSheet, VersionTimeSheet, the Tester
 and Time format pages, SetupFile, the Other picker's search), and anything that needs the phone (VoiceOver, the keyboard,
 the share sheet, haptics).
 
@@ -117,7 +117,7 @@ Severity: **high** blocks a v1 requirement or loses information; **medium** a re
 | F1 | W5 | Log | At text scales of 1.76 and above, the header card, the template chips and the composer grow, and rows 3 and 4 of the board fall under the tab bar. The Log screen does not scroll, so those tiles cannot be reached. NFR-02 and V4 ask for all 12 tiles at every text size. | Large text | high | 8 | [#154](https://github.com/iainchesworthlabs/icl-error-journaling/issues/154) |
 | F2 | W5 | LogBanner | At the default text size, with the "Not filled in yet" banner shown, the bottom row of tiles is cut by the tab bar. The mock-up has the same fault. | Mock-up, clarity | high | 8 | [#155](https://github.com/iainchesworthlabs/icl-error-journaling/issues/155) |
 | F3 | W5, W4 | LogBanner | The banner lists Commit as not filled in, but the commit is optional (HDR-09: "Leave it empty if you can't get it"). Someone who cannot get the commit has the banner, and F2, all day. Decision: drop Commit from the banner, or keep it. | Clarity | decided: no change | | none (no change) |
-| F4 | W10 | Settings | The unit prefix and the "Include a totals line" switch are on the page behind the Facilitator row, and no row in Settings names them. Nobody looking for the unit prefix would open Facilitator. Needs a mock-up: a "Unit prefix" row and an "Export" (totals) row, or a renamed "You and your log" row. | Discoverability | medium | 10 | [#156](https://github.com/iainchesworthlabs/icl-error-journaling/issues/156) |
+| F4 | W10 | Settings | The unit prefix and the "Include a totals line" switch are on the page behind the Tester row, and no row in Settings names them. Nobody looking for the unit prefix would open Tester. Needs a mock-up: a "Unit prefix" row and an "Export" (totals) row, or a renamed "You and your log" row. | Discoverability | medium | 10 | [#156](https://github.com/iainchesworthlabs/icl-error-journaling/issues/156) |
 | F5 | W2 | About you | The field label is the literal text "UNIT prefix", and the field shows a grey placeholder "UNIT", where the mock-up shows the value "UNIT-". A public user does not know what "UNIT" means. Label it "Unit prefix" and show the example as an example ("For example UNIT"). | Wording, mock-up | medium | 10, 11 | [#157](https://github.com/iainchesworthlabs/icl-error-journaling/issues/157) |
 | F6 | W5, W11 | TemplateValue, ImportErrors | 4.13a replaced `{value}` with "[answer]" in the editor, but the footnote of the template question sheet still showed `{value}` ("as "Played {value}""). The import error messages keep `{value}` on purpose: they tell someone editing the setup file what to type. | Wording | medium | 10 | [#158](https://github.com/iainchesworthlabs/icl-error-journaling/issues/158) |
 | F7 | W6, W4, W7 | Software version, Today's details, Edit entry | Content that scrolls under a pinned button is cut by it with no space below: the last line of the Software version sheet ("Entries after it use …") is half hidden, a check mark of Today's details shows below Start logging, and at large text the "In the shared log" heading of Edit entry is under Delete entry. | Mock-up, large text | medium | | [#159](https://github.com/iainchesworthlabs/icl-error-journaling/issues/159) |

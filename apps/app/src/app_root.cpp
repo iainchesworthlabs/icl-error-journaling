@@ -388,7 +388,7 @@ AppRoot::AppRoot(const vm::Environment& environment, const AppPlatform& platform
     connect(&m_People, &QAbstractItemModel::rowsRemoved, this, refresh_names);
     connect(&m_People, &QAbstractItemModel::dataChanged, this, refresh_names);
 
-    // An undone note goes back to the composer through the session's draft. Text the facilitator has typed since is
+    // An undone note goes back to the composer through the session's draft. Text the tester has typed since is
     // kept below it, so neither is lost.
     m_Undo.set_note_undo_target(
         [this](const std::string& text)

@@ -37,7 +37,7 @@ to an entry you logged with **Skip** and left without a person. Swipe, Copy, Del
 
 Tap **Share log** at the end of the day. The share sheet opens with the log as plain text, ready to post or send.
 
-The log has a header (facilitator, date, unit, location, software version) and one line for each entry:
+The log has a header (tester, date, unit, location, software version) and one line for each entry:
 
 ```
 10:20 T| Mute Delay

@@ -2,7 +2,7 @@
 
 This page is the design, task breakdown and test list for a second board for **interactions**, with an optional list of people that
 are typed once and picked later. It is for the owner's review. It writes no production code (the stage gate in
-`AGENTS.md`). Requirement IDs refer to the [PRD](../prd.md). The facilitator's stand-in is **Sam Example**, as everywhere in the repository (NFR-10). The stand-in for a saved name
+`AGENTS.md`). Requirement IDs refer to the [PRD](../prd.md). The tester's stand-in is **Sam Example**, as everywhere in the repository (NFR-10). The stand-in for a saved name
 on this page is **Alex Sample**, a second fictional name the owner approved on 13 Nov 2026 (package I-0 added it to
 `AGENTS.md` and `docs/`).
 
@@ -33,9 +33,9 @@ redesigning them.
 | Where | What it says |
 |---|---|
 | PRD, scope | "The interactions board (v2, issue #105)" is out of scope for v1. |
-| PRD, open items | "Note templates: ... Played song and Visitor interaction are confirmed", "A second board for logging interactions, with its own tab and its own interaction types, set up like the error board (#105). Raised by the facilitator; deferred on 9 Nov 2026." |
+| PRD, open items | "Note templates: ... Played song and Visitor interaction are confirmed", "A second board for logging interactions, with its own tab and its own interaction types, set up like the error board (#105). Raised by the tester; deferred on 9 Nov 2026." |
 | Implementation plan | 9 Nov 2026: "The interactions board (#105) stays in v2." |
-| Issue #105 | A second bingo board with **its own tab, so the tab bar has five tabs: Log errors, Log interactions, Review, History and Settings**. Set up exactly like the error board, with interaction types in place of error types. Free-text notes stay. The "Played song: {value}" style of prompt may no longer be needed. The facilitator thought interaction lines should **not** carry the `T\|` ticket marker: what matters is that the time of each event is exact, and the rest need only be enough to recall what happened. |
+| Issue #105 | A second bingo board with **its own tab, so the tab bar has five tabs: Log errors, Log interactions, Review, History and Settings**. Set up exactly like the error board, with interaction types in place of error types. Free-text notes stay. The "Played song: {value}" style of prompt may no longer be needed. The tester thought interaction lines should **not** carry the `T\|` ticket marker: what matters is that the time of each event is exact, and the rest need only be enough to recall what happened. |
 | Issue #105, open questions | How the user switches quickly (is a tab enough?); the export format of interaction lines and whether they count in the totals line; whether the setup file gets an `interactionTypes` list next to the error types. |
 | PRD, export rules | Notes carry no ticket marker (rule 4) and render as `<time> (Free Text) <text>`. Templated notes render through the template's line (NOTE-04). |
 
@@ -189,7 +189,7 @@ Interaction lines in the export:
 10:48 (Interaction) Visitor interaction – asked about the schedule
 ```
 
-- `(Interaction)` is a label in the style of `(Free Text)`. **No `T|` marker**: the facilitator thought not, and the
+- `(Interaction)` is a label in the style of `(Free Text)`. **No `T|` marker**: the tester thought not, and the
   downstream ticket indexer reads `T|`. The line is therefore treated like a note. The owner settled on 13 Nov 2026: no
   marker, label kept. (Whether the indexer ignores an unknown bracket tag is for the indexer's owner to confirm before
   release; it is the same as `(Free Text)` today.)
@@ -231,7 +231,7 @@ One change the mock-up forced: the board is 440 pt tall and a title strip does n
 
 ```text
  ┌──────────────────────────────┐
- │  header card (shared)        │   unit, site, version, date, facilitator
+ │  header card (shared)        │   unit, site, version, date, tester
  │  note composer (shared)      │   chips, field, Add
  │  Last bar                    │
  │ ┌──────┬──────┬──────┐       │

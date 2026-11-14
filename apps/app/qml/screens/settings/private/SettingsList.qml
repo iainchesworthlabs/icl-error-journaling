@@ -32,7 +32,7 @@ SettingsPage {
     signal templatesRequested
     signal locationsRequested
     signal unitEnvironmentsRequested
-    signal facilitatorRequested
+    signal testerRequested
     signal unitPrefixRequested
     signal errorPrefixRequested
     signal timeFormatRequested
@@ -303,16 +303,16 @@ SettingsPage {
             }
 
             ListRow {
-                objectName: "settingsFacilitator"
-                text: qsTr("Facilitator")
-                value: root.settings.facilitator
+                objectName: "settingsTester"
+                text: qsTr("Tester")
+                value: root.settings.tester
                 minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
-                onActivated: root.facilitatorRequested()
+                onActivated: root.testerRequested()
             }
 
             // The unit prefix and the totals line are on the list and nowhere else (Stage 7, F4): they are not behind the
-            // facilitator, and no page repeats them.
+            // tester, and no page repeats them.
             ListRow {
                 objectName: "settingsUnitPrefixRow"
                 text: qsTr("Unit prefix")

@@ -44,10 +44,10 @@ class TemplateListModel;
 ///
 /// **First launch.** Until a valid configuration is in force, `configured` is false and the invokables work on a set-up
 /// in progress that is held in memory and shown by the properties and the list models, but is not saved and is not what
-/// `configuration()` returns. It is saved, and `configured` becomes true, by the change that gives it a facilitator and
+/// `configuration()` returns. It is saved, and `configured` becomes true, by the change that gives it a tester and
 /// a unit prefix (a configuration without those is not one the importer accepts), or by an import.
 ///
-/// **Effects.** A new facilitator applies to logs created after it; the open log keeps the one it started with (the log
+/// **Effects.** A new tester applies to logs created after it; the open log keeps the one it started with (the log
 /// holds its own header). A new unit prefix or time format applies to every log, because neither is stored in a log.
 /// Retiring an error type or a location removes it from the pickers and keeps it on past entries.
 ///
@@ -63,7 +63,7 @@ class SettingsModel : public QObject, public ConfigurationSource, public Configu
     // Empty, or why the saved file was not used at launch ("update the app", a damaged file). The file is kept.
     Q_PROPERTY(QString loadProblem READ load_problem NOTIFY configurationChanged)
     Q_PROPERTY(bool saving READ saving NOTIFY savingChanged)
-    Q_PROPERTY(QString facilitator READ facilitator NOTIFY configurationChanged) // PRF-01
+    Q_PROPERTY(QString tester READ tester NOTIFY configurationChanged) // PRF-01
     Q_PROPERTY(QString unitPrefix READ unit_prefix NOTIFY configurationChanged)  // PRF-02
     // The choices of the environment picker on Today's details, in order, without "None" (PRF-11). Never empty.
     Q_PROPERTY(QStringList unitEnvironments READ unit_environments NOTIFY configurationChanged)
@@ -114,7 +114,7 @@ public:
     {
         return m_LoadProblem;
     }
-    [[nodiscard]] QString facilitator() const;
+    [[nodiscard]] QString tester() const;
     [[nodiscard]] QString unit_prefix() const;
     [[nodiscard]] QStringList unit_environments() const;
     [[nodiscard]] QString time_style() const;
@@ -154,7 +154,7 @@ public:
     // ConfigurationEditor: the Other sheet adds a type to the master list. Needs a configuration in force.
     [[nodiscard]] Result<ErrorTypeId, ConfigEditError> add_error_type(std::string name) override;
 
-    Q_INVOKABLE QString setFacilitator(const QString& name);
+    Q_INVOKABLE QString setTester(const QString& name);
     Q_INVOKABLE QString setUnitPrefix(const QString& prefix);
     /// `style` is "24h" or "12h"; `meridiem` is "upper" (AM, PM) or "lower" (am, pm) and only matters for "12h".
     Q_INVOKABLE QString setTimeFormat(const QString& style, bool seconds, const QString& meridiem);

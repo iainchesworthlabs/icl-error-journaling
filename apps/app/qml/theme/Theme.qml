@@ -648,7 +648,7 @@ QtObject {
             textScale: set.textScale
             dpi: set.dpi
         }
-        // The right column of the header card: the date in 600, the facilitator in 400.
+        // The right column of the header card: the date in 600, the tester in 400.
         readonly property FontRole captionSmall: FontRole {
             basePt: 12
             weight: 400
@@ -821,7 +821,7 @@ QtObject {
         text("Primary button label", c.textOnPrimary, c.primary);
         text("Primary button label, pressed", c.textOnPrimary, c.primaryPressed);
         text("Header card unit and date", c.textOnHeaderCard, c.headerCard);
-        text("Header card site, version and facilitator", c.headerCardTextSecondary, c.headerCard);
+        text("Header card site, version and tester", c.headerCardTextSecondary, c.headerCard);
         text("Delete label on the screen", c.destructive, c.background);
         text("Delete label on a card", c.destructive, c.surface);
         text("Delete label on a sheet", c.destructive, c.sheetBackground);
