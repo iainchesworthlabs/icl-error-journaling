@@ -9,7 +9,7 @@ namespace ej::export_format
 
 // The export is a contract with the downstream ticket indexer (PRD, Export format). Each constant is defined once here.
 
-inline constexpr std::string_view LABEL_TESTER = "Facilitator"; // legacy name: the export label is a contract with the downstream ticket indexer
+inline constexpr std::string_view LABEL_TESTER = "Tester";
 inline constexpr std::string_view LABEL_DATE = "Date";
 inline constexpr std::string_view LABEL_LOCATION = "Location";
 inline constexpr std::string_view LABEL_SOFTWARE_VERSION = "Software Version";

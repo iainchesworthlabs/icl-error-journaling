@@ -27,7 +27,7 @@ TEST_CASE("The PRD example renders to the golden file from the view-model tests"
 
 TEST_CASE("A golden mismatch is reported with the first differing line", "[viewmodel][support][golden]")
 {
-    const auto difference = test::compare_golden("prd-example", "Facilitator: Someone Else\n");
+    const auto difference = test::compare_golden("prd-example", "Tester: Someone Else\n");
 
     REQUIRE(difference.has_value());
     CHECK(difference->find("line 1") != std::string::npos);

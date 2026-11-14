@@ -53,7 +53,7 @@ TEST_CASE("The PRD example is the golden prd-example.txt, byte for byte", "[expo
     const auto text = render_export(scenario.m_Log, scenario.m_Context);
     REQUIRE(text.has_value());
     const std::string prd_example =
-        "Facilitator: Sam Example\n"
+        "Tester: Sam Example\n"
         "Date: 7 Nov 2026\n"
         "UNIT #: UNIT-27\n"
         "Location: North Site\n"

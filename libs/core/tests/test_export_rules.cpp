@@ -16,7 +16,7 @@ namespace
 {
 
 constexpr const char* HEADER =
-    "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: v1.4.2";
+    "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: v1.4.2";
 
 void must_add(Log& log, Entry entry)
 {
@@ -58,7 +58,7 @@ TEST_CASE("Rule 2: an empty header field prints its label and a colon only", "[e
     scenario.m_Log = Log(header);
     must_add(scenario.m_Log, error_entry(1, on_day(10, 5), ERROR_WRONG_RESPONSE));
     CHECK(render(scenario)
-          == "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation:\nSoftware Version:\n\n10:05 T| Wrong Response");
+          == "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation:\nSoftware Version:\n\n10:05 T| Wrong Response");
 }
 
 TEST_CASE("Rule 3: an error line, with an attached note after an en dash", "[export][rule3]")
@@ -198,7 +198,7 @@ TEST_CASE("Rule 9: the header block is one line per field too", "[export][rule9]
     header.m_Location = LocationValue{std::nullopt, "North\tSite\n"};
     auto scenario = blank_scenario();
     scenario.m_Log = Log(header);
-    CHECK(render(scenario) == "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation: North Site\nSoftware Version:");
+    CHECK(render(scenario) == "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation: North Site\nSoftware Version:");
 }
 
 TEST_CASE("render_entry_line of every entry equals the matching line of render_export", "[export]")

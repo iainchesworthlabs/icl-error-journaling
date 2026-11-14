@@ -626,7 +626,7 @@ TEST_CASE("The summary: count, last line, header text and title", "[viewmodel][t
         CHECK(rig.model().last_line().isEmpty());
         CHECK(rig.model().title_text() == "Sat 7 Nov \xC2\xB7 0 entries");
         CHECK(rig.model().header_text() ==
-              "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\n"
+              "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\n"
               "Software Version: v1.4.2");
     }
 
@@ -1004,7 +1004,7 @@ TEST_CASE("Copy: copyLine and copyAll put exactly the expected bytes on the clip
     REQUIRE(rig.model().copyAll());
     CHECK(rig.clipboard().text() == expected);
     CHECK(rig.clipboard().text() ==
-          "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: v1.4.2\n"
+          "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: v1.4.2\n"
           "\n11:10 T| A\n11:20 (Free Text) B\n11:30 T| C \xE2\x80\x93 with a note\n11:40 T| D");
 
     CHECK_FALSE(rig.model().copyLine(-1));

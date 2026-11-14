@@ -147,11 +147,11 @@ TEST_CASE("The export prints a line for each extra version after the software ve
     HeaderValues values = bare_header();
     values.m_SoftwareVersion = SoftwareVersion::parse("1.2.3").value();
     CHECK(render_header(Log(values), demo_context()).value() ==
-          "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation:\nSoftware Version: v1.2.3");
+          "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation:\nSoftware Version: v1.2.3");
 
     values.m_ExtraVersions = {labelled("Influencer", "4.5.0"), labelled("Gateway", "2.0.1")};
     CHECK(render_header(Log(values), demo_context()).value() ==
-          "Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation:\nSoftware Version: v1.2.3\n"
+          "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation:\nSoftware Version: v1.2.3\n"
           "Influencer Version: v4.5.0\nGateway Version: v2.0.1");
 }
 
