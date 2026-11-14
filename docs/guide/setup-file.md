@@ -1,4 +1,4 @@
-# The setup file
+It may be empty. Without this key your interaction types are left as they are. With no types at all, the app shows its own six: Spoke with, Played song, Visitor interaction, Gave item, Greeted and Helped. |# The setup file
 
 A setup file holds everything about how you work that is not in a day's log: your name, the unit prefix, the error types
 and where they sit on the board, your places, your note templates, the interaction types of the second board and your time format. It is a plain text file with the
@@ -153,6 +153,19 @@ The file below is the sample setup that the app's tests use. All the names in it
       "retired": false,
       "board_position": 4,
       "line_pattern": "Gave {person} {value}"
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d5",
+      "name": "Greeted",
+      "retired": false,
+      "board_position": 5
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d6",
+      "name": "Helped",
+      "retired": false,
+      "board_position": 6,
+      "line_pattern": "Helped {person}"
     }
   ]
 }
@@ -191,7 +204,7 @@ The file below is the sample setup that the app's tests use. All the names in it
 | `error_types` | Required | The error types. | A list, below. It may be empty. |
 | `locations` | Required | The places you work in. | A list, below. It may be empty. |
 | `note_templates` | Required | The quick notes. | A list, below. It may be empty. |
-| `interaction_types` | Optional | The tiles of the second board, Interactions. | A list, below. It may be empty. Without this key your interaction types are left as they are. |
+| `interaction_types` | Optional | The tiles of the second board, Interactions. | A list, below. It may be empty. Without this key your interaction types are left as they are. With no types at all, the app shows its own six: Spoke with, Played song, Visitor interaction, Gave item, Greeted and Helped. |
 
 ## Preferences
 

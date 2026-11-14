@@ -70,6 +70,8 @@ Item {
     property var interactionBoard: null
     // How shared text is written (ExportPreferences): Settings shows and sets the level of a name. Null leaves that row out.
     property var exportPreferences: null
+    // The list of people (PeopleModel), for the picker of the Interactions board. Null: no picker.
+    property var people: null
     // The QmlBridge: the haptics, the share sheet and the accessibility settings.
     required property var bridge
     // The file chooser that import and export go through. The platform's own unless the test of the shell gives it another.
@@ -383,6 +385,7 @@ Item {
                     sheetLayer: root.sheetLayer
                     activeBoard: root.currentTab === root.interactionsIndex ? "interactions" : "errors"
                     interactionBoard: root.interactionBoard
+                    people: root.people
                     onInteractionSetupRequested: root.showInteractionSetup()
                     onBoardSwitchRequested: board => root.selectTab(board === "interactions" ? root.interactionsIndex : root.logIndex)
                     onTodaysDetailsRequested: root.showDetails(logStack)

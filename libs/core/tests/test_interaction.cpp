@@ -520,3 +520,23 @@ TEST_CASE("export.interaction_lines: the type is looked up only when the entry h
     CHECK(render_entry_line(log, sample_id<EntryId>(1), context).value() ==
           "00:05 (Interaction) Spoke with \xE2\x80\x93 asked about \"the schedule\"");
 }
+
+TEST_CASE("interaction.defaults: the built-in types are the ones of the sample setup", "[interaction]")
+{
+    const auto types = default_interaction_types();
+    REQUIRE(types.size() == 6);
+    for (std::size_t i = 0; i < types.size(); ++i)
+    {
+        CHECK(types[i].m_BoardPosition == static_cast<int>(i) + 1);
+        CHECK_FALSE(types[i].m_Retired);
+        CHECK(types[i].m_Asks == interaction_asks_for(types[i].m_LinePattern));
+        if (types[i].m_LinePattern)
+        {
+            CHECK(validate_interaction_pattern(*types[i].m_LinePattern).has_value());
+        }
+    }
+    CHECK(types[0].m_Asks == InteractionAsks::PERSON);
+    CHECK(types[1].m_Asks == InteractionAsks::TEXT);
+    CHECK(types[2].m_Asks == InteractionAsks::NOTHING);
+    CHECK(types[3].m_Asks == InteractionAsks::PERSON);
+}
