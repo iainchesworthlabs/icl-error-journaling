@@ -291,16 +291,22 @@ Item {
         }
     }
 
-    // The finger stayed on a tile of the Interactions board. A typed draft goes on the entry as its note; with an empty composer
-    // there is nothing to add (the Edit entry sheet for interactions comes with Review, Stage 14 package I-9).
+    // The finger stayed on a tile of the Interactions board, as on the Errors board: a typed draft goes on the entry as its note;
+    // with an empty composer the Edit entry sheet opens on the new entry with the cursor in the note, and it has the people and the
+    // answer too, so the picker and the answer sheet do not open as well.
     function holdInteractionTile(row: int): void {
         const entryId = pressedEntries[row] ?? "";
-        if (entryId.length === 0 || !hasDraft)
+        if (entryId.length === 0)
             return;
+        const how = hasDraft ? "draft" : "sheet";
+        if (how === "sheet") {
+            askEntry = "";
+            askLeft = "";
+        }
         if (timeline.rowOf(entryId) >= 0)
-            session.attachDraft(entryId);
+            finishHold(entryId, how);
         else
-            waitingHolds[entryId] = "draft";
+            waitingHolds[entryId] = how;
     }
 
     // The finger stayed on a tile (or VoiceOver chose "Log with note"). The tile has asked for the entry already (`pressTile`,
@@ -1017,6 +1023,7 @@ Item {
             timeline: root.timeline
             picker: root.picker
             settings: root.settings
+            people: root.people
         }
     }
 
