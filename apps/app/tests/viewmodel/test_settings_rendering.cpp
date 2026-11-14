@@ -36,13 +36,13 @@ TEST_CASE("A new unit prefix re-renders a past log", "[viewmodel][settings][rend
     rig.load_configuration(scenario_configuration());
     const Scenario past = make_scenario("attached-note");
     const std::string before = render(past, rig.m_Settings.configuration());
-    REQUIRE(before.starts_with("Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\n"));
+    REQUIRE(before.starts_with("Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\n"));
 
     REQUIRE(rig.m_Settings.setUnitPrefix("DEMO").isEmpty());
     rig.commit();
 
     CHECK(render(past, rig.m_Settings.configuration())
-              .starts_with("Facilitator: Sam Example\nDate: 7 Nov 2026\nDEMO #: DEMO-27\n"));
+              .starts_with("Tester: Sam Example\nDate: 7 Nov 2026\nDEMO #: DEMO-27\n"));
 }
 
 TEST_CASE("A new time format re-renders a past log", "[viewmodel][settings][render]")

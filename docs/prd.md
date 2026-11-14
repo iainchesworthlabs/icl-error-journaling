@@ -204,10 +204,10 @@ IDs are UUIDs. The schema carries a version number with forward migrations from 
 
 The export is plain text in the format of the tester's original concept, extended with tester, date, header changes and attached notes. It pastes cleanly into Slack and Mail with no markup.
 
-The first header line keeps its label `Facilitator:` after the app's wording changed to "tester": the label is part of the format the downstream ticket indexer reads, and the owner decides whether it changes. The same holds for the stored names `facilitator` (setup file, journal, database column).
+The first header line reads `Tester:`. It read `Facilitator:` until the owner decided on 14 Nov 2026 that the log says "tester"; the downstream ticket indexer should be checked if it reads that line. The stored names keep `facilitator` (setup file, journal, database column): only what is shown and shared changed.
 
 ```
-Facilitator: Sam Example
+Tester: Sam Example
 Date: 7 Nov 2026
 UNIT #: UNIT-27
 Location: North Site

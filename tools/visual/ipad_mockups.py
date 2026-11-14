@@ -273,7 +273,7 @@ class Page:
     def header_block(self) -> str:
         c = self.c
         border = f"border: 1px solid {c['reviewDivider']}; " if self.dark else ""
-        lines = ["Facilitator: Sam Example", "Date: 7 Nov 2026", "UNIT #: UNIT-27", "Location: North Site", "Software Version: 1.4.2 (a1b2c3d)"]
+        lines = ["Tester: Sam Example", "Date: 7 Nov 2026", "UNIT #: UNIT-27", "Location: North Site", "Software Version: 1.4.2 (a1b2c3d)"]
         return (
             f'<a href="Header.{self.frame.name}{self.suffix()}.dc.html" style="display: block; background: {c["reviewSurface"]}; {border}'
             f'border-radius: 14px; padding: 12px 14px; text-decoration: none; color: {c["reviewText"]}; font-size: 14px; line-height: 1.55">'

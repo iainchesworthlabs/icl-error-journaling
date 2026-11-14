@@ -764,7 +764,7 @@ void Day::step_17_start_the_new_log()
     // Its export is the header and nothing else.
     CHECK(rig.timeline().copyAll());
     CHECK(rig.clipboard().text() ==
-          "Facilitator: Sam Example\nDate: 8 Nov 2026\nUNIT #:\nLocation:\nSoftware Version:");
+          "Tester: Sam Example\nDate: 8 Nov 2026\nUNIT #:\nLocation:\nSoftware Version:");
 }
 
 // ------------------------------------------------------------------------------------------------------ 18

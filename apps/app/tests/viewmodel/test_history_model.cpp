@@ -531,7 +531,7 @@ TEST_CASE("Opening a log binds a timeline with its lines; closing unbinds", "[vi
     CHECK(timeline_line(review, 3) == "13:40 T| Speech Delay");
     CHECK(review.entry_count() == 4);
     CHECK(review.ready());
-    CHECK(review.header_text().startsWith("Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27"));
+    CHECK(review.header_text().startsWith("Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27"));
     CHECK(history.review_document() != nullptr);
 
     history.closeLog();
