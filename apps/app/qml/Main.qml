@@ -30,6 +30,8 @@ Window {
     // the one of v1: four tabs.
     property QtObject boards: null
     property QtObject interactionBoard: null
+    // How shared text is written (ExportPreferences): the level of a name (nameExport) and the label of an interaction line.
+    property QtObject exportPreferences: null
     required property var bridge
     // The version of the core library and which bridge and storage are linked. They are at the foot of Settings.
     required property string versionText

@@ -189,7 +189,7 @@ Interaction lines in the export:
 | Value | Renders Alex Sample as |
 |---|---|
 | `full` | Alex Sample |
-| `initials` | S.E. |
+| `initials` | A.S. |
 | `hidden` | someone |
 
 The **recommended default is `initials`**, so a log pasted into Slack does not carry a full name unless the owner turns it

@@ -14,6 +14,9 @@
 namespace ej::viewmodel
 {
 
+class ExportPreferences;
+class PersonNames;
+
 /// Names one pending timer of a `Scheduler`. The default value names none.
 struct TimerId
 {
@@ -91,6 +94,10 @@ struct Environment
     IdGenerator& m_Ids;
     const DeviceZone& m_Zone;
     const TimeZoneProvider& m_Zones;
+    /// Where the export gets a person's name, and how shared text is written (Stage 14, 3.6). Null where there is no
+    /// list of people or no preference: an interaction then names nobody ("someone") and uses the default initials.
+    const PersonNames* m_People = nullptr;
+    const ExportPreferences* m_ExportPreferences = nullptr;
 };
 
 } // namespace ej::viewmodel
