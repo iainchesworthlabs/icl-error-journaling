@@ -545,6 +545,76 @@ TEST_CASE("tile.label: a label with a very long word wraps inside the word inste
     CHECK(label->property("contentHeight").toDouble() <= label->height() + 0.5);
 }
 
+TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone width, the smallest tile or any text size",
+          "[ui][tile]")
+{
+    UiRig rig;
+    // The longest words of the sample configuration (error types and interaction types) and "Disconnection", which a
+    // tester reported wrapping its last letter. Each is alone and with a short word before it.
+    const QStringList words{QStringLiteral("Disconnection"), QStringLiteral("Navigation"), QStringLiteral("Sequence"),
+                            QStringLiteral("interaction"), QStringLiteral("Interaction")};
+
+    // The runner's font is wider than the phone's, so a tile of the phone's width may not hold "Disconnection" in it.
+    // The widths are the phone's (iPhone 17 at 118 pt, the 88 pt minimum), where a word that cannot fit may break as
+    // the last resort, and widths from the runner's own measure of the word, for the case that is the report: a word
+    // that is a little too wide, and one that needs the label's smallest size.
+    for (const double scale : {1.0, 1.3, 3.1})
+    {
+        rig.set_text_scale(scale);
+        for (const QString& word : words)
+        {
+            for (const QString& text : {word, QStringLiteral("Visitor ") + word})
+            {
+                QQuickItem* tile = rig.load(QStringLiteral("Tile"), tile_properties(text, 2));
+                REQUIRE(tile != nullptr);
+                tile->setWidth(TILE_WIDTH);
+                tile->setHeight(TILE_HEIGHT);
+                rig.layout();
+                QObject* probe = tile->findChild<QObject*>(QStringLiteral("tileWordProbe"));
+                REQUIRE(probe != nullptr);
+                // The word at the role's size, and the tile that gives it this share of its width: a word that is
+                // 2% too wide (the report), 10% too wide, and the share at which it fits only at the smallest size.
+                const double word_width = probe->property("advanceWidth").toDouble();
+                const double padding = tile->property("padding").toDouble() * 2;
+                const double floor_share = tile->property("wordFitFloor").toDouble();
+                struct Width
+                {
+                    double m_Tile;
+                    bool m_MustFit;
+                };
+                for (const Width width : {Width{word_width * 0.98 + padding, true},
+                                          Width{word_width * 0.9 + padding, true},
+                                          Width{word_width * (floor_share + 0.02) + padding, true},
+                                          Width{118.0, false},
+                                          Width{88.0, false}})
+                {
+                    tile->setWidth(width.m_Tile);
+                    rig.layout();
+                    QQuickItem* label = rig.find(QStringLiteral("tileLabel"));
+                    REQUIRE(label != nullptr);
+                    const int words_in_label = static_cast<int>(text.count(QLatin1Char(' '))) + 1;
+                    INFO("label " << text.toStdString() << ", tile width " << width.m_Tile << ", text scale " << scale
+                                  << ", lines " << label->property("lineCount").toInt() << ", content width "
+                                  << label->property("contentWidth").toDouble() << " of " << label->width()
+                                  << ", the word " << word_width << " at the role's size");
+                    // A word that fits at the smallest size is whole: one line to a word at most, as a break inside a
+                    // word would make one more, and within the label. Where the tile is too narrow even for that, the
+                    // word breaks and nothing is cut off.
+                    if (width.m_MustFit || tile->property("wordFits").toBool())
+                    {
+                        CHECK(tile->property("wordFits").toBool());
+                        CHECK(label->property("lineCount").toInt() <= words_in_label);
+                        CHECK(label->property("contentWidth").toDouble() <= label->width() + 0.5);
+                    }
+                    CHECK_FALSE(label->property("truncated").toBool());
+                    CHECK(label->property("contentHeight").toDouble() <= label->height() + 0.5);
+                }
+            }
+        }
+    }
+    rig.set_text_scale(1.0);
+}
+
 TEST_CASE("tile.empty: an empty position is a button with a plus that taps and never presses", "[ui][tile]")
 {
     UiRig rig;
