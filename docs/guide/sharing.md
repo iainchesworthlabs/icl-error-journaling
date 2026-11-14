@@ -28,6 +28,19 @@ An error line is the time, the error prefix `T|`, the error type, and then the n
 indexer reads the `T|` marker, so do not change the lines after you share. A note on its own, with no error, is marked
 `(Free Text)` instead. The prefix can be changed in Settings if your tool reads a different one.
 
+If you use the second board, an interaction is a line of its own, marked `(Interaction)` and with no `T|`, so the ticket
+indexer does not read it:
+
+```
+10:12 (Interaction) Spoke with A.S.
+10:31 (Interaction) Played Morning Medley
+```
+
+A person's name is written in a shared or copied log at the level you choose in Settings: initials (the default, `A.S.`),
+the full name, or `someone`. Share, **Copy** and **Copy log** all use that choice, also for a log from an earlier day that
+you share again. Review and the board always show the full name, because they never leave your phone. The list of people
+itself is never exported, and the totals line counts errors only.
+
 Only **Share log** marks a log as shared. Copying does not.
 
 ## The next day

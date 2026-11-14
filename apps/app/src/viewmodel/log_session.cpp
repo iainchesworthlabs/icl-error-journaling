@@ -1172,7 +1172,7 @@ QString LogSession::previewHeaderChange(const QString& fieldKey, const QString& 
     {
         return header_message(changed.error());
     }
-    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment.m_Zones).build();
+    const ExportContext context = ExportContextBuilder(m_Configuration, m_Environment).build();
     const auto line = render_entry_line(scratch, id, context);
     if (!line)
     {

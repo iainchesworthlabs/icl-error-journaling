@@ -1,0 +1,17 @@
+Facilitator: Sam Example
+Date: 7 Nov 2026
+UNIT #: UNIT-27
+Location: North Site
+Software Version: v1.4.2
+
+10:05 T| Wrong Response
+10:12 Spoke with A.S.
+10:20 T| Mute Delay
+10:31 Played Morning Medley
+10:40 Spoke with A.S., J.P. and P.S.I.
+10:45 (Free Text) Robot restarted
+10:48 Visitor interaction – asked about the schedule
+11:00 Gave J.P. a card
+11:10 Spoke with someone
+11:20 Spoke with (person not set)
+11:40 T| Wrong Response

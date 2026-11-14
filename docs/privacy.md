@@ -11,7 +11,8 @@ and it does not send anything over the internet. This page says what that means 
   your name as the facilitator).
 - **People you name.** Only if you turn on the second board and choose to type a name (see below).
 - **Your setup.** The error types, places and note templates you set up, and your preferences, such as the time format.
-- **A few settings of the app itself**, such as whether you have closed the tip on the Log screen, whether the optional second board is on, and which board you used last. They are a switch and a word in a small file of their own; they are not in your logs and not in a setup file.
+- **A few settings of the app itself**, such as whether you have closed the tip on the Log screen, whether the optional second board is on, which board you used last, how names are written in a shared log and the label
+  of an interaction line. They are a switch and a word in a small file of their own; they are not in your logs and not in a setup file.
 
 ## People you choose to name
 
@@ -22,7 +23,9 @@ later. The list is yours: the app never fills it in, and a log that names nobody
   only a number for each person, never the name, so a name you remove is gone from the app (Settings, People, Forget).
   Entries that named that person stay and then read "someone".
 - **What leaves the device.** Only what you share or copy, at the level of detail you choose in Settings (the default is
-  initials). The setup file you can export holds no people, and there is no way to export the list itself.
+  initials: "Alex Sample" is written "A.S."; the other choices are the full name and "someone"). Share, Copy and Copy
+  log all follow that choice, also for a log you share again later. Review and the board show the full name, because they
+  stay on the device. The setup file you can export holds no people, and there is no way to export the list itself.
 - **Your device backup** holds the list with the rest of the app's files, as described below. Forgetting a person does not
   change a backup that was made before.
 - The developer receives none of it: the app sends nothing over the internet.
