@@ -237,7 +237,8 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("boards"), QVariant::fromValue(&boards)},
                                  {QStringLiteral("exportPreferences"), QVariant::fromValue(&export_preferences)},
                                  {QStringLiteral("interactionBoard"), QVariant::fromValue(root.interaction_board())},
-                                 {QStringLiteral("people"), QVariant::fromValue(root.people())}});
+                                 {QStringLiteral("people"), QVariant::fromValue(root.people())},
+                                 {QStringLiteral("peopleAdmin"), QVariant::fromValue(root.people_admin())}});
     // The shell says when the 12 tiles accept taps (the Log tab is shown and the session has loaded).
     QObject::connect(&platform_bridge, &ej::bridge::QmlBridge::boardEnabled, &platform_bridge,
                      [&launch] { launch.board_enabled(); });

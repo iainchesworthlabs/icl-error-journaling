@@ -17,6 +17,7 @@
 #include "viewmodel/interaction_board_model.hpp"
 #include "viewmodel/log_session.hpp"
 #include "viewmodel/open_log_source.hpp"
+#include "viewmodel/people_admin_model.hpp"
 #include "viewmodel/people_model.hpp"
 #include "viewmodel/settings_model.hpp"
 #include "viewmodel/share_service.hpp"
@@ -161,6 +162,7 @@ class AppRoot final : public QObject
     Q_PROPERTY(ej::viewmodel::BoardModel* board READ board CONSTANT)
     Q_PROPERTY(ej::viewmodel::InteractionBoardModel* interactionBoard READ interaction_board CONSTANT)
     Q_PROPERTY(ej::viewmodel::PeopleModel* people READ people CONSTANT)
+    Q_PROPERTY(ej::viewmodel::PeopleAdminModel* peopleAdmin READ people_admin CONSTANT)
     Q_PROPERTY(ej::viewmodel::ErrorPickerModel* picker READ picker CONSTANT)
     Q_PROPERTY(ej::viewmodel::TimelineModel* timeline READ timeline CONSTANT)
     Q_PROPERTY(ej::viewmodel::HistoryModel* history READ history CONSTANT)
@@ -195,6 +197,10 @@ public:
     [[nodiscard]] viewmodel::PeopleModel* people()
     {
         return &m_People;
+    }
+    [[nodiscard]] viewmodel::PeopleAdminModel* people_admin()
+    {
+        return &m_PeopleAdmin;
     }
     [[nodiscard]] viewmodel::ErrorPickerModel* picker()
     {
@@ -258,6 +264,7 @@ private:
     viewmodel::BoardModel m_Board;
     viewmodel::InteractionBoardModel m_InteractionBoard;
     viewmodel::PeopleModel m_People;
+    viewmodel::PeopleAdminModel m_PeopleAdmin;
     viewmodel::ErrorPickerModel m_Picker;
     viewmodel::TimelineModel m_Timeline;
     viewmodel::ShareService m_Share;

@@ -115,3 +115,18 @@ editor at once, and turning the switch on with nothing set up opens it for you.
 
 The first 11 types fill the board in the order shown; drag the handle, or use the arrows, to change it. The rest are under
 **Other…**. A type you retire leaves the board and stays on the entries already logged.
+
+### People
+
+**People** is the list of names an interaction can use. It is optional: a type with no **[person]** in its line never asks
+who. In **Settings**, **Second board**, tap **People**:
+
+- Type a name under **New person** and tap **Add person**. If you have locations, choose the one the person belongs to;
+  **Everyone** in the picker ticks the people of the location in force. A name is at most 60 characters, and two people
+  cannot share a name.
+- Tap a name to **rename** it. Entries that name the person show the new name.
+- **Retire** takes a person out of the picker. They stay on the entries already logged, and **Bring back** undoes it.
+- **Forget** removes a name for good, after you confirm. The entries stay and show “someone”.
+
+Names stay on the device and are never part of an export. A log you share shows them as you choose under **Names in
+shared logs**.
