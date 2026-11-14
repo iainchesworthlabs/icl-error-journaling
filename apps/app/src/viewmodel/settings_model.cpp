@@ -1191,6 +1191,16 @@ namespace
 using TypeLayout = std::array<std::optional<std::size_t>, CONFIG_BOARD_POSITIONS>;
 
 /// The second board's layout: the live types by position, the first in the list having a position that two claim.
+/// The first change to the interaction types copies the built-in list into the configuration, so that an edit starts from
+/// the types the board shows (Stage 14, I-6: a file with none shows the built-in ones) and the setup file then holds them.
+void materialise_interaction_defaults(Configuration& configuration)
+{
+    if (configuration.m_InteractionTypes.empty())
+    {
+        configuration.m_InteractionTypes = default_interaction_types();
+    }
+}
+
 TypeLayout type_layout(const Configuration& configuration)
 {
     TypeLayout layout{};
@@ -1312,6 +1322,7 @@ QString SettingsModel::addInteractionType(const QString& name, const QString& li
     return change_message(OP_INTERACTION_TYPE,
                           [value = *text, pattern = *pattern, id](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               if (configuration.m_InteractionTypes.size() >= CONFIG_MAX_ENTRIES_PER_LIST)
                               {
                                   return std::unexpected(list_full());
@@ -1358,6 +1369,7 @@ QString SettingsModel::updateInteractionType(const QString& id, const QString& n
     return change_message(OP_INTERACTION_TYPE,
                           [value = *text, pattern = *pattern, target = *type_id](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               const auto found =
                                   std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
                               if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
@@ -1387,6 +1399,7 @@ QString SettingsModel::retireInteractionType(const QString& id)
     return change_message(OP_INTERACTION_TYPE,
                           [target = *type_id](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               const auto found =
                                   std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
                               if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
@@ -1407,6 +1420,7 @@ QString SettingsModel::moveInteractionTile(int fromPosition, int toPosition)
     return change_message(OP_INTERACTION_TYPE,
                           [fromPosition, toPosition](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               TypeLayout layout = type_layout(configuration);
                               const auto from = static_cast<std::ptrdiff_t>(fromPosition - 1);
                               const auto to = static_cast<std::ptrdiff_t>(toPosition - 1);
@@ -1445,6 +1459,7 @@ QString SettingsModel::assignInteractionTile(int position, const QString& intera
     return change_message(OP_INTERACTION_TYPE,
                           [position, target = *type_id](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               const auto found =
                                   std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
                               if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
@@ -1480,6 +1495,7 @@ QString SettingsModel::removeInteractionTile(const QString& interactionTypeId)
     return change_message(OP_INTERACTION_TYPE,
                           [target = *type_id](Configuration& configuration) -> EditResult
                           {
+                              materialise_interaction_defaults(configuration);
                               const auto found =
                                   std::ranges::find(configuration.m_InteractionTypes, target, &InteractionType::m_Id);
                               if (found == configuration.m_InteractionTypes.end() || found->m_Retired)
