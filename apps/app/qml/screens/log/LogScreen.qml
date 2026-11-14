@@ -651,65 +651,72 @@ Item {
             Accessible.name: qsTr("Interactions board. Swipe here to switch to the Errors board.")
             Accessible.onPressAction: root.boardSwitchRequested("errors")
 
-            Row {
-                x: Theme.space.tileGap / 2
-                height: parent.height
-                spacing: Theme.space.tileGap
+            // The contents are made only on the Interactions board, so the Errors board pays two items for the strip (perf.scene).
+            Loader {
+                anchors.fill: parent
+                active: root.onInteractions
+                sourceComponent: Item {
+                    Row {
+                        x: Theme.space.tileGap / 2
+                        height: parent.height
+                        spacing: Theme.space.tileGap
 
-                Icon {
-                    anchors.verticalCenter: parent.verticalCenter
-                    kind: "speech"
-                    size: Theme.size.badge * 3 / 4
-                    colour: Theme.colour.interactionAccent
-                }
+                        Icon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            kind: "speech"
+                            size: Theme.size.badge * 3 / 4
+                            colour: Theme.colour.interactionAccent
+                        }
 
-                Text {
-                    objectName: "interactionsStripTitle"
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: Theme.colour.interactionAccent
-                    font: Theme.font.bodySmall.selectedFont
-                    text: qsTr("Interactions")
-                    Accessible.ignored: true
-                }
-            }
-
-            Text {
-                anchors.right: parent.right
-                anchors.rightMargin: Theme.space.tileGap / 2
-                anchors.verticalCenter: parent.verticalCenter
-                color: Theme.colour.textSecondary
-                font: Theme.font.footnote.font
-                text: qsTr("Swipe here to switch to Errors")
-                elide: Text.ElideLeft
-                width: Math.min(implicitWidth, parent.width / 2)
-                horizontalAlignment: Text.AlignRight
-                Accessible.ignored: true
-            }
-
-            // The swipe: a drag that is mostly horizontal and long enough. It is on the strip and takes no tile's touch.
-            DragHandler {
-                id: stripSwipe
-
-                objectName: "interactionsStripSwipe"
-                target: null
-                enabled: root.onInteractions
-                // How far the finger went, kept while it is down: the handler resets its own translation when it lets go.
-                property real travelX: 0
-                property real travelY: 0
-                onTranslationChanged: {
-                    if (active) {
-                        travelX = translation.x;
-                        travelY = translation.y;
+                        Text {
+                            objectName: "interactionsStripTitle"
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: Theme.colour.interactionAccent
+                            font: Theme.font.bodySmall.selectedFont
+                            text: qsTr("Interactions")
+                            Accessible.ignored: true
+                        }
                     }
-                }
-                onActiveChanged: {
-                    if (active) {
-                        travelX = 0;
-                        travelY = 0;
-                        return;
+
+                    Text {
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.space.tileGap / 2
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: Theme.colour.textSecondary
+                        font: Theme.font.footnote.font
+                        text: qsTr("Swipe here to switch to Errors")
+                        elide: Text.ElideLeft
+                        width: Math.min(implicitWidth, parent.width / 2)
+                        horizontalAlignment: Text.AlignRight
+                        Accessible.ignored: true
                     }
-                    if (Math.abs(travelX) >= Theme.size.minTouchTarget && Math.abs(travelX) > 2 * Math.abs(travelY))
-                        root.boardSwitchRequested("errors");
+
+                    // The swipe: a drag that is mostly horizontal and long enough. It is on the strip and takes no tile's touch.
+                    DragHandler {
+                        id: stripSwipe
+
+                        objectName: "interactionsStripSwipe"
+                        target: null
+                        enabled: root.onInteractions
+                        // How far the finger went, kept while it is down: the handler resets its own translation when it lets go.
+                        property real travelX: 0
+                        property real travelY: 0
+                        onTranslationChanged: {
+                            if (active) {
+                                travelX = translation.x;
+                                travelY = translation.y;
+                            }
+                        }
+                        onActiveChanged: {
+                            if (active) {
+                                travelX = 0;
+                                travelY = 0;
+                                return;
+                            }
+                            if (Math.abs(travelX) >= Theme.size.minTouchTarget && Math.abs(travelX) > 2 * Math.abs(travelY))
+                                root.boardSwitchRequested("errors");
+                        }
+                    }
                 }
             }
         }
