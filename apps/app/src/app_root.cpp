@@ -364,12 +364,15 @@ AppRoot::AppRoot(const vm::Environment& environment, const AppPlatform& platform
       m_Session(environment, *m_Gateway, m_Registry, m_Settings, m_Feedback, std::move(storage.m_Startup)),
       m_Undo(environment, m_Settings), m_UndoFollower(std::make_unique<UndoFollower>(m_Session, m_Undo)),
       m_Board(m_Settings, m_Session), m_InteractionBoard(m_Settings, m_Session), m_People(environment, *m_Gateway),
+      m_PeopleAdmin(environment, *m_Gateway),
       m_Picker(m_Settings, m_Session, m_Settings), m_Timeline(environment, m_Settings, platform.m_Clipboard),
       m_Share(environment, m_Session, m_Registry, m_Settings, platform.m_Share, platform.m_ShareAvailable),
       m_Day(environment, m_Session, m_Share),
       m_History(environment, *m_Gateway, m_Registry, m_Settings, m_Session, platform.m_Clipboard, m_Share)
 {
     m_Timeline.follow(m_Session);
+    // A change on the People screen reaches the picker.
+    connect(&m_PeopleAdmin, &vm::PeopleAdminModel::changed, &m_People, &vm::PeopleModel::reload);
 
     // An undone note goes back to the composer through the session's draft. Text the facilitator has typed since is
     // kept below it, so neither is lost.
