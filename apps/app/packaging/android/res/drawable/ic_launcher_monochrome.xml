@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Made by tools/store/make_android_icon.py from the drawing in tools/store/make_app_icon.py. Do not edit. -->
+<!-- The themed icon (Android 13 and later): the same shapes, one colour. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.547"
+        android:strokeLineJoin="round"
+        android:pathData="M29.586,31.305Q29.586,29.586 31.305,29.586L51.695,29.586Q53.414,29.586 53.414,31.305L53.414,39.195Q53.414,40.914 51.695,40.914L42.633,40.914Q40.914,40.914 40.914,42.633L40.914,52.867Q40.914,54.586 42.633,54.586L51.695,54.586Q53.414,54.586 53.414,56.305L53.414,64.195Q53.414,65.914 51.695,65.914L42.633,65.914Q40.914,65.914 40.914,67.633L40.914,76.695Q40.914,78.414 39.195,78.414L31.305,78.414Q29.586,78.414 29.586,76.695Z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M56.031,29.312H64.469A1.719,1.719 0 0 1 66.188,31.031V39.469A1.719,1.719 0 0 1 64.469,41.188H56.031A1.719,1.719 0 0 1 54.312,39.469V31.031A1.719,1.719 0 0 1 56.031,29.312Z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M43.531,41.812H51.969A1.719,1.719 0 0 1 53.688,43.531V51.969A1.719,1.719 0 0 1 51.969,53.688H43.531A1.719,1.719 0 0 1 41.812,51.969V43.531A1.719,1.719 0 0 1 43.531,41.812Z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M56.031,41.812H64.469A1.719,1.719 0 0 1 66.188,43.531V51.969A1.719,1.719 0 0 1 64.469,53.688H56.031A1.719,1.719 0 0 1 54.312,51.969V43.531A1.719,1.719 0 0 1 56.031,41.812Z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M68.531,41.812H76.969A1.719,1.719 0 0 1 78.688,43.531V51.969A1.719,1.719 0 0 1 76.969,53.688H68.531A1.719,1.719 0 0 1 66.812,51.969V43.531A1.719,1.719 0 0 1 68.531,41.812Z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M56.031,54.312H64.469A1.719,1.719 0 0 1 66.188,56.031V64.469A1.719,1.719 0 0 1 64.469,66.188H56.031A1.719,1.719 0 0 1 54.312,64.469V56.031A1.719,1.719 0 0 1 56.031,54.312Z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M56.031,66.812H64.469A1.719,1.719 0 0 1 66.188,68.531V76.969A1.719,1.719 0 0 1 64.469,78.688H56.031A1.719,1.719 0 0 1 54.312,76.969V68.531A1.719,1.719 0 0 1 56.031,66.812Z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M68.531,66.812H76.969A1.719,1.719 0 0 1 78.688,68.531V76.969A1.719,1.719 0 0 1 76.969,78.688H68.531A1.719,1.719 0 0 1 66.812,76.969V68.531A1.719,1.719 0 0 1 68.531,66.812Z" />
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.547"
+        android:strokeLineJoin="round"
+        android:pathData="M68.805,29.586H76.695A1.719,1.719 0 0 1 78.414,31.305V39.195A1.719,1.719 0 0 1 76.695,40.914H68.805A1.719,1.719 0 0 1 67.086,39.195V31.305A1.719,1.719 0 0 1 68.805,29.586Z" />
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.547"
+        android:strokeLineJoin="round"
+        android:pathData="M68.805,54.586H76.695A1.719,1.719 0 0 1 78.414,56.305V64.195A1.719,1.719 0 0 1 76.695,65.914H68.805A1.719,1.719 0 0 1 67.086,64.195V56.305A1.719,1.719 0 0 1 68.805,54.586Z" />
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.547"
+        android:strokeLineJoin="round"
+        android:pathData="M43.805,67.086H51.695A1.719,1.719 0 0 1 53.414,68.805V76.695A1.719,1.719 0 0 1 51.695,78.414H43.805A1.719,1.719 0 0 1 42.086,76.695V68.805A1.719,1.719 0 0 1 43.805,67.086Z" />
+</vector>

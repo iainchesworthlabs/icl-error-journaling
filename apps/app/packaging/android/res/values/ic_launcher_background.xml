@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Made by tools/store/make_android_icon.py from the drawing in tools/store/make_app_icon.py. Do not edit. -->
+<resources>
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>
