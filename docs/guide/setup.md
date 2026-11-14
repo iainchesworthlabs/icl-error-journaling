@@ -130,3 +130,7 @@ who. In **Settings**, **Second board**, tap **People**:
 
 Names stay on the device and are never part of an export. A log you share shows them as you choose under **Names in
 shared logs**.
+
+**Names in shared logs** (also in the **Second board** group) sets how a person's name is written when a log leaves the app,
+in Copy, Share and a re-shared past log: **Initials** (the default, for example “A.S.”), **Full name**, or **Someone** for no
+name at all. **Review** and the **Interactions** board always show the full name, because that stays on the device.
