@@ -24,6 +24,10 @@ SheetHost {
     property Item sheetLayer: null
     property string problem: ""
 
+    // A tile that was asked to move, and where it should arrive: the selection goes with it once the model has moved it.
+    property string followTypeId: ""
+    property int followPosition: 0
+
     signal closeRequested
     signal helpRequested(string topic)
 
@@ -37,6 +41,44 @@ SheetHost {
         property: "parent"
         value: root.sheetLayer
         when: root.sheetLayer !== null
+    }
+
+    Binding {
+        target: tilePicker
+        property: "parent"
+        value: root.sheetLayer
+        when: root.sheetLayer !== null
+    }
+
+    // Asks for a move, and remembers which tile it was if it is the selected one.
+    function moveTile(fromPosition: int, toPosition: int): void {
+        if (miniBoard.selectedPosition === fromPosition) {
+            root.followTypeId = miniBoard.tileItem(fromPosition - 1).typeId;
+            root.followPosition = toPosition;
+        }
+        root.problem = root.settings.moveInteractionTile(fromPosition, toPosition);
+        if (root.problem.length > 0)
+            root.followTypeId = "";
+    }
+
+    // The board changed: if the tile that was asked to move has arrived, the selection moves to it.
+    function followSelected(): void {
+        if (root.followTypeId.length === 0)
+            return;
+        const arrived = miniBoard.tileItem(root.followPosition - 1);
+        if (arrived && arrived.typeId === root.followTypeId) {
+            miniBoard.selectedPosition = root.followPosition;
+            root.followTypeId = "";
+        }
+    }
+
+    Connections {
+        target: root.settings.interactionLayout
+
+        // After the board has taken the change, so the tile it arrives on has its new type.
+        function onDataChanged(): void {
+            Qt.callLater(root.followSelected);
+        }
     }
 
     Connections {
@@ -66,6 +108,7 @@ SheetHost {
             contentWidth: width
             contentHeight: column.height + Theme.space.screenMargin
             boundsBehavior: Flickable.StopAtBounds
+            interactive: !miniBoard.dragging
 
             Column {
                 id: column
@@ -87,6 +130,39 @@ SheetHost {
                 Item {
                     width: parent.width
                     height: root.problem.length > 0 ? Theme.space.tileGap : 0
+                }
+
+                Text {
+                    x: Theme.space.tileGap / 2
+                    width: parent.width - 2 * x
+                    color: Theme.colour.textSecondary
+                    font: Theme.font.sectionLabel.font
+                    text: qsTr("Your interaction board").toLocaleUpperCase()
+                    wrapMode: Text.WordWrap
+                    Accessible.ignored: true
+                }
+
+                Item {
+                    width: parent.width
+                    height: Theme.space.tileGap
+                }
+
+                MiniBoard {
+                    id: miniBoard
+
+                    objectName: "interactionMiniBoard"
+                    width: parent.width
+                    model: root.settings.interactionLayout
+                    addText: qsTr("Add interaction type")
+                    changeText: qsTr("Change interaction type")
+                    onMoveRequested: (fromPosition, toPosition) => root.moveTile(fromPosition, toPosition)
+                    onReplaceRequested: position => tilePicker.openFor(position, miniBoard.tileItem(position - 1).typeId)
+                    onAddRequested: position => tilePicker.openFor(position, "")
+                }
+
+                Item {
+                    width: parent.width
+                    height: Theme.space.sectionGap
                 }
 
                 Text {
@@ -228,6 +304,12 @@ SheetHost {
             id: editSheet
 
             settings: root.settings
+        },
+        InteractionTilePicker {
+            id: tilePicker
+
+            settings: root.settings
+            onNewTypeRequested: editSheet.openForNew()
         }
     ]
 }
