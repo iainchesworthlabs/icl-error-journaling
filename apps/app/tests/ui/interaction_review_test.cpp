@@ -152,6 +152,14 @@ public:
     {
         m_Touched = ids;
     }
+    Q_INVOKABLE void setCurrentLocation(const QString& location)
+    {
+        m_CurrentLocation = location;
+    }
+    Q_INVOKABLE QStringList recentIds(int limit) const
+    {
+        return m_Recent.mid(0, limit);
+    }
 
     void seed(std::uint64_t number, const QString& name, const QString& location = {})
     {
@@ -165,6 +173,8 @@ public:
     std::vector<Row> m_Rows;
     QHash<QString, QString> m_Retired; // people kept by name who are not listed
     QStringList m_Touched;
+    QStringList m_Recent;
+    QString m_CurrentLocation;
 
 signals:
     void countChanged();
