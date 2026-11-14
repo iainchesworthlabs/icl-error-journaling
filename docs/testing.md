@@ -391,5 +391,7 @@ landscape and the fold-open portrait size, the tiles are at least 88 pt, equal t
 strip and the board area are in the column or the left pane and above the tab bar, the log pane is beside them in Wide, and the five
 tabs are in order, in the 680 pt column in Regular) and `fold.state_kept` (T-I8-2: a draft, the focus, the board and the entries
 across the open, tabletop, cover and short-cover sizes). Until Stage 13 builds the posture code the app sees a fold as a size; the 841 by
-701 window and the tab rail are not tested yet. The tests of the tiles and the open picker are added when the board and the picker
-of I-6 are merged.
+701 window and the tab rail are not tested yet. Two more cases in `apps/app/tests/ui/log_screen_test.cpp` use the real board of I-6:
+`ipad.second_board_tiles` (the twelve tiles, each 88 pt or more, equal in height and inside the board area, in the iPad and fold
+sizes) and a second `fold.state_kept` (the person picker open, with a name typed in its search, across the fold sizes: the picker,
+the search text and the logged entry stay).
