@@ -1,0 +1,1 @@
+**The interaction types editor now shows the types on the board.** With no setup file, the Interactions board shows six built-in types; the editor lists the same six, and changing one keeps them all in your setup. Not yet run on a device.

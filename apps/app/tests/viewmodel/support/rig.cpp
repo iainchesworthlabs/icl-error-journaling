@@ -57,7 +57,10 @@ vm::Environment Rig::environment()
 {
     const TimeZoneProvider& zones = m_QtZones ? static_cast<const TimeZoneProvider&>(*m_QtZones)
                                               : static_cast<const TimeZoneProvider&>(m_FakeZones);
-    return vm::Environment{m_Clock, m_Clock, m_Ids, m_DeviceZone, zones};
+    vm::Environment environment{m_Clock, m_Clock, m_Ids, m_DeviceZone, zones};
+    environment.m_People = &m_PersonNames;
+    environment.m_ExportPreferences = &m_ExportPreferences;
+    return environment;
 }
 
 void Rig::build()
@@ -119,6 +122,7 @@ void Rig::build()
 
     const app::AppPlatform platform{m_Platform, m_Platform, m_Clipboard, true};
     m_Root = std::make_unique<app::AppRoot>(environment(), platform, std::move(started));
+    m_PersonNames.set(m_Root->people());
     watch_events();
 }
 
@@ -126,6 +130,7 @@ void Rig::tear_down()
 {
     m_Watching = false;
     harvest_records();
+    m_PersonNames.set(nullptr);
     m_Root.reset();
     m_Threaded = nullptr;
     m_Manual = nullptr;

@@ -1,0 +1,1 @@
+**You can choose how a name is written in a shared log.** With the second board on, **Names in shared logs** in Settings offers Initials (the default), Full name and Someone. It applies to Copy, Share and a re-shared past log; Review and the Interactions board always show the full name. Not yet run on a device.

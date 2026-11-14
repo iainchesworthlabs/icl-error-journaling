@@ -80,7 +80,7 @@ int selected_cards(UiRig& rig)
 
 } // namespace
 
-TEST_CASE("version.choices: two plain choices, exactly one selected, in the facilitator's words", "[ui][version_sheet]")
+TEST_CASE("version.choices: two plain choices, exactly one selected, in the tester's words", "[ui][version_sheet]")
 {
     HeaderWorld world(true);
     UiRig rig;

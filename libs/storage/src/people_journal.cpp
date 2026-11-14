@@ -104,12 +104,20 @@ struct BodyWriter
         body.insert(QStringLiteral("id"), to_qt(b.m_Id.format()));
         return body;
     }
+    QJsonObject operator()(const SetPersonLocationBody& b) const
+    {
+        QJsonObject body;
+        body.insert(QStringLiteral("id"), to_qt(b.m_Id.format()));
+        body.insert(QStringLiteral("location"),
+                    b.m_Location ? QJsonValue(to_qt(b.m_Location->format())) : QJsonValue());
+        return body;
+    }
 };
 
 QJsonObject record_object(const PeopleRecord& record)
 {
     QJsonObject object;
-    object.insert(QStringLiteral("v"), static_cast<int>(record.m_Version));
+    object.insert(QStringLiteral("v"), static_cast<int>(people_record_version(record.m_Body)));
     object.insert(QStringLiteral("seq"), static_cast<double>(record.m_Seq));
     object.insert(QStringLiteral("op"), to_qt(people_op_name(people_op(record.m_Body))));
     object.insert(QStringLiteral("body"), std::visit(BodyWriter{}, record.m_Body));
@@ -194,7 +202,7 @@ struct Fields
 std::optional<PeopleOp> op_from_name(std::string_view name)
 {
     for (const PeopleOp op : {PeopleOp::ADD_PERSON, PeopleOp::RENAME_PERSON, PeopleOp::RETIRE_PERSON,
-                              PeopleOp::TOUCH_PERSON, PeopleOp::FORGET_PERSON})
+                              PeopleOp::TOUCH_PERSON, PeopleOp::FORGET_PERSON, PeopleOp::SET_PERSON_LOCATION})
     {
         if (people_op_name(op) == name)
         {
@@ -230,8 +238,15 @@ std::string_view people_op_name(PeopleOp op)
         return "touch_person";
     case PeopleOp::FORGET_PERSON:
         return "forget_person";
+    case PeopleOp::SET_PERSON_LOCATION:
+        return "set_person_location";
     }
     return {};
+}
+
+std::uint32_t people_record_version(const PeopleBody& body)
+{
+    return std::holds_alternative<SetPersonLocationBody>(body) ? 2U : 1U;
 }
 
 Result<std::string, StorageError> encode_people_record(const PeopleRecord& record)
@@ -239,10 +254,6 @@ Result<std::string, StorageError> encode_people_record(const PeopleRecord& recor
     if (record.m_Seq == 0 || static_cast<double>(record.m_Seq) >= MAX_SAFE)
     {
         return invalid("a people journal sequence number is out of range");
-    }
-    if (record.m_Version != PEOPLE_JOURNAL_VERSION)
-    {
-        return invalid("a people journal record has a version this build does not write");
     }
     QJsonObject object = record_object(record);
     const std::uint32_t checksum = crc32(compact(object));
@@ -255,7 +266,7 @@ Result<std::string, StorageError> encode_people_record(const PeopleRecord& recor
     return line;
 }
 
-Result<PeopleRecord, PeopleDecodeError> decode_people_record(std::string_view line)
+Result<PeopleRecord, PeopleDecodeError> decode_people_record(std::string_view line, std::uint64_t* seq_out)
 {
     if (line.size() > MAX_RECORD_BYTES || line.empty() || line.front() != '{')
     {
@@ -300,9 +311,17 @@ Result<PeopleRecord, PeopleDecodeError> decode_people_record(std::string_view li
     const std::int64_t seq = root.integer("seq");
     const auto op = op_from_name(to_std(root.text("op")));
     const QJsonObject body_object = root.object("body");
-    if (bad || version < 1 || seq <= 0 || !op)
+    if (bad || version < 1 || seq <= 0)
     {
         return std::unexpected(PeopleDecodeError::MALFORMED);
+    }
+    if (!op)
+    {
+        if (seq_out != nullptr)
+        {
+            *seq_out = static_cast<std::uint64_t>(seq);
+        }
+        return std::unexpected(PeopleDecodeError::UNKNOWN_OP);
     }
     const Fields body{body_object, bad};
     PeopleRecord record;
@@ -344,6 +363,25 @@ Result<PeopleRecord, PeopleDecodeError> decode_people_record(std::string_view li
     case PeopleOp::FORGET_PERSON:
         record.m_Body = ForgetPersonBody{PersonId{body.uuid("id")}};
         break;
+    case PeopleOp::SET_PERSON_LOCATION:
+    {
+        SetPersonLocationBody set;
+        set.m_Id = PersonId{body.uuid("id")};
+        if (const auto location = body.optional_text("location"))
+        {
+            const auto parsed = Uuid::parse(*location);
+            if (!parsed)
+            {
+                bad = true;
+            }
+            else
+            {
+                set.m_Location = LocationId{*parsed};
+            }
+        }
+        record.m_Body = std::move(set);
+        break;
+    }
     }
     if (bad)
     {
@@ -467,6 +505,16 @@ Result<void, StorageError> PeopleState::apply(const PeopleBody& body)
             found->second.m_LastUsedUtc = b.m_Utc;
             return {};
         }
+        Result<void, StorageError> operator()(const SetPersonLocationBody& b) const
+        {
+            const auto found = m_State.m_People.find(b.m_Id);
+            if (found == m_State.m_People.end())
+            {
+                return Failure(make_error(StorageErrorKind::NOT_FOUND, "no such person"));
+            }
+            found->second.m_Location = b.m_Location;
+            return {};
+        }
         Result<void, StorageError> operator()(const ForgetPersonBody& b) const
         {
             if (m_State.m_Forgotten.contains(b.m_Id))
@@ -559,8 +607,15 @@ PeopleScan scan_people_journal(std::string_view bytes)
             ++scan.m_BadRecords; // after the first problem nothing is taken: the journal is not carried on past a hole
             continue;
         }
-        const auto record = decode_people_record(line);
-        if (!record || record->m_Seq != scan.last_seq() + 1)
+        std::uint64_t unknown_seq = 0;
+        const auto record = decode_people_record(line, &unknown_seq);
+        if (!record && record.error() == PeopleDecodeError::UNKNOWN_OP && unknown_seq == scan.m_LastSeq + 1)
+        {
+            ++scan.m_UnknownRecords; // a record type of a later build: skipped, and the sequence goes on
+            scan.m_LastSeq = unknown_seq;
+            continue;
+        }
+        if (!record || record->m_Seq != scan.m_LastSeq + 1)
         {
             ++scan.m_BadRecords;
             scan.m_HasProblem = true;
@@ -575,6 +630,7 @@ PeopleScan scan_people_journal(std::string_view bytes)
         }
         scan.m_State = std::move(trial);
         scan.m_Records.push_back(*record);
+        scan.m_LastSeq = record->m_Seq;
     }
     return scan;
 }

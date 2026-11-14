@@ -264,7 +264,7 @@ TEST_CASE("import.sample: the sample file imports and the board, the picker and 
     CHECK(world.model().error_types()->rowCount() == 11);
     CHECK(world.model().locations()->rowCount() == 2);
     CHECK(world.model().templates()->rowCount() == 2);
-    CHECK(world.model().facilitator() == QStringLiteral("Sam Example"));
+    CHECK(world.model().tester() == QStringLiteral("Sam Example"));
     CHECK(world.model().unit_prefix() == QStringLiteral("UNIT"));
 
     // The board and the picker read the configuration that is now in force.

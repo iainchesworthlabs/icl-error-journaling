@@ -431,3 +431,69 @@ TEST_CASE("Forgetting twice is fine, and so is forgetting someone the journal ne
     CHECK(people->people().empty());
     CHECK(scan_people_journal(people_file(store)).m_State.forgotten().size() == 2);
 }
+
+TEST_CASE("A person's location is set, changed and cleared, in the journal and the table", "[people][store][location]")
+{
+    TempDir dir;
+    OpenStore store(dir.path());
+    auto people = open_people(store, &store.repo());
+    const LocationId north = sample_id<LocationId>(5);
+    REQUIRE(people->add_person(person(1), ALEX).has_value());
+    REQUIRE(people->add_person(person(2), JORDAN, north).has_value());
+    CHECK(people->last_seq() == 2);
+
+    REQUIRE(people->set_person_location(person(1), north).has_value());
+    CHECK(people->find(person(1))->m_Location == north);
+    REQUIRE(people->set_person_location(person(2), std::nullopt).has_value());
+    CHECK_FALSE(people->find(person(2))->m_Location.has_value());
+    CHECK(people->last_seq() == 4);
+
+    // The same value writes nothing.
+    REQUIRE(people->set_person_location(person(1), north).has_value());
+    REQUIRE(people->set_person_location(person(2), std::nullopt).has_value());
+    CHECK(people->last_seq() == 4);
+
+    // Nobody, or someone who was forgotten, is refused and writes nothing.
+    CHECK(people->set_person_location(person(9), north).error().m_Kind == StorageErrorKind::NOT_FOUND);
+    REQUIRE(people->forget_person(person(2)).has_value());
+    const std::uint64_t seq = people->last_seq();
+    CHECK(people->set_person_location(person(2), north).error().m_Kind == StorageErrorKind::NOT_FOUND);
+    CHECK(people->last_seq() == seq);
+
+    const auto cached = store.repo().read_people().value();
+    REQUIRE(cached.m_People.size() == 1);
+    CHECK(cached.m_People.front().m_Location == north);
+
+    // A new store over the file reads it back.
+    people.reset();
+    auto again = open_people(store);
+    CHECK(again->find(person(1))->m_Location == north);
+    CHECK(again->is_forgotten(person(2)));
+}
+
+TEST_CASE("Forget leaves no location record that names the person", "[people][store][forget][location]")
+{
+    TempDir dir;
+    OpenStore store(dir.path());
+    auto people = open_people(store, &store.repo());
+    REQUIRE(people->add_person(person(1), ALEX).has_value());
+    REQUIRE(people->add_person(person(2), JORDAN).has_value());
+    REQUIRE(people->set_person_location(person(1), sample_id<LocationId>(5)).has_value());
+    REQUIRE(people->set_person_location(person(2), sample_id<LocationId>(6)).has_value());
+    REQUIRE(contains(people_file(store), person(1).format()));
+
+    REQUIRE(people->forget_person(person(1)).has_value());
+    const std::string bytes = people_file(store);
+    const PeopleScan scan = scan_people_journal(bytes);
+    REQUIRE(scan.is_clean());
+    CHECK(scan.m_State.is_forgotten(person(1)));
+    CHECK(contains(bytes, "forget_person"));
+    CHECK_FALSE(contains(bytes, sample_id<LocationId>(5).format())); // the location of the forgotten person is gone
+    CHECK(scan.m_State.find(person(2))->m_Location == sample_id<LocationId>(6));
+    {
+        RawDb raw(store.location().database_path());
+        CHECK(raw.scalar(QStringLiteral("SELECT location_id FROM person WHERE id = ?"),
+                         {QString::fromStdString(person(1).format())})
+                  .isNull());
+    }
+}

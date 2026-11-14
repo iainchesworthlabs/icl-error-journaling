@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SettingsScreen (docs/plan/stage-4.md, 4.12): settings.rows, settings.facilitator, settings.prefix,
+// SettingsScreen (docs/plan/stage-4.md, 4.12): settings.rows, settings.tester, settings.prefix,
 // settings.time_format, settings.totals, settings.board_layout, settings.board_limit, settings.export,
 // settings.import_row, settings.loading, settings.voiceover, settings.about (PRF-12) and the cross-cutting checks,
 // against the real SettingsModel and BoardModel over the fakes of Stage 3 and the sample configuration.
@@ -312,17 +312,17 @@ TEST_CASE("settings.rows: the rows show the values of the model, with no counts,
     CHECK(fixture.require(QStringLiteral("settingsErrorTypes"))->property("value").toString().isEmpty());
     CHECK(fixture.require(QStringLiteral("settingsTemplates"))->property("value").toString().isEmpty());
     CHECK(fixture.require(QStringLiteral("settingsLocations"))->property("value").toString().isEmpty());
-    CHECK(fixture.require(QStringLiteral("settingsFacilitator"))->property("value").toString() == "Sam Example");
+    CHECK(fixture.require(QStringLiteral("settingsTester"))->property("value").toString() == "Sam Example");
     CHECK(fixture.require(QStringLiteral("settingsTimeFormat"))->property("value").toString() == "24-hour");
     CHECK(fixture.require(QStringLiteral("settingsImportExport"))->property("value").toString().isEmpty());
     for (const QString& row : {QStringLiteral("settingsErrorTypes"), QStringLiteral("settingsTemplates"),
-                               QStringLiteral("settingsLocations"), QStringLiteral("settingsFacilitator"),
+                               QStringLiteral("settingsLocations"), QStringLiteral("settingsTester"),
                                QStringLiteral("settingsTimeFormat"), QStringLiteral("settingsImportExport")})
     {
         INFO(row.toStdString());
         CHECK(fixture.m_Ui.geometry(fixture.require(row)).height() == 44.0);
     }
-    // The unit prefix and the totals line are on the list, and the Facilitator page does not repeat them (F4).
+    // The unit prefix and the totals line are on the list, and the Tester page does not repeat them (F4).
     CHECK(fixture.shown(QStringLiteral("settingsUnitPrefixRow")) != nullptr);
     CHECK(fixture.shown(QStringLiteral("settingsTotalsRow")) != nullptr);
     CHECK(fixture.shown(QStringLiteral("settingsSharedLog")) == nullptr);
@@ -341,7 +341,7 @@ TEST_CASE("settings.rows: the pages the screen has itself are pushed, and Back r
           "[ui][settings_screen]")
 {
     Fixture fixture;
-    for (const QString& row : {QStringLiteral("settingsFacilitator"), QStringLiteral("settingsTimeFormat"),
+    for (const QString& row : {QStringLiteral("settingsTester"), QStringLiteral("settingsTimeFormat"),
                                QStringLiteral("settingsImportExport")})
     {
         INFO(row.toStdString());
@@ -361,11 +361,11 @@ TEST_CASE("settings.rows: the pages the screen has itself are pushed, and Back r
     CHECK(fixture.depth() == 1);
 }
 
-TEST_CASE("settings.facilitator: Save asks the model once, a refusal shows inline and the old name stays",
+TEST_CASE("settings.tester: Save asks the model once, a refusal shows inline and the old name stays",
           "[ui][settings_screen]")
 {
     Fixture fixture;
-    fixture.open_page(QStringLiteral("settingsFacilitator"));
+    fixture.open_page(QStringLiteral("settingsTester"));
 
     // The field starts with the name in force, and Save waits for a change. The log that is open keeps its own name.
     QQuickItem* input = fixture.require(QStringLiteral("formInput"));
@@ -380,7 +380,7 @@ TEST_CASE("settings.facilitator: Save asks the model once, a refusal shows inlin
     fixture.m_Ui.settle();
     CHECK(fixture.depth() == 2);
     CHECK(fixture.saves() == before);
-    CHECK(fixture.settings().facilitator() == "Sam Example");
+    CHECK(fixture.settings().tester() == "Sam Example");
     QQuickItem* field = fixture.require(QStringLiteral("settingsTextField"));
     CHECK(field->property("invalid").toBool());
     const QString refusal = field->property("errorText").toString();
@@ -395,11 +395,11 @@ TEST_CASE("settings.facilitator: Save asks the model once, a refusal shows inlin
     fixture.m_Ui.advance(400ms);
     CHECK(fixture.depth() == 1);
     // The name shows in the list when it has been saved, and not before.
-    CHECK(fixture.require(QStringLiteral("settingsFacilitator"))->property("value").toString() == "Sam Example");
+    CHECK(fixture.require(QStringLiteral("settingsTester"))->property("value").toString() == "Sam Example");
     fixture.m_Ui.settle();
     CHECK(fixture.saves() == before + 1);
-    CHECK(fixture.settings().facilitator() == "Alex Example");
-    CHECK(fixture.require(QStringLiteral("settingsFacilitator"))->property("value").toString() == "Alex Example");
+    CHECK(fixture.settings().tester() == "Alex Example");
+    CHECK(fixture.require(QStringLiteral("settingsTester"))->property("value").toString() == "Alex Example");
 }
 
 TEST_CASE("settings.prefix: Save asks the model once and a refusal shows inline", "[ui][settings_screen]")
@@ -909,7 +909,7 @@ TEST_CASE("settings.loading: the skeleton shows until the setup has been read, a
     }
     CHECK(tiles == 12);
     CHECK(bars == 6);
-    CHECK(fixture.shown(QStringLiteral("settingsFacilitator")) == nullptr);
+    CHECK(fixture.shown(QStringLiteral("settingsTester")) == nullptr);
     CHECK(fixture.shown(QStringLiteral("miniTile0")) == nullptr);
     CHECK_FALSE(fixture.shows(QStringLiteral("Sam Example")));
     expect_clean(check_everything(fixture.m_Ui, min_target));
@@ -919,7 +919,7 @@ TEST_CASE("settings.loading: the skeleton shows until the setup has been read, a
     fixture.m_Ui.settle();
     CHECK_FALSE(fixture.settings().loading());
     CHECK(fixture.shown(QStringLiteral("settingsSkeleton")) == nullptr);
-    CHECK(fixture.shown(QStringLiteral("settingsFacilitator")) != nullptr);
+    CHECK(fixture.shown(QStringLiteral("settingsTester")) != nullptr);
     CHECK(fixture.shown(QStringLiteral("miniTile0")) != nullptr);
 }
 
@@ -939,9 +939,9 @@ TEST_CASE("settings.voiceover: rows read their label and value, the switch reads
         return Node{};
     };
 
-    const Node facilitator = name_of(QStringLiteral("settingsFacilitator"));
-    CHECK(facilitator.m_Role == QAccessible::Button);
-    CHECK(facilitator.m_Name == "Facilitator, Sam Example");
+    const Node tester = name_of(QStringLiteral("settingsTester"));
+    CHECK(tester.m_Role == QAccessible::Button);
+    CHECK(tester.m_Name == "Tester, Sam Example");
     CHECK(name_of(QStringLiteral("settingsErrorTypes")).m_Name == "Error types");
     CHECK(name_of(QStringLiteral("settingsTimeFormat")).m_Name == "Time format, 24-hour");
 
@@ -1010,7 +1010,7 @@ TEST_CASE("settings.a11y: names, targets, reading order and the text scales, in 
             fixture.m_Ui.tap(close);
         }
 
-        for (const QString& row : {QStringLiteral("settingsFacilitator"), QStringLiteral("settingsTimeFormat"),
+        for (const QString& row : {QStringLiteral("settingsTester"), QStringLiteral("settingsTimeFormat"),
                                    QStringLiteral("settingsImportExport")})
         {
             INFO(row.toStdString());
@@ -1061,7 +1061,7 @@ TEST_CASE("settings.a11y: the list clears the top inset and nothing is cut off",
     // and the page are as big as the window, so the window-wide check of the rig is not used on them.)
     CHECK(fixture.m_Ui.geometry(fixture.require(QStringLiteral("settingsNavBar"))).top() >= 59);
     CHECK(fixture.m_Ui.geometry(fixture.require(QStringLiteral("miniGrid"))).top() > 59);
-    for (const QString& row : {QStringLiteral("settingsFacilitator"), QStringLiteral("settingsTimeFormat")})
+    for (const QString& row : {QStringLiteral("settingsTester"), QStringLiteral("settingsTimeFormat")})
     {
         fixture.open_page(row);
         CHECK(fixture.m_Ui.geometry(fixture.require(QStringLiteral("settingsNavBar"))).top() >= 59);
@@ -1405,17 +1405,17 @@ TEST_CASE("settings.about: the licence text is whole at the largest text size an
     expect_clean(check_everything(fixture.m_Ui, min_target));
 }
 
-TEST_CASE("settings.list_rows: the unit prefix and the totals line are on the list, below the facilitator (F4)",
+TEST_CASE("settings.list_rows: the unit prefix and the totals line are on the list, below the tester (F4)",
           "[ui][settings_screen]")
 {
     Fixture fixture;
-    QQuickItem* facilitator = fixture.require(QStringLiteral("settingsFacilitator"));
+    QQuickItem* tester = fixture.require(QStringLiteral("settingsTester"));
     QQuickItem* prefix = fixture.require(QStringLiteral("settingsUnitPrefixRow"));
     QQuickItem* totals = fixture.require(QStringLiteral("settingsTotalsRow"));
     CHECK(prefix->property("text").toString() == QStringLiteral("Unit prefix"));
     CHECK(prefix->property("value").toString() == QStringLiteral("UNIT"));
     CHECK(totals->property("text").toString() == QStringLiteral("Include a totals line"));
-    CHECK(fixture.m_Ui.geometry(prefix).top() >= fixture.m_Ui.geometry(facilitator).bottom() - 0.5);
+    CHECK(fixture.m_Ui.geometry(prefix).top() >= fixture.m_Ui.geometry(tester).bottom() - 0.5);
     CHECK(fixture.m_Ui.geometry(totals).top() >= fixture.m_Ui.geometry(prefix).bottom() - 0.5);
 
     // The switch is the setting's own: it saves and moves.

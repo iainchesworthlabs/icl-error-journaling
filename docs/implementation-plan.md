@@ -103,7 +103,7 @@ A thin QObject layer connects the core and storage to QML. QML holds no logic be
 | TimelineModel    | Entries in time order for the Last line and the review screen, rendered through the export renderer.                       | REV-01                          |
 | HistoryModel     | Past logs grouped by date, with shared state.                                                                              | DAY-04                          |
 | DayWatcher       | Checks for a new calendar day on launch and on return to the foreground; raises the new-day prompt with the unshared flag. | DAY-01                          |
-| SettingsModel    | Facilitator, prefix, locations, error types, board layout, templates, time format; configuration import and export.        | PRF-01 to PRF-10                |
+| SettingsModel    | Tester, prefix, locations, error types, board layout, templates, time format; configuration import and export.        | PRF-01 to PRF-10                |
 | ShareService     | Builds the export text and hands it to the platform share interface; records the share time.                               | REV-05                          |
 
 QML-facing names are camelCase; everything else follows the labs C++ casing standard.
@@ -128,7 +128,7 @@ The eight approved screens (https://claude.ai/artifact/ULU3voVz6TiuaLMfQHn1ob) a
 
 No Qt Quick Controls default styling is used anywhere visible (NFR-05).
 
-**Exit gate:** side-by-side review of each screen against the design on an iPhone 17, in light and dark mode, signed off by the facilitator.
+**Exit gate:** side-by-side review of each screen against the design on an iPhone 17, in light and dark mode, signed off by the tester.
 
 ## Stage 5 – iOS bridge and lifecycle
 
@@ -147,9 +147,9 @@ A small Objective-C++ layer covers what Qt does not, behind interfaces with desk
 
 ## Stage 6 – TestFlight and acceptance
 
-The facilitator uses a TestFlight build in real sessions for one working week before v1 is called done.
+The tester uses a TestFlight build in real sessions for one working week before v1 is called done.
 
-1.  Prepare her configuration file outside the repository: facilitator, UNIT prefix, locations, the 11 board types, any other error types, and the note templates. AirDrop it to her phone.
+1.  Prepare her configuration file outside the repository: tester, UNIT prefix, locations, the 11 board types, any other error types, and the note templates. AirDrop it to her phone.
 
 2.  Run the acceptance checklist on her phone with her: every Must requirement in the PRD, one line per requirement ID, pass or fail.
 
@@ -193,13 +193,13 @@ Each stage below gets its own page, `docs/plan/stage-N.md`, which sets out the t
 | Service tests              | Session flows, undo, day rollover, sharing state                  | Every PR, desktop                                |
 | QML tests                  | Component behaviour and screen navigation                         | Every PR, desktop                                |
 | Device checks              | Latency, start-up, haptics, share sheet, appearance               | Each TestFlight build, iPhone 17                 |
-| Acceptance                 | Every Must requirement, with the facilitator                                | Stage 6                                          |
+| Acceptance                 | Every Must requirement, with the tester                                | Stage 6                                          |
 
 **Risks**
 
 | Risk                                                       | Effect                 | Mitigation                                                                                |
 |------------------------------------------------------------|------------------------|-------------------------------------------------------------------------------------------|
-| Qt Quick looks or feels less native than a Swift app       | Misses the polish goal | Custom components from tokens, motion tuned on device weekly, the facilitator signs off each screen |
+| Qt Quick looks or feels less native than a Swift app       | Misses the polish goal | Custom components from tokens, motion tuned on device weekly, the tester signs off each screen |
 | Share sheet or haptics integration from Qt is awkward      | Delays Stage 5         | Spike both in Stage 0 on the empty app                                                    |
 | Platform time zone support differs between desktop and iOS | Wrong times in the log | All conversion goes through QTimeZone; daylight-saving tests in Stage 1                   |
 | Data loss from a crash or corruption                       | P1 defect, lost trust  | Stage 2 kill and corruption tests gate all later stages                                   |

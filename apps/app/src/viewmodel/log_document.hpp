@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -131,6 +132,15 @@ public:
     /// flag, and its edit time becomes the time of this call. `entry.m_Id` is ignored.
     [[nodiscard]] Result<void, DocumentError> edit_entry(EntryId id, Entry entry, Done done);
 
+    /// An edit that is worked out when the command reaches the front of the queue, from the entry as it is then: commands
+    /// before it have committed, so an edit that was submitted earlier and is not through yet is not overwritten (a note
+    /// held onto an entry and the people put on it a moment later both stay). `mutate` changes the copy it is given and
+    /// returns nothing, or a plain sentence that refuses the edit. It is called on the GUI thread, once when the command
+    /// is submitted (on the entry as it is) and once at the front of the queue, so it must give the same answer on the
+    /// same entry. Time, id and deleted flag follow `edit_entry`.
+    using Mutator = std::function<std::optional<std::string>(Entry&)>;
+    [[nodiscard]] Result<void, DocumentError> edit_entry(EntryId id, Mutator mutate, Done done);
+
     /// A soft delete (`deleted`) or a restore. Nothing is ever removed (Stage 3 decision 6). `origin` is `UNDO` for
     /// the undo of the last action.
     [[nodiscard]] Result<void, DocumentError> set_deleted(EntryId id, bool deleted, Origin origin, Done done);
@@ -168,6 +178,7 @@ private:
         Op m_Op = Op::ADD_ENTRY;
         Origin m_Origin = Origin::USER;
         Entry m_Entry;                                  // ADD_ENTRY, EDIT_ENTRY, CHANGE_HEADER
+        Mutator m_Mutate;                               // EDIT_ENTRY made with a mutator: the entry is worked out in make_body
         EntryId m_Target;                               // SET_DELETED, CORRECT_CHANGE
         bool m_Deleted = false;                         // SET_DELETED
         HeaderField m_Field = HeaderField::UNIT_NUMBER; // CORRECT_HEADER

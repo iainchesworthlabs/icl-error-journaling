@@ -3,7 +3,7 @@
 Everything that makes the app yours is in **Settings**: the tiles on the board, your error types, places and note
 templates, and your name and unit prefix.
 
-![The Settings screen. At the top is Your board, a miniature of the tiles. Below are Error types, Note templates, Locations, Number suffixes, Facilitator, Unit prefix and a switch for a totals line.](img/board-settings.png){ width="270" }
+![The Settings screen. At the top is Your board, a miniature of the tiles. Below are Error types, Note templates, Locations, Number suffixes, Tester, Unit prefix and a switch for a totals line.](img/board-settings.png){ width="270" }
 
 ## Your board
 
@@ -51,7 +51,7 @@ Each template has three parts:
 
 ## Your name, prefix and totals
 
-- **Facilitator** and **Unit prefix** are the two things asked on first launch. They head every log.
+- **Tester** and **Unit prefix** are the two things asked on first launch. They head every log.
 - **Include a totals line** adds a line at the end of a shared log with the count of each error type.
 - **Time format** and **Error prefix** are further down the list. The error prefix is the marker before each error line
   (`T|` unless you change it). Change it only if the tool that reads your log expects something else.
@@ -92,7 +92,7 @@ setup rows). A fifth tab, **Interactions**, appears at once, and the first tab i
 - To change board, tap the tab, or swipe along the strip that says **Interactions**. A swipe anywhere else does nothing, so a
   slip over a tile never changes board.
 - The app opens on the board you used last.
-- Until you have added interaction types, the board is empty and offers **Add interaction types**.
+- The board has six interaction types to start with, so it has tiles at once. A setup file with its own `interaction_types` replaces them. If a setup file leaves the board with no types on it, the board is empty and offers **Add interaction types**.
 
 Turning the switch off hides the tab and the board. **Nothing is deleted:** the entries stay in the log and in Review and
 History, and what you set up is kept for the next time. If you were on the Interactions board, the app goes to the Errors board.
@@ -113,5 +113,31 @@ editor at once, and turning the switch on with nothing set up opens it for you.
   log it.
 - With no line, the log shows the name of the type.
 
-The first 11 types fill the board in the order shown; drag the handle, or use the arrows, to change it. The rest are under
+The line is the template of the type: there is no separate list of interaction templates. “Spoke with [person]” with the
+name “Spoke with” writes “Spoke with Alex Sample” when you pick Alex Sample.
+
+The miniature board at the top shows the 11 tiles. Tap a tile to move it earlier or later or to change its type, tap an empty
+tile to add one, or hold and drag a tile. In the list below, the first 11 types fill the board in the order shown; drag the
+handle, or use the arrows, to change it. The rest are under
 **Other…**. A type you retire leaves the board and stays on the entries already logged.
+
+### People
+
+**People** is the list of names an interaction can use. It is optional: a type with no **[person]** in its line never asks
+who. In **Settings**, **Second board**, tap **People**:
+
+- Type a name under **New person** and tap **Add person**. If you have locations, choose the one the person belongs to;
+  **Everyone** in the picker ticks the people of the location in force. A name is at most 60 characters, and two people
+  cannot share a name.
+- Tap a name to **rename** it. Entries that name the person show the new name.
+- In the same sheet, under **Location**, choose another location for the person, or **No location**, and tap **Save**.
+  Entries already logged are not touched; the change only decides who **Everyone** ticks.
+- **Retire** takes a person out of the picker. They stay on the entries already logged, and **Bring back** undoes it.
+- **Forget** removes a name for good, after you confirm. The entries stay and show “someone”.
+
+Names stay on the device and are never part of an export. A log you share shows them as you choose under **Names in
+shared logs**.
+
+**Names in shared logs** (also in the **Second board** group) sets how a person's name is written when a log leaves the app,
+in Copy, Share and a re-shared past log: **Initials** (the default, for example “A.S.”), **Full name**, or **Someone** for no
+name at all. **Review** and the **Interactions** board always show the full name, because that stays on the device.

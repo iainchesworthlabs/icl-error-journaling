@@ -142,20 +142,20 @@ QQuickItem* load_screen(UiRig& rig, HeaderWorld& world, FakeShare* share = nullp
 
 } // namespace
 
-TEST_CASE("details.fields: the values come from the session; the facilitator and the date are not editable",
+TEST_CASE("details.fields: the values come from the session; the tester and the date are not editable",
           "[ui][header_screen]")
 {
     HeaderWorld world(true);
     UiRig rig(TALL_WINDOW);
     load_screen(rig, world);
 
-    QQuickItem* facilitator = need(rig, QStringLiteral("headerFacilitator"));
+    QQuickItem* tester = need(rig, QStringLiteral("headerTester"));
     QQuickItem* date = need(rig, QStringLiteral("headerDate"));
-    REQUIRE(facilitator != nullptr);
+    REQUIRE(tester != nullptr);
     REQUIRE(date != nullptr);
-    CHECK(facilitator->property("value").toString() == QStringLiteral("Sam Example"));
+    CHECK(tester->property("value").toString() == QStringLiteral("Sam Example"));
     CHECK(date->property("value").toString() == QStringLiteral("Sat 7 Nov"));
-    for (QQuickItem* row : {facilitator, date})
+    for (QQuickItem* row : {tester, date})
     {
         CHECK_FALSE(row->property("tappable").toBool());
         for (const Node& node : rig.accessible_tree(row))
@@ -167,7 +167,7 @@ TEST_CASE("details.fields: the values come from the session; the facilitator and
     const auto nodes = rig.tree();
     for (const Node& node : nodes)
     {
-        if (node.m_Item == facilitator)
+        if (node.m_Item == tester)
         {
             row_node = &node;
         }
@@ -500,7 +500,7 @@ TEST_CASE("details.new_log_row: starting a new log asks first and then archives 
         // The log has entries and has never been shared, and the alert says so.
         CHECK(alert->property("message").toString() ==
               QStringLiteral("UNIT-27 at North Site has 2 entries and hasn’t been shared. It stays in History. The new "
-                             "log starts empty, with Sam Example as facilitator."));
+                             "log starts empty, with Sam Example as tester."));
         rig.tap(need(rig, QStringLiteral("alertCancel"), alert));
         play(rig, 400);
         rig.settle();
@@ -524,7 +524,7 @@ TEST_CASE("details.new_log_row: starting a new log asks first and then archives 
         CHECK(world.storage().repository().call_count(RepositoryOp::START_NEW_LOG) == 1);
         CHECK(world.session().live_entry_count() == 0);
         CHECK(world.session().unit_text().isEmpty());
-        CHECK(world.session().facilitator() == QStringLiteral("Sam Example"));
+        CHECK(world.session().tester() == QStringLiteral("Sam Example"));
         CHECK(input_text(rig, "headerUnit").isEmpty());
         CHECK(input_text(rig, "headerVersion").isEmpty());
         CHECK_FALSE(location_row(rig, QStringLiteral("North Site"))->property("checked").toBool());
@@ -546,7 +546,7 @@ TEST_CASE("details.new_log_row: the row is the design's, with the plus, in the l
     QQuickItem* group = need(rig, QStringLiteral("headerNewLog"));
     CHECK(group->property("title").toString() == QStringLiteral("Another unit or site"));
     CHECK(group->property("footer").toString() ==
-          QStringLiteral("Keeps today’s log in History and opens an empty one. Only the facilitator carries over."));
+          QStringLiteral("Keeps today’s log in History and opens an empty one. Only the tester carries over."));
 }
 
 TEST_CASE("details.new_log_row: an unshared log offers to be shared first, and the alert comes back",
@@ -599,7 +599,7 @@ TEST_CASE("details.new_log_row: a log shared and then added to is unshared again
         CHECK_FALSE(need(rig, QStringLiteral("alertAlternate"))->isVisible());
         CHECK(alert->property("message").toString() ==
               QStringLiteral("UNIT-27 at North Site has 2 entries. It stays in History. The new log starts empty, with "
-                             "Sam Example as facilitator."));
+                             "Sam Example as tester."));
     }
 
     SECTION("shared, then another entry")
@@ -613,7 +613,7 @@ TEST_CASE("details.new_log_row: a log shared and then added to is unshared again
         CHECK(need(rig, QStringLiteral("alertAlternate"))->isVisible());
         CHECK(alert->property("message").toString() ==
               QStringLiteral("UNIT-27 at North Site has 3 entries and has changed since it was last shared. It stays "
-                             "in History. The new log starts empty, with Sam Example as facilitator."));
+                             "in History. The new log starts empty, with Sam Example as tester."));
     }
 }
 
@@ -644,7 +644,7 @@ TEST_CASE("details.new_log_row: without a share sheet, or with the log shared, t
         CHECK_FALSE(need(rig, QStringLiteral("alertAlternate"))->isVisible());
         CHECK(need(rig, QStringLiteral("newLogAlert"))->property("message").toString() ==
               QStringLiteral("UNIT-27 at North Site has 0 entries. It stays in History. The new log starts empty, with "
-                             "Sam Example as facilitator."));
+                             "Sam Example as tester."));
     }
 }
 

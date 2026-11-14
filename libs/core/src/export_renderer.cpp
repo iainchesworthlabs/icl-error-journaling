@@ -395,7 +395,7 @@ Result<std::string, RenderError> render_header(const Log& log, const ExportConte
     }
 
     std::string out;
-    append_labelled(out, export_format::LABEL_FACILITATOR, collapse(header.m_Facilitator));
+    append_labelled(out, export_format::LABEL_TESTER, collapse(header.m_Tester));
     out += export_format::LINE_END;
     append_labelled(out, export_format::LABEL_DATE, format_date(header.m_LocalDate));
     out += export_format::LINE_END;

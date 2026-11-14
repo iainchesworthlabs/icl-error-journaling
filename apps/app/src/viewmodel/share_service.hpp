@@ -36,7 +36,7 @@ namespace ej::viewmodel
 ///
 /// One share at a time. While one is under way (from the call until the sheet has ended) `sharing` is true and a
 /// second `shareOpenLog` or `shareLog` returns `false` and does nothing: it emits no signal, and the share under way
-/// is not touched. It is not queued; the facilitator taps again once the first has ended.
+/// is not touched. It is not queued; the tester taps again once the first has ended.
 ///
 /// Sharing fires no haptic: the only platform dependency is the bridge's `Share` (Stage 5, 5.1).
 ///

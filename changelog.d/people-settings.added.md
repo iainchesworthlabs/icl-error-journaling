@@ -1,0 +1,1 @@
+**You can add and manage the people of the Interactions board.** With the second board on, **People** in Settings opens a list where you add a name (with a location if you want), rename it, retire it, bring it back, or Forget it, which removes the name from the app and leaves the entries showing “someone”. Not yet run on a device.

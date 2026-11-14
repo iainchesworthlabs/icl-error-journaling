@@ -25,7 +25,7 @@ Timestamp at(int m)
 Log make_log()
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam Example";
+    header.m_Tester = "Sam Example";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     header.m_UnitNumber = UnitNumber::parse("27").value();
     header.m_Location = LocationValue{test_id<LocationId>(1), {}};
@@ -36,7 +36,7 @@ Log make_log()
 Log make_empty_header_log()
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam Example";
+    header.m_Tester = "Sam Example";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     return Log(std::move(header));
 }

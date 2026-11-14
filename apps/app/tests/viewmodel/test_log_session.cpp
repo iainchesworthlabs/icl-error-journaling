@@ -210,7 +210,7 @@ TEST_CASE("A first start with a configuration creates today's log with three emp
     CHECK(rig.calls(RepositoryOp::CREATE_LOG) == 1);
     // 21:55 UTC on 6 November is 08:55 on 7 November in Melbourne.
     CHECK(rig.document().log().initial_header().m_LocalDate == std::chrono::year{2026} / 11 / 7);
-    CHECK(rig.session->facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session->tester() == QStringLiteral("Sam Example"));
     CHECK(rig.session->date_text() == QStringLiteral("Sat 7 Nov"));
     CHECK(rig.session->unit_text().isEmpty());
     CHECK(rig.session->location_text().isEmpty());
@@ -237,7 +237,7 @@ TEST_CASE("Without a configuration the session needs setup and creates nothing, 
     rig.gateway.run_all();
     CHECK(rig.session->state() == LogSession::State::OPEN);
     CHECK(rig.calls(RepositoryOp::CREATE_LOG) == 1);
-    CHECK(rig.session->facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session->tester() == QStringLiteral("Sam Example"));
 }
 
 TEST_CASE("An open log is opened as it was, with its draft", "[viewmodel][session]")
@@ -540,7 +540,7 @@ TEST_CASE("Header values are checked inline and a refused value writes nothing",
     CHECK(valid("location", SOUTH_SITE.toStdString().c_str()).isEmpty());
     CHECK_FALSE(valid("location", "   ").isEmpty());
     CHECK_FALSE(rig.session->validateHeaderValue(QStringLiteral("location"), QString(201, QChar('x'))).isEmpty());
-    CHECK_FALSE(valid("facilitator", "Sam Example").isEmpty());
+    CHECK_FALSE(valid("tester", "Sam Example").isEmpty());
     // Different fields have different messages.
     CHECK(valid("unit_number", "027") != valid("software_version", "1.4"));
 
@@ -548,7 +548,7 @@ TEST_CASE("Header values are checked inline and a refused value writes nothing",
     CHECK_FALSE(rig.session->changeHeader(QStringLiteral("software_version"), QStringLiteral("1.4"), LOCAL_0855));
     CHECK_FALSE(rig.session->changeHeader(QStringLiteral("unit_number"), QStringLiteral("027"), LOCAL_0855));
     CHECK_FALSE(rig.session->correctHeader(QStringLiteral("software_version"), QStringLiteral("1.4.2-beta")));
-    CHECK_FALSE(rig.session->correctHeader(QStringLiteral("facilitator"), QStringLiteral("Sam")));
+    CHECK_FALSE(rig.session->correctHeader(QStringLiteral("tester"), QStringLiteral("Sam")));
     CHECK(rig.gateway.posted() == posted);
 }
 
@@ -958,7 +958,7 @@ TEST_CASE("The draft is shown at once and stored after a quiet moment, or when f
     rig.world.m_Clock.advance(1s);
     CHECK(rig.gateway.pending() == 0);
 
-    // Cleared by the facilitator: the store is told too.
+    // Cleared by the tester: the store is told too.
     rig.session->set_draft(QString{});
     rig.session->flushDraft();
     rig.gateway.run_all();
@@ -978,7 +978,7 @@ TEST_CASE("A draft that could not be stored is reported", "[viewmodel][session]"
 
 // --------------------------------------------------------------------------------------------------- new log
 
-TEST_CASE("A new log archives the open one with all its entries and starts one with the facilitator and the date",
+TEST_CASE("A new log archives the open one with all its entries and starts one with the tester and the date",
           "[viewmodel][session]")
 {
     SessionRig rig(Options().existing());
@@ -1018,8 +1018,8 @@ TEST_CASE("A new log archives the open one with all its entries and starts one w
     CHECK(observer.changes().front().m_Kind == LogChange::Kind::REPLACED);
     CHECK(header.count() == 1);
 
-    // The new log: the facilitator and today's date, nothing else, and no entries.
-    CHECK(rig.session->facilitator() == QStringLiteral("Sam Example"));
+    // The new log: the tester and today's date, nothing else, and no entries.
+    CHECK(rig.session->tester() == QStringLiteral("Sam Example"));
     CHECK(rig.session->date_text() == QStringLiteral("Sun 8 Nov"));
     CHECK(rig.session->missing_fields().size() == 4);
     CHECK(rig.session->live_entry_count() == 0);
@@ -1137,13 +1137,13 @@ TEST_CASE("A new log cannot be started before there is a log", "[viewmodel][sess
     CHECK_FALSE(loading.session->startNewLog());
 }
 
-TEST_CASE("The new log of an unconfigured session keeps the facilitator of the log it replaces", "[viewmodel][session]")
+TEST_CASE("The new log of an unconfigured session keeps the tester of the log it replaces", "[viewmodel][session]")
 {
     SessionRig rig(Options().existing());
     rig.config.clear();
     REQUIRE(rig.session->startNewLog());
     rig.gateway.run_all();
-    CHECK(rig.session->facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session->tester() == QStringLiteral("Sam Example"));
 }
 
 // ------------------------------------------------------------------------------------------------ lifetime
@@ -1428,7 +1428,7 @@ TEST_CASE("A new log starts with no unit and so no environment, as the number do
     CHECK(rig.session->unit_text().isEmpty());
     CHECK(rig.session->unit_digits().isEmpty());
     CHECK(rig.session->unit_environment().isEmpty());
-    CHECK(rig.session->facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session->tester() == QStringLiteral("Sam Example"));
     CHECK(rig.session->missing_fields().contains(QStringLiteral("unit_number")));
     // The old log is archived with the unit it had, environment and all.
     const auto old_log = rig.storage.memory().load_log(rig.log_id);
@@ -1832,7 +1832,7 @@ TEST_CASE("A Change of the version carries its commit into the entry, the line a
     CHECK(rig.gateway.posted() == posted);
 }
 
-TEST_CASE("A new log starts with no version and so no commit, as only the facilitator carries over",
+TEST_CASE("A new log starts with no version and so no commit, as only the tester carries over",
           "[viewmodel][session][commit]")
 {
     SessionRig rig(Options().existing());
@@ -1845,7 +1845,7 @@ TEST_CASE("A new log starts with no version and so no commit, as only the facili
     CHECK(rig.session->version_text().isEmpty());
     CHECK(rig.session->commit_text().isEmpty());
     CHECK(rig.session->version_display_text().isEmpty());
-    CHECK(rig.session->facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session->tester() == QStringLiteral("Sam Example"));
     CHECK(rig.session->missing_fields() ==
           QStringList{"unit_number", "location", "software_version", "software_commit"});
 }

@@ -17,6 +17,8 @@
 #include "support/test_clock.hpp"
 #include "support/test_environment.hpp"
 #include "viewmodel/environment.hpp"
+#include "viewmodel/export_preferences.hpp"
+#include "viewmodel/people_model.hpp"
 #include "viewmodel/storage_gateway.hpp"
 
 #include <QString>
@@ -158,6 +160,11 @@ public:
     {
         return m_Clipboard;
     }
+    /// The preferences of how text that leaves the device is written (an ini file nowhere: kept in memory).
+    [[nodiscard]] viewmodel::ExportPreferences& export_preferences()
+    {
+        return m_ExportPreferences;
+    }
     [[nodiscard]] SequentialIds& ids()
     {
         return m_Ids;
@@ -277,10 +284,14 @@ private:
     SharedClock m_StoreClock;
     SequentialIds m_Ids;
     FakeDeviceZone m_DeviceZone;
+    // The names of people for the export and the screens, as main.cpp wires them: the list of the root, once it is
+    // built.
+    viewmodel::PersonNamesForwarder m_PersonNames;
     FakeTimeZoneProvider m_FakeZones;
     std::unique_ptr<TimeZoneProvider> m_QtZones;
     FakePlatform m_Platform;
     FakeClipboard m_Clipboard;
+    viewmodel::ExportPreferences m_ExportPreferences{QString()};
 
     // MEMORY: the store outlives a restart.
     std::unique_ptr<MemoryStorage> m_Memory;

@@ -212,7 +212,7 @@ and the US export rules they cite, so the owner can confirm it.
 
 Drafted in `store/appstore/review_information/notes.txt`. The notes say:
 
-- What the app is for: a facilitator logs, one tap at a time, the errors a robot makes during a session, and shares the
+- What the app is for: a tester logs, one tap at a time, the errors a robot makes during a session, and shares the
   day's log as plain text.
 - There is no account and no sign-in, so no demo account is needed. There is no network access, no server and no hardware
   to connect. The app does not talk to the robot.

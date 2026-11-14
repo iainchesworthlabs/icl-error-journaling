@@ -138,7 +138,7 @@ The mock-up script uses these numbers, and so will `WindowLayout.qml`. `Compact`
 Text sizes other than the tile label do not change. iPadOS uses the same type sizes as iOS, and Dynamic Type still
 applies. The tile label is larger because the tiles are larger and are read at arm's length on a table.
 
-The board keeps its 3 × 4 shape in every class. The facilitator finds a tile by where it is (spatial memory, decision 9
+The board keeps its 3 × 4 shape in every class. The tester finds a tile by where it is (spatial memory, decision 9
 of the design package), so a tile is in the same place on the phone and on the iPad, in both orientations. A 4 × 3 board
 in landscape was considered and rejected for this reason.
 
@@ -181,7 +181,7 @@ reasons:
    four orientations for the iPad, or App Store Connect rejects the build (ITMS-90474). So in landscape the app turns both
    ways, and in portrait it turns both ways too. The phone keeps portrait only. The iPhone's list and the iPad's list are
    separate keys.
-4. **It suits facilitators.** A facilitator can keep notes or a chat open beside the board.
+4. **It suits testers.** A tester can keep notes or a chat open beside the board.
 
 What stays off:
 - **More than one window** (`UIApplicationSupportsMultipleScenes` stays false). The storage of Stage 2 has one writer: one
@@ -309,7 +309,7 @@ The labels are as in `docs/testing.md`. Every UI test runs in the offscreen app 
 | T8-6 | `ipad.tiles` | ui | Tile sizes in Regular and Wide at each iPad size: at least 88 pt high, the same 3 × 4 positions as the phone, and the longest label ("Sequence Out of Order") not cut at 17 pt and at the 1.3 cap. |
 | T8-7 | `ipad.tap_latency` | perf | The press path (4.12) at 1180 × 820 keeps the phone's budget: a tile press reaches the session on the press. |
 | T8-8 | `ipad.form_sheet` | ui | Each sheet at Regular and Wide is 560 wide, centred, inside the safe area, and above the keyboard (simulated keyboard heights 313 and 398). Cancel and Save are reachable, the scrim tap does what it does on the phone, and VoiceOver order is the sheet only (`a11y.reading_order`). |
-| T8-9 | `ipad.wide_reading_order` | ui | In Wide, VoiceOver reads the header card, the composer (chips, note field, Add) and the board, then the log pane (Copy all, the rows, Share log), then the tabs. The header card stays first, as on the phone, because the tree is the same in every class: a screen reader reads the facilitator's header, then the work area, then the log. (The plan first said composer and board before the header card; that would need a different tree in Wide.) In Regular the order is the phone's. |
+| T8-9 | `ipad.wide_reading_order` | ui | In Wide, VoiceOver reads the header card, the composer (chips, note field, Add) and the board, then the log pane (Copy all, the rows, Share log), then the tabs. The header card stays first, as on the phone, because the tree is the same in every class: a screen reader reads the tester's header, then the work area, then the log. (The plan first said composer and board before the header card; that would need a different tree in Wide.) In Regular the order is the phone's. |
 | T8-10 | `ipad.log_pane`, `ipad.log_pane_empty`, `ipad.wide_screens_fit` | ui | In Wide: the log pane lists the log in time order with the prefix in the secondary colour; the newest entry is in view when one is added; a tap on a row opens Edit entry; a swipe gives Copy and Delete, and Undo, which is in the pane, brings a deleted row back; Copy all confirms itself; Share log shares the open log and the popover's anchor is the button's rectangle; an empty log says so and has nothing to copy or share. The panes, the tiles (all the same height, at least 88 pt, in the phone's places, the last row a screen margin above the tab bar) and the card are where the plan has them on every iPad in landscape, with names, touch targets, text scale and the safe area clean. |
 | T8-11 | `ipad.toast_clear`, `ipad.wide_toast_clear` | ui | In Regular the toast is under the board; in Wide it is in the log pane, between the list and Share log; it covers no tile and no row. |
 | T8-12 | `ipad.keyboard_rotation` | ui | With the keyboard up over the composer, a change from Wide to Regular keeps the field visible and focused. (Built with 8.6, which owns the keyboard and rotation.) |
@@ -393,7 +393,7 @@ Run on a TestFlight build on an iPad, ideally an iPad mini, which is the tightes
 1. **Multitasking:** support Split View and Stage Manager with all four iPad orientations (recommended), or full screen
    only.
 2. **Which side the board is on in landscape:** left (as drawn), or right. Left keeps the phone's reading order (composer,
-   board, then the log). Right puts the board under a right-handed facilitator's hand when the iPad is flat on a table. A
+   board, then the log). Right puts the board under a right-handed tester's hand when the iPad is flat on a table. A
    setting for it is possible, but is not proposed for v1.
 3. **The Review tab in landscape:** kept (as drawn), so the four tabs are the same in every orientation, even though the log
    pane repeats today's log. The alternative is to hide it in `Wide`, which means the tab bar changes on rotation.

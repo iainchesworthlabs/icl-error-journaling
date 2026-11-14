@@ -38,7 +38,7 @@ constexpr auto PROBE = R"(
 
 } // namespace
 
-TEST_CASE("help.topics: eight topics, each with an id, a title and two to five paragraphs of text",
+TEST_CASE("help.topics: nine topics, each with an id, a title and two to five paragraphs of text",
           "[ui][help][help_topics]")
 {
     UiRig rig;
@@ -46,7 +46,7 @@ TEST_CASE("help.topics: eight topics, each with an id, a title and two to five p
     INFO(rig.errors().toStdString());
     QQuickItem* probe = require_item(rig, QStringLiteral("probe"));
     const QVariantList topics = probe->property("topics").toList();
-    REQUIRE(topics.size() == 8);
+    REQUIRE(topics.size() == 9);
 
     QSet<QString> ids;
     QSet<QString> titles;
@@ -86,6 +86,7 @@ TEST_CASE("help.topics: eight topics, each with an id, a title and two to five p
     CHECK(ids.contains(QStringLiteral("setupFile")));
     CHECK(ids.contains(QStringLiteral("review")));
     CHECK(ids.contains(QStringLiteral("interactionTypes")));
+    CHECK(ids.contains(QStringLiteral("people")));
 }
 
 TEST_CASE("help.topics: addresses are the site, then the page, then the heading, and the site is named once",

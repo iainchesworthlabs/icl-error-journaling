@@ -12,6 +12,7 @@
 #include "error_journaling/time_zone_provider.hpp"
 #include "viewmodel/board_model.hpp"
 #include "viewmodel/export_context_builder.hpp"
+#include "viewmodel/person_names.hpp"
 
 #include <QByteArray>
 #include <QCoreApplication>
@@ -63,6 +64,10 @@ QString kind_text(const Entry& entry)
     {
         return QStringLiteral("note");
     }
+    if (std::holds_alternative<InteractionEntry>(entry.m_Body))
+    {
+        return QStringLiteral("interaction");
+    }
     return QStringLiteral("header_change");
 }
 
@@ -106,6 +111,12 @@ bool same_body(const EntryBody& a, const EntryBody& b)
     {
         const auto& y = std::get<NoteEntry>(b);
         return x->m_Template == y.m_Template && x->m_Value == y.m_Value;
+    }
+    if (const auto* x = std::get_if<InteractionEntry>(&a))
+    {
+        const auto& y = std::get<InteractionEntry>(b);
+        return x->m_Type == y.m_Type && x->m_TypeLabel == y.m_TypeLabel && x->m_People == y.m_People &&
+               x->m_Value == y.m_Value && x->m_AttachedNote == y.m_AttachedNote;
     }
     const auto& x = std::get<HeaderChangeEntry>(a);
     const auto& y = std::get<HeaderChangeEntry>(b);
@@ -731,6 +742,40 @@ bool TimelineModel::deleteEntry(const QString& entryId)
 
 // ------------------------------------------------------------------------------------------------------------ edit
 
+QVariantList TimelineModel::interactionTypesFor(const QString& entryId) const
+{
+    QVariantList list;
+    const auto id = parse_id(entryId);
+    const Entry* entry = id ? m_Document->log().find(*id) : nullptr;
+    const auto* interaction = entry != nullptr ? std::get_if<InteractionEntry>(&entry->m_Body) : nullptr;
+    if (interaction == nullptr)
+    {
+        return list;
+    }
+    bool own_listed = false;
+    for (const InteractionType& type : m_Configuration.configuration().m_InteractionTypes)
+    {
+        const bool own = type.m_Id == interaction->m_Type;
+        if (type.m_Retired && !own)
+        {
+            continue;
+        }
+        own_listed = own_listed || own;
+        QVariantMap item;
+        item.insert(QStringLiteral("typeId"), text_of(type.m_Id.format()));
+        item.insert(QStringLiteral("name"), text_of(type.m_Name));
+        list.append(item);
+    }
+    if (!own_listed)
+    {
+        QVariantMap item;
+        item.insert(QStringLiteral("typeId"), text_of(interaction->m_Type.format()));
+        item.insert(QStringLiteral("name"), text_of(interaction->m_TypeLabel));
+        list.append(item);
+    }
+    return list;
+}
+
 QVariantMap TimelineModel::entryForEdit(const QString& entryId) const
 {
     const auto id = parse_id(entryId);
@@ -775,6 +820,39 @@ QVariantMap TimelineModel::entryForEdit(const QString& entryId) const
     {
         map.insert(QStringLiteral("noteText"), text_of(note->m_Value));
         map.insert(QStringLiteral("templateId"), note->m_Template ? text_of(note->m_Template->format()) : QString());
+    }
+    else if (const auto* interaction = std::get_if<InteractionEntry>(&entry->m_Body))
+    {
+        map.insert(QStringLiteral("interactionTypeId"), text_of(interaction->m_Type.format()));
+        map.insert(QStringLiteral("interactionTypeName"), text_of(interaction->m_TypeLabel));
+        QStringList people;
+        for (const PersonId& person : interaction->m_People)
+        {
+            people.append(text_of(person.format()));
+        }
+        map.insert(QStringLiteral("personIds"), people);
+        // The location in force when the entry was made, for "Everyone here" in the picker; empty for none.
+        const HeaderValues header = HeaderHistory(m_Document->log()).at(entry->m_Captured.m_Utc);
+        map.insert(QStringLiteral("locationId"), header.m_Location && header.m_Location->m_Id
+                                                     ? text_of(header.m_Location->m_Id->format())
+                                                     : QString());
+        // The names of the people as the screen shows them (the full name; "someone" when forgotten or unknown).
+        QVariantMap names;
+        for (const PersonId& person : interaction->m_People)
+        {
+            const auto name =
+                m_Environment.m_People != nullptr ? m_Environment.m_People->name_of(person) : std::nullopt;
+            names.insert(text_of(person.format()), name ? text_of(*name) : tr("someone"));
+        }
+        map.insert(QStringLiteral("personNames"), names);
+        const auto& types = m_Configuration.configuration().m_InteractionTypes;
+        const auto type = std::ranges::find(types, interaction->m_Type, &InteractionType::m_Id);
+        const InteractionAsks asks = type == types.end() ? InteractionAsks::NOTHING : type->m_Asks;
+        map.insert(QStringLiteral("asksPerson"), asks == InteractionAsks::PERSON || !interaction->m_People.empty());
+        // The answer can be edited when the type asks for one, or when the entry already has one.
+        map.insert(QStringLiteral("asksText"), asks == InteractionAsks::TEXT || interaction->m_Value.has_value());
+        map.insert(QStringLiteral("value"), text_of(interaction->m_Value.value_or(std::string{})));
+        map.insert(QStringLiteral("attachedNote"), text_of(interaction->m_AttachedNote.value_or(std::string{})));
     }
     else
     {
@@ -946,6 +1024,70 @@ Result<TimelineModel::Edit, QString> TimelineModel::work_out_edit(EntryId id, co
         if (text_of(note->m_Value).trimmed().isEmpty())
         {
             return fail(tr("A note cannot be empty."));
+        }
+    }
+    else if (auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body))
+    {
+        if (edit.contains(QStringLiteral("interactionTypeId")))
+        {
+            const auto uuid = Uuid::parse(utf8_of(edit.value(QStringLiteral("interactionTypeId")).toString()));
+            if (!uuid)
+            {
+                return fail(tr("That interaction type is not known."));
+            }
+            // The same type keeps the name it has, even when the configuration lost it; a new type takes a new one.
+            if (InteractionTypeId(*uuid) != interaction->m_Type)
+            {
+                const auto type = std::ranges::find(configuration.m_InteractionTypes, InteractionTypeId(*uuid),
+                                                    &InteractionType::m_Id);
+                if (type == configuration.m_InteractionTypes.end() || type->m_Retired || type->m_Name.empty())
+                {
+                    return fail(tr("That interaction type is not known."));
+                }
+                interaction->m_Type = type->m_Id;
+                interaction->m_TypeLabel = type->m_Name;
+            }
+        }
+        if (edit.contains(QStringLiteral("personIds")))
+        {
+            std::vector<PersonId> people;
+            for (const QVariant& item : edit.value(QStringLiteral("personIds")).toList())
+            {
+                const auto uuid = Uuid::parse(utf8_of(item.toString()));
+                if (!uuid)
+                {
+                    return fail(tr("That person is not known."));
+                }
+                if (!add_person_pick(people, PersonId(*uuid)))
+                {
+                    return fail(tr("An interaction can name at most %1 people.").arg(MAX_PEOPLE_PER_INTERACTION));
+                }
+            }
+            interaction->m_People = std::move(people);
+        }
+        if (edit.contains(QStringLiteral("value")))
+        {
+            const QString value = edit.value(QStringLiteral("value")).toString();
+            if (value.trimmed().isEmpty())
+            {
+                interaction->m_Value.reset();
+            }
+            else
+            {
+                interaction->m_Value = utf8_of(value);
+            }
+        }
+        if (edit.contains(QStringLiteral("attachedNote")))
+        {
+            const QString typed_note = edit.value(QStringLiteral("attachedNote")).toString();
+            if (typed_note.trimmed().isEmpty())
+            {
+                interaction->m_AttachedNote.reset();
+            }
+            else
+            {
+                interaction->m_AttachedNote = utf8_of(typed_note);
+            }
         }
     }
     else if (auto* change = std::get_if<HeaderChangeEntry>(&entry.m_Body))

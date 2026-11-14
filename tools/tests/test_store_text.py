@@ -27,7 +27,7 @@ GOOD = {
     "appstore/en-AU/subtitle.txt": "A short subtitle",
     "appstore/en-AU/promotional_text.txt": "Promotional text.",
     "appstore/en-AU/description.txt": "First paragraph.\n\nSecond paragraph.",
-    "appstore/en-AU/keywords.txt": "facilitator,error log,robot",
+    "appstore/en-AU/keywords.txt": "tester,error log,robot",
     "appstore/en-AU/release_notes.txt": "First release.",
     "appstore/en-AU/support_url.txt": URL,
     "appstore/en-AU/privacy_url.txt": URL.replace("support", "privacy"),
@@ -119,11 +119,11 @@ class StoreTextTest(unittest.TestCase):
         self.assert_problem("must be one line")
 
     def test_keyword_space_after_comma(self) -> None:
-        self.write("appstore/en-AU/keywords.txt", "facilitator, robot\n")
+        self.write("appstore/en-AU/keywords.txt", "tester, robot\n")
         self.assert_problem("space next to a comma")
 
     def test_keyword_empty(self) -> None:
-        self.write("appstore/en-AU/keywords.txt", "facilitator,,robot\n")
+        self.write("appstore/en-AU/keywords.txt", "tester,,robot\n")
         self.assert_problem("empty keyword")
 
     def test_keyword_repeated(self) -> None:
@@ -131,11 +131,11 @@ class StoreTextTest(unittest.TestCase):
         self.assert_problem("repeated keyword(s): robot")
 
     def test_keyword_too_short(self) -> None:
-        self.write("appstore/en-AU/keywords.txt", "facilitator,qa\n")
+        self.write("appstore/en-AU/keywords.txt", "tester,qa\n")
         self.assert_problem("2 characters or fewer, which Apple does not accept: qa")
 
     def test_keyword_from_name(self) -> None:
-        self.write("appstore/en-AU/keywords.txt", "facilitator,board log\n")
+        self.write("appstore/en-AU/keywords.txt", "tester,board log\n")
         self.assert_problem("app's name, which the store indexes already: board")
 
     def test_url_must_be_https(self) -> None:

@@ -69,14 +69,14 @@ enum class ErrorPrefixProblem
 
 struct Configuration
 {
-    std::string m_Facilitator;
+    std::string m_Tester;
     std::string m_UnitPrefix;
     /// The choices for the environment of a unit, in the order the picker shows them (PRF-11). Never empty in a
     /// configuration read from a file. The file's optional `unit_environments` key replaces the default.
     std::vector<std::string> m_UnitEnvironments = default_unit_environments();
     TimeFormat m_TimeFormat;
     bool m_IncludeTotals = false;
-    /// The text before the error name on an error line of the export (PRF-13). "T|" unless the facilitator changed it;
+    /// The text before the error name on an error line of the export (PRF-13). "T|" unless the tester changed it;
     /// may be empty. The setup file's optional `error_prefix` key replaces the default.
     std::string m_ErrorPrefix = std::string(export_format::DEFAULT_ERROR_PREFIX);
     std::vector<ErrorType> m_ErrorTypes;

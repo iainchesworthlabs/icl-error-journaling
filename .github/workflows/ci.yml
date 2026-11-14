@@ -271,6 +271,7 @@ jobs:
           python3 -m pip install --quiet gcovr==8.7
           gcovr --root . --object-directory build/linux-coverage --json coverage.json \
             --exclude-throw-branches --exclude-unreachable-branches \
+            --gcov-ignore-parse-errors negative_hits.warn_once_per_file \
             --filter 'libs/' --filter 'apps/' --exclude '.*/tests/'
           python3 .icl-infra/scripts/coverage_gate.py --report coverage.json --floors tools/coverage-floors.json
       - name: Save caches

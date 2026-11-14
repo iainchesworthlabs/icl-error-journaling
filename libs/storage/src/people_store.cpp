@@ -310,6 +310,16 @@ Result<void, StorageError> PeopleStore::rename_person(PersonId id, std::string_v
     return commit(RenamePersonBody{id, std::move(*name)}, true);
 }
 
+Result<void, StorageError> PeopleStore::set_person_location(PersonId id, std::optional<LocationId> location)
+{
+    const Person* found = m_State.find(id);
+    if (found != nullptr && found->m_Location == location)
+    {
+        return {};
+    }
+    return commit(SetPersonLocationBody{id, location}, true);
+}
+
 Result<void, StorageError> PeopleStore::retire_person(PersonId id, bool retired)
 {
     return commit(RetirePersonBody{id, retired}, true);

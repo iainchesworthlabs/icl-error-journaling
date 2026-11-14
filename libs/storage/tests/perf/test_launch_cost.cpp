@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The cost of the launch check (work package 2.6 of docs/plan/stage-2.md, finding F13): an integrity check that grows
-// with history could break NFR-04 (the board is up quickly). It builds the store of a facilitator who has used the app
+// with history could break NFR-04 (the board is up quickly). It builds the store of a tester who has used the app
 // for a year, about 80,000 entries in 365 logs with a journal for each, then times what happens at launch, on a warm
 // cache.
 //

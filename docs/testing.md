@@ -25,10 +25,16 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 | unit | `tools/ci/check_help_links.py`, `tools/tests/test_check_help_links.py` | The in-app help against the guide: the site address, the number of paragraphs of each topic, the pages and headings the topics, the Help group and the import errors row open, and the topic ids the screens ask for. The tests change one fact of a copy of the app's help or the guide and expect the check to find it |
 | unit | `apps/app/tests/viewmodel/test_help_state.cpp` | `HelpState` (the first-run tip): open on a first run, closed for good by Close, shown on three days and not a fourth, the rest of its third day, and a file that is damaged or cannot be written. Cases `help.state.*` |
 | unit | `apps/app/tests/viewmodel/test_settings_interaction_types.cpp`, `apps/app/tests/ui/interaction_types_test.cpp`, `interaction_type_edit_test.cpp` | `SettingsModel` interaction types (Stage 14, I-7): add with a line and the derived ask, names and lines refused, edit, retire, move, swap, leave the board, the example line. Cases `settings.interaction_types*` |
+| ui | `apps/app/tests/ui/people_test.cpp` | The People screen (Stage 14, I-7), with a stand-in list of people: add and refuse a repeated or empty name, rename with the name checked as it is typed, choose, change and clear a person's location in the sheet, retire and bring back, Forget asks first and Cancel keeps the person (`settings.people*`, T-I7-2) |
+| ui | `apps/app/tests/ui/app_flow_test.cpp` | The case `settings.names` (Stage 14, I-7): the Names in shared logs row only while the second board is on, the three levels, the tick follows the choice. The stub `UiStubExportPreferences` stands for `ExportPreferences` |
 | ui | `apps/app/tests/ui/app_flow_test.cpp`, `log_screen_test.cpp` | The in-app help, through the shell and the Log screen: `help.entry_points` (a named button on every screen of the table, opening its topic), `help.import_errors`, `help.sheet` and `help.sheet_large` (reading order, "Read more" asks the opener for the topic's address, Done, the largest text size), `help.settings_group` (Quick help and the three online rows), `help.offline` (every topic from the text in the app, the opener not called) and `help.first_run_tip*` (shown in the Last bar's place, the board whole, Close, not on an empty board). The stub `UiStubHelpState` stands for the stored state |
 | unit | `tools/ci/check_setup_doc.py`, `tools/tests/test_check_setup_doc.py` | The setup-file page of the user guide against the reader in `libs/core`: every key, required or optional, limit, range, clock choice, message kind and the example (`docs/ci.md`). The tests change one fact of a copy of the reader or the page and expect the check to find it |
 | unit | `tools/ci/check_site_address.py`, `tools/tests/test_check_site_address.py` | The documentation site's address in `mkdocs.yml` against the store URL files, the demo setup address in the reviewer notes and the pages of `docs/` (which write `{{ site_url }}`, not the host). The tests move the address in one file and expect the others to be named; they also run the page hook |
 | unit | `tools/ci/check_qml_*.py` | `qml.platform`, `theme.no_literals`, `i18n.strings`, `qml.tests`, `motion.animators`, `qml.format` and `qml.lint`: the checks that keep the QML honest (`docs/ci.md`) |
+| unit | `apps/app/tests/viewmodel/test_interaction_board.cpp` | The Interactions board (Stage 14, I-6): the built-in interaction types when the setup has none, the 12 tiles, counts and Other, what each type asks for, and an interaction logged with no people and then given people, an answer and a note. Cases `interaction.*` |
+| integration | `apps/app/tests/viewmodel/integration/test_people_model.cpp` | `PeopleModel` on the real store: a name is added once and saved before `personAdded`, a match by case or spacing is refused, the list survives a restart, last used first (`picker.write_order`) |
+| integration | `apps/app/tests/viewmodel/integration/test_people_admin_model.cpp` | `PeopleAdminModel` (the People screen) on the real store: add, rename, move to a location and to none, retire and bring back with the picker following, Forget removes the name from both lists and the store, a retired name can be taken again (`settings.people_model*`) |
+| ui | `apps/app/tests/ui/interaction_board_test.cpp` | The Interactions board and the person picker through QML: `board.log_first` (double-tap logs before the picker opens; Skip keeps the entry), `picker.search_and_add`, `picker.group` (several people, Done (n), the limit of 20, Everyone), `board.hold_note`, `board.voiceover` |
 
 ## Tests of the QML
 
@@ -161,7 +167,7 @@ All screenshot output goes under `screenshots/`, which git ignores: `screenshots
 `docs/plan/stage-7.md`). The screens are the states of `tools/ej_screenshots/screens.json`, grouped by flow: the scenes of
 the visual capture (the mock-up states, phone and iPad) and the states the design package did not draw (`extra_scenes()` in
 `visual_capture_test.cpp`: the tap hint, the hold sheet, the Other search, the environment and version-time sheets, and
-the Facilitator and Time format pages). The modes are in the same file: `light`, `dark`, and `large` (light at a text
+the Tester and Time format pages). The modes are in the same file: `light`, `dark`, and `large` (light at a text
 scale of 3.1, the largest iOS size); a mode is added there without code.
 
 The pictures come from the `ui` case `screenshots.render`, which ctest runs on every build leg (with its own timeout of
@@ -388,5 +394,7 @@ landscape and the fold-open portrait size, the tiles are at least 88 pt, equal t
 strip and the board area are in the column or the left pane and above the tab bar, the log pane is beside them in Wide, and the five
 tabs are in order, in the 680 pt column in Regular) and `fold.state_kept` (T-I8-2: a draft, the focus, the board and the entries
 across the open, tabletop, cover and short-cover sizes). Until Stage 13 builds the posture code the app sees a fold as a size; the 841 by
-701 window and the tab rail are not tested yet. The tests of the tiles and the open picker are added when the board and the picker
-of I-6 are merged.
+701 window and the tab rail are not tested yet. Two more cases in `apps/app/tests/ui/log_screen_test.cpp` use the real board of I-6:
+`ipad.second_board_tiles` (the twelve tiles, each 88 pt or more, equal in height and inside the board area, in the iPad and fold
+sizes) and a second `fold.state_kept` (the person picker open, with a name typed in its search, across the fold sizes: the picker,
+the search text and the logged entry stay).

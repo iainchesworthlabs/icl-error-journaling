@@ -93,7 +93,7 @@ TEST_CASE("setup.first_launch: Import a setup file asks the shell for the file d
     CHECK(world.m_Rig.store().saves().empty());
 }
 
-TEST_CASE("setup.first_launch: Set up by hand asks for the facilitator and the UNIT prefix, and Back returns",
+TEST_CASE("setup.first_launch: Set up by hand asks for the tester and the UNIT prefix, and Back returns",
           "[ui][setup]")
 {
     World world(Start::FIRST_LAUNCH);
@@ -102,8 +102,8 @@ TEST_CASE("setup.first_launch: Set up by hand asks for the facilitator and the U
 
     world.m_Ui.tap(card(world, QStringLiteral("manualCard")));
     settle_page(world);
-    REQUIRE(item(world, QStringLiteral("facilitatorField")) != nullptr);
-    CHECK(item(world, QStringLiteral("facilitatorField"))->isVisible());
+    REQUIRE(item(world, QStringLiteral("testerField")) != nullptr);
+    CHECK(item(world, QStringLiteral("testerField"))->isVisible());
     CHECK(item(world, QStringLiteral("prefixField"))->isVisible());
     CHECK(item(world, QStringLiteral("continueButton"))->isVisible());
     CHECK(shows_text(world, QStringLiteral("About you")));
@@ -133,13 +133,13 @@ TEST_CASE("setup.first_launch: setting up by hand with both values saves the set
 
     world.m_Ui.tap(card(world, QStringLiteral("manualCard")));
     settle_page(world);
-    enter_text(world, QStringLiteral("facilitatorField"), QStringLiteral("Sam Example"));
+    enter_text(world, QStringLiteral("testerField"), QStringLiteral("Sam Example"));
     enter_text(world, QStringLiteral("prefixField"), QStringLiteral("UNIT"));
     tap(world, QStringLiteral("continueButton"));
 
     CHECK(completed.count() == 1);
     CHECK(world.model().configured());
-    CHECK(world.model().facilitator() == QStringLiteral("Sam Example"));
+    CHECK(world.model().tester() == QStringLiteral("Sam Example"));
     CHECK(world.model().unit_prefix() == QStringLiteral("UNIT"));
     CHECK(world.m_Rig.store().saves().size() == 1);
 }

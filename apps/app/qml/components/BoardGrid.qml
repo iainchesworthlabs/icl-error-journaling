@@ -36,6 +36,10 @@ Item {
     property bool skeleton: false
     property int coveredTiles: 0
     property bool noteAction: false
+    // The board is the Interactions board: tiles take the second hue family.
+    property bool interactions: false
+    // The object name of a tile is this and its row, so that the two boards of the Log screen have tiles that can be told apart.
+    property string tilePrefix: "tile"
 
     signal tilePressed(int row, string typeId, bool isOther)
     signal tileHeld(int row, string typeId)
@@ -74,10 +78,11 @@ Item {
                 // delegate by `index` and `model`.
                 required property var model
 
-                objectName: "tile" + index
+                objectName: root.tilePrefix + tile.index
                 width: root.tileWidth
                 height: root.tileHeight
                 skeleton: root.skeleton
+                interactions: root.interactions
                 covered: tile.index < root.coveredTiles
                 onPressed: root.tilePressed(tile.index, tile.typeId, tile.isOther)
                 onHeld: root.tileHeld(tile.index, tile.typeId)
@@ -118,7 +123,7 @@ Item {
             readonly property bool offered: !isOther && !isEmpty && index >= root.coveredTiles
             Accessible.role: Accessible.Button
             Accessible.name: qsTr("Log %1 with note").arg(label)
-            Accessible.description: qsTr("Logs this error with the note you typed")
+            Accessible.description: root.interactions ? qsTr("Logs this interaction with the note you typed") : qsTr("Logs this error with the note you typed")
             Accessible.ignored: !offered
             Accessible.focusable: offered
             Accessible.onPressAction: {

@@ -10,7 +10,7 @@ ON THE BOARD
 • Free-text notes, and note templates for the things you write every day
 
 THE DAY'S LOG
-• A header with the facilitator, date, unit, location and software version
+• A header with the tester, date, unit, location and software version
 • Changes to the header during the day are logged with their time
 • Review, edit, copy or delete any entry
 • Earlier days kept in History

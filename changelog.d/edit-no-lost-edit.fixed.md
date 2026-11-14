@@ -1,0 +1,1 @@
+**Two quick changes to one entry no longer overwrite each other.** Putting people on an interaction a moment after holding a note on it (or giving it an answer) used to keep only the later change, because each edit started from the entry as it was when it was made. Each edit is now worked out when its turn comes, from the entry as it is then, so both stay.

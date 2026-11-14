@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "viewmodel/interaction_type_list_model.hpp"
 
+#include "viewmodel/interaction_types.hpp"
+
 #include <utility>
 #include <vector>
 
@@ -44,7 +46,7 @@ QHash<int, QByteArray> InteractionTypeListModel::roleNames() const
 void InteractionTypeListModel::refresh(const Configuration& configuration)
 {
     std::vector<InteractionTypeRow> rows;
-    for (const InteractionType& type : configuration.m_InteractionTypes)
+    for (const InteractionType& type : interaction_types_in_force(configuration))
     {
         if (type.m_Retired)
         {

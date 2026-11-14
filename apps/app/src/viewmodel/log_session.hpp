@@ -63,12 +63,14 @@ class LogSession : public QObject, public OpenLogSource
     Q_PROPERTY(State state READ state NOTIFY stateChanged)
     // The header in force now (HeaderHistory::at(now)), for the header card. The export's header block is the start
     // values.
-    Q_PROPERTY(QString facilitator READ facilitator NOTIFY headerChanged)
+    Q_PROPERTY(QString tester READ tester NOTIFY headerChanged)
     Q_PROPERTY(QString unitText READ unit_text NOTIFY headerChanged)         // "UNIT-27" or "UNIT-27-prod", or empty
     Q_PROPERTY(QString unitDigits READ unit_digits NOTIFY headerChanged)     // "27", or empty: the number alone
     // "prod", or empty when the unit has no environment (and when it has no number): the environment alone (PRF-11).
     Q_PROPERTY(QString unitEnvironment READ unit_environment NOTIFY headerChanged)
     Q_PROPERTY(QString locationText READ location_text NOTIFY headerChanged) // the name, resolved from the id
+    // The id of the location in force, or empty when it was typed or is not set: for the picker's Everyone row.
+    Q_PROPERTY(QString locationId READ location_id NOTIFY headerChanged)
     Q_PROPERTY(QString versionText READ version_text NOTIFY headerChanged)   // "1.4.2": the components alone
     // "a1b2c3d", or empty when the version has no commit (HDR-09): the commit alone.
     Q_PROPERTY(QString commitText READ commit_text NOTIFY headerChanged)
@@ -129,7 +131,7 @@ public:
     LogSession& operator=(const LogSession&) = delete;
 
     /// Reads the open log and the draft through the gateway; the state is `LOADING` until that has completed. With no
-    /// open log and a valid configuration it starts today's log (HDR-01: the facilitator of the preferences, today's
+    /// open log and a valid configuration it starts today's log (HDR-01: the tester of the preferences, today's
     /// local date, three empty fields); with no configuration the state becomes `NEEDS_SETUP` and the first log is
     /// started when the configuration comes. Not QML-facing: the composition root calls it.
     void load();
@@ -137,7 +139,7 @@ public:
     // Properties.
 
     [[nodiscard]] State state() const;
-    [[nodiscard]] QString facilitator() const;
+    [[nodiscard]] QString tester() const;
     [[nodiscard]] QString unit_text() const;
     [[nodiscard]] QString unit_digits() const;
     [[nodiscard]] QString unit_environment() const;
@@ -150,6 +152,7 @@ public:
         return m_ChangedSinceShare;
     }
     [[nodiscard]] QString location_text() const;
+    [[nodiscard]] QString location_id() const;
     [[nodiscard]] QString version_text() const;
     [[nodiscard]] QString commit_text() const;
     [[nodiscard]] QString version_display_text() const;
@@ -183,6 +186,17 @@ public:
     /// is not `OPEN`. A draft that was changed while the commit ran is kept. The note-saved haptic follows the commit, as
     /// for a note, and `draftAttached` tells the undo toast, which then hands the draft back when it is undone.
     Q_INVOKABLE bool attachDraft(const QString& entryId);
+
+    /// Stage 14 (I-6). Logs an interaction of the type, with no people and no answer yet: log first, ask second. Returns
+    /// the entry id as `recordErrorEntry` does, or empty for a type that is unknown or retired.
+    Q_INVOKABLE QString recordInteractionEntry(const QString& typeId);
+
+    /// Puts these people (ids, in the order picked, at most 20) on the interaction entry `entryId`: one edit. Refused for
+    /// an entry that is not a live interaction entry of the open log, an id that is not an id, and more than 20 people.
+    Q_INVOKABLE bool setInteractionPeople(const QString& entryId, const QStringList& personIds);
+
+    /// Puts the answer (trimmed, not empty, at most 1,000 characters) on the interaction entry `entryId`: one edit.
+    Q_INVOKABLE bool setInteractionValue(const QString& entryId, const QString& value);
 
     /// NOTE-01. The text is trimmed; empty text and text over 10,000 characters are refused.
     Q_INVOKABLE bool addNote(const QString& text);
@@ -258,7 +272,7 @@ public:
     /// writes nothing and makes no id. The line shows the old value, the new value and the time of the change.
     Q_INVOKABLE QString previewHeaderChange(const QString& fieldKey, const QString& text, int localSeconds) const;
 
-    /// DAY-01 and DAY-02: archives the open log and starts one with the facilitator and today's local date and no
+    /// DAY-01 and DAY-02: archives the open log and starts one with the tester and today's local date and no
     /// other value, in one repository call (`start_new_log`), after the writes that are waiting. It is the entry point
     /// for a log for another unit or site as well as the answer to the new-day prompt. While it is in progress every
     /// other command is refused (`writeFailed`), because a tap would otherwise land in the log being archived. The
@@ -334,7 +348,7 @@ private:
 
     [[nodiscard]] Timestamp now_timestamp() const;
     [[nodiscard]] std::chrono::year_month_day today() const;
-    [[nodiscard]] std::string facilitator_for_new_log() const;
+    [[nodiscard]] std::string tester_for_new_log() const;
 
     Environment m_Environment;
     StorageGateway& m_Gateway;

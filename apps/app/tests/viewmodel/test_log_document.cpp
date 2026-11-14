@@ -707,3 +707,68 @@ TEST_CASE("A log archived while its document is open stops taking entries", "[vi
     CHECK(rig.observer.changes().size() == 1);
     CHECK(rig.gateway().posted() == 2);
 }
+
+TEST_CASE("edit.no_lost_edit: two edits submitted back to back both stay", "[viewmodel][document][edit]")
+{
+    DocumentRig rig;
+    std::vector<Result<void, StorageError>> results;
+    REQUIRE(rig.document->add_entry(sample_interaction_entry(1, 10, {}), Origin::USER, rig.keep(results)));
+    rig.gateway().run_all();
+
+    // Both are submitted before either has committed: each used to start from the entry as it was at submission, so the
+    // second overwrote the first.
+    const auto note = [](Entry& entry) -> std::optional<std::string>
+    {
+        std::get<InteractionEntry>(entry.m_Body).m_AttachedNote = "Asked about the schedule";
+        return std::nullopt;
+    };
+    const auto people = [](Entry& entry) -> std::optional<std::string>
+    {
+        std::get<InteractionEntry>(entry.m_Body).m_People = {sample_id<PersonId>(7)};
+        return std::nullopt;
+    };
+    REQUIRE(rig.document->edit_entry(entry_id(1), LogDocument::Mutator(note), rig.keep(results)));
+    REQUIRE(rig.document->edit_entry(entry_id(1), LogDocument::Mutator(people), rig.keep(results)));
+    rig.gateway().run_all();
+
+    const Entry* stored = rig.document->log().find(entry_id(1));
+    REQUIRE(stored != nullptr);
+    const auto& body = std::get<InteractionEntry>(stored->m_Body);
+    CHECK(body.m_AttachedNote == std::optional<std::string>("Asked about the schedule"));
+    REQUIRE(body.m_People.size() == 1);
+    CHECK(mirror_matches_store(rig));
+}
+
+TEST_CASE("edit.mutator_refusal: a refusal at the front of the queue reports and blocks nothing",
+          "[viewmodel][document][edit]")
+{
+    DocumentRig rig;
+    std::vector<Result<void, StorageError>> results;
+    REQUIRE(rig.document->add_entry(sample_interaction_entry(1, 10, {}), Origin::USER, rig.keep(results)));
+    rig.gateway().run_all();
+
+    int calls = 0;
+    // Agrees when it is submitted and refuses when it is reached (the entry has changed in between).
+    const auto picky = [&calls](Entry& entry) -> std::optional<std::string>
+    {
+        ++calls;
+        auto& body = std::get<InteractionEntry>(entry.m_Body);
+        if (body.m_AttachedNote.has_value())
+        {
+            return "That entry has a note already.";
+        }
+        body.m_AttachedNote = "second";
+        return std::nullopt;
+    };
+    std::vector<Result<void, StorageError>> first;
+    std::vector<Result<void, StorageError>> second;
+    REQUIRE(rig.document->edit_entry(entry_id(1), LogDocument::Mutator(picky), rig.keep(first)));
+    REQUIRE(rig.document->edit_entry(entry_id(1), LogDocument::Mutator(picky), rig.keep(second)));
+    rig.gateway().run_all();
+    REQUIRE(first.size() == 1);
+    CHECK(first[0].has_value());
+    REQUIRE(second.size() == 1);
+    CHECK_FALSE(second[0].has_value());
+    CHECK(std::get<InteractionEntry>(rig.document->log().find(entry_id(1))->m_Body).m_AttachedNote ==
+          std::optional<std::string>("second"));
+}

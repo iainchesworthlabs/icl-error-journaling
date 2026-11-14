@@ -61,6 +61,8 @@ Item {
     required property bool isEmpty
     required property string accessibleName
     property bool skeleton: false
+    // A tile of the Interactions board: its fill is from the second hue family (Theme.interactionTileColour).
+    property bool interactions: false
     // Under the empty-board card of the Log screen: drawn, but out of the screen reader's way (the card is read instead).
     property bool covered: false
     // How long the finger has to stay down for held() (BRD-07, docs/plan/stage-4.md, 4.17), and the longest gap between the lift of
@@ -99,8 +101,35 @@ Item {
     readonly property real padding: WindowLayout.tileLabelRole.enlarged ? Theme.space.sectionGap - Theme.border.hairline * 2 : Theme.space.sectionGap
     // The floor of the label's fit (fontSizeMode), as a share of its size: the label wraps and shrinks to this, never elides.
     readonly property real labelFloor: 0.75
+    // The longest word of the label, as written. A word is never broken, so the label is first sized to give it a line.
+    readonly property string longestWord: {
+        let longest = "";
+        for (const word of label.split(" ")) {
+            if (word.length > longest.length)
+                longest = word;
+        }
+        return longest;
+    }
+    // The size, as a share of the role's, at which the longest word fills a line: 1 for a word that fits, as every short
+    // label does, so those tiles keep the type scale's size. It goes no lower than 0.75 of the role's size without the
+    // text scale (the floor of 10 pt at the default size), which holds at the larger sizes, where a word needs less of it.
+    readonly property real wordFitFloor: Math.min(1, labelFloor * WindowLayout.tileLabelRole.basePt / WindowLayout.tileLabelRole.size)
+    // The side margin of the label: the tile's padding, or, for a word that does not fit at that floor, up to four points
+    // less on each side, as much as the word needs (the bottom margin and the Other icon keep the padding).
+    readonly property real labelInset: {
+        const needed = wordProbe.advanceWidth * wordFitFloor;
+        const room = width - 2 * padding;
+        if (needed <= room + 0.5)
+            return padding;
+        return Math.max(padding - labelInsetGive, Math.min(padding, (width - needed) / 2));
+    }
+    readonly property real labelInsetGive: 4
+    readonly property real labelWidth: width - 2 * labelInset
+    readonly property real wordFit: wordProbe.advanceWidth > 0 ? Math.max(wordFitFloor, Math.min(1, labelWidth / wordProbe.advanceWidth)) : 1
+    // A word that is wider than the tile even at that floor is the last resort: it is broken, and not cut off.
+    readonly property bool wordFits: wordProbe.advanceWidth * wordFitFloor <= labelWidth + 0.5
     readonly property bool dashed: isOther && !skeleton
-    readonly property color fillColour: skeleton ? Theme.colour.swatch : (isOther ? Theme.colour.otherTileFill : Theme.tileColour(colourSlot))
+    readonly property color fillColour: skeleton ? Theme.colour.swatch : (isOther ? Theme.colour.otherTileFill : (interactions ? Theme.interactionTileColour(colourSlot) : Theme.tileColour(colourSlot)))
 
     implicitWidth: Theme.size.tileWidth
     implicitHeight: Theme.size.tileHeight
@@ -204,6 +233,15 @@ Item {
             colour: Theme.colour.primaryText
         }
 
+        // The longest word at the role's own size, to measure it (not an item, so the scene stays as it was).
+        TextMetrics {
+            id: wordProbe
+
+            objectName: "tileWordProbe"
+            text: root.longestWord
+            font: WindowLayout.tileLabelRole.font
+        }
+
         Text {
             id: labelText
 
@@ -212,8 +250,8 @@ Item {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            anchors.leftMargin: root.padding
-            anchors.rightMargin: root.padding
+            anchors.leftMargin: root.labelInset
+            anchors.rightMargin: root.labelInset
             anchors.bottomMargin: root.padding
             // The label is bottom-aligned and may use the whole height above its margin: four lines at the 1.3 cap are
             // 86 pt, which a 104 pt tile holds only when the top margin is not taken from them.
@@ -221,21 +259,32 @@ Item {
             visible: !root.isEmpty && !root.skeleton
             text: root.label
             color: Theme.colour.tileText
-            font: WindowLayout.tileLabelRole.font
+            font: {
+                const sized = WindowLayout.tileLabelRole.font;
+                // A whole size is a pixel size and a fractional one a point size (Theme, FontRole.make).
+                if (root.wordFit < 1) {
+                    if (sized.pixelSize > 0)
+                        sized.pixelSize = Math.floor(sized.pixelSize * root.wordFit);
+                    else
+                        sized.pointSize = sized.pointSize * root.wordFit;
+                }
+                return sized;
+            }
             // A line is 1.2 times the size, as CSS has it (16.2 pt at 13.5), not 1.2 times the font's own line. It is
             // given as a ratio of the font's line, because the label shrinks to fit (fontSizeMode) and a ratio shrinks
             // with it.
             lineHeight: WindowLayout.tileLabelRole.lineRatio
             lineHeightMode: Text.ProportionalHeight
-            // Wraps at words, and inside a word that is wider than the tile; never elides (NFR-02, decision 9).
-            wrapMode: Text.Wrap
+            // Wraps at words only, as the longest word has been sized to a line; inside a word only when it is wider than the
+            // tile even at the smallest size. It never elides (NFR-02, decision 9).
+            wrapMode: root.wordFits ? Text.WordWrap : Text.Wrap
             horizontalAlignment: Text.AlignLeft
             verticalAlignment: Text.AlignBottom
             // The tile never grows, so a label that would not fit shrinks, down to a floor, before it is cut.
             fontSizeMode: Text.Fit
-            minimumPixelSize: Math.round(WindowLayout.tileLabelRole.size * root.labelFloor)
+            minimumPixelSize: Math.floor(WindowLayout.tileLabelRole.size * Math.min(root.labelFloor, root.wordFit))
             // A fractional size is a point size, and Fit then shrinks to the point floor.
-            minimumPointSize: WindowLayout.tileLabelRole.size * root.labelFloor * 72 / Theme.fontDpi
+            minimumPointSize: WindowLayout.tileLabelRole.size * Math.min(root.labelFloor, root.wordFit) * 72 / Theme.fontDpi
             Accessible.ignored: true
         }
 

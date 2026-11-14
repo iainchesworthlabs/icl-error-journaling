@@ -3,7 +3,7 @@ import QtQuick
 import ErrorJournalingApp
 
 // The plum card at the top of the Log screen: the unit and the site and version on the left, the date and the
-// facilitator on the right. A tap opens Today's details. It shows what it is given; a field that is empty reads as a
+// tester on the right. A tap opens Today's details. It shows what it is given; a field that is empty reads as a
 // prompt ("Location not set") and not as a gap, and the fields that are missing are listed in a strip inside the card
 // (HDR-06), which carries a mark and a count so that it is not colour alone. Nothing here blocks logging.
 //
@@ -15,7 +15,7 @@ import ErrorJournalingApp
 // that draws them: the launch image is made on a desktop, in CI, and has to come out the same on every one.
 //
 // Look (Main, LogBanner): the card is at least 64 pt; the right column is 12 pt, the date in 600 and white, the
-// facilitator in 400; the chevron is the 16 pt Icon. The strip under it is 41 pt: a full-width divider, 4 pt, a 30 pt
+// tester in 400; the chevron is the 16 pt Icon. The strip under it is 41 pt: a full-width divider, 4 pt, a 30 pt
 // row with a 16 pt warning sign and the text in 13/600, both white and centred on the row, and 6 pt.
 Item {
     id: root
@@ -24,7 +24,7 @@ Item {
     required property string locationText
     required property string versionText
     required property string dateText
-    required property string facilitatorText
+    required property string testerText
     required property var missingFields
     property bool skeleton: false
     // With `skeleton`: the lines and the right column from the design and not from the font (above).
@@ -34,15 +34,15 @@ Item {
     property string unitPrompt: qsTr("Unit —")
     property string locationPrompt: qsTr("Location not set")
     property string versionPrompt: qsTr("v —")
-    property string facilitatorPrompt: qsTr("Facilitator not set")
+    property string testerPrompt: qsTr("Tester not set")
 
     // What a screen reader says: the whole card, which changes as fields are filled. A screen may replace it.
     property string accessibleName: {
         if (skeleton)
             return "";
         const unset = qsTr("not set");
-        const values = [unitText.length > 0 ? unitText : unset, locationText.length > 0 ? locationText : unset, versionText.length > 0 ? versionText : unset, dateText, facilitatorText.length > 0 ? facilitatorText : unset];
-        const spoken = qsTr("Today's details. Unit %1. Location %2. Version %3. Date %4. Facilitator %5.").arg(values[0]).arg(values[1]).arg(values[2]).arg(values[3]).arg(values[4]);
+        const values = [unitText.length > 0 ? unitText : unset, locationText.length > 0 ? locationText : unset, versionText.length > 0 ? versionText : unset, dateText, testerText.length > 0 ? testerText : unset];
+        const spoken = qsTr("Today's details. Unit %1. Location %2. Version %3. Date %4. Tester %5.").arg(values[0]).arg(values[1]).arg(values[2]).arg(values[3]).arg(values[4]);
         const open = qsTr("Opens today's details.");
         return missingCount > 0 ? qsTr("%1 Not filled in yet: %2. %3").arg(spoken).arg(missingText).arg(open) : qsTr("%1 %2").arg(spoken).arg(open);
     }
@@ -63,7 +63,7 @@ Item {
     }
     readonly property bool pressed: tap.pressed
     // From a text scale of 1.2 up the card shows two lines, the unit and the site and version, each on one line and cut with
-    // an ellipsis; the date and the facilitator are one tap away in Today's details (Stage 7, F1). The accessible name has
+    // an ellipsis; the date and the tester are one tap away in Today's details (Stage 7, F1). The accessible name has
     // all of it.
     readonly property bool reduced: Theme.clampedScale > 1.2 && !skeleton
 
@@ -87,7 +87,7 @@ Item {
         border.color: Theme.colour.textOnHeaderCard
     }
 
-    // The unit and site on the left, the date and facilitator on the right, and the chevron.
+    // The unit and site on the left, the date and tester on the right, and the chevron.
     Item {
         id: main
 
@@ -101,10 +101,10 @@ Item {
             text: root.dateText
         }
         TextMetrics {
-            id: facilitatorMetrics
+            id: testerMetrics
 
             font: Theme.font.captionSmall.font
-            text: facilitatorLabel.text
+            text: testerLabel.text
         }
 
         Column {
@@ -151,7 +151,7 @@ Item {
             x: chevron.x - Theme.space.sectionGap - width
             y: (main.height - height) / 2
             visible: !root.reduced
-            width: root.skeleton && root.nominalMetrics ? main.width * 0.4 : Math.min(Math.ceil(Math.max(dateMetrics.advanceWidth, facilitatorMetrics.advanceWidth)) + Theme.border.hairline, main.width * 0.4)
+            width: root.skeleton && root.nominalMetrics ? main.width * 0.4 : Math.min(Math.ceil(Math.max(dateMetrics.advanceWidth, testerMetrics.advanceWidth)) + Theme.border.hairline, main.width * 0.4)
             spacing: Theme.border.hairline * 2
 
             Text {
@@ -168,14 +168,14 @@ Item {
                 Accessible.ignored: true
             }
             Text {
-                id: facilitatorLabel
+                id: testerLabel
 
                 width: parent.width
                 opacity: root.skeleton ? 0 : 1
                 horizontalAlignment: Text.AlignRight
                 color: Theme.colour.headerCardTextSecondary
                 font: Theme.font.captionSmall.font
-                text: root.facilitatorText.length > 0 ? root.facilitatorText : root.facilitatorPrompt
+                text: root.testerText.length > 0 ? root.testerText : root.testerPrompt
                 wrapMode: Text.WordWrap
                 height: root.skeleton && root.nominalMetrics ? Theme.font.captionSmall.nominalPitch : implicitHeight
                 Accessible.ignored: true
@@ -213,9 +213,9 @@ Item {
         Rectangle {
             visible: root.skeleton
             x: rightColumn.x + rightColumn.width * 0.3
-            y: rightColumn.y + facilitatorLabel.y
+            y: rightColumn.y + testerLabel.y
             width: rightColumn.width * 0.7
-            height: facilitatorLabel.height
+            height: testerLabel.height
             radius: Theme.border.hairline * 4
             color: Theme.colour.border
         }

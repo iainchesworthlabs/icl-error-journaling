@@ -114,6 +114,11 @@ A code-change queue entry therefore holds about 170 of the 20 x 60 = 1,200 runne
 the pool, and every pull request push adds about a quarter of that again. A pull request run used to repeat the coverage job that the
 queue entry runs on the merged tree; coverage now runs on a pull request only with the `deep` label.
 
+**Coverage and negative hits.** GCC's `gcov` sometimes writes a negative hit count for a line that tests ran in more than one
+thread (GCC bug 68080), and gcovr stops with `NegativeHitsError` on the first one. The Coverage job passes
+`--gcov-ignore-parse-errors negative_hits.warn_once_per_file`, so such a line is reported once and counted as it is, and the
+floors still decide the result.
+
 **Job limits.** Healthy Linux build legs ran up to 30 minutes (release 30.0, ASan/UBSan 28.6, TSan 28.7 on a cold
 cache), so the old limit of 30 cancelled good jobs. The Linux legs now have 60 minutes. Coverage (45, slowest 27), the
 kill harness (90, slowest 11) and the macOS legs (30, slowest 15) keep their limits. The merge queue's own

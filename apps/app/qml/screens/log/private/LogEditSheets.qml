@@ -15,6 +15,8 @@ Item {
     required property var timeline
     required property var picker
     required property var settings
+    // The list of people for the people of an interaction (PeopleModel); null where there is none.
+    property var people: null
 
     readonly property alias editor: entryEditor
     readonly property bool isOpen: entryEditor.isOpen || entryTimeSheet.isOpen
@@ -27,6 +29,7 @@ Item {
         timeline: root.timeline
         picker: root.picker
         settings: root.settings
+        people: root.people
     }
 
     EditTimeSheet {

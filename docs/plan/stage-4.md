@@ -6,7 +6,7 @@ one pull request into `develop`. Requirement IDs refer to the [PRD](../prd.md). 
 share sheet and launch screen that touch the same files are in [Stage 5](stage-5.md) and the [spikes](spikes.md).
 
 **Exit gate:** side-by-side review of each screen against the design on an iPhone 17, in light and dark mode, signed off
-by the facilitator.
+by the tester.
 
 **Status:** approved by the owner on 2026-11-07 (every recommendation accepted). `AGENTS.md` forbids UI code until the
 Stage 2 exit gate has passed, so only package 4.2 (design documents) may start before the gate.
@@ -53,7 +53,7 @@ putting the rule in QML.
 - **Coverage.** Catch2 does not measure QML. Coverage of the C++ of the rig and helpers is held by the existing floor; the
   QML is covered by the rule that each component and screen has a test file named after it, which a policy check
   enforces (4.1), and by the screenshot set of 4.16.
-- **Changelog.** Every package that changes what the facilitator sees adds a fragment to `changelog.d/`.
+- **Changelog.** Every package that changes what the tester sees adds a fragment to `changelog.d/`.
 - **Fictional data only (NFR-10).** Tests and screenshots use `config/sample-config.json`: Sam Example, UNIT-27,
   North Site, Wrong Response, Mute Delay and the other proposed board types.
 - **Licence headers.** Every new file, QML included, carries the SPDX header copied from an existing file.
@@ -112,7 +112,7 @@ invokables and properties named in `stage-3.md`.
 |---|---|---|---|---|
 | Log | `Main.dc.html` | BRD-01 to 05, NOTE-01 to 04, HDR-06 | `session` (header text, `missingFields`, `draft`, `recordError`, `addNote`, `addTemplatedNote`, `entryRecorded`, `writeFailed`, `state`, `recoveryNotice`), `board` (roles `typeId`, `label`, `colourSlot`, `count`, `hasCount`, `isOther`, `isEmpty`, `accessibleName`), `undo` (`active`, `text`, `repeatCount`, `generation`, `windowMs`, `undo()`, `dismiss()`), `timeline` (`lastLine`, `entryCount`), `settings.templates` | 4.7 |
 | Other picker | `Other.dc.html` | BRD-06 | `picker` (`filter`, `addType`, roles `typeId`, `label`, `section`, `count`, `colourSlot`), `session.recordError` | 4.8 |
-| Today's details | `Header.dc.html` | HDR-01 to 06 | `session` (`facilitator`, `dateText`, `unitText`, `locationText`, `versionText`, `validateHeaderValue`, `correctHeader`), `settings.locations`, `settings.unitPrefix` | 4.9 |
+| Today's details | `Header.dc.html` | HDR-01 to 06 | `session` (`tester`, `dateText`, `unitText`, `locationText`, `versionText`, `validateHeaderValue`, `correctHeader`), `settings.locations`, `settings.unitPrefix` | 4.9 |
 | Software version | `ChangeVersion.dc.html` | HDR-07, DAY-03 | `session.changeHeader`, `correctHeader`, `validateHeaderValue`, and gap items 1 and 2 | 4.9 |
 | Review | `Review.dc.html` | REV-01, 03, 04, 05 | `timeline` (rows, `headerText`, `titleText`, `copyLine`, `copyAll`, `deleteEntry`), `undo`, `share` (`available`, `sharing`, `shareOpenLog`, `shareFinished`) | 4.10 |
 | Edit entry | `EditEntry.dc.html` | REV-02, NOTE-06 | `timeline` (`entryForEdit`, `previewLine`, `saveEntry`, `deleteEntry`), `picker`/`board` type list | 4.10 |
@@ -173,7 +173,7 @@ that draws shapes only, in neutral colours, with no text, badge or type colour (
 | `UndoToast` | UndoToast | The 52 pt toast: text, remaining-time bar restarting on `generation`, the Undo button, spring in and out | 4.5 |
 | `LastEntryBar` | LastEntryBar | The latest line and the count; opens Review | 4.5 |
 | `MiniBoard` | MiniBoard for settings | The miniature board: hold and drag to move, tap to swap in a type, plus the VoiceOver alternative | 4.5 |
-| `HeaderCard` | HeaderCard | The plum card: unit, site, version, date, facilitator; opens Today's details | 4.6 |
+| `HeaderCard` | HeaderCard | The plum card: unit, site, version, date, tester; opens Today's details | 4.6 |
 | `NoteComposer`, `Chip` | NoteComposer with template chips | The text field with Add, the chip row, the 300 ms draft binding | 4.6 |
 | `ListRow`, `GroupedList`, `SwipeRow` | ListRow, SwipeRow | 48 pt rows in a 14 pt-radius group; a row that reveals Copy and Delete on swipe | 4.6 |
 | `ChoiceCard` | ChoiceCard | The two plain choices of the version sheet, selected state | 4.6 |
@@ -364,7 +364,7 @@ pull request (as Stage 3 specified).
 **Waves.**
 
 0. 4.2 alone, now, in parallel with Stage 2 and Stage 3. It is documentation and the design review it needs (the owner,
-   then the facilitator) is the slowest step in the stage.
+   then the tester) is the slowest step in the stage.
 1. 4.1, and 4.3 beside it once Stage 5's 5.1 has merged.
 2. 4.4, 4.5 and 4.6 in parallel. They share nothing but `Theme` and `UiRig` from 4.1.
 3. 4.7, 4.8, 4.9, 4.10, 4.11 and 4.12 in parallel. 4.11 waits for the approval of the History design and for 4.10 only
@@ -377,7 +377,7 @@ pull request (as Stage 3 specified).
 Each package runs `linux-debug` and `linux-asan-ubsan` locally before its pull request (AGENTS.md), and TSan in CI. The
 pull request says which parts have not run on a device. A macOS desktop build is where the work is iterated visually
 (implementation plan, Stage 4), but there is no Mac here; the design iteration happens on the screenshots of 4.16 and on
-the facilitator's phone, in the TestFlight builds, weekly.
+the tester's phone, in the TestFlight builds, weekly.
 
 ### 4.1 Foundations
 
@@ -399,7 +399,7 @@ No code. Draw, in the format of the existing `.dc.html` files, the screens the d
 confirmation, the template value prompt, the write-failed and recovery messages), the entry point for starting a new log
 (decision 8), the board layout's selected-tile state with the VoiceOver alternative, and **every screen in dark mode**.
 Add the dark values to `tokens.json` and the rules to the design README. The owner reviews the documents, then the
-facilitator approves them; a screen package starts when its design is approved. This is the only package that can run
+tester approves them; a screen package starts when its design is approved. This is the only package that can run
 now, and the dark palette blocks the Stage 4 exit gate (implementation plan, decisions that block a stage).
 
 Checks (`precheck`/docs build only): every colour in the dark section passes the contrast pairs of `Theme.contrastPairs`
@@ -485,7 +485,7 @@ cross-cutting tests.
 
 ### 4.7 Log screen
 
-The screen the facilitator lives in: `HeaderCard`, the HDR-06 banner, `NoteComposer`, `LastEntryBar`, `BoardGrid`,
+The screen the tester lives in: `HeaderCard`, the HDR-06 banner, `NoteComposer`, `LastEntryBar`, `BoardGrid`,
 `UndoToast`, the template value prompt (a small `Sheet`), the write-failed and recovery `Banner`s, and the `LOADING`
 placeholder (all 12 tile rectangles, no text, taps ignored). It owns the press wiring: `onPressedDown` calls
 `bridge.hapticImpact(timestamp)` then `session.recordError(typeId)`; `onActivated` does the same; the screen calls
@@ -524,20 +524,20 @@ nothing is recorded; empty, duplicate and over-long names show the model's refus
 
 ### 4.9 Today's details and Software version
 
-The two header sheets. Today's details: facilitator and date read only, the unit number field with the fixed prefix and
+The two header sheets. Today's details: tester and date read only, the unit number field with the fixed prefix and
 the number pad (digits only; `validateHeaderValue` for the inline message), the location list with Other and free text,
 the software version with inline validation, and "Start logging" (which is a close, since nothing blocks logging). A first
 fill of an empty field is a Correct (Stage 3). The version sheet: the two choices, From and To, a time field defaulting to
 now, and the preview line. Gap items 1 and 2 supply the time conversion and the preview; until they exist this package
 cannot be finished.
 
-Tests: `details.fields` (values from the session; the facilitator and date are not editable); `details.unit_keypad` (the
+Tests: `details.fields` (values from the session; the tester and date are not editable); `details.unit_keypad` (the
 number pad hint is set, letters never reach the field, the prefix is displayed and not typed, `027` shows the model's
 message and nothing is saved); `details.location` (a configured location sets its id, Other shows a free text field and
 sends the text); `details.version_validation` (`1.4`, `1.4.2-beta` show the message inline and Save stays disabled until
 valid); `details.correct_first_fill` (filling an empty field calls `correctHeader` and adds no timeline entry);
 `details.new_log_row` (the DAY-02 row from decision 8 asks for confirmation before `startNewLog`); `version.choices`
-(the two plain choices, one selected, texts in the facilitator's words); `version.change` ("It changed during the day" calls
+(the two plain choices, one selected, texts in the tester's words); `version.change` ("It changed during the day" calls
 `changeHeader` with the time chosen, once, and the timeline gains the line); `version.correct` ("I typed it wrong" calls
 `correctHeader`, no entry); `version.preview` (the preview equals the saved line byte for byte, updates as the fields
 change, shows the refusal for an unchanged value); `version.time_default` (the field starts at now and a time earlier than
@@ -566,7 +566,7 @@ Task breakdown:
    `EnvironmentSheet`, a short `Sheet.Content` list with None first and the one in force ticked. The choice is saved with the
    number; chosen before there is a valid number, it waits for it.
 4. **Design.** `Header.dc.html` and its dark variant show the row.
-5. **Carry-forward.** Checked: only the facilitator carries into a new log (HDR-05, DAY-02), and the unit prefix is a
+5. **Carry-forward.** Checked: only the tester carries into a new log (HDR-05, DAY-02), and the unit prefix is a
    preference rather than a part of a log, so the environment starts at None in every new log, like the number.
 
 Tests: `UnitNumber` parse, stored text and limits (`unit-number`, `environment`); the setup-file key (valid, replaced list,
@@ -599,7 +599,7 @@ Task breakdown:
    sheet's card with the same hint under the card; "Commit" in the Log card's strip.
 4. **Design.** `Header`, `HeaderNewLogRow`, `ChangeVersion` (light and dark) and `LogBanner` show the field, the row and the
    strip.
-5. **Carry-forward.** Checked: only the facilitator carries into a new log (HDR-05, DAY-02), so the version does not carry
+5. **Carry-forward.** Checked: only the tester carries into a new log (HDR-05, DAY-02), so the version does not carry
    and neither does its commit. Within a log the commit is a part of the version value, so it is kept for the day, and a
    Change takes a version and a commit as a pair: the sheet's To and Commit rows start empty, as To always did, so a new
    build never inherits the commit of the old one by accident.
@@ -661,13 +661,13 @@ cancelling deletes nothing; confirming calls `confirmDelete(token)` once; a fail
 
 ### 4.12 Settings and board layout
 
-The Settings list (facilitator, unit prefix, time format with the 24-hour, 12-hour, seconds and meridiem choices, totals
+The Settings list (tester, unit prefix, time format with the 24-hour, 12-hour, seconds and meridiem choices, totals
 option, the four list rows with counts, import and export rows) and the board layout screen built on `MiniBoard`. Rows
-that edit text push editor pages (4.13); this package owns the list, the simple editors it can do inline (facilitator,
+that edit text push editor pages (4.13); this package owns the list, the simple editors it can do inline (tester,
 prefix, the time format picker, totals) and the board layout.
 
-Tests: `settings.rows` (values from `settings`, counts on the list rows); `settings.facilitator` and `settings.prefix`
-(editing calls the invokable once; a refusal message is shown inline and the old value stays; the open log's facilitator
+Tests: `settings.rows` (values from `settings`, counts on the list rows); `settings.tester` and `settings.prefix`
+(editing calls the invokable once; a refusal message is shown inline and the old value stays; the open log's tester
 note, "applies from the next log", is shown); `settings.time_format` (all combinations call `setTimeFormat` once and the
 sample time on the screen follows, PRF-07); `settings.totals` (the switch calls `setIncludeTotals`); `settings.board_layout`
 (drag and swap as in `mini_board.*`, against the real `SettingsModel`: the Log screen's board follows after the signal,
@@ -686,7 +686,7 @@ document picker supplies the path, then calls `settings.loadImport(path)` (decis
 Tests: `editor.error_types` (add, rename, retire; a retired type disappears from the list; duplicate and empty names refused
 inline; reorder through move buttons as well as drag); `editor.locations`; `editor.templates` (name, prompt, pattern; the live
 pattern message from `validatePattern` while typing; `{name}` refused; the preview of the output pattern with a sample
-value); `setup.first_launch` (shown when `configured` is false; choosing manual setup asks for facilitator and prefix and
+value); `setup.first_launch` (shown when `configured` is false; choosing manual setup asks for tester and prefix and
 then dismisses; the Log screen is reachable after); `import.flow` (`loadImport` is called with the chosen path; the summary
 screen shows the counts; Apply calls `applyImport`; Cancel calls `discardImport` and changes nothing); `import.errors` (a
 malformed file, a future schema version and duplicate ids show the core's messages in file order and nothing changes);
@@ -752,7 +752,7 @@ every required property set, and a missing one fails loudly in a test, not silen
 
 Walk every screen in dark and at the two larger text scales, fix what the cross-cutting tests and the eye find, and add
 `ej_screenshots`: a desktop tool that renders every screen and sheet in light, dark and large text, with the sample data, to
-PNGs that CI uploads as an artifact. The owner and the facilitator compare these with the design before the phone is
+PNGs that CI uploads as an artifact. The owner and the tester compare these with the design before the phone is
 involved; they are not golden files (fonts differ between the runners and the phone). Also the VoiceOver audit: a
 checklist table recorded in 4.18.
 
@@ -766,7 +766,7 @@ in this page so a new screen cannot be forgotten).
 Holding the finger on a tile for 500 ms (`Tile.holdMs`, `Theme.motion.holdMs`) logs the error with a note, in one of two ways.
 **Since 4.17a the hold records the entry itself**, at the hold, because the touch no longer records (a single tap logs nothing);
 a hold that follows a first tap has recorded at its touch already, as the second tap of a double-tap, and the hold adds the note
-to that entry. Which way is decided at the moment the hold completes, by whether the composer has a typed draft (**the owner chose both, 2026-11-09**, after the facilitator said "you type the note, press and
+to that entry. Which way is decided at the moment the hold completes, by whether the composer has a typed draft (**the owner chose both, 2026-11-09**, after the tester said "you type the note, press and
 hold the error, and it will log together"):
 
 1. **A draft is typed: log with it.** `session.attachDraft(entryId)` puts the draft, trimmed, on the entry as its attached
@@ -824,9 +824,9 @@ This package is optional: it can slip to 1.1 without changing the gate.
 
 ### 4.17a Double-tap to log (BRD-02, BRD-03; owner request, 2026-11-09)
 
-The facilitator asked for a tile to be logged by a **double-tap** instead of one tap, so that an accidental touch does not
+The tester asked for a tile to be logged by a **double-tap** instead of one tap, so that an accidental touch does not
 make an entry, and kept **press and hold** (4.17) as the way to log with a note. The owner decided it on 9 Nov 2026 for the build
-the facilitator gets on 10 Nov 2026 (decision 18).
+the tester gets on 10 Nov 2026 (decision 18).
 
 **The gestures** (for a tile with an error type; `Tile` counts them for each tile on its own):
 
@@ -845,7 +845,7 @@ the facilitator gets on 10 Nov 2026 (decision 18).
 
 **The window.** 300 ms, counted from the lift of the first tap to the touch of the second, so a slow tap does not use up the time.
 It is a token, `motion.doubleTapMs` in `docs/design/tokens.json` and `Theme.motion.doubleTapMs`, with `holdMs` (500 ms), `tapHintVisibleMs`
-(2000) and `tapHintIntervalMs` (5000); the owner can change them in one place after the facilitator has used it (checklist P6). The window is
+(2000) and `tapHintIntervalMs` (5000); the owner can change them in one place after the tester has used it (checklist P6). The window is
 timed on the animation clock like the hold (a `NumberAnimation` of a number that nothing reads, then a `ScriptAction`), so that
 the rig's `advance` moves it; it needs `rig.steady_time()` for the reason given under 4.17.
 
@@ -884,7 +884,7 @@ changed with the hold (it records), and the cases that tapped a tile once now do
 
 ### 4.13a Plain words in the note template editor (TestFlight feedback)
 
-The facilitator did not understand "Prompt", "Output pattern" or that `{value}` has to be typed. The model stays as it is
+The tester did not understand "Prompt", "Output pattern" or that `{value}` has to be typed. The model stays as it is
 (a template has a name, a question and a line with the answer in it; the file format keeps `value_prompt` and
 `output_pattern`, and the stored pattern keeps `{value}`). The editor and its messages change:
 
@@ -907,10 +907,10 @@ and the visual pass for `TemplateEdit`, `TemplateEditInvalid` and `Templates`.
 
 ### 4.18 Exit-gate pass
 
-Run the checklist on an iPhone 17 in light and dark with the facilitator, record the results at the end of this file,
+Run the checklist on an iPhone 17 in light and dark with the tester, record the results at the end of this file,
 raise the UI components' coverage evidence (`tools/coverage-floors.json` for the C++ rig and helpers), add the
 `changelog.d/` fragments that are missing, and amend the implementation plan and the PRD wording this page changes (below).
-The facilitator signs off each screen in the pull request.
+The tester signs off each screen in the pull request.
 
 ## Device checklist (the exit gate)
 
@@ -954,7 +954,7 @@ The development machine has no Mac and no phone. CI runs the QML on a desktop, o
 fakes. Not proved by any test on this page:
 
 - **How it looks.** Fonts (SF Pro on the phone, a different font on the runner), anti-aliasing, the real colours under the
-  display's colour management, and the Dynamic Island clearance. The screenshots of 4.16 and the facilitator's review are
+  display's colour management, and the Dynamic Island clearance. The screenshots of 4.16 and the tester's review are
   how this is judged, and the gate is her sign-off.
 - **VoiceOver itself.** The tests prove the accessible tree (names, roles, order, targets). They do not prove what iOS
   speaks, the rotor behaviour, announcements (U3) or focus return. Device rows A1 to A6.
@@ -1020,7 +1020,7 @@ so references such as "decision 4" elsewhere on the page and in other pages reso
    the tile was reached. The accidental-touch risk is handled by the undo toast, as in the approved design. (owner, 2026-11-07)
 8. **Where does "start a new log" (DAY-02) live?** The design package has no menu. **Decided: a row at the bottom of
    Today's details, "Start a new log for another unit or site", behind a confirmation `Alert`** (it archives the open log),
-   because that is where the facilitator is already looking at the unit and site. A menu on the Log screen is a new control
+   because that is where the tester is already looking at the unit and site. A menu on the Log screen is a new control
    she did not approve. To be drawn in 4.2. (owner, 2026-11-07)
 9. **Tile label lines.** NFR-02 says up to three lines that never truncate; `tokens.json` says four. **Decided:** three lines
    at the default size, four at larger sizes up to the 1.3 cap, never truncated, with a test using the longest label of the
@@ -1028,7 +1028,7 @@ so references such as "decision 4" elsewhere on the page and in other pages reso
 10. **Dark palette direction (blocks the exit gate).** **Decided:** keep the plum header card and the deep blue primary
     as the brand anchors; a near-black blue-grey background and raised surfaces; tile colours as the same 11 hues at low
     lightness and moderate saturation with light text (the tile rule "text is always `textPrimary` on the tile colour" holds, with the dark-mode `textPrimary`); no red or green; Other stays neutral with a dashed border; the
-    Review text white on black, as the light mode is black on white. Drawn and contrast-checked in 4.2, approved by the facilitator. (owner, 2026-11-07)
+    Review text white on black, as the light mode is black on white. Drawn and contrast-checked in 4.2, approved by the tester. (owner, 2026-11-07)
 11. **Time input control.** **Decided:** a custom two-column `Tumbler` (hours, minutes, with seconds and meridiem when
     the time format has them), re-skinned, VoiceOver adjustable. A text field for times invites a typo that the model must
     reject; the native `UIDatePicker` is not reachable from Qt Quick without a bridge item. (owner, 2026-11-07)
@@ -1037,10 +1037,10 @@ so references such as "decision 4" elsewhere on the page and in other pages reso
     accessibility tests, the screenshot artifact of 4.16 for review, and the device pass. The one pixel comparison in the
     project stays the launch image of Stage 5, which has no text. (owner, 2026-11-07)
 13. **Who designs the screens that are not drawn?** **Decided:** drafted as `.dc.html` mock-ups in 4.2 in the
-    existing format, reviewed by the owner, then approved by the facilitator, before the screen package starts. The cost of
+    existing format, reviewed by the owner, then approved by the tester, before the screen package starts. The cost of
     redrawing is much lower than the cost of rebuilding QML. (owner, 2026-11-07)
 14. **Bold Text and Increase Contrast.** **Decided:** not handled in v1 (NFR-07 asks for VoiceOver and Dynamic Type); the
-    tokens already pass 4.5 to 1. Revisit if the facilitator uses them. (owner, 2026-11-07)
+    tokens already pass 4.5 to 1. Revisit if the tester uses them. (owner, 2026-11-07)
 15. **Orientation and iPad.** **Decided:** portrait only on iPhone, as NFR-01 and the plan have it; the layout uses
     `SafeFrame` and token sizes so a later iPad layout is a new set of screens, not a rewrite of components. (owner, 2026-11-07)
 16. **Long-press (BRD-07, Should).** **Decided:** build it last (4.17) because it depends on the Edit sheet and has no
@@ -1053,7 +1053,7 @@ so references such as "decision 4" elsewhere on the page and in other pages reso
 17. **Desktop build in CI.** The plan says the UI is iterated on a macOS desktop build; the Linux runner builds it too.
     **Decided:** keep the QML free of anything desktop-only except the dev file dialog in the shell, which 4.15 isolates in
     one file the iOS build does not load. (owner, 2026-11-07)
-18. **Double-tap to log (BRD-02, 4.17a).** The facilitator asked for it, to avoid accidental entries. **Decided (owner,
+18. **Double-tap to log (BRD-02, 4.17a).** The tester asked for it, to avoid accidental entries. **Decided (owner,
     2026-11-09):** a tile with an error type is logged by two taps within 300 ms (`motion.doubleTapMs`), and a single tap logs
     nothing and shows the hint "Double-tap to log", at most once in 5 s. Press and hold (500 ms) stays, and records at the hold.
     The haptic, the press and the record are on the touch of the second tap, and the latency budget (NFR-03) is counted from it. The Other tile, which

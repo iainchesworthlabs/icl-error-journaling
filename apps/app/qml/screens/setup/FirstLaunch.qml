@@ -6,7 +6,7 @@ import ErrorJournalingApp
 // The first-launch screen (docs/design/screens/FirstLaunch.dc.html, PRF-09), shown while `settings.configured` is false and
 // the settings have finished loading. It names the app, Field Test, and offers two plain choices:
 //
-//   Set up by hand         the main button. Opens FirstLaunchManual, which asks for the facilitator and the unit prefix. The
+//   Set up by hand         the main button. Opens FirstLaunchManual, which asks for the tester and the unit prefix. The
 //                          view model holds them in memory until both are set, then saves and `configured` becomes true.
 //   Import a setup file    the second button. Emits `importRequested()`. The shell opens the platform's file dialog and, with
 //                          the chosen file, calls ImportFlow.begin(); that shows the confirmation or the problems with the file.

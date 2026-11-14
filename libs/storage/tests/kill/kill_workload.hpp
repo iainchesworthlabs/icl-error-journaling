@@ -13,6 +13,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -60,7 +61,8 @@ enum class OperationKind
     RENAME_PERSON,
     RETIRE_PERSON,
     TOUCH_PERSON,
-    FORGET_PERSON
+    FORGET_PERSON,
+    SET_PERSON_LOCATION
 };
 
 /// A people operation: its own journal, its own crash points (after the append, after the sync).
@@ -68,7 +70,7 @@ enum class OperationKind
 {
     return kind == OperationKind::ADD_PERSON || kind == OperationKind::RENAME_PERSON ||
            kind == OperationKind::RETIRE_PERSON || kind == OperationKind::TOUCH_PERSON ||
-           kind == OperationKind::FORGET_PERSON;
+           kind == OperationKind::FORGET_PERSON || kind == OperationKind::SET_PERSON_LOCATION;
 }
 
 struct Operation
@@ -84,6 +86,7 @@ struct Operation
     std::string m_Text;                             // CORRECT_HEADER's value, SET_DRAFT's text, a person's name
     PersonId m_Person;                              // the people operations
     bool m_Retired = true;                          // RETIRE_PERSON: retire, or bring back
+    std::optional<LocationId> m_Location;           // SET_PERSON_LOCATION: the location, or none
     UtcMillis m_Time; // what the clock says during the call, and the edit, share or draft time
 };
 
@@ -179,11 +182,11 @@ private:
 [[nodiscard]] Result<void, StorageError> apply_operation(LogRepository& repository, PeopleStore* people,
                                                          ScriptedClock& clock, const Operation& operation);
 
-/// The people a store holds: each person's name and whether they are retired, and who was forgotten. The time a person
-/// was last used is left out: a touch is not synced, so a kill may cost it.
+/// The people a store holds: each person's name, whether they are retired and their location, and who was forgotten.
+/// The time a person was last used is left out: a touch is not synced, so a kill may cost it.
 struct PeopleSummary
 {
-    std::map<PersonId, std::pair<std::string, bool>> m_People;
+    std::map<PersonId, std::tuple<std::string, bool, std::optional<LocationId>>> m_People;
     std::set<PersonId> m_Forgotten;
     friend bool operator==(const PeopleSummary&, const PeopleSummary&) = default;
 };

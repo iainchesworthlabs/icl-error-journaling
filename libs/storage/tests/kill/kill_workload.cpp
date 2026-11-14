@@ -91,6 +91,8 @@ const char* operation_name(OperationKind kind)
         return "touch_person";
     case OperationKind::FORGET_PERSON:
         return "forget_person";
+    case OperationKind::SET_PERSON_LOCATION:
+        return "set_person_location";
     }
     return "unknown";
 }
@@ -278,9 +280,18 @@ Operation Workload::make_person_operation(Operation base)
         base.m_Kind = OperationKind::RENAME_PERSON;
         base.m_Text = "Pat Stand-in " + std::to_string(++m_PersonCounter);
     }
-    else if (roll < 80)
+    else if (roll < 72)
     {
         base.m_Kind = OperationKind::TOUCH_PERSON;
+    }
+    else if (roll < 80)
+    {
+        base.m_Kind = OperationKind::SET_PERSON_LOCATION;
+        const std::uint64_t which = m_PeopleRng.below(4); // none, or one of three locations
+        if (which != 0)
+        {
+            base.m_Location = sample_id<LocationId>(which);
+        }
     }
     else if (roll < 92)
     {
@@ -463,6 +474,8 @@ Result<void, StorageError> apply_operation(LogRepository& repository, PeopleStor
             return people->retire_person(operation.m_Person, operation.m_Retired);
         case OperationKind::TOUCH_PERSON:
             return people->touch_person(operation.m_Person);
+        case OperationKind::SET_PERSON_LOCATION:
+            return people->set_person_location(operation.m_Person, operation.m_Location);
         default:
             return people->forget_person(operation.m_Person);
         }
@@ -498,7 +511,8 @@ Result<ModelState, StorageError> state_of(LogRepository& repository, const Peopl
     {
         for (const Person& person : people->people())
         {
-            state.m_People.m_People.emplace(person.m_Id, std::make_pair(person.m_DisplayName, person.m_Retired));
+            state.m_People.m_People.emplace(person.m_Id,
+                                            std::make_tuple(person.m_DisplayName, person.m_Retired, person.m_Location));
         }
         state.m_People.m_Forgotten = people->forgotten();
     }
@@ -570,6 +584,9 @@ ModelState model_after(std::uint64_t seed, std::uint64_t forced_archive_at, std:
         case OperationKind::FORGET_PERSON:
             applied = people.apply(ForgetPersonBody{operation.m_Person});
             break;
+        case OperationKind::SET_PERSON_LOCATION:
+            applied = people.apply(SetPersonLocationBody{operation.m_Person, operation.m_Location});
+            break;
         default:
             applied = apply_operation(repository, clock, operation);
             break;
@@ -591,7 +608,8 @@ ModelState model_after(std::uint64_t seed, std::uint64_t forced_archive_at, std:
     }
     for (const Person& person : people.people())
     {
-        state->m_People.m_People.emplace(person.m_Id, std::make_pair(person.m_DisplayName, person.m_Retired));
+        state->m_People.m_People.emplace(person.m_Id,
+                                         std::make_tuple(person.m_DisplayName, person.m_Retired, person.m_Location));
     }
     state->m_People.m_Forgotten = people.forgotten();
     return std::move(*state);

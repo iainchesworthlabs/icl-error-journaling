@@ -1,5 +1,5 @@
 WHAT THE APP IS FOR
-Field Test is a log for a facilitator who runs sessions with a robot. During a session the facilitator taps a tile each time the robot makes a known kind of error. The app records the error with the local time. At the end of the day the facilitator shares the day's log as plain text, usually to a team chat. "Bingo board" means the grid of tiles. There is no game, wager, score or prize.
+Field Test is a log for a tester who runs sessions with a robot. During a session the tester taps a tile each time the robot makes a known kind of error. The app records the error with the local time. At the end of the day the tester shares the day's log as plain text, usually to a team chat. "Bingo board" means the grid of tiles. There is no game, wager, score or prize.
 
 NO ACCOUNT, NO NETWORK, NO HARDWARE
 There is no sign-in and no demo account is needed. The app has no network access and no server. It does not connect to the robot or to any device. All data stays on the device and leaves only through the system share sheet or copy, when the user chooses.

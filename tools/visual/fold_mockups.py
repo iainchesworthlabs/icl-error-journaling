@@ -540,7 +540,7 @@ def settings_screen(p: Page) -> str:
             ]
         )
         + p.grouped(
-            [("Facilitator", "Sam Example", True), ("Time format", "24-hour", True)]
+            [("Tester", "Sam Example", True), ("Time format", "24-hour", True)]
         )
         + p.grouped([("Import or export setup", "", True)])
         + "</div>"

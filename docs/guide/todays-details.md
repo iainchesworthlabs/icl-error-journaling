@@ -3,13 +3,13 @@
 The purple card at the top of the Log screen shows the unit, place, software version, date and your name. Tap it to open
 **Today's details**. These fields head the log you share.
 
-![Today's details: Facilitator, Date, Unit number, Number suffix, Location, Robot software version and Other versions, and a Start logging button.](img/todays-details.png){ width="270" }
+![Today's details: Tester, Date, Unit number, Number suffix, Location, Robot software version and Other versions, and a Start logging button.](img/todays-details.png){ width="270" }
 
 You can log errors before every field is filled in. While a field is empty the card says **Not filled in yet** and names it.
 
 ## The fields
 
-- **Facilitator** and **Date** are filled in for you. Change the name in Settings.
+- **Tester** and **Date** are filled in for you. Change the name in Settings.
 - **Unit number:** type the number only. The prefix from Settings is added for you, so `27` shows as `UNIT-27`.
 - **Number suffix:** tap to choose a word that goes after the number, such as `prod` or `dev`, so `27` shows as `UNIT-27-prod`. You do not type it. **None** is the first choice. The rest come from **Number suffixes** in Settings. It is saved with the unit number.
 - **Location:** choose a place from your list, or **Other…** and type where you are.
@@ -33,5 +33,5 @@ If the robot's version changes during the day, for example an over-the-air updat
 ## Starting another log
 
 At the bottom of Today's details, **Start a new log for another unit or site** keeps today's log in History and opens an
-empty one. Only the facilitator carries over. Use it when you move to another unit or site on the same day. A new day
+empty one. Only the tester carries over. Use it when you move to another unit or site on the same day. A new day
 starts its own log (see [Sharing and the next day](sharing.md#the-next-day)).
