@@ -370,3 +370,111 @@ TEST_CASE("review.interaction_rows: a past log shows interactions the same way a
     REQUIRE(model.copyLine(0));
     CHECK(clipboard.text() == "10:10 (Interaction) Spoke with someone");
 }
+
+TEST_CASE("review.copy: a row that is not there, a row of an error and a model with no log copy what they can",
+          "[viewmodel][review][interaction]")
+{
+    Fixture f;
+    CHECK_FALSE(f.model().copyLine(-1));
+    CHECK_FALSE(f.model().copyLine(100));
+    REQUIRE(f.model().copyLine(3));
+    CHECK(f.m_Clipboard.text().rfind("10:30", 0) == 0);
+
+    TimelineModel unbound(f.m_World.environment(), f.m_Config, f.m_Clipboard);
+    CHECK_FALSE(unbound.copyAll());
+    CHECK_FALSE(unbound.copyLine(0));
+}
+
+TEST_CASE("edit.interaction: the types an entry can be changed to keep its own, retired or gone from the setup",
+          "[viewmodel][edit][interaction]")
+{
+    Fixture f;
+    CHECK(f.model().interactionTypesFor("not an id").isEmpty());
+    CHECK(f.model().interactionTypesFor(id_text(99)).isEmpty());
+
+    // Entry 6 is a Greeted. Retired since, it is still offered, once; the retired Visitor, not its own, is not.
+    Configuration retired = configuration_with_interactions();
+    for (InteractionType& type : retired.m_InteractionTypes)
+    {
+        type.m_Retired = type.m_Retired || type.m_Id == test_id<InteractionTypeId>(INTERACTION_GREETED);
+    }
+    f.m_Config.set(retired);
+    CHECK(f.model().interactionTypesFor(id_text(6)).size() == 3);
+
+    // Gone from the setup altogether: the entry's own type is added from the name it was logged with.
+    Configuration gone = configuration_with_interactions();
+    std::erase_if(gone.m_InteractionTypes, [](const InteractionType& type)
+                  { return type.m_Id == test_id<InteractionTypeId>(INTERACTION_GREETED); });
+    f.m_Config.set(gone);
+    const QVariantList list = f.model().interactionTypesFor(id_text(6));
+    REQUIRE(list.size() == 3);
+    CHECK(list.back().toMap().value("typeId").toString() == type_text(INTERACTION_GREETED));
+    const auto& body = std::get<InteractionEntry>(f.m_Document->log().find(sample_id<EntryId>(6))->m_Body);
+    CHECK(list.back().toMap().value("name").toString() == QString::fromStdString(body.m_TypeLabel));
+
+    // The same type, as it is, is allowed though the setup lost it; a type with no name is not.
+    QVariantMap same;
+    same.insert("interactionTypeId", type_text(INTERACTION_GREETED));
+    CHECK(f.model().validateEdit(id_text(6), same).isEmpty());
+    Configuration nameless = configuration_with_interactions();
+    nameless.m_InteractionTypes.push_back(make_type(40, "", std::nullopt, InteractionAsks::NOTHING));
+    f.m_Config.set(nameless);
+    QVariantMap to_nameless;
+    to_nameless.insert("interactionTypeId", type_text(40));
+    CHECK_FALSE(f.model().validateEdit(id_text(1), to_nameless).isEmpty());
+}
+
+TEST_CASE("edit.interaction: what the sheet asks for follows the type, and what the entry already has",
+          "[viewmodel][edit][interaction]")
+{
+    Fixture f;
+    Configuration bare = configuration_with_interactions();
+    bare.m_InteractionTypes.clear();
+    f.m_Config.set(bare);
+
+    // A type the setup does not know asks for nothing; people or an answer on the entry are still shown.
+    const QVariantMap with_person = f.edit_of(1);
+    CHECK(with_person.value("asksPerson").toBool());
+    CHECK_FALSE(with_person.value("asksText").toBool());
+    const QVariantMap plain = f.edit_of(2);
+    CHECK_FALSE(plain.value("asksPerson").toBool());
+    CHECK_FALSE(plain.value("asksText").toBool());
+    const QVariantMap with_value = f.edit_of(3);
+    CHECK_FALSE(with_value.value("asksPerson").toBool());
+    CHECK(with_value.value("asksText").toBool());
+
+    // With no list of people the names read as "someone".
+    f.m_World.m_People = nullptr;
+    TimelineModel nameless(f.m_World.environment(), f.m_Config, f.m_Clipboard);
+    nameless.bind(f.m_Document);
+    CHECK(nameless.entryForEdit(id_text(1)).value("personNames").toMap().value(person_text(PERSON_ALEX)).toString() ==
+          "someone");
+}
+
+TEST_CASE("edit.interaction: an empty answer and an empty note are taken off, and a person picked twice stays once",
+          "[viewmodel][edit][interaction]")
+{
+    Fixture f;
+
+    SECTION("the answer and the note of entry 3 are cleared")
+    {
+        QVariantMap edit;
+        edit.insert("value", "   ");
+        edit.insert("attachedNote", "  ");
+        REQUIRE(f.model().saveEntry(id_text(3), edit));
+        f.commit();
+        const auto& body = std::get<InteractionEntry>(f.m_Document->log().find(sample_id<EntryId>(3))->m_Body);
+        CHECK_FALSE(body.m_Value.has_value());
+        CHECK_FALSE(body.m_AttachedNote.has_value());
+    }
+    SECTION("a repeated person is one person")
+    {
+        QVariantMap edit;
+        edit.insert("personIds",
+                    QStringList{person_text(PERSON_ALEX), person_text(PERSON_ALEX), person_text(PERSON_JORDAN)});
+        REQUIRE(f.model().saveEntry(id_text(2), edit));
+        f.commit();
+        const auto& body = std::get<InteractionEntry>(f.m_Document->log().find(sample_id<EntryId>(2))->m_Body);
+        CHECK(body.m_People.size() == 2);
+    }
+}
