@@ -74,15 +74,15 @@ class AndroidIconTest(unittest.TestCase):
         folder = RES / "mipmap-anydpi-v26"
         self.assertEqual((folder / "ic_launcher.xml").read_text(), (folder / "ic_launcher_round.xml").read_text())
 
-    def test_the_background_is_the_light_icons_white(self) -> None:
+    def test_the_background_is_the_icons_leaf_green(self) -> None:
         colours = {c.get("name"): c.text for c in ET.parse(RES / "values" / "ic_launcher_background.xml").getroot()}
-        self.assertEqual(colours, {"ic_launcher_background": design.LIGHT.background})
+        self.assertEqual(colours, {"ic_launcher_background": design.LEAF.background})
 
-    def test_the_foreground_uses_the_light_icons_colours_and_nothing_else(self) -> None:
+    def test_the_foreground_uses_the_icons_colours_and_nothing_else(self) -> None:
         colours = set()
         for p in attributes(RES / "drawable" / "ic_launcher_foreground.xml"):
             colours.add(p.get("fillColor") or p.get("strokeColor"))
-        self.assertEqual(colours, {design.LIGHT.tile, design.LIGHT.gold})
+        self.assertEqual(colours, {design.LEAF.tile, design.LEAF.letter})
 
     def test_the_themed_layer_is_the_same_shapes_in_one_colour(self) -> None:
         colour = attributes(RES / "drawable" / "ic_launcher_foreground.xml")
@@ -90,17 +90,16 @@ class AndroidIconTest(unittest.TestCase):
         self.assertEqual([p["pathData"] for p in mono], [p["pathData"] for p in colour])
         self.assertEqual({p.get("fillColor") or p.get("strokeColor") for p in mono}, {android.MONOCHROME_COLOUR})
 
-    def test_the_icon_has_the_seven_tiles_the_f_and_the_three_gold_squares(self) -> None:
+    def test_the_icon_has_the_solid_f_the_seven_tiles_and_the_three_outlined_squares(self) -> None:
         paths = attributes(RES / "drawable" / "ic_launcher_foreground.xml")
         filled = [p for p in paths if "fillColor" in p]
         stroked = [p for p in paths if "strokeColor" in p]
-        self.assertEqual(len(filled), len(design.FILLED))
-        self.assertEqual(len([p for p in stroked if p["strokeColor"] == design.LIGHT.gold]), len(design.GOLD))
-        self.assertEqual(len([p for p in stroked if p["strokeColor"] == design.LIGHT.tile]), 1)  # the f
+        self.assertEqual([p["fillColor"] for p in filled], [design.LEAF.letter] + [design.LEAF.tile] * len(design.FILLED))
+        self.assertEqual([p["strokeColor"] for p in stroked], [design.LEAF.tile] * len(design.EMPTY))
 
     def test_everything_is_inside_the_area_every_launcher_shape_shows(self) -> None:
         # Android cuts the 108 dp canvas to a shape and always shows the middle 72 dp: a circle of 36 dp from the centre.
-        layer = android.shapes(design.LIGHT.tile, design.LIGHT.gold)
+        layer = android.shapes(design.LEAF.tile, design.LEAF.letter)
         self.assertLessEqual(android.farthest_corner(layer), android.VISIBLE_RADIUS)
 
     def test_every_number_in_the_paths_is_on_the_canvas(self) -> None:

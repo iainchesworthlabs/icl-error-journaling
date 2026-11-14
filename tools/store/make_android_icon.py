@@ -6,16 +6,16 @@
 
 Writes, under the Android resources folder:
 
-  drawable/ic_launcher_foreground.xml   the board as a vector, in the light icon's colours
+  drawable/ic_launcher_foreground.xml   the board as a vector: the white f, the t's tiles and the outlined squares
   drawable/ic_launcher_monochrome.xml   the same shapes in one colour, which Android 13 and later tint (themed icons)
   mipmap-anydpi-v26/ic_launcher.xml     the adaptive icon: background, foreground and monochrome layers
   mipmap-anydpi-v26/ic_launcher_round.xml   the same, for launchers that ask for a round icon
-  values/ic_launcher_background.xml     the background colour (white, as the light iOS icon)
+  values/ic_launcher_background.xml     the background colour (the icon's leaf green)
 
 Android draws an adaptive icon on a 108 x 108 dp canvas and cuts it to a shape (a circle, a rounded square, a squircle),
 so only the middle 72 x 72 dp is always seen. The board is drawn 50 dp wide, so its corners are inside a circle of
 72 dp across and no launcher shape cuts it. The shapes are the same as the iOS icon: the same tiles, gaps, corners and
-lines, scaled. Android has no dark icon, so there is one set, the light one.
+lines, scaled. The iOS icon is the same in light and dark and so is this one.
 
 The output depends only on this file and make_app_icon.py. `--preview` also draws the icon in three launcher shapes
 (needs Pillow, requirements/store.txt).
@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import make_app_icon as design  # noqa: E402  (the drawing: cells, tiles, the f outline and the light colours)
+import make_app_icon as design  # noqa: E402  (the drawing: cells, tiles, the f and the colours)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RES = ROOT / "apps" / "app" / "packaging" / "android" / "res"
@@ -76,14 +76,13 @@ def num(value: float) -> str:
 def rounded_box(left: float, top: float, right: float, bottom: float, radius: float) -> str:
     """The path of a rounded rectangle, in the dp of the canvas."""
     r = radius
-    width, height = right - left, bottom - top
     return (
         f"M{num(left + r)},{num(top)}"
         f"H{num(right - r)}A{num(r)},{num(r)} 0 0 1 {num(right)},{num(top + r)}"
         f"V{num(bottom - r)}A{num(r)},{num(r)} 0 0 1 {num(right - r)},{num(bottom)}"
         f"H{num(left + r)}A{num(r)},{num(r)} 0 0 1 {num(left)},{num(bottom - r)}"
         f"V{num(top + r)}A{num(r)},{num(r)} 0 0 1 {num(left + r)},{num(top)}Z"
-    ) if width > 2 * r and height > 2 * r else ""
+    )
 
 
 def rounded_polygon(points: list[tuple[float, float]], radius: float) -> str:
@@ -106,29 +105,29 @@ def rounded_polygon(points: list[tuple[float, float]], radius: float) -> str:
     return "".join(parts) + "Z"
 
 
-def shapes(tile_colour: str, gold_colour: str) -> list[Shape]:
-    """Every shape of the icon: the f outline, the filled tiles and the gold squares."""
+def shapes(tile_colour: str, letter_colour: str) -> list[Shape]:
+    """Every shape of the icon: the solid f, the filled tiles of the t and the outlined empty squares."""
     origin = (design.SIZE - 4 * design.CELL) // 2
     radius = dp(design.RADIUS)
     result: list[Shape] = []
 
-    outline = design.inset_polygon([(x * design.CELL, y * design.CELL) for x, y in design.F_OUTLINE], design.GAP + design.LINE / 2)
-    corners = [point(origin + x, origin + y) for x, y in outline]
-    result.append(Shape(rounded_polygon(corners, radius), tile_colour, True, tuple(corners)))
+    inset = design.inset_polygon([(x * design.CELL, y * design.CELL) for x, y in design.F_SHAPE], design.GAP)
+    corners = [point(origin + x, origin + y) for x, y in inset]
+    result.append(Shape(rounded_polygon(corners, radius), letter_colour, False, tuple(corners)))
 
-    def box(row: int, column: int, inset: float) -> tuple[float, float, float, float]:
-        left, top = origin + column * design.CELL + inset, origin + row * design.CELL + inset
-        size = design.CELL - 2 * inset
+    def box(row: int, column: int, inset_by: float) -> tuple[float, float, float, float]:
+        left, top = origin + column * design.CELL + inset_by, origin + row * design.CELL + inset_by
+        size = design.CELL - 2 * inset_by
         (x0, y0), (x1, y1) = point(left, top), point(left + size, top + size)
         return x0, y0, x1, y1
 
     for row, column in design.FILLED:
         x0, y0, x1, y1 = box(row, column, design.GAP)
         result.append(Shape(rounded_box(x0, y0, x1, y1, radius), tile_colour, False, ((x0, y0), (x1, y1))))
-    for row, column in design.GOLD:
+    for row, column in design.EMPTY:
         # The line is drawn on the path, so the path is half a line inside the tile's edge.
         x0, y0, x1, y1 = box(row, column, design.GAP + design.LINE / 2)
-        result.append(Shape(rounded_box(x0, y0, x1, y1, radius), gold_colour, True, ((x0, y0), (x1, y1))))
+        result.append(Shape(rounded_box(x0, y0, x1, y1, radius), tile_colour, True, ((x0, y0), (x1, y1))))
     return result
 
 
@@ -181,7 +180,7 @@ BACKGROUND = (
     XML_HEAD
     + GENERATED
     + f"""<resources>
-    <color name="ic_launcher_background">{design.LIGHT.background}</color>
+    <color name="ic_launcher_background">{design.LEAF.background}</color>
 </resources>
 """
 )
@@ -191,7 +190,7 @@ MONOCHROME_COLOUR = "#000000"  # only its shape counts: Android tints it
 
 def files() -> dict[str, str]:
     """The resource files, by their path under res/."""
-    colour = shapes(design.LIGHT.tile, design.LIGHT.gold)
+    colour = shapes(design.LEAF.tile, design.LEAF.letter)
     mono = shapes(MONOCHROME_COLOUR, MONOCHROME_COLOUR)
     return {
         "drawable/ic_launcher_foreground.xml": vector(colour, "The adaptive icon's foreground: the f and the t on a board of tiles."),
@@ -216,16 +215,16 @@ def preview(path: Path) -> None:
     """The icon in a circle, a rounded square and a squircle-ish shape, as launchers show it (needs Pillow)."""
     from PIL import Image, ImageDraw
 
-    full = design.draw_icon(design.LIGHT)  # the 1024 px drawing, white background
+    full = design.draw_icon(design.LEAF)  # the 1024 px drawing
     size = 540
-    layer = Image.new("RGB", (size, size), design.LIGHT.background)
+    layer = Image.new("RGB", (size, size), design.LEAF.background)
     board = round(size * BOARD / CANVAS)
     drawn = full.crop((192, 192, 192 + 640, 192 + 640)).resize((board, board), Image.Resampling.LANCZOS)
     layer.paste(drawn, ((size - board) // 2, (size - board) // 2))
     visible = round(size * 72 / CANVAS)
-    shapes_ = {"circle": visible // 2, "rounded square": round(visible * 0.22), "squircle": round(visible * 0.34)}
+    radii = [visible // 2, round(visible * 0.22), round(visible * 0.34)]  # circle, rounded square, squircle-ish
     sheet = Image.new("RGB", (3 * (visible + 40) + 40, visible + 80), "#8A8F95")
-    for i, (_, radius) in enumerate(shapes_.items()):
+    for i, radius in enumerate(radii):
         crop = layer.crop(((size - visible) // 2, (size - visible) // 2, (size + visible) // 2, (size + visible) // 2))
         mask = Image.new("L", crop.size, 0)
         ImageDraw.Draw(mask).rounded_rectangle([0, 0, crop.size[0] - 1, crop.size[1] - 1], radius=radius, fill=255)
