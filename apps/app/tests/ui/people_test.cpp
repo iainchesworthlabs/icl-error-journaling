@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// People, the People screen of Settings (Stage 14, package I-7): T-I7-2 `settings.people`. The list of people is a stand-in
-// in memory with the names and the calls of `PeopleAdminModel`, and the names are the stand-ins of the docs.
+// People, the People screen of Settings (Stage 14, package I-7): T-I7-2 `settings.people`. The list of people is a
+// stand-in in memory with the names and the calls of `PeopleAdminModel`, and the names are the stand-ins of the docs.
 #include "editors_sheet_support.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -108,6 +108,12 @@ public:
         change(id, [&typed](Row& row) { row.m_Name = typed.simplified(); });
         return {};
     }
+    Q_INVOKABLE QString setLocation(const QString& id, const QString& location)
+    {
+        ++m_LocationCalls;
+        change(id, [&location](Row& row) { row.m_Location = location; });
+        return {};
+    }
     Q_INVOKABLE QString setRetired(const QString& id, bool retired)
     {
         change(id, [retired](Row& row) { row.m_Retired = retired; });
@@ -131,6 +137,7 @@ public:
     }
 
     std::vector<QString> m_Forgotten;
+    int m_LocationCalls = 0;
 
 signals:
     void countChanged();
@@ -225,6 +232,69 @@ TEST_CASE("settings.people: a person is renamed in the sheet, and the name is ch
     CHECK(names(world) == QStringList{QStringLiteral("Alex Example"), QStringLiteral("Jordan Placeholder")});
 }
 
+TEST_CASE("settings.people: a person's location is chosen in the sheet, changed and cleared", "[ui][editor][people]")
+{
+    World world;
+    FakePeopleAdmin people;
+    people.seed(QStringLiteral("Alex Sample"));
+    people.seed(QStringLiteral("Jordan Placeholder"));
+    world.load("People", {{QStringLiteral("people"), as_property(people)}});
+    world.m_Ui.layout();
+
+    const auto open_alex = [&world]
+    {
+        world.m_Ui.tap(label_of(row_with(world, ROWS, QStringLiteral("Alex Sample"))));
+        world.play(400);
+        world.m_Ui.layout();
+        REQUIRE(sheet_is_open(world));
+    };
+    const auto alex_detail = [&world]
+    {
+        QQuickItem* row = row_with(world, ROWS, QStringLiteral("Alex Sample"));
+        REQUIRE(row != nullptr);
+        return row->property("detail").toString();
+    };
+
+    CHECK(alex_detail().isEmpty());
+    open_alex();
+    const QStringList places = row_names(world, QStringLiteral("personLocation"), panel(world));
+    REQUIRE(places.size() >= 2);
+    // No location is ticked at first, and the setup's locations follow it.
+    REQUIRE(in_sheet(world, QStringLiteral("personNoLocation")) != nullptr);
+    CHECK(in_sheet(world, QStringLiteral("personNoLocation"))->property("checked").toBool());
+
+    // Choose the second location and save: the row shows it, and the person was moved once.
+    world.m_Ui.tap(row_with(world, QStringLiteral("personLocation"), places[1], panel(world)));
+    world.m_Ui.layout();
+    CHECK_FALSE(in_sheet(world, QStringLiteral("personNoLocation"))->property("checked").toBool());
+    tap_in_sheet(world, QStringLiteral("navTrailing"));
+    CHECK_FALSE(sheet_is_open(world));
+    CHECK(alex_detail() == places[1]);
+    CHECK(people.m_LocationCalls == 1);
+
+    // Opened again, the location is ticked; saving without a change moves nobody.
+    open_alex();
+    CHECK(row_with(world, QStringLiteral("personLocation"), places[1], panel(world))->property("checked").toBool());
+    tap_in_sheet(world, QStringLiteral("navTrailing"));
+    CHECK(people.m_LocationCalls == 1);
+
+    // Cancel keeps the old location.
+    open_alex();
+    world.m_Ui.tap(row_with(world, QStringLiteral("personLocation"), places[0], panel(world)));
+    world.m_Ui.layout();
+    tap_in_sheet(world, QStringLiteral("navLeading"));
+    CHECK(alex_detail() == places[1]);
+    CHECK(people.m_LocationCalls == 1);
+
+    // No location clears it.
+    open_alex();
+    world.m_Ui.tap(in_sheet(world, QStringLiteral("personNoLocation")));
+    world.m_Ui.layout();
+    tap_in_sheet(world, QStringLiteral("navTrailing"));
+    CHECK(alex_detail().isEmpty());
+    CHECK(people.m_LocationCalls == 2);
+}
+
 TEST_CASE("settings.people: Retire and Bring back, and Forget asks first", "[ui][editor][people]")
 {
     World world;
@@ -277,7 +347,8 @@ TEST_CASE("settings.people: Retire and Bring back, and Forget asks first", "[ui]
     tap_in_sheet(world, QStringLiteral("personForget"));
     world.play(400);
     world.m_Ui.layout();
-    world.m_Ui.tap(find_item(find_item(world.m_Ui.root(), QStringLiteral("forgetAlert")), QStringLiteral("alertConfirm")));
+    world.m_Ui.tap(
+        find_item(find_item(world.m_Ui.root(), QStringLiteral("forgetAlert")), QStringLiteral("alertConfirm")));
     world.settle();
     world.play(400);
     world.m_Ui.layout();

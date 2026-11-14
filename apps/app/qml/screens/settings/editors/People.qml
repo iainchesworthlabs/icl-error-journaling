@@ -8,7 +8,7 @@ import ErrorJournalingApp
 //
 //   New person    a name, and optionally the location the person belongs to. "Everyone" in the picker ticks the people of the
 //                 location in force, so a person with a location is found there first.
-//   a row         opens a sheet: rename (the history follows), retire (the person leaves the picker and stays on past entries;
+//   a row         opens a sheet: rename (the history follows), the location the person belongs to (or none), retire (the person leaves the picker and stays on past entries;
 //                 "Bring back" undoes it) and Forget.
 //   Forget        asks first: "Forget Alex Sample? Entries stay but show someone." It removes the name from the app's files; the
 //                 entries keep their place and show "someone".
@@ -76,16 +76,23 @@ SheetHost {
         id: sheet
 
         required property var people
+        // The locations of the setup (rows of id and name), for the choice of the person's location.
+        required property var locations
         property string personId: ""
         property string draftName: ""
+        // The location the person belongs to when the sheet was opened, and the one chosen now ("" for none).
+        property string originalLocation: ""
+        property string draftLocation: ""
         property bool retired: false
         property string refusal: ""
 
         signal forgetRequested(string personId, string name)
 
-        function openFor(id: string, name: string, isRetired: bool): void {
+        function openFor(id: string, name: string, isRetired: bool, locationId: string): void {
             sheet.personId = id;
             sheet.draftName = name;
+            sheet.originalLocation = locationId;
+            sheet.draftLocation = locationId;
             sheet.retired = isRetired;
             sheet.refusal = "";
             sheet.open();
@@ -94,7 +101,9 @@ SheetHost {
         function save(): void {
             if (sheet.refusal.length > 0)
                 return;
-            const message = sheet.people.renamePerson(sheet.personId, sheet.draftName);
+            let message = sheet.people.renamePerson(sheet.personId, sheet.draftName);
+            if (message.length === 0 && sheet.draftLocation !== sheet.originalLocation)
+                message = sheet.people.setLocation(sheet.personId, sheet.draftLocation);
             if (message.length === 0)
                 sheet.close();
             else
@@ -160,6 +169,41 @@ SheetHost {
                         sheet.refusal = sheet.people.validateName(text, sheet.personId);
                     }
                     onAccepted: sheet.save()
+                }
+
+                GroupedList {
+                    objectName: "personLocations"
+                    width: parent.width
+                    visible: personLocationRepeater.count > 0
+                    title: qsTr("Location")
+                    footer: qsTr("Everyone in the picker means the people of the location in force.")
+
+                    ListRow {
+                        objectName: "personNoLocation"
+                        text: qsTr("No location")
+                        minimumHeight: Theme.size.rowHeightCompact
+                        checkable: true
+                        checked: sheet.draftLocation.length === 0
+                        onActivated: sheet.draftLocation = ""
+                    }
+
+                    Repeater {
+                        id: personLocationRepeater
+
+                        model: sheet.locations
+
+                        delegate: ListRow {
+                            required property string locationId
+                            required property string name
+
+                            objectName: "personLocation"
+                            text: name
+                            minimumHeight: Theme.size.rowHeightCompact
+                            checkable: true
+                            checked: sheet.draftLocation === locationId
+                            onActivated: sheet.draftLocation = locationId
+                        }
+                    }
                 }
 
                 GroupedList {
@@ -370,7 +414,7 @@ SheetHost {
                             text: name
                             detail: root.detailOf(retired, locationId)
                             chevron: true
-                            onActivated: personSheet.openFor(personId, name, retired)
+                            onActivated: personSheet.openFor(personId, name, retired, locationId)
                         }
                     }
                 }
@@ -383,6 +427,7 @@ SheetHost {
             id: personSheet
 
             people: root.people
+            locations: root.settings.locations
             onForgetRequested: (id, name) => {
                 root.forgetId = id;
                 root.forgetName = name;

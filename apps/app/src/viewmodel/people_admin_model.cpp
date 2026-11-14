@@ -238,6 +238,18 @@ QString PeopleAdminModel::renamePerson(const QString& personId, const QString& t
     return {};
 }
 
+QString PeopleAdminModel::setLocation(const QString& personId, const QString& locationId)
+{
+    const auto id = parse_person(personId);
+    if (!m_Available || !id || row_of(*id) < 0)
+    {
+        return tr("People are not available right now.");
+    }
+    const std::optional<LocationId> location = parse_location(locationId);
+    commit([id = *id, location](PeopleStore& store) { return store.set_person_location(id, location); });
+    return {};
+}
+
 QString PeopleAdminModel::setRetired(const QString& personId, bool retired)
 {
     const auto id = parse_person(personId);
