@@ -1,0 +1,1 @@
+**The reading-order check ignores what a list clips.** The accessibility check of the Review screen no longer counts the part of a row that lies past the edge of the list, which made `review.cross_cutting` fail on Windows builds. The app itself is unchanged. Not yet run on a device.
