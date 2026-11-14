@@ -202,3 +202,29 @@ TEST_CASE("shell.empty_board: a setup whose interaction types are all retired le
     CHECK(f.m_Board.board_empty());
     CHECK(f.value(0, InteractionBoardModel::IS_EMPTY).toBool());
 }
+
+TEST_CASE("edit.no_lost_edit: a held note and the people put on a moment later both stay",
+          "[viewmodel][interaction][edit][unit]")
+{
+    Rig rig(RigStore::MEMORY);
+    rig.import_sample_configuration();
+    auto& session = rig.session();
+    const auto types = viewmodel::interaction_types_in_force(rig.settings().configuration());
+    const QString entry = session.recordInteractionEntry(QString::fromStdString(types[0].m_Id.format()));
+    rig.settle();
+
+    // The note and the people are both submitted before either has committed.
+    session.set_draft("Asked about the schedule");
+    REQUIRE(session.attachDraft(entry));
+    const QString person = QString::fromStdString(Uuid::from_random(11, 12).format());
+    REQUIRE(session.setInteractionPeople(entry, {person}));
+    REQUIRE(session.setInteractionValue(entry, "Morning Medley"));
+    rig.settle();
+
+    const auto log = rig.stored_open_log();
+    REQUIRE(log.has_value());
+    const auto& body = std::get<InteractionEntry>(log->m_Log.find(EntryId(*Uuid::parse(entry.toStdString())))->m_Body);
+    CHECK(body.m_AttachedNote == std::optional<std::string>("Asked about the schedule"));
+    CHECK(body.m_People.size() == 1);
+    CHECK(body.m_Value == std::optional<std::string>("Morning Medley"));
+}

@@ -644,26 +644,35 @@ bool LogSession::attachDraft(const QString& entryId)
     {
         return false;
     }
-    Entry edited = *found;
-    if (const auto* error = std::get_if<ErrorEntry>(&found->m_Body))
+    // Worked out against the entry as it is when the command is reached, so an edit still in flight is not overwritten.
+    const auto attach = [text](Entry& entry) -> std::optional<std::string>
     {
-        if (error->m_AttachedNote.has_value())
+        if (auto* error = std::get_if<ErrorEntry>(&entry.m_Body))
+        {
+            if (error->m_AttachedNote.has_value())
+            {
+                return "That entry has a note already.";
+            }
+            error->m_AttachedNote = text;
+            return std::nullopt;
+        }
+        if (auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body))
+        {
+            if (interaction->m_AttachedNote.has_value())
+            {
+                return "That entry has a note already.";
+            }
+            interaction->m_AttachedNote = text;
+            return std::nullopt;
+        }
+        return "Only an error or an interaction takes a note.";
+    };
+    {
+        Entry probe = *found;
+        if (attach(probe))
         {
             return false;
         }
-        std::get<ErrorEntry>(edited.m_Body).m_AttachedNote = text;
-    }
-    else if (const auto* interaction = std::get_if<InteractionEntry>(&found->m_Body))
-    {
-        if (interaction->m_AttachedNote.has_value())
-        {
-            return false;
-        }
-        std::get<InteractionEntry>(edited.m_Body).m_AttachedNote = text;
-    }
-    else
-    {
-        return false;
     }
 
     const QString submitted = m_Draft;
@@ -678,7 +687,7 @@ bool LogSession::attachDraft(const QString& entryId)
                                   draft_attached(to_qstring(entry.format()), to_qstring(text), submitted, revision);
                               }
                           });
-    return settle(OPERATION, m_Document->edit_entry(*id, std::move(edited), std::move(done)));
+    return settle(OPERATION, m_Document->edit_entry(*id, LogDocument::Mutator(attach), std::move(done)));
 }
 
 void LogSession::draft_attached(const QString& entry_id, const QString& text, const QString& submitted,
@@ -778,10 +787,18 @@ bool LogSession::setInteractionPeople(const QString& entryId, const QStringList&
             return false;
         }
     }
-    Entry edited = *found;
-    std::get<InteractionEntry>(edited.m_Body).m_People = std::move(people);
     ++m_OwnPending;
-    return settle(OPERATION, m_Document->edit_entry(*id, std::move(edited), make_done(OPERATION, {})));
+    const auto put = [people = std::move(people)](Entry& entry) -> std::optional<std::string>
+    {
+        auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body);
+        if (interaction == nullptr)
+        {
+            return "That entry is not an interaction.";
+        }
+        interaction->m_People = people;
+        return std::nullopt;
+    };
+    return settle(OPERATION, m_Document->edit_entry(*id, LogDocument::Mutator(put), make_done(OPERATION, {})));
 }
 
 bool LogSession::setInteractionValue(const QString& entryId, const QString& value)
@@ -803,10 +820,18 @@ bool LogSession::setInteractionValue(const QString& entryId, const QString& valu
     {
         return false;
     }
-    Entry edited = *found;
-    std::get<InteractionEntry>(edited.m_Body).m_Value = text;
     ++m_OwnPending;
-    return settle(OPERATION, m_Document->edit_entry(*id, std::move(edited), make_done(OPERATION, {})));
+    const auto put = [text](Entry& entry) -> std::optional<std::string>
+    {
+        auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body);
+        if (interaction == nullptr)
+        {
+            return "That entry is not an interaction.";
+        }
+        interaction->m_Value = text;
+        return std::nullopt;
+    };
+    return settle(OPERATION, m_Document->edit_entry(*id, LogDocument::Mutator(put), make_done(OPERATION, {})));
 }
 
 bool LogSession::addNote(const QString& text)
