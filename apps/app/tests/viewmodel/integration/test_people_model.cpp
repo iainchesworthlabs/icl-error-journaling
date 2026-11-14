@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Stage 14, package I-6: the list of people for the picker, on the real store and a storage thread. The names are the
 // stand-ins of the docs.
+#include "support/recording_repository.hpp"
 #include "support/rig.hpp"
 #include "viewmodel/interaction_types.hpp"
 #include "viewmodel/people_model.hpp"
@@ -9,6 +10,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <QSignalSpy>
+#include <chrono>
+#include <variant>
 #include <QString>
 #include <QStringList>
 
@@ -193,4 +196,62 @@ TEST_CASE("export.name_levels: copy and share of a log of the real people write 
 
     // The screen keeps the full name whatever the choice is.
     CHECK(rig.timeline().data(rig.timeline().index(0), viewmodel::TimelineModel::FULL_LINE).toString().contains("Alex Sample"));
+}
+
+TEST_CASE("picker.group: people of the location in force come first, and the recent ones are listed newest first",
+          "[viewmodel][people][integration]")
+{
+    Rig rig(RigStore::SQLITE);
+    rig.import_sample_configuration();
+    PeopleModel& people = *rig.root().people();
+    rig.settle();
+    const QString north = "00000000-0000-4000-8000-0000000000b1";
+    const QString south = "00000000-0000-4000-8000-0000000000b2";
+    const QString a = add(rig, "Alex Sample", south);
+    const QString b = add(rig, "Jordan Placeholder", north);
+    const QString c = add(rig, "Pat Stand-in", south);
+    CHECK(people.recentIds(5).isEmpty());
+
+    people.setCurrentLocation(north);
+    CHECK(people.data(people.index(0), PeopleModel::PERSON_ID).toString() == b);
+
+    people.touch({a});
+    rig.settle();
+    rig.advance(std::chrono::seconds(1));
+    people.touch({c});
+    rig.settle();
+    const QStringList recent = people.recentIds(5);
+    REQUIRE(recent.size() == 2);
+    CHECK(recent[0] == c);
+    CHECK(recent[1] == a);
+    CHECK(people.recentIds(1).size() == 1);
+    // Still the location first.
+    CHECK(people.data(people.index(0), PeopleModel::PERSON_ID).toString() == b);
+}
+
+TEST_CASE("picker.write_order: when the second write fails, the entry and the new person both stay",
+          "[viewmodel][people][integration]")
+{
+    Rig rig(RigStore::SQLITE);
+    rig.import_sample_configuration();
+    rig.settle();
+    const auto types = viewmodel::interaction_types_in_force(rig.settings().configuration());
+    const QString entry = rig.session().recordInteractionEntry(QString::fromStdString(types[0].m_Id.format()));
+    rig.settle();
+    REQUIRE_FALSE(entry.isEmpty());
+
+    // The new name is saved first, as the picker does; then the edit that names them fails.
+    const QString person = add(rig, "Alex Sample");
+    rig.repository().fail_next(RepositoryOp::EDIT_ENTRY);
+    CHECK(rig.session().setInteractionPeople(entry, {person}));
+    rig.settle();
+
+    const auto log = rig.stored_open_log();
+    REQUIRE(log.has_value());
+    const Entry* stored = log->m_Log.find(EntryId(*Uuid::parse(entry.toStdString())));
+    REQUIRE(stored != nullptr);
+    CHECK(std::get<InteractionEntry>(stored->m_Body).m_People.empty());
+    CHECK(rig.root().people()->nameOf(person) == "Alex Sample");
+    const auto stored_people = rig.in_store([](viewmodel::StorageContext& context) { return context.m_People->people().size(); });
+    CHECK(stored_people == 1);
 }

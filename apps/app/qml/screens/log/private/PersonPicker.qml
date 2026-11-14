@@ -43,6 +43,8 @@ Sheet {
     property bool editing: false
     // The people ticked that the list does not show (retired, or forgotten), so that they can be taken off.
     readonly property var unlisted: picked.filter(id => !root.people.isListed(id))
+    // The people used most recently, newest first: the chips above the list (at most five). Read when the picker opens.
+    property var recentIds: []
     // Done was chosen: the sheet closing is then not a skip.
     property bool finished: false
 
@@ -92,6 +94,8 @@ Sheet {
 
     // Opens the picker. `picks` (ordered person ids) are ticked and make it an editor of those people.
     function begin(picks): void {
+        people.setCurrentLocation(locationId);
+        recentIds = people.recentIds(5);
         editing = picks !== undefined;
         picked = editing ? picks.slice() : [];
         notice = "";
@@ -207,6 +211,43 @@ Sheet {
                 wrapMode: Text.WordWrap
                 Accessible.role: Accessible.StaticText
                 Accessible.name: text
+            }
+
+            Column {
+                objectName: "personPickerRecent"
+                width: parent.width
+                spacing: Theme.space.tileGap
+                visible: root.recentIds.length > 0 && root.filterText.length === 0
+
+                Text {
+                    x: Theme.space.tileGap / 2
+                    color: Theme.colour.textSecondary
+                    font: Theme.font.sectionLabel.font
+                    text: qsTr("Recent").toLocaleUpperCase()
+                    Accessible.role: Accessible.StaticText
+                    Accessible.name: qsTr("Recent")
+                }
+
+                Flow {
+                    width: parent.width
+                    spacing: Theme.space.tileGap
+
+                    Repeater {
+                        model: root.recentIds
+
+                        Chip {
+                            id: recentChip
+
+                            required property string modelData
+
+                            objectName: "personPickerRecentChip"
+                            text: root.people.labelFor(recentChip.modelData)
+                            iconKind: root.isPicked(recentChip.modelData) ? "check" : ""
+                            accessibleName: root.isPicked(recentChip.modelData) ? qsTr("%1, ticked").arg(text) : text
+                            onClicked: root.toggle(recentChip.modelData)
+                        }
+                    }
+                }
             }
 
             GroupedList {

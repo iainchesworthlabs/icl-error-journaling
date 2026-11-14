@@ -71,6 +71,7 @@ The app has six interaction types to start with: **Spoke with**, **Played song**
 **The entry is logged first, and the question comes second.** If the type has a line with a person in it (Spoke with, Gave item,
 Helped), a list of **People** opens at once:
 
+- The people you used last are chips under the heading **Recent**: tap one to tick it. People saved for the place in force today come first in the list.
 - Type a name in the search field. If nobody matches, tap **Add "name" as a new person**. You type a name once; next time you
   pick it from the list. A name that differs only by capital letters or spacing is the same person.
 - Tap a name to tick it, tap again to untick. You can tick up to 20 people. **Everyone here** ticks the people saved for the

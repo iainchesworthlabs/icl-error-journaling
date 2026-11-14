@@ -123,6 +123,57 @@ QHash<int, QByteArray> PeopleModel::roleNames() const
     return {{PERSON_ID, "personId"}, {NAME, "name"}, {LOCATION_ID, "locationId"}};
 }
 
+/// People of the location in force first, then last used first, then by name.
+bool PeopleModel::precedes(const Person& a, const Person& b) const
+{
+    if (m_CurrentLocation)
+    {
+        const bool here_a = a.m_Location == m_CurrentLocation;
+        const bool here_b = b.m_Location == m_CurrentLocation;
+        if (here_a != here_b)
+        {
+            return here_a;
+        }
+    }
+    return before(a, b);
+}
+
+void PeopleModel::setCurrentLocation(const QString& locationId)
+{
+    const auto location = parse_location(locationId);
+    if (location == m_CurrentLocation)
+    {
+        return;
+    }
+    m_CurrentLocation = location;
+    beginResetModel();
+    std::ranges::stable_sort(m_People, [this](const Person& a, const Person& b) { return precedes(a, b); });
+    endResetModel();
+}
+
+QStringList PeopleModel::recentIds(int limit) const
+{
+    std::vector<const Person*> used;
+    for (const Person& person : m_People)
+    {
+        if (person.m_LastUsedUtc)
+        {
+            used.push_back(&person);
+        }
+    }
+    std::ranges::stable_sort(used, [](const Person* a, const Person* b) { return *a->m_LastUsedUtc > *b->m_LastUsedUtc; });
+    QStringList ids;
+    for (const Person* person : used)
+    {
+        if (ids.size() >= limit)
+        {
+            break;
+        }
+        ids.append(text_of(person->m_Id.format()));
+    }
+    return ids;
+}
+
 void PeopleModel::apply_loaded(bool available, std::vector<Person> people)
 {
     m_Names.clear();
@@ -131,7 +182,7 @@ void PeopleModel::apply_loaded(bool available, std::vector<Person> people)
         m_Names.emplace(person.m_Id, person.m_DisplayName);
     }
     std::erase_if(people, [](const Person& person) { return person.m_Retired; });
-    std::ranges::sort(people, before);
+    std::ranges::sort(people, [this](const Person& a, const Person& b) { return precedes(a, b); });
     beginResetModel();
     m_People = std::move(people);
     endResetModel();
@@ -263,7 +314,7 @@ bool PeopleModel::addPerson(const QString& typed, const QString& locationId)
             m_Names[person.m_Id] = person.m_DisplayName;
             const QString id_text = text_of(person.m_Id.format());
             const QString name_text = text_of(person.m_DisplayName);
-            const auto at = std::ranges::lower_bound(m_People, person, before);
+            const auto at = std::ranges::lower_bound(m_People, person, [this](const Person& a, const Person& b) { return precedes(a, b); });
             const int row = static_cast<int>(at - m_People.begin());
             beginInsertRows({}, row, row);
             m_People.insert(at, std::move(person));
@@ -298,7 +349,7 @@ void PeopleModel::touch(const QStringList& personIds)
         }
     }
     beginResetModel();
-    std::ranges::stable_sort(m_People, before);
+    std::ranges::stable_sort(m_People, [this](const Person& a, const Person& b) { return precedes(a, b); });
     endResetModel();
     m_Gateway.run(
         [ids](StorageContext& context)
