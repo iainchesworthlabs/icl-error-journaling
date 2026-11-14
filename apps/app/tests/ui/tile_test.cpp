@@ -570,11 +570,11 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
                 tile->setWidth(TILE_WIDTH);
                 tile->setHeight(TILE_HEIGHT);
                 rig.layout();
-                QQuickItem* probe = rig.find(QStringLiteral("tileWordProbe"));
+                QObject* probe = tile->findChild<QObject*>(QStringLiteral("tileWordProbe"));
                 REQUIRE(probe != nullptr);
                 // The word at the role's size, and the tile that gives it this share of its width: a word that is
                 // 2% too wide (the report), 10% too wide, and the share at which it fits only at the smallest size.
-                const double word_width = probe->property("implicitWidth").toDouble();
+                const double word_width = probe->property("advanceWidth").toDouble();
                 const double padding = tile->property("padding").toDouble() * 2;
                 const double floor_share = tile->property("wordFitFloor").toDouble();
                 struct Width

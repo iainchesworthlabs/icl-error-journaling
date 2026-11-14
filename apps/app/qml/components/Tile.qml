@@ -112,9 +112,9 @@ Item {
     // label does, so those tiles keep the type scale's size. It goes no lower than 0.75 of the role's size without the
     // text scale (the floor of 10 pt at the default size), which holds at the larger sizes, where a word needs less of it.
     readonly property real wordFitFloor: Math.min(1, labelFloor * WindowLayout.tileLabelRole.basePt / WindowLayout.tileLabelRole.size)
-    readonly property real wordFit: wordProbe.implicitWidth > 0 ? Math.max(wordFitFloor, Math.min(1, labelText.width / wordProbe.implicitWidth)) : 1
+    readonly property real wordFit: wordProbe.advanceWidth > 0 ? Math.max(wordFitFloor, Math.min(1, labelText.width / wordProbe.advanceWidth)) : 1
     // A word that is wider than the tile even at that floor is the last resort: it is broken, and not cut off.
-    readonly property bool wordFits: wordProbe.implicitWidth * wordFitFloor <= labelText.width + 0.5
+    readonly property bool wordFits: wordProbe.advanceWidth * wordFitFloor <= labelText.width + 0.5
     readonly property bool dashed: isOther && !skeleton
     readonly property color fillColour: skeleton ? Theme.colour.swatch : (isOther ? Theme.colour.otherTileFill : Theme.tileColour(colourSlot))
 
@@ -220,16 +220,13 @@ Item {
             colour: Theme.colour.primaryText
         }
 
-        // The longest word at the role's own size, to measure it.
-        Text {
+        // The longest word at the role's own size, to measure it (not an item, so the scene stays as it was).
+        TextMetrics {
             id: wordProbe
 
             objectName: "tileWordProbe"
-            visible: false
             text: root.longestWord
             font: WindowLayout.tileLabelRole.font
-            wrapMode: Text.NoWrap
-            Accessible.ignored: true
         }
 
         Text {
