@@ -109,5 +109,34 @@
       "icon": "speech",
       "sort_order": 2
     }
+  ],
+  "interaction_types": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000d1",
+      "name": "Spoke with",
+      "retired": false,
+      "board_position": 1,
+      "line_pattern": "Spoke with {person}"
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d2",
+      "name": "Played song",
+      "retired": false,
+      "board_position": 2,
+      "line_pattern": "Played {value}"
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d3",
+      "name": "Visitor interaction",
+      "retired": false,
+      "board_position": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d4",
+      "name": "Gave item",
+      "retired": false,
+      "board_position": 4,
+      "line_pattern": "Gave {person} {value}"
+    }
   ]
 }

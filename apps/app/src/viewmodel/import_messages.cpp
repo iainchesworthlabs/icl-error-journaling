@@ -42,6 +42,10 @@ Noun noun_of(const std::string& section)
     {
         return {translate("Location"), translate("Locations")};
     }
+    if (section == "interaction_types")
+    {
+        return {translate("Interaction type"), translate("Interaction types")};
+    }
     return {translate("Note template"), translate("Note templates")};
 }
 
@@ -56,7 +60,7 @@ QString field_name(const std::string& field)
     {
         return translate("question to ask");
     }
-    if (field == "output_pattern")
+    if (field == "output_pattern" || field == "line_pattern")
     {
         return translate("line in the log");
     }
@@ -92,7 +96,8 @@ QString last_part(const std::string& field)
 
 bool is_list_section(const std::string& section)
 {
-    return section == "error_types" || section == "locations" || section == "note_templates";
+    return section == "error_types" || section == "locations" || section == "note_templates" ||
+           section == "interaction_types";
 }
 
 QString whole_file_message(const ConfigError& error)
@@ -120,6 +125,11 @@ QString whole_file_message(const ConfigError& error)
         default:
             return translate("The file could not be read as a setup file.");
         }
+    }
+    if (error.m_Problem == Problem::PEOPLE_IN_FILE)
+    {
+        return translate("The file has a list of people. A setup file never holds people: remove it, and add people "
+                         "in the app.");
     }
     if (error.m_Code == Code::UNKNOWN_FIELD)
     {
@@ -190,6 +200,11 @@ QString list_message(const ConfigError& error)
                          "is allowed.")
             .arg(noun.m_One)
             .arg(item);
+    case Problem::REPEATED_PLACEHOLDER:
+        return translate("%1 %2: the line in the log has {person} or {value} more than once. Each is allowed once.")
+            .arg(noun.m_One)
+            .arg(item);
+    case Problem::PEOPLE_IN_FILE:
     case Problem::OTHER:
         break;
     }
@@ -197,6 +212,10 @@ QString list_message(const ConfigError& error)
     switch (error.m_Code)
     {
     case Code::UNKNOWN_FIELD:
+        if (error.m_Problem == Problem::PEOPLE_IN_FILE)
+        {
+            break;
+        }
         return translate("%1 %2 has a setting this app does not use: \xE2\x80\x9C%3\xE2\x80\x9D.")
             .arg(noun.m_One)
             .arg(item)

@@ -40,8 +40,9 @@ SECTIONS = {
     "error_types": "read_error_types",
     "locations": "read_locations",
     "note_templates": "read_templates",
+    "interaction_types": "read_interaction_types",
 }
-LIST_KEYS = {"error_types": "error_types", "locations": "locations", "note_templates": "note_templates"}
+LIST_KEYS = {"error_types": "error_types", "locations": "locations", "note_templates": "note_templates", "interaction_types": "interaction_types"}
 
 
 def constants(*texts: str) -> dict[str, int]:

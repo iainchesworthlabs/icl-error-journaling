@@ -101,7 +101,7 @@ class SetupDocCheck(unittest.TestCase):
         self.assertTrue(any("CONFIG_MAX_ENTRIES_PER_LIST" in p and "600" in p for p in self.problems()))
 
     def test_a_new_message_kind_must_be_documented(self) -> None:
-        self.change(doc_check.HEADER, "UNKNOWN_PLACEHOLDER   //", "UNKNOWN_PLACEHOLDER,\n        BRAND_NEW   //")
+        self.change(doc_check.HEADER, "PEOPLE_IN_FILE        //", "PEOPLE_IN_FILE,\n        BRAND_NEW   //")
         self.assertTrue(any("Problem::BRAND_NEW" in p for p in self.problems()))
 
     def test_a_new_code_must_be_documented(self) -> None:
