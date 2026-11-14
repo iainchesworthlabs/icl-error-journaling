@@ -262,7 +262,7 @@ Stage 11 owns the listing. These are the parts that depend on this stage:
 | iPad screenshots: the 13-inch iPad size (2064 × 2752 portrait or 2752 × 2064 landscape) is needed when the app runs on an iPad. Smaller iPads use scaled copies. | Stage 11's `ej_screenshots` renders the app at 1032 × 1376 and 1376 × 1032 pt at 2x. Those sizes are `Regular` and `Wide`. Stage 11 asks for the landscape side-by-side layout for screenshot 8. |
 | All four iPad orientations when the app is not full screen only (ITMS-90474) | Info.plist (above) |
 | A launch screen for every device | `UILaunchScreen` (above) |
-| The app icon on the iPad | The single 1024 px icon in `AppIcon.appiconset` covers every iPad size. The checklist confirms how it looks on the Home Screen. |
+| The app icon on the iPad | The 1024 px icon in `AppIcon.appiconset` (a light one and a dark one) covers every iPad size. The checklist confirms how it looks on the Home Screen. |
 | App Review: the app is usable on an iPad, with no cut-off, letterboxing or phone-sized layout (Guideline 2.4.1, and the layout tests of App Review) | This stage |
 | No iPad-only capability in `UIRequiredDeviceCapabilities` | Unchanged: `arm64` only |
 
