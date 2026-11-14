@@ -227,7 +227,7 @@ void Day::step_1_start()
 
     CHECK(rig.settings().configured());
     CHECK(rig.session().state() == vm::LogSession::State::OPEN);
-    CHECK(rig.session().facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session().tester() == QStringLiteral("Sam Example"));
     CHECK(rig.session().date_text() == QStringLiteral("Sat 7 Nov"));
     QStringList missing = rig.session().missing_fields();
     missing.sort();
@@ -466,7 +466,7 @@ void Day::step_9_restart()
     rig.restart();
 
     CHECK(rig.session().state() == vm::LogSession::State::OPEN);
-    CHECK(rig.session().facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session().tester() == QStringLiteral("Sam Example"));
     CHECK(rig.session().unit_text() == QStringLiteral("UNIT-27"));
     CHECK(rig.session().location_text() == QStringLiteral("North Site"));
     CHECK(rig.session().version_text() == QStringLiteral("1.4.2"));
@@ -745,7 +745,7 @@ void Day::step_17_start_the_new_log()
         else
         {
             ++open;
-            CHECK(summary.m_Header.m_Facilitator == "Sam Example");
+            CHECK(summary.m_Header.m_Tester == "Sam Example");
             CHECK(summary.m_Header.m_LocalDate == std::chrono::year_month_day{std::chrono::year{2026} / 11 / 8});
         }
     }
@@ -758,13 +758,13 @@ void Day::step_17_start_the_new_log()
     {
         CHECK(count == 0);
     }
-    CHECK(rig.session().facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session().tester() == QStringLiteral("Sam Example"));
     CHECK(rig.session().missing_fields().size() == 4);
 
     // Its export is the header and nothing else.
     CHECK(rig.timeline().copyAll());
     CHECK(rig.clipboard().text() ==
-          "Facilitator: Sam Example\nDate: 8 Nov 2026\nUNIT #:\nLocation:\nSoftware Version:");
+          "Tester: Sam Example\nDate: 8 Nov 2026\nUNIT #:\nLocation:\nSoftware Version:");
 }
 
 // ------------------------------------------------------------------------------------------------------ 18

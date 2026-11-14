@@ -221,6 +221,7 @@ struct App
         {
             given.insert(QStringLiteral("boards"), object(*boards));
             given.insert(QStringLiteral("interactionBoard"), object(*interaction_board));
+            given.insert(QStringLiteral("exportPreferences"), object(*export_preferences));
         }
         return given;
     }
@@ -245,6 +246,9 @@ struct App
         QQmlComponent model_component(&ui.engine(), MODULE, "UiStubInteractionBoard");
         interaction_board.reset(model_component.create());
         REQUIRE(interaction_board != nullptr);
+        QQmlComponent export_component(&ui.engine(), MODULE, "UiStubExportPreferences");
+        export_preferences.reset(export_component.create());
+        REQUIRE(export_preferences != nullptr);
     }
 
     void load(const QVariantMap& without = {})
@@ -377,6 +381,7 @@ struct App
     std::unique_ptr<QObject> url_opener;
     std::unique_ptr<QObject> help;
     std::unique_ptr<QObject> boards;
+    std::unique_ptr<QObject> export_preferences;
     std::unique_ptr<QObject> interaction_board;
     QQuickItem* shell = nullptr;
 };
@@ -513,31 +518,31 @@ TEST_CASE("app.navigation: each tab shows its screen, a tab that is tapped again
 
     app.choose_tab(SETTINGS_TAB);
     CHECK(app.shown(QStringLiteral("settingsScreen")));
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
 
     // The Settings tab pushes the editors on its own stack, and a second tap on the tab pops them.
     app.tap(QStringLiteral("settingsErrorTypes"));
     app.play();
     CHECK(app.shown(QStringLiteral("addRow")));
-    CHECK_FALSE(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTester")));
     CHECK(app.shown(QStringLiteral("shellTabBar")));
     app.choose_tab(SETTINGS_TAB);
     CHECK_FALSE(app.shown(QStringLiteral("addRow")));
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
 
     // The editors are pages too: the list rows of Locations and the note templates open the same way, and their own
     // "back" returns to Settings.
     app.tap(QStringLiteral("settingsLocations"));
     app.play();
-    CHECK_FALSE(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTester")));
     REQUIRE(QMetaObject::invokeMethod(app.need(QStringLiteral("settingsScreen")), "popPage"));
     app.play();
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
     app.tap(QStringLiteral("settingsTemplates"));
     app.play();
-    CHECK_FALSE(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTester")));
     app.choose_tab(SETTINGS_TAB);
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
 
     // Back on Log, the screen is where it was left.
     app.choose_tab(LOG_TAB);
@@ -2263,7 +2268,7 @@ TEST_CASE("app.keyboard_review: the note of Edit entry is above the keyboard and
 }
 
 TEST_CASE(
-    "app.keyboard_settings: the facilitator page, the editors of locations and note templates, and the sheets of the "
+    "app.keyboard_settings: the tester page, the editors of locations and note templates, and the sheets of the "
     "error types and of a location end at the keyboard",
     "[ui][app]")
 {
@@ -2274,9 +2279,9 @@ TEST_CASE(
     phone(app);
     QQuickItem* settings = app.need(QStringLiteral("settingsScreen"));
 
-    SECTION("the facilitator page: the page ends at the keyboard, and a field that is clear does not scroll it")
+    SECTION("the tester page: the page ends at the keyboard, and a field that is clear does not scroll it")
     {
-        activate(app, QStringLiteral("settingsFacilitator"));
+        activate(app, QStringLiteral("settingsTester"));
         QQuickItem* field = inside(app, QStringLiteral("settingsTextField"), settings);
         // The page in view is the last one of the stack: the list under it has a Flickable of the same name.
         const auto flicks = app.ui.find_items(QStringLiteral("settingsFlickable"), settings);
@@ -2352,7 +2357,7 @@ TEST_CASE("app.keyboard_first_launch: setting up by hand ends the page at the ke
     app.play();
     QQuickItem* page = shown_page(app);
     const double top_before = app.ui.geometry(page).top();
-    for (const char* name : {"facilitatorField", "prefixField"})
+    for (const char* name : {"testerField", "prefixField"})
     {
         CAPTURE(name);
         QQuickItem* field = inside(app, QString::fromLatin1(name), page);
@@ -2496,7 +2501,7 @@ TEST_CASE("app.keyboard_tabs: changing the tab, and pushing or popping a page, p
     SECTION("a tab change while a field of Settings has the focus")
     {
         app.choose_tab(SETTINGS_TAB);
-        activate(app, QStringLiteral("settingsFacilitator"));
+        activate(app, QStringLiteral("settingsTester"));
         QQuickItem* field =
             inside(app, QStringLiteral("settingsTextField"), app.need(QStringLiteral("settingsScreen")));
         focus_field(app, field);
@@ -3151,6 +3156,40 @@ TEST_CASE("shell.toggle: the switch shows and hides the tab, an empty board offe
     CHECK(app.shown(QStringLiteral("tabInteractions")));
     app.choose_tab_named(QStringLiteral("tabInteractions"));
     CHECK(app.shown(QStringLiteral("interactionsEmptyBoard")));
+}
+
+TEST_CASE("settings.names: the level of a name in shared logs is a choice, shown only while the second board is on",
+          "[ui][app][settings][interactions]")
+{
+    SECTION("off: no row")
+    {
+        App app(true, false);
+        app.with_boards(false);
+        app.load();
+        app.choose_tab(SETTINGS_TAB);
+        CHECK_FALSE(app.shown(QStringLiteral("settingsNames")));
+    }
+    SECTION("on: initials to begin with, and the choice is kept")
+    {
+        App app(true, false);
+        app.with_boards(true);
+        app.load();
+        app.choose_tab(SETTINGS_TAB);
+        QQuickItem* row = reveal_in_settings(app, QStringLiteral("settingsNames"));
+        CHECK(row->property("value").toString() == QStringLiteral("Initials"));
+        app.ui.tap(row);
+        app.play();
+        CHECK(app.need(QStringLiteral("settingsNamesInitials"))->property("checked").toBool());
+        CHECK_FALSE(app.need(QStringLiteral("settingsNamesFull"))->property("checked").toBool());
+        app.tap(QStringLiteral("settingsNamesFull"));
+        app.play();
+        CHECK(app.export_preferences->property("nameExport").toString() == QStringLiteral("full"));
+        CHECK(app.need(QStringLiteral("settingsNamesFull"))->property("checked").toBool());
+        app.tap(QStringLiteral("settingsNamesHidden"));
+        app.play();
+        CHECK(app.export_preferences->property("nameExport").toString() == QStringLiteral("hidden"));
+        CHECK(app.need(QStringLiteral("settingsNamesHidden"))->property("checked").toBool());
+    }
 }
 
 TEST_CASE("shell.toggle: turning the board off in Settings leaves Settings where it is and the tab bar of four",

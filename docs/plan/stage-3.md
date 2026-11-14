@@ -140,7 +140,7 @@ and follow `stage-2.md`; the starred ones are not in that page yet):
 - `open_log()` returning the log, its id and `last_shared_utc`; `create_log(id, header)`.
 - `* start_new_log(old_id, new_id, header)`: archive and create as one unit. Stage 2 says the pair is one unit; Stage 3
   needs it to be one call so that a failure between the halves is not Stage 3's problem.
-- `list_logs()` returning summaries (`* LogSummary`: id, local date, facilitator, unit number, location text, live
+- `list_logs()` returning summaries (`* LogSummary`: id, local date, tester, unit number, location text, live
   entry count, `last_shared_utc`), and `load_log(id)`.
 - `add_entry(log_id, entry)` where a note entry also clears the draft in the same transaction (stage 2, W5);
   `edit_entry`, `set_entry_deleted`, `correct_header`, `mark_shared`; `get_draft` and the draft store's `set` and
@@ -191,7 +191,7 @@ class LogSession : public QObject
     Q_OBJECT
     Q_PROPERTY(State state READ state NOTIFY stateChanged)
     // The header in force now (HeaderHistory::at(now)), for the header card. The export's header block is the start values.
-    Q_PROPERTY(QString facilitator READ facilitator NOTIFY headerChanged)
+    Q_PROPERTY(QString tester READ tester NOTIFY headerChanged)
     Q_PROPERTY(QString unitText READ unit_text NOTIFY headerChanged)         // "UNIT-27", or empty
     Q_PROPERTY(QString locationText READ location_text NOTIFY headerChanged) // the name, resolved from the id
     Q_PROPERTY(QString versionText READ version_text NOTIFY headerChanged)
@@ -227,7 +227,7 @@ Behaviour:
 
 - **Loading.** The constructor takes a `StartupResult` made on the storage thread by the composition root (recovery
   has already run). `load()` asks for `open_log()`. No open log and a valid configuration: it creates today's log with
-  the facilitator from the preferences and today's local date (HDR-01) and goes to `OPEN`. No open log and no valid
+  the tester from the preferences and today's local date (HDR-01) and goes to `OPEN`. No open log and no valid
   configuration: `NEEDS_SETUP`, and the first log is created when `SettingsModel` becomes configured. The board shows its
   placeholder while `LOADING`, so the first frame does not wait for the store (NFR-04, standard 7.6).
 - **Taps and notes** are accepted in every header state (HDR-06). `recordError` returns `false` and writes nothing for a
@@ -241,10 +241,10 @@ Behaviour:
   instant (default now) and writes an entry; a value equal to the one in force is rejected with `UNCHANGED`.
 - **Draft.** `set_draft` updates the property at once and forwards the text to the draft store through the gateway; the
   300 ms debounce stays in `DraftStore` (stage 2, 2.8). `addNote` clears the draft in the same transaction. If the
-  facilitator kept typing while the note was committing, the newer text stays. At load the draft comes from the store
+  tester kept typing while the note was committing, the newer text stays. At load the draft comes from the store
   (DS-03).
 - **New log.** `startNewLog` queues behind pending writes, then calls `start_new_log` with a header holding only the
-  facilitator and today's local date (DAY-02, HDR-05). On success the document is replaced, observers get `REPLACED`,
+  tester and today's local date (DAY-02, HDR-05). On success the document is replaced, observers get `REPLACED`,
   and `newLogStarted()` fires. The old log is archived, never deleted (DS-05). The draft is not touched.
 - **Recovery notice.** `recovery_notice(const RecoveryReport&)` is a pure function that turns the report into one plain
   sentence (counts only, no entry text): empty for `clean`, and one wording each for `replayed`, `rebuilt`,
@@ -260,7 +260,7 @@ implements `OpenLogSource` (3.1), so the models follow a new log without dependi
 
 Tests (`unit`, in-memory repository, `ManualStorageGateway`, `TestClock`):
 
-- Load: no open log and a valid configuration creates a log with the preference facilitator, today's date in the device
+- Load: no open log and a valid configuration creates a log with the preference tester, today's date in the device
   zone and three empty fields; no configuration gives `NEEDS_SETUP` and creates nothing; an existing open log is opened
   as it was, with its draft.
 - Tap: before the job runs there is no entry, no count and no toast; after `run_next()` the entry exists with the time
@@ -277,7 +277,7 @@ Tests (`unit`, in-memory repository, `ManualStorageGateway`, `TestClock`):
 - Notes: empty and 10,001-character text are refused; a templated note stores the template id and renders through the
   pattern; a note commit clears the draft in the same repository call (the fake records one call, not two); typing
   during the commit keeps the newer draft; every `set_draft` is forwarded and `flushDraft` forwards a flush.
-- New log: archives the old log with all its entries, creates one with only the facilitator and today's date, leaves
+- New log: archives the old log with all its entries, creates one with only the tester and today's date, leaves
   no moment in the fake repository where there are zero or two open logs, and keeps the draft. A failure keeps the old
   log open. The header edits of the new log do not alter the archived one.
 - A date in 1970 and a time zone change between taps are stored as given.
@@ -480,7 +480,7 @@ public:
 - The filter is a case-insensitive substring match on the label (`QString::toCaseFolded`), applied in the model; a change
   rebuilds the list with one `modelReset`. `section` is `OFF_BOARD` or `ON_BOARD`.
 - `addType` forwards to `SettingsModel` (master list, saved); the new type appears under "Not on your board". It does not
-  record an entry: the facilitator taps it as for any other type (open question 12).
+  record an entry: the tester taps it as for any other type (open question 12).
 - Picking a type is `LogSession::recordError(typeId)`, the same path as a tile.
 
 Tests (`unit`): sections and counts for the sample configuration; the filter (case, accents, empty result, a filter that
@@ -669,11 +669,11 @@ Tests (`unit`, `TestClock`, fake zone provider and, in one case, the Qt provider
   midnight, not at 24 hours of elapsed time. The traveller: a log opened in Melbourne, `now` in Perth at 22:30 local on
   the same UTC day gives no prompt, at 00:30 it does.
 - The unshared flag: true for an unshared log with entries; false for an empty log; false after a share is recorded
-  (the property changes while the prompt is visible); true again after a share the facilitator cancelled; it is
+  (the property changes while the prompt is visible); true again after a share the tester cancelled; it is
   per open log, so it is true again for a new log once that has entries. After a share: an added entry, an edit, a delete
   and a restore each make it true again (`changedSinceShare` too), and a second share clears it; a share with no change
   after it leaves it false.
-- The prompt on a gap of several days (the facilitator works on some days only): the open log's date is compared, not
+- The prompt on a gap of several days (the tester works on some days only): the open log's date is compared, not
   "yesterday", so a check three days later raises the prompt naming that day, unshared or not as the rule says.
 - `shareFirst` leaves the prompt up, and `acceptNewLog` afterwards starts the log; `acceptNewLog` while a write fails
   keeps the prompt.
@@ -690,7 +690,7 @@ class SettingsModel : public QObject, public ConfigurationSource
 {
     Q_OBJECT
     Q_PROPERTY(bool configured READ configured NOTIFY configurationChanged)          // PRF-09: first launch shows setup
-    Q_PROPERTY(QString facilitator READ facilitator NOTIFY configurationChanged)       // PRF-01
+    Q_PROPERTY(QString tester READ tester NOTIFY configurationChanged)       // PRF-01
     Q_PROPERTY(QString unitPrefix READ unit_prefix NOTIFY configurationChanged)        // PRF-02
     Q_PROPERTY(QString timeStyle READ time_style NOTIFY configurationChanged)          // PRF-07: "24h" or "12h"
     Q_PROPERTY(bool timeSeconds READ time_seconds NOTIFY configurationChanged)
@@ -701,7 +701,7 @@ class SettingsModel : public QObject, public ConfigurationSource
     Q_PROPERTY(QAbstractItemModel* templates READ templates CONSTANT)                  // PRF-06
     Q_PROPERTY(QAbstractItemModel* boardLayout READ board_layout CONSTANT)             // PRF-05
 public:
-    Q_INVOKABLE QString setFacilitator(const QString&);        // each returns "" or the plain message of the refusal
+    Q_INVOKABLE QString setTester(const QString&);        // each returns "" or the plain message of the refusal
     Q_INVOKABLE QString setUnitPrefix(const QString&);
     Q_INVOKABLE QString setTimeFormat(const QString& style, bool seconds, const QString& meridiem);
     Q_INVOKABLE QString setIncludeTotals(bool);
@@ -735,7 +735,7 @@ signals:
   or `#`, patterns through `validate_pattern`, at most 11 board positions, the 200 and 500 limits), makes a changed copy of
   the configuration and saves it; on success the mirror is replaced and `ConfigurationObserver`s and
   `configurationChanged` fire. Nothing changes if the save fails. A refusal returns the message; QML shows it inline.
-- **Effects.** A new facilitator name applies to logs created afterwards; the open log keeps the one it started with. A new
+- **Effects.** A new tester name applies to logs created afterwards; the open log keeps the one it started with. A new
   unit prefix and time format re-render everything, including past days, because neither is stored in a log
   (PRF-07). Retiring a type removes it from the pickers and the board and keeps it on past entries; "remove" for a location
   is the same (retire). A retired type keeps its position out of the layout.
@@ -755,8 +755,8 @@ thread. Renderer: provides the `ExportContext` inputs (prefix, time format, tota
 Tests (`unit`, fake `ConfigStore`; two cases against `FileConfigStore` in a temporary directory, label `integration`):
 
 - Each setting changes the mirror only after the save succeeds; a failing save changes nothing and reports.
-- Facilitator and prefix: empty, over-length, prefix with `-` or `#` refused with the core's message; the open log keeps
-  its facilitator and the next new log takes the new one.
+- Tester and prefix: empty, over-length, prefix with `-` or `#` refused with the core's message; the open log keeps
+  its tester and the next new log takes the new one.
 - Time format: all eight style, seconds and meridiem combinations; changing it re-renders a timeline, the toast text and
   a past log in History.
 - Locations: add, rename, reorder, remove (retire); duplicates refused; a retired location still renders on a past log.
@@ -770,7 +770,7 @@ Tests (`unit`, fake `ConfigStore`; two cases against `FileConfigStore` in a temp
 - Import: the sample configuration (`config/sample-config.json`) loads and applies; a malformed file, a future schema
   version ("update the app"), duplicate ids and a 2 MiB file are refused with messages in file order and no change; cancel
   (`discardImport`) changes nothing; import then export round-trips byte for byte.
-- First launch: `configured` is false with no file, true after a valid import or a manual setup of facilitator and
+- First launch: `configured` is false with no file, true after a valid import or a manual setup of tester and
   prefix; a corrupt file at launch gives `NEEDS_SETUP` and is kept on disk.
 - `FileConfigStore`: a save killed between the temporary file and the rename leaves the old file readable (simulated by
   failing the rename); a read of a file that disappears reports; an unwritable directory reports.
@@ -871,7 +871,7 @@ fictional names only. The final text is compared with `libs/core/tests/golden/pr
 
 | Step | Time (local) | Action | Must hold afterwards |
 |---|---|---|---|
-| 1 Start | Sat 7 Nov 08:55 | Empty store. `loadImport` and `applyImport` of the sample configuration. `LogSession` loads. | `configured`; state `OPEN`; facilitator Sam Example; `dateText` "Sat 7 Nov"; `missingFields` has all three keys; timeline empty; 12 board rows, all counts 0; no haptic. |
+| 1 Start | Sat 7 Nov 08:55 | Empty store. `loadImport` and `applyImport` of the sample configuration. `LogSession` loads. | `configured`; state `OPEN`; tester Sam Example; `dateText` "Sat 7 Nov"; `missingFields` has all three keys; timeline empty; 12 board rows, all counts 0; no haptic. |
 | 2 Tap before the header, then undo | 08:58 | Tap Wrong Response with the commit held (the manual gateway in `unit`, a latch in the repository wrapper in `integration`). Release it. After 2 s call `undo()`. | Held: the touch-down impact haptic has fired once; no entry, count or toast. Released: count 1, toast "Wrong Response logged at 08:58", still one impact haptic (it precedes the commit; the confirmation follows it). After undo: count 0, toast closed, the entry exists in the store as deleted, no second haptic. |
 | 3 Header | 09:00 | `validateHeaderValue` and `correctHeader` for version `1.4` (refused). Unit number `28`, then Correct to `27`. Location North Site. Version `1.4.2`. | Refused call writes nothing (the write count is unchanged). `missingFields` empty; `unitText` "UNIT-27". Correct added no entry: timeline `entryCount` 0 and no header-change entry in the store. |
 | 4 Single tap | 10:05 | Tap Wrong Response. Advance 6 s. | Count 1. Toast gone after the window; `undo()` returns `false`. |
@@ -887,7 +887,7 @@ fictional names only. The final text is compared with `libs/core/tests/golden/pr
 | 14 Share, cancelled | 17:30 | `shareOpenLog()`; the fake sheet reports `cancelled`. Then `day.check()`. | `shareFinished` "cancelled"; no `last_shared` in the store; no prompt (same date). |
 | 15 New day | Sun 8 Nov 08:05 | `day.check()` (a foreground). | Prompt visible; `newDateText` "Sunday 8 November"; `openLogDayText` "Saturday"; `openLogEntryCount` 6; `unshared` true. |
 | 16 Share first | 08:05:20 | `day.shareFirst()`; the sheet reports `shared` after 20 s. `copyAll()`. | Text given to the sheet equals `prd-example.txt` (golden check 2); `last_shared` is 08:05:20 local, committed after the sheet completed; `unshared` false while the prompt is still visible; the clipboard text equals the same bytes. |
-| 17 Start the new log | 08:06 | `day.acceptNewLog()`. | Prompt hidden; `newLogStarted` once; the store has the old log archived and exactly one open log; new header has Sam Example and "8 Nov 2026" and three empty fields; timeline empty; board counts all 0; no toast; its export is exactly `Facilitator: Sam Example`, `Date: 8 Nov 2026`, `UNIT #:`, `Location:`, `Software Version:`. |
+| 17 Start the new log | 08:06 | `day.acceptNewLog()`. | Prompt hidden; `newLogStarted` once; the store has the old log archived and exactly one open log; new header has Sam Example and "8 Nov 2026" and three empty fields; timeline empty; board counts all 0; no toast; its export is exactly `Tester: Sam Example`, `Date: 8 Nov 2026`, `UNIT #:`, `Location:`, `Software Version:`. |
 | 18 History | 08:10 | `history.refresh()`, `openLog`, `share.shareLog(id)` with the sheet reporting `shared`. | One row: section "7 Nov 2026", "UNIT-27", "North Site", 6 entries, shared at "08:05"; `reviewModel` lines equal the six golden lines; the text shared is `prd-example.txt` byte for byte (golden check 3, the last step); `last_shared` moves to the new time and the row updates. |
 | 19 Closing checks | | Read the `EventLog` and the store. | Every impact haptic precedes the commit of the entry it acknowledges, and the confirmation (count, toast, "Last" bar) follows that commit; every success haptic directly follows the commit of its note; there is no haptic for an undo, a review edit, a delete, a header Correct or a share; every commit has the expected kind and order; the gateway is idle; no `writeFailed` was emitted; in `integration`, no repository call ran on the GUI thread; all three golden comparisons passed. |
 
@@ -942,7 +942,7 @@ The pull request says which parts have not run on a device.
 
 - **Documentation.** `docs/architecture.md`: the layout and targets (3.1) and the final wiring (3.11). `docs/testing.md`:
   the fakes, the `Rig` and the label use (3.1). No CMake option or preset changes, so `docs/building.md` is unchanged.
-  Nothing is visible to the facilitator yet, so there is no `changelog.d/` fragment; the first one comes with Stage 4.
+  Nothing is visible to the tester yet, so there is no `changelog.d/` fragment; the first one comes with Stage 4.
 - **Licence headers.** Every new source file carries the SPDX header copied from an existing file.
 - **No platform `#if`.** Nothing in the layer differs by platform. The differences (clock, device zone, clipboard,
   haptics, share sheet) are behind the interfaces above and chosen in the composition root.
@@ -951,7 +951,7 @@ The pull request says which parts have not run on a device.
 - **Coverage and baselines.** `tools/preprocessor-baseline.json` must not rise (the `Q_OBJECT` and `Q_PROPERTY` macros are
   not preprocessor directives). 3.12 gives the viewmodel code its own coverage floor if the gate can key on a
   subdirectory (proposed 90 line, 70 branch); otherwise it raises `apps/app`.
-- **Error messages for the screen.** A write failure shows the facilitator something (a banner, a toast) and the design
+- **Error messages for the screen.** A write failure shows the tester something (a banner, a toast) and the design
   package has no such state yet. Stage 3 supplies `writeFailed(operation, message)` with a plain message; the wording and
   the look are a Stage 4 design item, listed there with the recovery message.
 - **Strings.** User-visible text made in C++ uses `tr()` with `%1`-style placeholders and no concatenation, so Stage 4 can
@@ -997,7 +997,7 @@ that number.
 - An empty open log from an earlier day still gets the prompt, is archived like any other (DS-05), and is never called
   unshared. (owner, 2026-11-07)
 - Empty board positions are empty tiles that cannot be tapped; Other is always the twelfth. (owner, 2026-11-07)
-- A change of facilitator name applies to logs created afterwards. A change of unit prefix or time format applies to
+- A change of tester name applies to logs created afterwards. A change of unit prefix or time format applies to
   every log, past days included, because neither is stored in a log. (owner, 2026-11-07)
 - A location "remove" is a retire, as for error types, so past logs still render the name. (owner, 2026-11-07)
 - At most 64 commands wait per log; the 65th is refused with a message instead of being dropped. (owner, 2026-11-07)
@@ -1038,7 +1038,7 @@ that number.
     not by clocks (`LogMeta::m_ChangedSinceShare`, `day_log.changed_since_share`, schema version 2).
 11. **Archived journals are reopened** to append edit, delete and shared records, so DS-02 holds for history. Stage 2's
     2.3 and 2.4 adapt to this. (owner, 2026-11-07)
-12. **Adding a type from the Other sheet does not record it.** The new type appears in the list and the facilitator taps
+12. **Adding a type from the Other sheet does not record it.** The new type appears in the list and the tester taps
     it, so a typo in a new name cannot create an entry she did not mean to log. (owner, 2026-11-07)
 
 ## Addendum: five additions for Stage 4 (decided by the owner, 2026-11-07)

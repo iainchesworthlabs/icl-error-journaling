@@ -462,7 +462,7 @@ that refers to something missing is counted and skipped. The report says `partia
 ### 5.4 Archived logs (F8)
 
 The plan's rebuild restores the open log only. After a database loss, every archived log would be gone, which the
-facilitator would reasonably call data loss. On `archive`, keep the finished journal in `journal/archive/`
+tester would reasonably call data loss. On `archive`, keep the finished journal in `journal/archive/`
 and include it in the rebuild, so history is rebuilt too. A journal is a few tens of kilobytes per day. `archived_logs_lost`
 in the report is zero when that works. The owner accepted this (decision 2).
 
@@ -630,7 +630,7 @@ The owner answered on 7 Nov 2026. The text above reflects these answers.
 ### Error type snapshots (decision 5)
 
 An error entry records which error type was tapped, for example "Wrong Response". The configuration owns the list of
-error types and lets the facilitator rename or remove them (PRF-08). If an entry holds only a reference to the type,
+error types and lets the tester rename or remove them (PRF-08). If an entry holds only a reference to the type,
 then once the type is renamed or removed an old log cannot say what the entry was: an old export would change or fail.
 A snapshot stores the label as it was at the moment of the tap, next to the reference, so old logs and exports always
 read the way they did when written. It costs one extra text column. Decided: store the snapshot. Whether a renamed type should *also* update old

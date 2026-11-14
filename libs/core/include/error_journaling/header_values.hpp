@@ -27,7 +27,7 @@ struct LocationValue
 /// The header of a log at one moment. Each field after the date may be empty.
 struct HeaderValues
 {
-    std::string m_Facilitator;
+    std::string m_Tester;
     std::chrono::year_month_day m_LocalDate;
     std::optional<UnitNumber> m_UnitNumber;
     std::optional<LocationValue> m_Location;

@@ -1,0 +1,1 @@
+**Names in shared interactions are checked end to end.** A test now copies and shares a log of real people at each name level and checks that a name is never written as a list. Not yet run on a device.

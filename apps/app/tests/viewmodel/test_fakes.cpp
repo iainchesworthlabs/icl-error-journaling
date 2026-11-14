@@ -225,7 +225,7 @@ TEST_CASE("The sample configuration is Sam Example's and imports cleanly", "[vie
 {
     const Configuration configuration = sample_configuration();
 
-    CHECK(configuration.m_Facilitator == "Sam Example");
+    CHECK(configuration.m_Tester == "Sam Example");
     CHECK(configuration.m_UnitPrefix == "UNIT");
     CHECK_FALSE(configuration.m_ErrorTypes.empty());
     CHECK_FALSE(configuration.m_Locations.empty());
@@ -283,7 +283,7 @@ TEST_CASE("The fake configuration source tells its observers once per change", "
 
     source.set(sample_configuration());
     CHECK(source.configured());
-    CHECK(source.configuration().m_Facilitator == "Sam Example");
+    CHECK(source.configuration().m_Tester == "Sam Example");
     CHECK(observer.changes() == 1);
     CHECK(observer.last_source() == &source);
 

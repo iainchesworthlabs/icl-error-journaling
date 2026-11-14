@@ -622,6 +622,28 @@ TEST_CASE("A person who was acknowledged in the journal and not yet in the table
     CHECK(store.cached().m_People.size() == 4);
 }
 
+TEST_CASE("A location change that is in the journal and not in the table is put in the table",
+          "[recovery][interaction][location]")
+{
+    InteractionStore store;
+    const LocationId north = sample_id<LocationId>(7);
+    {
+        OpenStore open(store.location().root());
+        PeopleStore::Options options; // no cache: the journal alone is written
+        auto people = PeopleStore::open(open.location(), open.clock(), options);
+        REQUIRE(people.has_value());
+        REQUIRE((*people)->set_person_location(person(1), north).has_value());
+    }
+    const auto report = recover(store.location());
+    REQUIRE(report.has_value());
+    CHECK(report->m_PeopleRecovered == 1);
+    CHECK(report->m_PeopleLost == 0);
+    const auto cached = store.cached();
+    const auto row = std::ranges::find_if(cached.m_People, [](const Person& p) { return p.m_Id == person(1); });
+    REQUIRE(row != cached.m_People.end());
+    CHECK(row->m_Location == north);
+}
+
 TEST_CASE("A forget that was killed before its rename leaves the old file, and recovery clears the leftover",
           "[recovery][interaction][forget]")
 {
@@ -696,7 +718,7 @@ TEST_CASE("After adding, renaming and forgetting people, no log journal and no e
         REQUIRE(store.repo().checkpoint().has_value());
     }
 
-    // (Sam Example is the facilitator of the sample header, so he is not one of them.)
+    // (Sam Example is the tester of the sample header, so he is not one of them.)
     const std::vector<std::string_view> every_name = {ALEX, JORDAN, PAT, "Pat Stand-in Senior",
                                                       "Jordan Placeholder Junior"};
 

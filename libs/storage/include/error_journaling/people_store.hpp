@@ -95,6 +95,9 @@ public:
     [[nodiscard]] Result<Person, StorageError> add_person(PersonId id, std::string_view typed_name,
                                                           std::optional<LocationId> location = std::nullopt);
     [[nodiscard]] Result<void, StorageError> rename_person(PersonId id, std::string_view typed_name);
+    /// Sets the location a person belongs to, or clears it with `std::nullopt`. The same location again writes nothing.
+    /// The id is not checked against the setup. `NOT_FOUND` for a person who is not there or was forgotten.
+    [[nodiscard]] Result<void, StorageError> set_person_location(PersonId id, std::optional<LocationId> location);
     /// Retires a person (they leave the picker and stay on past entries), or brings them back with `retired = false`.
     [[nodiscard]] Result<void, StorageError> retire_person(PersonId id, bool retired = true);
     /// Marks the person as used now. Not synced.

@@ -32,7 +32,7 @@ template <typename Id>
 [[nodiscard]] inline HeaderValues sample_header()
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam Example";
+    header.m_Tester = "Sam Example";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     header.m_UnitNumber = UnitNumber::parse("27").value();
     header.m_Location = LocationValue{std::nullopt, "North Site"};

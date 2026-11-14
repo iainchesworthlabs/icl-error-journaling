@@ -1,4 +1,4 @@
-Facilitator: Sam Example
+Tester: Sam Example
 Date: 7 Nov 2026
 UNIT #: UNIT-28
 Location: North Site

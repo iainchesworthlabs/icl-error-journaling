@@ -17,11 +17,13 @@ Sheet {
 
     required property string templateName
     required property string valuePrompt
-    required property string outputPattern
+    property string outputPattern
     property string errorText
     property string value
     // The line the note will have in the log, as the renderer makes it for the value typed so far.
     property string previewText
+    // The line under the preview. Empty keeps the note template wording, which names the template and its pattern.
+    property string footerText
 
     // Add was chosen, or Return was pressed in the field.
     signal addRequested(string value)
@@ -95,7 +97,7 @@ Sheet {
             objectName: "templateValuePreview"
             width: parent.width
             title: qsTr("In the log")
-            footer: qsTr("Saved with the template “%1”, as “%2”.").arg(root.templateName).arg(root.outputPattern)
+            footer: root.footerText.length > 0 ? root.footerText : qsTr("Saved with the template “%1”, as “%2”.").arg(root.templateName).arg(root.outputPattern)
             surface: Theme.colour.surfaceRaised
 
             Item {

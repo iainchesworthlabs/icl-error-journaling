@@ -273,7 +273,7 @@ class Page:
     def header_block(self) -> str:
         c = self.c
         border = f"border: 1px solid {c['reviewDivider']}; " if self.dark else ""
-        lines = ["Facilitator: Sam Example", "Date: 7 Nov 2026", "UNIT #: UNIT-27", "Location: North Site", "Software Version: 1.4.2 (a1b2c3d)"]
+        lines = ["Tester: Sam Example", "Date: 7 Nov 2026", "UNIT #: UNIT-27", "Location: North Site", "Software Version: 1.4.2 (a1b2c3d)"]
         return (
             f'<a href="Header.{self.frame.name}{self.suffix()}.dc.html" style="display: block; background: {c["reviewSurface"]}; {border}'
             f'border-radius: 14px; padding: 12px 14px; text-decoration: none; color: {c["reviewText"]}; font-size: 14px; line-height: 1.55">'
@@ -606,7 +606,7 @@ def header_screen(p: Page) -> str:
         + f'<div style="position: absolute; left: {x}px; width: {width}px; top: {SAFE_TOP + 52}px; display: flex; flex-direction: column; gap: 16px">'
         f'<div><h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.4px">Today’s details</h1>'
         f'<p style="margin: 6px 0 0; font-size: 15px; color: {c["textSecondary"]}">Set these once at the start of the day. They head your log.</p></div>'
-        f'{form_row("Facilitator", "Sam Example", muted=True)}{form_row("Date", "Sat 7 Nov 2026", muted=True)}'
+        f'{form_row("Tester", "Sam Example", muted=True)}{form_row("Date", "Sat 7 Nov 2026", muted=True)}'
         f'{form_row("UNIT number", "UNIT-27", "Type the number only.")}{form_row("Environment", "None")}'
         f"{locations}"
         f'{form_row("Software version", "1.4.2", "Format 1.4.2 – numbers only.")}'
@@ -648,7 +648,7 @@ def settings_screen(p: Page) -> str:
         f'<p style="margin: -4px 4px 0; font-size: 13px; line-height: 1.4; color: {c["textSecondary"]}">Hold and drag a tile to move it. '
         f"Tap a tile to change its error type, or + to add one. Each type keeps its colour.</p>"
         + p.grouped([("Error types", "", True), ("Note templates", "", True), ("Locations", "", True), ("Unit environments", "2", True)])
-        + p.grouped([("Facilitator", "Sam Example", True), ("Unit prefix", "UNIT", True), ("Include a totals line", "Off", False), ("Time format", "24-hour", True), ("Error prefix", "T|", True)])
+        + p.grouped([("Tester", "Sam Example", True), ("Unit prefix", "UNIT", True), ("Include a totals line", "Off", False), ("Time format", "24-hour", True), ("Error prefix", "T|", True)])
         + p.grouped([("Import or export setup", "", True)])
         + "</div>"
         + p.tab_bar(3)

@@ -5,7 +5,7 @@ import QtQuick.Shapes
 import ErrorJournalingApp
 
 // The miniature board of the settings screen (Stage 4, package 4.5; PRF-02, PRF-05): the 12 tiles of the board in small, so
-// that the facilitator can arrange them, and the means to do it. It shows a BoardLayoutModel and changes nothing; every
+// that the tester can arrange them, and the means to do it. It shows a BoardLayoutModel and changes nothing; every
 // change is a signal, and the board changes only when the model does. A screen connects the signals to SettingsModel.
 //
 //   model              the BoardLayoutModel (roles typeId, label, colourSlot, position, isOther, isEmpty, accessibleName)
@@ -13,7 +13,7 @@ import ErrorJournalingApp
 //   dragging           a tile is being dragged (a screen turns scrolling off while it is, so the page does not move)
 //
 //   moveRequested(fromPosition, toPosition)   settings.moveBoardTile(from, to): a drop, or Move earlier and Move later
-//   replaceRequested(position)                Change error type: the screen lets the facilitator choose a type, then
+//   replaceRequested(position)                Change error type: the screen lets the tester choose a type, then
 //                                             calls settings.assignBoardTile(position, typeId)
 //   addRequested(position)                    an empty position was tapped: the screen opens the same choice at once,
 //                                             with "New error type" at the top (no panel first)
@@ -37,6 +37,9 @@ Item {
 
     required property var model
     property int selectedPosition: 0
+    // The words that name what a tile holds, for the empty tile and the panel: error types by default.
+    property string addText: qsTr("Add error type")
+    property string changeText: qsTr("Change error type")
     readonly property alias dragging: dragState.active
 
     signal moveRequested(int fromPosition, int toPosition)
@@ -355,7 +358,7 @@ Item {
                             objectName: "miniLabel"
                             anchors.fill: parent
                             anchors.margins: Theme.miniBoard.labelInset
-                            text: tile.isEmpty ? qsTr("Add error type") : tile.label
+                            text: tile.isEmpty ? root.addText : tile.label
                             color: tile.isOther ? Theme.colour.textSecondary : tile.isEmpty ? Theme.colour.primaryText : Theme.colour.tileText
                             font.pointSize: root.labelPoints
                             font.hintingPreference: Font.PreferNoHinting
@@ -560,7 +563,7 @@ Item {
                     PanelButton {
                         objectName: "miniReplace"
                         width: actions.buttonWidth
-                        label: qsTr("Change error type")
+                        label: root.changeText
                         glyph: "swap"
                         onActivated: root.replaceRequested(root.selectedPosition)
                     }

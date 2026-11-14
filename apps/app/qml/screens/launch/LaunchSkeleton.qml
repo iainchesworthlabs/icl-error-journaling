@@ -5,7 +5,7 @@ import ErrorJournalingApp
 // The skeleton of the Log screen (Stage 5, package 5.8): the picture that the launch screen shows until the first frame of
 // the application. The background, the header card, the note composer, the "Last" bar, the 12 tiles in their 3 by 4 grid and
 // the tab bar, as plain shapes in neutral colours, with no text, no badge and no colour per type: the order and the colours
-// of the tiles are the facilitator's setup, which the launch screen cannot know.
+// of the tiles are the tester's setup, which the launch screen cannot know.
 //
 // It lays out the same components as the Log screen and the shell do (HeaderCard, NoteComposer, LastEntryBar, BoardGrid,
 // TabBar), each in its `skeleton` mode, with the same margins and gaps (the placing below repeats the lines of
@@ -65,12 +65,12 @@ Item {
             locationText: ""
             versionText: ""
             dateText: root.loadingMark
-            facilitatorText: ""
+            testerText: ""
             missingFields: []
             unitPrompt: root.loadingMark
             locationPrompt: root.loadingMark
             versionPrompt: root.loadingMark
-            facilitatorPrompt: root.loadingMark
+            testerPrompt: root.loadingMark
             skeleton: true
             nominalMetrics: true
         }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // What a change of setting does to what is rendered (work package 3.3): the unit prefix, the time format and the totals
-// option apply to every log, past days included; a retired type or location still renders; the facilitator applies to
+// option apply to every log, past days included; a retired type or location still renders; the tester applies to
 // logs made afterwards. The renderer's context is built from the configuration in force, as `ExportContextBuilder`
 // (3.2) will do; the log is a past day's, made before the change.
 #include "settings_rig.hpp"
@@ -36,13 +36,13 @@ TEST_CASE("A new unit prefix re-renders a past log", "[viewmodel][settings][rend
     rig.load_configuration(scenario_configuration());
     const Scenario past = make_scenario("attached-note");
     const std::string before = render(past, rig.m_Settings.configuration());
-    REQUIRE(before.starts_with("Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\n"));
+    REQUIRE(before.starts_with("Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\n"));
 
     REQUIRE(rig.m_Settings.setUnitPrefix("DEMO").isEmpty());
     rig.commit();
 
     CHECK(render(past, rig.m_Settings.configuration())
-              .starts_with("Facilitator: Sam Example\nDate: 7 Nov 2026\nDEMO #: DEMO-27\n"));
+              .starts_with("Tester: Sam Example\nDate: 7 Nov 2026\nDEMO #: DEMO-27\n"));
 }
 
 TEST_CASE("A new time format re-renders a past log", "[viewmodel][settings][render]")
@@ -115,27 +115,27 @@ TEST_CASE("A renamed location is named by its new name on a past log", "[viewmod
     CHECK(contains(render(past, rig.m_Settings.configuration()), "Location: Main Site"));
 }
 
-TEST_CASE("A new facilitator applies to logs made afterwards and not to the one already made",
+TEST_CASE("A new tester applies to logs made afterwards and not to the one already made",
           "[viewmodel][settings][render]")
 {
     SettingsRig rig;
     rig.load_configuration(scenario_configuration());
-    // A log's header holds its own facilitator, copied when the log is made.
+    // A log's header holds its own tester, copied when the log is made.
     Scenario open_log = blank_scenario();
     open_log.m_Log.set_initial_header(
         [&]
         {
             HeaderValues header = open_log.m_Log.initial_header();
-            header.m_Facilitator = rig.m_Settings.configuration().m_Facilitator;
+            header.m_Tester = rig.m_Settings.configuration().m_Tester;
             return header;
         }());
 
-    REQUIRE(rig.m_Settings.setFacilitator("Alex Example").isEmpty());
+    REQUIRE(rig.m_Settings.setTester("Alex Example").isEmpty());
     rig.commit();
 
     HeaderValues next = open_log.m_Log.initial_header();
-    next.m_Facilitator = rig.m_Settings.configuration().m_Facilitator;
-    CHECK(open_log.m_Log.initial_header().m_Facilitator == "Sam Example");
-    CHECK(next.m_Facilitator == "Alex Example");
+    next.m_Tester = rig.m_Settings.configuration().m_Tester;
+    CHECK(open_log.m_Log.initial_header().m_Tester == "Sam Example");
+    CHECK(next.m_Tester == "Alex Example");
     CHECK(rig.m_Observer.changes() == 2); // the load and the change: the observers hear of it
 }

@@ -1,0 +1,1 @@
+**The shared log's first header line now reads `Tester: …`, not `Facilitator: …`.** Everything else in the log is unchanged. The downstream ticket indexer should be checked if it reads that line. Nothing stored changes: setup files, journals and the database keep the name `facilitator` inside. Not yet run on a device.

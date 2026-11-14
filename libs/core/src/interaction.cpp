@@ -163,6 +163,40 @@ std::string render_interaction_text(const std::optional<std::string>& pattern, s
     return expand(*pattern, people_text, value ? trim(*value) : std::string_view{}).m_Text;
 }
 
+std::vector<InteractionType> default_interaction_types()
+{
+    struct Row
+    {
+        const char* m_Id;
+        const char* m_Name;
+        const char* m_Pattern;
+    };
+    static constexpr Row ROWS[] = {
+        {"00000000-0000-4000-8000-0000000000d1", "Spoke with", "Spoke with {person}"},
+        {"00000000-0000-4000-8000-0000000000d2", "Played song", "Played {value}"},
+        {"00000000-0000-4000-8000-0000000000d3", "Visitor interaction", nullptr},
+        {"00000000-0000-4000-8000-0000000000d4", "Gave item", "Gave {person} {value}"},
+        {"00000000-0000-4000-8000-0000000000d5", "Greeted", nullptr},
+        {"00000000-0000-4000-8000-0000000000d6", "Helped", "Helped {person}"},
+    };
+    std::vector<InteractionType> types;
+    int position = 1;
+    for (const Row& row : ROWS)
+    {
+        InteractionType type;
+        type.m_Id = InteractionTypeId{*Uuid::parse(row.m_Id)};
+        type.m_Name = row.m_Name;
+        type.m_BoardPosition = position++;
+        if (row.m_Pattern != nullptr)
+        {
+            type.m_LinePattern = row.m_Pattern;
+        }
+        type.m_Asks = interaction_asks_for(type.m_LinePattern);
+        types.push_back(std::move(type));
+    }
+    return types;
+}
+
 Result<void, PickError> add_person_pick(std::vector<PersonId>& people, PersonId person)
 {
     if (std::ranges::find(people, person) != people.end())

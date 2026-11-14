@@ -52,7 +52,7 @@ TEST_CASE("settings.interaction_types: a type is added at the first empty tile w
     const QAbstractItemModel& types = *rig.m_Settings.interaction_types();
     const std::size_t before = rig.m_Settings.configuration().m_InteractionTypes.size();
 
-    CHECK(rig.m_Settings.addInteractionType("  Greeted ", "Greeted [person]").isEmpty());
+    CHECK(rig.m_Settings.addInteractionType("  Waved at ", "Waved at [person]").isEmpty());
     rig.commit();
     CHECK(rig.m_Settings.addInteractionType("Sang", "Sang [answer]").isEmpty());
     rig.commit();
@@ -62,8 +62,8 @@ TEST_CASE("settings.interaction_types: a type is added at the first empty tile w
     const auto& stored = rig.m_Settings.configuration().m_InteractionTypes;
     REQUIRE(stored.size() == before + 3);
     const InteractionType& spoke = stored[before];
-    CHECK(spoke.m_Name == "Greeted");
-    CHECK(spoke.m_LinePattern == std::optional<std::string>("Greeted {person}"));
+    CHECK(spoke.m_Name == "Waved at");
+    CHECK(spoke.m_LinePattern == std::optional<std::string>("Waved at {person}"));
     CHECK(spoke.m_Asks == InteractionAsks::PERSON);
     CHECK(stored[before + 1].m_LinePattern == std::optional<std::string>("Sang {value}"));
     CHECK(stored[before + 1].m_Asks == InteractionAsks::TEXT);
@@ -74,7 +74,7 @@ TEST_CASE("settings.interaction_types: a type is added at the first empty tile w
     CHECK(import_configuration(*rig.store().saved()).has_value());
 
     const int last = types.rowCount() - 3;
-    CHECK(text_of_role(types, last, "line") == "Greeted [person]");
+    CHECK(text_of_role(types, last, "line") == "Waved at [person]");
     CHECK(text_of_role(types, last, "asks") == "person");
     CHECK(text_of_role(types, last + 1, "asks") == "text");
     CHECK(text_of_role(types, last + 2, "asks") == "nothing");
@@ -85,7 +85,7 @@ TEST_CASE("settings.interaction_types: a name must be given and differ, ignoring
 {
     SettingsRig rig;
     rig.load_sample();
-    CHECK(rig.m_Settings.addInteractionType("Greeted", "Greeted [person]").isEmpty());
+    CHECK(rig.m_Settings.addInteractionType("Waved at", "Waved at [person]").isEmpty());
     rig.commit();
     const auto saves = rig.store().saves();
 
@@ -107,7 +107,7 @@ TEST_CASE("settings.interaction_types: a type is edited, and a type with no [per
 {
     SettingsRig rig;
     rig.load_sample();
-    CHECK(rig.m_Settings.addInteractionType("Greeted", "Greeted [person]").isEmpty());
+    CHECK(rig.m_Settings.addInteractionType("Waved at", "Waved at [person]").isEmpty());
     rig.commit();
     const QAbstractItemModel& types = *rig.m_Settings.interaction_types();
     const int row = types.rowCount() - 1;
@@ -133,7 +133,7 @@ TEST_CASE("settings.interaction_types: a type is retired and stays in the file, 
 {
     SettingsRig rig;
     rig.load_sample();
-    CHECK(rig.m_Settings.addInteractionType("Greeted", "Greeted [person]").isEmpty());
+    CHECK(rig.m_Settings.addInteractionType("Waved at", "Waved at [person]").isEmpty());
     rig.commit();
     const QAbstractItemModel& types = *rig.m_Settings.interaction_types();
     const int rows = types.rowCount();
@@ -142,10 +142,10 @@ TEST_CASE("settings.interaction_types: a type is retired and stays in the file, 
     CHECK(rig.m_Settings.retireInteractionType(id).isEmpty());
     rig.commit();
     CHECK(types.rowCount() == rows - 1);
-    CHECK_FALSE(names_of(types).contains("Greeted"));
+    CHECK_FALSE(names_of(types).contains("Waved at"));
     CHECK(rig.m_Settings.configuration().m_InteractionTypes.back().m_Retired);
     CHECK_FALSE(rig.m_Settings.retireInteractionType(id).isEmpty());
-    CHECK(rig.m_Settings.addInteractionType("Greeted", "").isEmpty());
+    CHECK(rig.m_Settings.addInteractionType("Waved at", "").isEmpty());
     rig.commit();
     CHECK(import_configuration(*rig.store().saved()).has_value());
 }
@@ -199,4 +199,53 @@ TEST_CASE("settings.interaction_types: the example line shows a sample person an
     CHECK(rig.m_Settings.previewInteractionLine("Played song", "Played [answer]") == "Played Morning Medley");
     CHECK(rig.m_Settings.previewInteractionLine("Waved", "") == "Waved");
     CHECK(rig.m_Settings.previewInteractionLine("X", "{") == "Fix the line to see an example.");
+}
+
+TEST_CASE("settings.interaction_types: with no types in the file the editor shows the built-in ones, and the first edit keeps them",
+          "[viewmodel][settings][interaction_types]")
+{
+    Configuration configuration = sample_configuration();
+    configuration.m_InteractionTypes.clear();
+    SettingsRig rig;
+    rig.load_configuration(configuration);
+    const QAbstractItemModel& types = *rig.m_Settings.interaction_types();
+
+    // What the board shows is what the editor lists.
+    const QStringList shown = names_of(types);
+    REQUIRE(shown.size() == 6);
+    CHECK(shown.front() == QStringLiteral("Spoke with"));
+    CHECK(text_of_role(types, 0, "line") == QStringLiteral("Spoke with [person]"));
+    CHECK(text_of_role(types, 0, "asks") == QStringLiteral("person"));
+    CHECK(position_at(types, 0) == 1);
+
+    // A rename edits the built-in type: the six are now in the configuration and nothing else changed.
+    CHECK(rig.m_Settings.updateInteractionType(id_at(types, 0), "Chatted with", "Chatted with [person]").isEmpty());
+    rig.commit();
+    const QStringList after = names_of(types);
+    REQUIRE(after.size() == 6);
+    CHECK(after.front() == QStringLiteral("Chatted with"));
+    CHECK(after.back() == shown.back());
+
+    // A new type goes to the first empty tile, after the six.
+    CHECK(rig.m_Settings.addInteractionType("Waved at", "Waved at [person]").isEmpty());
+    rig.commit();
+    CHECK(names_of(types).size() == 7);
+    CHECK(position_at(types, 6) == 7);
+}
+
+TEST_CASE("settings.interaction_types: the miniature layout has the 11 tiles and Other, and follows a move",
+          "[viewmodel][settings][interaction_types]")
+{
+    SettingsRig rig;
+    rig.load_sample();
+    const QAbstractItemModel& layout = *rig.m_Settings.interaction_layout();
+    REQUIRE(layout.rowCount() == 12);
+    CHECK(text_of_role(layout, 0, "label") == QStringLiteral("Spoke with"));
+    CHECK(text_of_role(layout, 6, "typeId").isEmpty());
+    CHECK(layout.data(layout.index(11, 0), role_named(layout, "isOther")).toBool());
+
+    CHECK(rig.m_Settings.moveInteractionTile(1, 7).isEmpty());
+    rig.commit();
+    CHECK(text_of_role(layout, 6, "label") == QStringLiteral("Spoke with"));
+    CHECK(text_of_role(layout, 0, "label") != QStringLiteral("Spoke with"));
 }
