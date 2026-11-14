@@ -2,7 +2,9 @@
 // Stage 14, package I-6: the list of people for the picker, on the real store and a storage thread. The names are the
 // stand-ins of the docs.
 #include "support/rig.hpp"
+#include "viewmodel/interaction_types.hpp"
 #include "viewmodel/people_model.hpp"
+#include "viewmodel/timeline_model.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -118,4 +120,77 @@ TEST_CASE("The export asks the list of people for a name by id", "[viewmodel][pe
     forwarder.set(rig.root().people());
     CHECK(forwarder.name_of(person) == std::optional<std::string>("Alex Sample"));
     CHECK_FALSE(forwarder.name_of(PersonId(Uuid::from_random(1, 2))).has_value());
+}
+
+TEST_CASE("export.name_levels: copy and share of a log of the real people write the chosen level, never a list",
+          "[viewmodel][people][export][integration]")
+{
+    Rig rig(RigStore::SQLITE);
+    rig.import_sample_configuration();
+    rig.settle();
+    const QString alex = add(rig, "Alex Sample");
+    const QString jordan = add(rig, "Jordan Placeholder");
+    add(rig, "Pat Stand-in"); // in the list, but on no entry: must never leave the phone
+
+    const auto types = viewmodel::interaction_types_in_force(rig.settings().configuration());
+    const QString entry = rig.session().recordInteractionEntry(QString::fromStdString(types[0].m_Id.format()));
+    REQUIRE_FALSE(entry.isEmpty());
+    rig.settle();
+    REQUIRE(rig.session().setInteractionPeople(entry, {alex, jordan}));
+    rig.settle();
+
+    const auto count_of = [](const std::string& text, const std::string& what)
+    {
+        std::size_t found = 0;
+        for (std::size_t at = text.find(what); at != std::string::npos; at = text.find(what, at + 1))
+        {
+            ++found;
+        }
+        return found;
+    };
+    const auto copied = [&rig]
+    {
+        REQUIRE(rig.timeline().copyAll());
+        return rig.clipboard().text();
+    };
+    const auto shared = [&rig]
+    {
+        const std::size_t before = rig.platform().sheets_presented();
+        REQUIRE(rig.share().shareOpenLog());
+        rig.settle();
+        REQUIRE(rig.platform().sheets_presented() == before + 1);
+        return rig.platform().shared_texts().back();
+    };
+
+    // The default is initials.
+    for (const std::string& text : {copied(), shared()})
+    {
+        CHECK(count_of(text, "(Interaction) Spoke with A.S. and J.P.") == 1);
+        CHECK(text.find("Alex") == std::string::npos);
+        CHECK(text.find("Jordan") == std::string::npos);
+        CHECK(text.find("Pat") == std::string::npos);
+        CHECK(text.find("T|") == std::string::npos);
+    }
+
+    rig.export_preferences().set_name_export("full");
+    for (const std::string& text : {copied(), shared()})
+    {
+        CHECK(count_of(text, "Spoke with Alex Sample and Jordan Placeholder") == 1);
+        // Each name once, in its line: no list of people anywhere else, and the third person is not there.
+        CHECK(count_of(text, "Alex Sample") == 1);
+        CHECK(count_of(text, "Jordan Placeholder") == 1);
+        CHECK(text.find("Pat") == std::string::npos);
+    }
+
+    rig.export_preferences().set_name_export("hidden");
+    for (const std::string& text : {copied(), shared()})
+    {
+        CHECK(count_of(text, "(Interaction) Spoke with someone") == 1);
+        CHECK(text.find("Sample") == std::string::npos);
+        CHECK(text.find("Placeholder") == std::string::npos);
+        CHECK(text.find("Pat") == std::string::npos);
+    }
+
+    // The screen keeps the full name whatever the choice is.
+    CHECK(rig.timeline().data(rig.timeline().index(0), viewmodel::TimelineModel::FULL_LINE).toString().contains("Alex Sample"));
 }

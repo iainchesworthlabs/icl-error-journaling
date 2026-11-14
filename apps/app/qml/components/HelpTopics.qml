@@ -74,7 +74,7 @@ QtObject {
         {
             "id": "review",
             "title": qsTr("Review and sharing"),
-            "paragraphs": [qsTr("<b>Review</b> is today’s log, in the same words that you share."), qsTr("Tap an entry to edit it. Swipe an entry left for <b>Copy</b> and <b>Delete</b>."), qsTr("<b>Share log</b> opens the share sheet with the log as plain text. Only Share log marks the log as shared. <b>Copy log</b> does not."), qsTr("A past log is in History, where you can share it again.")],
+            "paragraphs": [qsTr("<b>Review</b> is today’s log, in the words that you share."), qsTr("Tap an entry to edit it. Swipe an entry left for <b>Copy</b> and <b>Delete</b>."), qsTr("<b>Share log</b> opens the share sheet with the log as plain text. Only Share log marks the log as shared. <b>Copy log</b> does not."), qsTr("A past log is in History, where you can share it again."), qsTr("An interaction is a line of its own, with no <b>T|</b>. A person’s name leaves the phone as initials unless you choose the full name or <b>someone</b> in Settings. Review always shows the full name.")],
             "page": "guide/sharing/",
             "anchor": "review"
         },
