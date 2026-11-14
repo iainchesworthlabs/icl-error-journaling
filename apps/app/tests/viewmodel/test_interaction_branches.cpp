@@ -278,18 +278,21 @@ TEST_CASE("board.setup: a change of setup is told to the tiles, and to the board
 {
     BoardFixture f(configuration_with_odd_types());
     QSignalSpy empty_changed(&f.m_Board, &InteractionBoardModel::boardEmptyChanged);
+    QSignalSpy other_changed(&f.m_Board, &InteractionBoardModel::otherTypesChanged);
     QSignalSpy data_changed(&f.m_Board, &QAbstractItemModel::dataChanged);
 
     // The same setup again: the tiles are told (they are read again), the two properties are not.
     f.m_Config.set(configuration_with_odd_types());
     CHECK(data_changed.count() == 1);
     CHECK(empty_changed.count() == 0);
+    CHECK(other_changed.count() == 0);
 
     // A type that is on no tile is a change of the Other sheet only.
     Configuration more = configuration_with_odd_types();
     more.m_InteractionTypes.push_back(make_type(30, "Extra", std::nullopt, InteractionAsks::NOTHING, std::nullopt));
     f.m_Config.set(more);
     CHECK(empty_changed.count() == 0);
+    CHECK(other_changed.count() == 1);
     CHECK(other_types_of(f.m_Board).size() == 5);
 
     // All retired: the board is empty, and the Other sheet has nothing.
@@ -302,6 +305,7 @@ TEST_CASE("board.setup: a change of setup is told to the tiles, and to the board
     CHECK(empty_changed.count() == 1);
     CHECK(f.m_Board.board_empty());
     CHECK(f.m_Board.other_types().isEmpty());
+    CHECK(other_changed.count() == 2);
 
     // And back.
     f.m_Config.set(configuration_with_odd_types());

@@ -8,6 +8,7 @@
 #include <QVariantMap>
 #include <algorithm>
 #include <unordered_map>
+#include <utility>
 
 namespace ej::viewmodel
 {
@@ -30,6 +31,7 @@ InteractionBoardModel::InteractionBoardModel(ConfigurationSource& configuration,
       m_Log(open_log, [this](const LogChange& change) { on_open_log_event(change); })
 {
     m_Tiles = build();
+    m_ShownOtherTypes = other_types();
     m_Configuration.add_observer(*this);
 }
 
@@ -195,15 +197,15 @@ QString InteractionBoardModel::previewLine(const QString& typeId, const QString&
 void InteractionBoardModel::refresh_everything()
 {
     const bool was_empty = board_empty();
-    const auto was_other = other_types();
     m_Tiles = build();
     emit dataChanged(index(0), index(BOARD_ROWS - 1));
     if (board_empty() != was_empty)
     {
         emit boardEmptyChanged();
     }
-    if (other_types() != was_other)
+    if (QVariantList other = other_types(); other != m_ShownOtherTypes)
     {
+        m_ShownOtherTypes = std::move(other);
         emit otherTypesChanged();
     }
 }

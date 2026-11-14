@@ -90,6 +90,7 @@ private:
     ConfigurationSource& m_Configuration;
     Tiles m_Tiles;
     OpenLogFollower m_Log;
+    QVariantList m_ShownOtherTypes; // what otherTypesChanged last told, to see a change by the setup
 };
 
 } // namespace ej::viewmodel
