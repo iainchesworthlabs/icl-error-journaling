@@ -221,6 +221,7 @@ struct App
         {
             given.insert(QStringLiteral("boards"), object(*boards));
             given.insert(QStringLiteral("interactionBoard"), object(*interaction_board));
+            given.insert(QStringLiteral("exportPreferences"), object(*export_preferences));
         }
         return given;
     }
@@ -245,6 +246,9 @@ struct App
         QQmlComponent model_component(&ui.engine(), MODULE, "UiStubInteractionBoard");
         interaction_board.reset(model_component.create());
         REQUIRE(interaction_board != nullptr);
+        QQmlComponent export_component(&ui.engine(), MODULE, "UiStubExportPreferences");
+        export_preferences.reset(export_component.create());
+        REQUIRE(export_preferences != nullptr);
     }
 
     void load(const QVariantMap& without = {})
@@ -377,6 +381,7 @@ struct App
     std::unique_ptr<QObject> url_opener;
     std::unique_ptr<QObject> help;
     std::unique_ptr<QObject> boards;
+    std::unique_ptr<QObject> export_preferences;
     std::unique_ptr<QObject> interaction_board;
     QQuickItem* shell = nullptr;
 };
@@ -3151,6 +3156,40 @@ TEST_CASE("shell.toggle: the switch shows and hides the tab, an empty board offe
     CHECK(app.shown(QStringLiteral("tabInteractions")));
     app.choose_tab_named(QStringLiteral("tabInteractions"));
     CHECK(app.shown(QStringLiteral("interactionsEmptyBoard")));
+}
+
+TEST_CASE("settings.names: the level of a name in shared logs is a choice, shown only while the second board is on",
+          "[ui][app][settings][interactions]")
+{
+    SECTION("off: no row")
+    {
+        App app(true, false);
+        app.with_boards(false);
+        app.load();
+        app.choose_tab(SETTINGS_TAB);
+        CHECK_FALSE(app.shown(QStringLiteral("settingsNames")));
+    }
+    SECTION("on: initials to begin with, and the choice is kept")
+    {
+        App app(true, false);
+        app.with_boards(true);
+        app.load();
+        app.choose_tab(SETTINGS_TAB);
+        QQuickItem* row = reveal_in_settings(app, QStringLiteral("settingsNames"));
+        CHECK(row->property("value").toString() == QStringLiteral("Initials"));
+        app.ui.tap(row);
+        app.play();
+        CHECK(app.need(QStringLiteral("settingsNamesInitials"))->property("checked").toBool());
+        CHECK_FALSE(app.need(QStringLiteral("settingsNamesFull"))->property("checked").toBool());
+        app.tap(QStringLiteral("settingsNamesFull"));
+        app.play();
+        CHECK(app.export_preferences->property("nameExport").toString() == QStringLiteral("full"));
+        CHECK(app.need(QStringLiteral("settingsNamesFull"))->property("checked").toBool());
+        app.tap(QStringLiteral("settingsNamesHidden"));
+        app.play();
+        CHECK(app.export_preferences->property("nameExport").toString() == QStringLiteral("hidden"));
+        CHECK(app.need(QStringLiteral("settingsNamesHidden"))->property("checked").toBool());
+    }
 }
 
 TEST_CASE("shell.toggle: turning the board off in Settings leaves Settings where it is and the tab bar of four",

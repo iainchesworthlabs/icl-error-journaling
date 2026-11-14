@@ -16,8 +16,8 @@
 #include "viewmodel/about_model.hpp"
 #include "viewmodel/board_state.hpp"
 #include "viewmodel/export_preferences.hpp"
+#include "viewmodel/people_model.hpp"
 #include "viewmodel/help_state.hpp"
-#include "viewmodel/interaction_board_model.hpp"
 #include "viewmodel/settings_model.hpp"
 
 #include <QCommandLineOption>
@@ -114,9 +114,12 @@ int main(int argc, char* argv[])
     ej::viewmodel::ExportPreferences export_preferences(QDir(data_path).filePath(QStringLiteral("export-preferences.ini")));
     ej::viewmodel::Environment environment = production.environment();
     environment.m_ExportPreferences = &export_preferences;
+    ej::viewmodel::PersonNamesForwarder person_names;
+    environment.m_People = &person_names;
     ej::app::AppRoot root(environment,
                           ej::app::AppPlatform{share_sheet, haptics, clipboard, share_available},
                           ej::app::start_sqlite_storage(store));
+    person_names.set(root.people());
     // What the application does when it goes inactive and comes back (NOTE-03, DAY-01): flush the note draft and finish
     // the writes in flight inside a background task, and run the day check on becoming active once the store is ready.
     // Connected before the drain below, so the flush at quit comes first.
@@ -191,20 +194,18 @@ int main(int argc, char* argv[])
                                   [] { return QDate::currentDate(); });
 
     // Which boards there are (the optional second board is off until it is turned on in Settings) and which was used
-    // last. Its own small file beside the data, outside the store (Stage 14, I-5). The board model is the stand-in that
-    // I-6 replaces.
+    // last. Its own small file beside the data, outside the store (Stage 14, I-5).
     ej::viewmodel::BoardState boards(QDir(data_path).filePath(QStringLiteral("board-state.ini")));
-    ej::viewmodel::InteractionBoardModel interaction_board;
 
     QQmlApplicationEngine engine;
     QQmlEngine::setObjectOwnership(&about, QQmlEngine::CppOwnership);
     QQmlEngine::setObjectOwnership(&help, QQmlEngine::CppOwnership);
     QQmlEngine::setObjectOwnership(&boards, QQmlEngine::CppOwnership);
     QQmlEngine::setObjectOwnership(&export_preferences, QQmlEngine::CppOwnership);
-    QQmlEngine::setObjectOwnership(&interaction_board, QQmlEngine::CppOwnership);
     // The root owns the models; QML must never delete one.
     QObject* const models[] = {root.session(), root.undo(), root.board(),    root.picker(), root.timeline(),
-                               root.history(), root.day(),  root.settings(), root.share()};
+                               root.history(), root.day(),  root.settings(), root.share(),  root.interaction_board(),
+                               root.people()};
     for (QObject* model : models)
     {
         QQmlEngine::setObjectOwnership(model, QQmlEngine::CppOwnership);
@@ -235,7 +236,8 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("help"), QVariant::fromValue(&help)},
                                  {QStringLiteral("boards"), QVariant::fromValue(&boards)},
                                  {QStringLiteral("exportPreferences"), QVariant::fromValue(&export_preferences)},
-                                 {QStringLiteral("interactionBoard"), QVariant::fromValue(&interaction_board)}});
+                                 {QStringLiteral("interactionBoard"), QVariant::fromValue(root.interaction_board())},
+                                 {QStringLiteral("people"), QVariant::fromValue(root.people())}});
     // The shell says when the 12 tiles accept taps (the Log tab is shown and the session has loaded).
     QObject::connect(&platform_bridge, &ej::bridge::QmlBridge::boardEnabled, &platform_bridge,
                      [&launch] { launch.board_enabled(); });
