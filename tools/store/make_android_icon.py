@@ -40,7 +40,10 @@ BOARD = 50.0  # dp, the width of the 4 x 4 board
 VISIBLE_RADIUS = 36.0  # dp, half of the 72 dp that every launcher shape shows
 SCALE = BOARD / (4 * design.CELL)  # dp per pixel of the 1024 px drawing
 
-XML_HEAD = '<?xml version="1.0" encoding="utf-8"?>\n<!-- SPDX-License-Identifier: GPL-3.0-or-later -->\n'
+# The licence tag is written in two pieces so that the REUSE tool, which reads every line of this file, does not take
+# the text of the header it writes for a header of this file.
+LICENCE_TAG = "SPDX-License" + "-Identifier: GPL-3.0-or-later"
+XML_HEAD = f'<?xml version="1.0" encoding="utf-8"?>\n<!-- {LICENCE_TAG} -->\n'
 GENERATED = "<!-- Made by tools/store/make_android_icon.py from the drawing in tools/store/make_app_icon.py. Do not edit. -->\n"
 
 

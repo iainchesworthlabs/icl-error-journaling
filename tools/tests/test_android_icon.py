@@ -51,7 +51,8 @@ class AndroidIconTest(unittest.TestCase):
         for name in android.files():
             text = (RES / name).read_text(encoding="utf-8")
             ET.fromstring(text)
-            self.assertIn("SPDX-License-Identifier: GPL-3.0-or-later", text, name)
+            # In two pieces, so that the REUSE tool does not take this line for a header of this file.
+            self.assertIn("SPDX-License" + "-Identifier: GPL-3.0-or-later", text, name)
 
     def test_the_adaptive_icon_has_a_background_a_foreground_and_a_monochrome_layer(self) -> None:
         for name in ("ic_launcher.xml", "ic_launcher_round.xml"):
