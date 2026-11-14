@@ -266,7 +266,7 @@ Result<std::string, StorageError> encode_people_record(const PeopleRecord& recor
     return line;
 }
 
-Result<PeopleRecord, PeopleDecodeError> decode_people_record(std::string_view line)
+Result<PeopleRecord, PeopleDecodeError> decode_people_record(std::string_view line, std::uint64_t* seq_out)
 {
     if (line.size() > MAX_RECORD_BYTES || line.empty() || line.front() != '{')
     {
@@ -311,9 +311,17 @@ Result<PeopleRecord, PeopleDecodeError> decode_people_record(std::string_view li
     const std::int64_t seq = root.integer("seq");
     const auto op = op_from_name(to_std(root.text("op")));
     const QJsonObject body_object = root.object("body");
-    if (bad || version < 1 || seq <= 0 || !op)
+    if (bad || version < 1 || seq <= 0)
     {
         return std::unexpected(PeopleDecodeError::MALFORMED);
+    }
+    if (!op)
+    {
+        if (seq_out != nullptr)
+        {
+            *seq_out = static_cast<std::uint64_t>(seq);
+        }
+        return std::unexpected(PeopleDecodeError::UNKNOWN_OP);
     }
     const Fields body{body_object, bad};
     PeopleRecord record;
@@ -599,8 +607,15 @@ PeopleScan scan_people_journal(std::string_view bytes)
             ++scan.m_BadRecords; // after the first problem nothing is taken: the journal is not carried on past a hole
             continue;
         }
-        const auto record = decode_people_record(line);
-        if (!record || record->m_Seq != scan.last_seq() + 1)
+        std::uint64_t unknown_seq = 0;
+        const auto record = decode_people_record(line, &unknown_seq);
+        if (!record && record.error() == PeopleDecodeError::UNKNOWN_OP && unknown_seq == scan.m_LastSeq + 1)
+        {
+            ++scan.m_UnknownRecords; // a record type of a later build: skipped, and the sequence goes on
+            scan.m_LastSeq = unknown_seq;
+            continue;
+        }
+        if (!record || record->m_Seq != scan.m_LastSeq + 1)
         {
             ++scan.m_BadRecords;
             scan.m_HasProblem = true;
@@ -615,6 +630,7 @@ PeopleScan scan_people_journal(std::string_view bytes)
         }
         scan.m_State = std::move(trial);
         scan.m_Records.push_back(*record);
+        scan.m_LastSeq = record->m_Seq;
     }
     return scan;
 }

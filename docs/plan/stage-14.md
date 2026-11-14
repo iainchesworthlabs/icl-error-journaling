@@ -149,13 +149,18 @@ app. A name written into them could never be erased. So:
   atomically without that person's earlier records (the one place an app action rewrites a journal; it works on a copy
   and renames, like recovery). Entries keep the id. Everything that shows or exports the entry then says "someone".
 - **`set_person_location`** is the one record of this journal written at `v:2`; the others stay `v:1`, so a journal
-  in which nobody was moved stays readable by the build before. An older build that reads the new line stops at it
-  (`UNSUPPORTED_VERSION`, which the scan treats like any line it cannot read): the people journal "needs recovery",
-  recovery sets a copy aside in quarantine and writes the journal again from the people it did read. That costs the
-  moves and the people added after them (shown as "someone"), never an entry; downgrade is unsupported anyway
-  (decision 9). The record is durable before the call returns, setting the value a person already has writes nothing,
-  and Forget needs no extra step: the rewrite seeds each person from their state (the location is part of the
-  `add_person` record there), so no record that names a forgotten person's location is left.
+  in which nobody was moved stays readable by the build before. A build before it cannot read a journal that holds one
+  (downgrade is unsupported, decision 9): it stops at the `v:2` line, the journal "needs recovery", and recovery sets a
+  copy aside in quarantine and writes the journal again from the people it did read. That costs the moves and the people
+  added after them (they read "someone"), never an entry. From this build on, the reader is forward compatible: a whole
+  record (good checksum, a version this build reads) whose op it does not have is skipped and counted
+  (`PeopleScan::m_UnknownRecords`), keeps its place in the sequence and leaves the journal clean; the people before and
+  after it are intact. A version above `PEOPLE_JOURNAL_VERSION` still ends the accepted run, as in a log's journal: that
+  is how a journal says it needs a newer app. So a later record type is written at the version in force, and the
+  version rises only when an existing record changes meaning. A rewrite (Forget, recovery) writes the people it knows
+  and drops a record it skipped. The record is durable before the call returns, setting the value a person already has
+  writes nothing, and Forget needs no extra step: the rewrite seeds each person from their state (the location is part
+  of the `add_person` record there), so no record that names a forgotten person's location is left.
 - Because entries hold ids, **renaming** someone corrects every past entry, like a header correction. Tester typos
   are fixable once.
 

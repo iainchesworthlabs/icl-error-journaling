@@ -1,0 +1,6 @@
+[0/2] Re-checking globbed directories...
+[1/11] Scanning E:\wt\icl-error-journaling\person-location\libs\storage\tests\test_people_journal.cpp for CXX dependencies
+[2/11] Generating CXX dyndep file libs\storage\tests\CMakeFiles\ej_storage_tests.dir\CXX.dd
+[3/5] Building CXX object libs\storage\tests\CMakeFiles\ej_storage_tests.dir\test_people_journal.cpp.obj
+[4/5] Linking CXX executable libs\storage\tests\ej_storage_tests.exe
+done 0 

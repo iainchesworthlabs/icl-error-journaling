@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The people journal's records and the state they fold to (Stage 14, section 3.4; T-I2-4). All names are stand-ins.
+#include "error_journaling/journal_record.hpp"
 #include "error_journaling/people_journal.hpp"
 #include "people_names.hpp"
 #include "storage_samples.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -352,15 +354,55 @@ TEST_CASE("A location change is replayed by a scan and kept by the seed, and a f
     CHECK(again.m_State.is_forgotten(person(1)));
 }
 
-TEST_CASE("A line that a build does not know ends the accepted run", "[people][journal]")
+namespace
 {
-    // What an older build sees of a location change: a line it cannot read (a newer version, or an op it does not
-    // have) ends the accepted run, so the store is not used and recovery sets a copy aside before it writes the journal
-    // again. The op name is changed here, with the checksum made right, to stand for an older build.
-    const std::string known = line_of(record(1, AddPersonBody{make_person(1, ALEX)}));
-    const std::string future = R"({"body":{"id":"x"},"crc":"00000000","op":"set_person_location","seq":2,"v":3})";
-    const PeopleScan scan = scan_people_journal(known + "\n" + future + "\n");
+
+/// A whole line with a good checksum, as a later build might write it: any op and version.
+std::string foreign_line(std::uint64_t seq, std::string_view op, int version)
+{
+    const std::string head = "{\"body\":{\"id\":\"" + person(1).format() + "\"},";
+    const std::string tail = ",\"op\":\"" + std::string(op) + "\",\"seq\":" + std::to_string(seq) +
+                             ",\"v\":" + std::to_string(version) + "}";
+    char digits[16];
+    std::snprintf(digits, sizeof digits, "%08x", crc32(head.substr(0, head.size() - 1) + tail.substr(0)));
+    return head + "\"crc\":\"" + digits + "\"" + tail;
+}
+
+} // namespace
+
+TEST_CASE("A record of an op this build does not have is skipped and counted, and what is around it is kept",
+          "[people][journal]")
+{
+    const std::string bytes = line_of(record(1, AddPersonBody{make_person(1, ALEX)})) + "\n" +
+                              foreign_line(2, "future_op", 2) + "\n" +
+                              line_of(record(3, AddPersonBody{make_person(2, JORDAN, 2)})) + "\n" +
+                              line_of(record(4, RenamePersonBody{person(1), std::string(PAT)})) + "\n";
+    const PeopleScan scan = scan_people_journal(bytes);
+    CHECK(scan.is_clean());
+    CHECK(scan.m_UnknownRecords == 1);
+    CHECK(scan.m_BadRecords == 0);
+    CHECK(scan.m_Records.size() == 3);
+    CHECK(scan.last_seq() == 4); // the skipped record keeps its number, so the next append is 5
+    CHECK(scan.m_State.size() == 2);
+    CHECK(scan.m_State.find(person(1))->m_DisplayName == PAT);
+    CHECK(scan.m_State.find(person(2))->m_DisplayName == JORDAN);
+
+    // Out of place, it is not trusted: a gap is a gap.
+    const PeopleScan gap = scan_people_journal(line_of(record(1, AddPersonBody{make_person(1, ALEX)})) + "\n" +
+                                               foreign_line(5, "future_op", 2) + "\n");
+    CHECK(gap.m_HasProblem);
+    CHECK(gap.m_UnknownRecords == 0);
+}
+
+TEST_CASE("A record of a version this build does not read ends the accepted run", "[people][journal]")
+{
+    // The one thing that says "this needs a newer app": the journal is not used and recovery sets a copy aside.
+    const std::string bytes = line_of(record(1, AddPersonBody{make_person(1, ALEX)})) + "\n" +
+                              foreign_line(2, "set_person_location", 3) + "\n" +
+                              line_of(record(3, AddPersonBody{make_person(2, JORDAN, 2)})) + "\n";
+    const PeopleScan scan = scan_people_journal(bytes);
     CHECK(scan.m_Records.size() == 1);
     CHECK(scan.m_HasProblem);
     CHECK_FALSE(scan.is_clean());
+    CHECK(decode_people_record(foreign_line(2, "future_op", 3)).error() == PeopleDecodeError::UNSUPPORTED_VERSION);
 }
