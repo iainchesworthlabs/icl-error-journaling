@@ -241,6 +241,12 @@ public:
         }
         return {};
     }
+    Q_INVOKABLE bool isListed(const QString& id) const { return !nameOf(id).isEmpty(); }
+    Q_INVOKABLE QString labelFor(const QString& id) const
+    {
+        const QString name = nameOf(id);
+        return name.isEmpty() ? m_Retired.value(id, QStringLiteral("someone")) : name;
+    }
     Q_INVOKABLE QString nameOf(const QString& id) const
     {
         for (const Row& row : m_Rows)
@@ -292,6 +298,7 @@ public:
     }
 
     std::vector<Row> m_Rows;
+    QHash<QString, QString> m_Retired; // people kept by name who are not listed
     QStringList m_Touched;
 
 signals:
@@ -2758,6 +2765,53 @@ TEST_CASE("board.voiceover: tiles are named, a screen reader activation logs onc
     CHECK(sim.entries().size() == 1);
 }
 
+
+TEST_CASE("picker.edit_mode: the people of an entry are ticked, a retired one is named and a forgotten one is someone, Cancel has no Skip, Done may be empty", "[ui][log][interaction]")
+{
+    FakePeople people;
+    people.seed("Alex Sample");
+    people.seed("Jordan Placeholder");
+    const QString alex = QString::fromStdString(sample_id<PersonId>(100).format());
+    const QString retired = QString::fromStdString(sample_id<PersonId>(200).format());
+    const QString forgotten = QString::fromStdString(sample_id<PersonId>(201).format());
+    people.m_Retired.insert(retired, QStringLiteral("Pat Stand-in"));
+
+    UiRig rig;
+    QQuickItem* picker = rig.load(QStringLiteral("PersonPicker"),
+                                  {{QStringLiteral("people"), QVariant::fromValue(static_cast<QObject*>(&people))},
+                                   {QStringLiteral("typeName"), QStringLiteral("Spoke with")}});
+    REQUIRE(picker != nullptr);
+    QSignalSpy done(picker, SIGNAL(doneRequested(QVariant)));
+    QSignalSpy skipped(picker, SIGNAL(skipped()));
+
+    QMetaObject::invokeMethod(picker, "begin", Q_ARG(QVariant, QVariant(QStringList{alex, retired, forgotten})));
+    rig.advance(600ms);
+    rig.layout();
+    CHECK(picker->property("editing").toBool());
+    CHECK(picker->property("picked").toStringList().size() == 3);
+    // Two of the three are not in the list: they are shown by name and as "someone", ticked, and can be taken off.
+    const auto rows = rig.find_items(QStringLiteral("personPickerUnlistedRow"));
+    REQUIRE(rows.size() == 2);
+    CHECK(rows[0]->property("text").toString() == QStringLiteral("Pat Stand-in"));
+    CHECK(rows[1]->property("text").toString() == QStringLiteral("someone"));
+    CHECK(rows[0]->property("checked").toBool());
+
+    // No Skip: the bar says Cancel.
+    QQuickItem* bar = rig.find_item(QStringLiteral("personPickerBar"));
+    REQUIRE(bar != nullptr);
+    CHECK(bar->property("leadingText").toString() == QStringLiteral("Cancel"));
+
+    // Everyone off, then Done: an empty list is sent.
+    QMetaObject::invokeMethod(picker, "toggle", Q_ARG(QString, alex));
+    QMetaObject::invokeMethod(picker, "toggle", Q_ARG(QString, retired));
+    QMetaObject::invokeMethod(picker, "toggle", Q_ARG(QString, forgotten));
+    CHECK(picker->property("picked").toStringList().isEmpty());
+    QMetaObject::invokeMethod(picker, "finish");
+    rig.advance(600ms);
+    REQUIRE(done.count() == 1);
+    CHECK(done.at(0).at(0).toStringList().isEmpty());
+    CHECK(skipped.count() == 0);
+}
 #include "log_screen_test.moc"
 
 // ---- the first-run tip (Stage 10, 10.6) ----

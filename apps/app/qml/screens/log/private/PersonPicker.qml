@@ -38,6 +38,11 @@ Sheet {
     readonly property string matchId: filterText.length > 0 ? root.people.matchFor(filterText) : ""
     readonly property bool offersAdd: filterText.length > 0 && matchId.length === 0 && root.people.available
     readonly property var everyoneIds: locationId.length > 0 ? root.people.everyoneAt(locationId) : []
+    // The picker edits the people of an entry that has some already (the Edit entry sheet): the people of the entry are ticked,
+    // there is no Skip but Cancel, and Done with nobody ticked takes everyone off the entry.
+    property bool editing: false
+    // The people ticked that the list does not show (retired, or forgotten), so that they can be taken off.
+    readonly property var unlisted: picked.filter(id => !root.people.isListed(id))
     // Done was chosen: the sheet closing is then not a skip.
     property bool finished: false
 
@@ -85,8 +90,10 @@ Sheet {
             adding = false;
     }
 
-    function begin(): void {
-        picked = [];
+    // Opens the picker. `picks` (ordered person ids) are ticked and make it an editor of those people.
+    function begin(picks): void {
+        editing = picks !== undefined;
+        picked = editing ? picks.slice() : [];
         notice = "";
         adding = false;
         finished = false;
@@ -134,7 +141,7 @@ Sheet {
         anchors.top: parent.top
         title: root.typeName.length > 0 ? qsTr("%1 …").arg(root.typeName) : qsTr("Pick people")
         inSheet: true
-        leadingText: qsTr("Skip")
+        leadingText: root.editing ? qsTr("Cancel") : qsTr("Skip")
         trailingText: root.picked.length > 0 ? qsTr("Done (%1)").arg(root.picked.length) : qsTr("Done")
         onLeadingTriggered: root.close()
         onTrailingTriggered: root.finish()
@@ -224,6 +231,31 @@ Sheet {
                     value: qsTr("%n people", "", root.everyoneIds.length)
                     minimumHeight: Theme.size.rowHeightForm
                     onActivated: root.tickEveryone()
+                }
+            }
+
+            GroupedList {
+                objectName: "personPickerUnlisted"
+                width: parent.width
+                surface: Theme.colour.surfaceRaised
+                visible: root.unlisted.length > 0
+                title: qsTr("On this entry")
+
+                Repeater {
+                    model: root.unlisted
+
+                    ListRow {
+                        id: kept
+
+                        required property string modelData
+
+                        objectName: "personPickerUnlistedRow"
+                        text: root.people.labelFor(kept.modelData)
+                        checkable: true
+                        checked: true
+                        minimumHeight: Theme.size.rowHeightForm
+                        onActivated: root.toggle(kept.modelData)
+                    }
                 }
             }
 
