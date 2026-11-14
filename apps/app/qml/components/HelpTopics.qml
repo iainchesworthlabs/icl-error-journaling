@@ -88,7 +88,7 @@ QtObject {
         {
             "id": "people",
             "title": qsTr("People"),
-            "paragraphs": [qsTr("<b>People</b> are the names an interaction such as “Spoke with [person]” can use. They are optional: a tile with no <b>[person]</b> in its line never asks who."), qsTr("Type a name under <b>New person</b> and tap <b>Add person</b>. Choose a location if the person belongs to one, and <b>Everyone</b> in the picker ticks the people of the location in force."), qsTr("Tap a name to rename it (past entries follow), to <b>Retire</b> it (it leaves the picker and stays on past entries), or to <b>Forget</b> it. Forget removes the name from this device for good, and the entries show “someone”."), qsTr("Names stay on this device. A log you share shows them as initials, in full or as “someone”, as you choose under <b>Names in shared logs</b>.")],
+            "paragraphs": [qsTr("<b>People</b> are the names an interaction such as “Spoke with [person]” can use. They are optional: a tile with no <b>[person]</b> in its line never asks who."), qsTr("Type a name under <b>New person</b> and tap <b>Add person</b>. Choose a location if the person belongs to one, and <b>Everyone</b> in the picker ticks the people of the location in force."), qsTr("Tap a name to rename it (past entries follow), to change its location, to <b>Retire</b> it (it leaves the picker and stays on past entries), or to <b>Forget</b> it. Forget removes the name from this device for good, and the entries show “someone”."), qsTr("Names stay on this device. A log you share shows them as initials, in full or as “someone”, as you choose under <b>Names in shared logs</b>.")],
             "page": "guide/setup/",
             "anchor": "people"
         }

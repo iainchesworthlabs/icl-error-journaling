@@ -125,6 +125,8 @@ who. In **Settings**, **Second board**, tap **People**:
   **Everyone** in the picker ticks the people of the location in force. A name is at most 60 characters, and two people
   cannot share a name.
 - Tap a name to **rename** it. Entries that name the person show the new name.
+- In the same sheet, under **Location**, choose another location for the person, or **No location**, and tap **Save**.
+  Entries already logged are not touched; the change only decides who **Everyone** ticks.
 - **Retire** takes a person out of the picker. They stay on the entries already logged, and **Bring back** undoes it.
 - **Forget** removes a name for good, after you confirm. The entries stay and show “someone”.
 

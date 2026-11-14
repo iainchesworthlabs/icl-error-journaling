@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Stage 14, package I-7: the People screen's list, on the real store and a storage thread. The names are the stand-ins of the
-// docs.
+// Stage 14, package I-7: the People screen's list, on the real store and a storage thread. The names are the stand-ins
+// of the docs.
 #include "error_journaling/uuid.hpp"
 #include "support/rig.hpp"
 #include "viewmodel/people_admin_model.hpp"
@@ -83,6 +83,49 @@ TEST_CASE("settings.people_model: add, rename, retire and bring back, and the pi
     CHECK(picker.count() == 1);
 }
 
+TEST_CASE("settings.people_model: a person is moved to another location and to none, and nobody else changes",
+          "[viewmodel][people][integration]")
+{
+    Rig rig(RigStore::SQLITE);
+    rig.import_sample_configuration();
+    PeopleAdminModel& admin = *rig.root().people_admin();
+    rig.settle();
+    REQUIRE(admin.available());
+    const QString alex = add(rig, QStringLiteral("Alex Sample"));
+    const QString jordan = add(rig, QStringLiteral("Jordan Placeholder"));
+    const QString north = QString::fromStdString(Uuid::parse("00000000-0000-4000-8000-0000000000a1")->format());
+
+    const auto location_of = [&admin](const QString& id)
+    {
+        for (int row = 0; row < admin.rowCount(); ++row)
+        {
+            if (admin.data(admin.index(row), PeopleAdminModel::PERSON_ID).toString() == id)
+            {
+                return admin.data(admin.index(row), PeopleAdminModel::LOCATION_ID).toString();
+            }
+        }
+        return QStringLiteral("not listed");
+    };
+    CHECK(location_of(alex).isEmpty());
+
+    QSignalSpy changed(&admin, &PeopleAdminModel::changed);
+    REQUIRE(admin.setLocation(alex, north).isEmpty());
+    rig.wait_until([&changed] { return changed.count() == 1; });
+    rig.settle();
+    CHECK(location_of(alex) == north);
+    CHECK(location_of(jordan).isEmpty());
+    CHECK(admin.count() == 2);
+
+    REQUIRE(admin.setLocation(alex, {}).isEmpty());
+    rig.wait_until([&changed] { return changed.count() == 2; });
+    rig.settle();
+    CHECK(location_of(alex).isEmpty());
+
+    // Nobody who is not listed can be moved.
+    CHECK_FALSE(admin.setLocation(QStringLiteral("not an id"), north).isEmpty());
+    CHECK(admin.count() == 2);
+}
+
 TEST_CASE("settings.people_model: Forget removes the person from both lists and the name from the export",
           "[viewmodel][people][integration]")
 {
@@ -120,8 +163,9 @@ TEST_CASE("settings.people_model: Forget removes the person from both lists and 
     CHECK(admin.addPerson(QStringLiteral("Alex Sample"), {}).isEmpty());
 }
 
-TEST_CASE("settings.people_model: a retired person's name can be taken by a new person, and bringing both back is refused",
-          "[viewmodel][people][integration]")
+TEST_CASE(
+    "settings.people_model: a retired person's name can be taken by a new person, and bringing both back is refused",
+    "[viewmodel][people][integration]")
 {
     Rig rig(RigStore::SQLITE);
     rig.import_sample_configuration();
