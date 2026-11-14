@@ -17,6 +17,8 @@ SettingsPage {
     id: root
 
     required property var settings
+    // BoardState, for the Second board group: `interactionsEnabled`. Null leaves the group out.
+    property var boards: null
     // The foot of the list: the version and platform text, as a plain caption. Empty hides it. The build's facts, the licence and
     // the timing line (five taps on the version) are on the About page, which the last row opens.
     property string aboutText
@@ -189,6 +191,30 @@ SettingsPage {
         Item {
             width: parent.width
             height: board.selectedPosition > 0 ? Theme.space.tileGap : Theme.space.sectionGap * 3 / 2
+        }
+
+        // The optional second board (Stage 14, I-5; SecondBoardSettings): one switch. Off, the app is as it was; turning it off
+        // again hides the board and the tab and deletes nothing.
+        GroupedList {
+            objectName: "settingsSecondBoardGroup"
+            width: parent.width
+            visible: root.boards !== null
+            title: qsTr("Second board")
+            footer: root.boards !== null && root.boards.interactionsEnabled ? qsTr("Turn this off to hide the board. Nothing is deleted: entries stay in the log, and the types and people are kept for next time.") : qsTr("A second board for what you did, with the people involved if you want them. Off, the app is exactly as it was.")
+
+            SettingsSwitchRow {
+                objectName: "settingsSecondBoardRow"
+                text: qsTr("Second board: Interactions")
+                description: qsTr("For what you did, as well as what went wrong")
+                checked: root.boards !== null && root.boards.interactionsEnabled
+                onToggled: wanted => root.boards.interactionsEnabled = wanted
+            }
+        }
+
+        Item {
+            width: parent.width
+            height: Theme.space.sectionGap
+            visible: root.boards !== null
         }
 
         GroupedList {

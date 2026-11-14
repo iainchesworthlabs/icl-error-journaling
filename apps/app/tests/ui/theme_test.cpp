@@ -197,6 +197,31 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
         }
     }
 
+    SECTION("the interaction palette, 11 slots of a second hue family")
+    {
+        const QJsonArray palette = json.value(QStringLiteral("interactionPalette")).toArray();
+        REQUIRE(palette.size() == 11);
+        for (const bool dark : {false, true})
+        {
+            rig.set_dark(dark);
+            for (int i = 0; i < 11; ++i)
+            {
+                const QJsonObject slot = palette.at(i).toObject();
+                REQUIRE(slot.value(QStringLiteral("slot")).toInt() == i + 1);
+                INFO((dark ? "dark " : "light ") << slot.value(QStringLiteral("name")).toString().toStdString());
+                QColor got;
+                REQUIRE(QMetaObject::invokeMethod(theme, "interactionTileColour", Q_RETURN_ARG(QColor, got),
+                                                  Q_ARG(int, i + 1)));
+                CHECK(got == QColor(slot.value(dark ? QStringLiteral("darkHex") : QStringLiteral("hex")).toString()));
+            }
+            // A slot that is not one gives the neutral Other fill, never a colour that means something.
+            QColor outside;
+            REQUIRE(QMetaObject::invokeMethod(theme, "interactionTileColour", Q_RETURN_ARG(QColor, outside),
+                                              Q_ARG(int, 0)));
+            CHECK(outside == colour_of(child(theme, "colour"), QStringLiteral("otherTileFill")));
+        }
+    }
+
     SECTION("sizes, radii, spacing and the frame")
     {
         check_numbers(json.value(QStringLiteral("size")).toObject(), child(theme, "size"));

@@ -2278,6 +2278,8 @@ TEST_CASE("perf.scene: the items and the delegates of the Log screen stay under 
     // is what the screen needs, and a Repeater or a Loader for each tile would raise it.
     // The budget is 321 items: the 320 of the screen and the one Loader of the first-run tip, whose card is made only while the
     // tip is wanted and so costs nothing more once it is closed (Stage 10, 10.6).
+    // Three more for the Interactions board (Stage 14, I-5): the title strip and its Loader, and the Loader of the empty
+    // board. Their contents are made only on that board, so the Errors board pays these three and nothing else.
     constexpr int TILE_DELEGATES = 12;
     constexpr int CHIP_DELEGATES = 2;
     CHECK(limit.value(QStringLiteral("delegates")).toInt() == TILE_DELEGATES + CHIP_DELEGATES);

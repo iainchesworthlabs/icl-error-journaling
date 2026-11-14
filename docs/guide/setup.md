@@ -75,3 +75,25 @@ If the file has problems, the app lists every one, in the order they appear in t
 ![The import errors screen: a list of problems found in the file, each saying where it is and how to fix it.](img/import-errors.png){ width="270" }
 
 [The setup file](setup-file.md) explains every key and every message, for whoever prepares the file.
+
+## The second board: Interactions (optional)
+
+The app can show a second board, **Interactions**, for what you did as well as what went wrong. It is **off** until you turn it
+on, and while it is off the app looks and works as it always has: four tabs, and the first one is **Log**.
+
+To turn it on, open **Settings** and turn on **Second board: Interactions** (the **Second board** group, above the list of
+setup rows). A fifth tab, **Interactions**, appears at once, and the first tab is now called **Errors**. The tabs are
+**Errors**, **Interactions**, **Review**, **History** and **Settings**.
+
+- The header card, the note box and the **Last** bar at the top are the same on both boards, so there is one note draft and
+  **Last** shows the latest entry of either kind.
+- The Interactions board has a strip with its name, and its tiles are a different set of colours from the Errors board, so you
+  can tell the boards apart. The tab, the strip and the label of each tile say which board you are on; do not rely on colour.
+- To change board, tap the tab, or swipe along the strip that says **Interactions**. A swipe anywhere else does nothing, so a
+  slip over a tile never changes board.
+- The app opens on the board you used last.
+- Until you have added interaction types, the board is empty and offers **Add interaction types**.
+
+Turning the switch off hides the tab and the board. **Nothing is deleted:** the entries stay in the log and in Review and
+History, and what you set up is kept for the next time. If you were on the Interactions board, the app goes to the Errors board.
+

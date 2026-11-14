@@ -1,6 +1,6 @@
 # Privacy
 
-Last changed: 13 November 2026.
+Last changed: 14 November 2026.
 
 **Field Test collects no data about you.** It has no accounts, no analytics, no advertising and no crash reporting,
 and it does not send anything over the internet. This page says what that means in practice.
@@ -10,7 +10,7 @@ and it does not send anything over the internet. This page says what that means 
 - **Your logs.** Each day's entries, the notes you type and the day's details (unit, place, software versions (the robot's and any others you add), date and
   your name as the facilitator).
 - **Your setup.** The error types, places and note templates you set up, and your preferences, such as the time format.
-- **A few settings of the app itself**, such as whether you have closed the tip on the Log screen.
+- **A few settings of the app itself**, such as whether you have closed the tip on the Log screen, whether the optional second board is on, and which board you used last. They are a switch and a word in a small file of their own; they are not in your logs and not in a setup file.
 
 ## The microphone
 

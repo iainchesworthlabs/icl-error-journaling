@@ -177,3 +177,104 @@ TEST_CASE("a11y.contrast: any two tiles differ for a person with deuteranopia", 
         CHECK(closest.m_Distance >= (dark ? DARK_FLOOR : LIGHT_FLOOR));
     }
 }
+
+namespace
+{
+
+QColor interaction_tile(QObject* theme, int slot)
+{
+    QColor result;
+    REQUIRE(QMetaObject::invokeMethod(theme, "interactionTileColour", Q_RETURN_ARG(QColor, result), Q_ARG(int, slot)));
+    return result;
+}
+
+} // namespace
+
+// T-I5-4 (docs/plan/stage-14.md): the second hue family of the Interactions board.
+TEST_CASE("theme.interaction_hues: the interaction tiles and the strip pass the contrast test in light and in dark",
+          "[ui][a11y][contrast]")
+{
+    UiRig rig;
+    QObject* theme = rig.theme();
+    for (const bool dark : {false, true})
+    {
+        rig.set_dark(dark);
+        QStringList labels;
+        for (const QVariant& entry : pairs(theme))
+        {
+            labels.append(entry.toMap().value("label").toString());
+        }
+        for (int slot = 1; slot <= 11; ++slot)
+        {
+            CHECK(labels.contains(QStringLiteral("Interaction tile label, slot %1").arg(slot)));
+            CHECK(labels.contains(QStringLiteral("Count badge on interaction tile, slot %1").arg(slot)));
+            // The tile text is the screen's primary text, as for the error tiles.
+            CHECK(contrast_ratio(colour_property(theme, "colour", "tileText"), interaction_tile(theme, slot)) >= 4.5);
+        }
+        CHECK(labels.contains(QStringLiteral("Interactions strip title")));
+        CHECK(labels.contains(QStringLiteral("Interactions tab, selected")));
+        const QColor accent = colour_property(theme, "colour", "interactionAccent");
+        CHECK(contrast_ratio(accent, colour_property(theme, "colour", "background")) >= 4.5);
+        CHECK(contrast_ratio(accent, colour_property(theme, "colour", "surface")) >= 4.5);
+    }
+}
+
+TEST_CASE("theme.interaction_hues: no interaction tile is red or green, and none is an error tile",
+          "[ui][a11y][contrast]")
+{
+    UiRig rig;
+    QObject* theme = rig.theme();
+    for (const bool dark : {false, true})
+    {
+        rig.set_dark(dark);
+        for (int slot = 1; slot <= 11; ++slot)
+        {
+            const QColor fill = interaction_tile(theme, slot);
+            const double hue = hue_degrees(fill);
+            INFO((dark ? "dark" : "light") << " slot " << slot << " hue " << hue);
+            const bool red = hue >= 350.0 || hue <= 20.0;
+            const bool green = hue >= 75.0 && hue <= 165.0;
+            CHECK_FALSE(red);
+            CHECK_FALSE(green);
+            // A tile of the other board is never the same colour, so that a wrong tap is seen.
+            for (int other = 1; other <= 11; ++other)
+            {
+                CHECK(fill != tile(theme, other));
+            }
+        }
+    }
+}
+
+TEST_CASE("theme.interaction_hues: the interaction tiles differ for a person with deuteranopia", "[ui][a11y][contrast]")
+{
+    // The same rule and the same floors as the error tiles (the light pastels are close, the label carries the meaning
+    // of a tile and never the colour). The closest pairs are recorded in docs/design/contrast.md.
+    constexpr double LIGHT_FLOOR = 0.25;
+    constexpr double DARK_FLOOR = 1.4;
+
+    UiRig rig;
+    QObject* theme = rig.theme();
+    for (const bool dark : {false, true})
+    {
+        rig.set_dark(dark);
+        double closest = 1e9;
+        int first = 0;
+        int second = 0;
+        for (int a = 1; a <= 11; ++a)
+        {
+            for (int b = a + 1; b <= 11; ++b)
+            {
+                const double distance = deuteranopia_distance(interaction_tile(theme, a), interaction_tile(theme, b));
+                if (distance < closest)
+                {
+                    closest = distance;
+                    first = a;
+                    second = b;
+                }
+            }
+        }
+        INFO((dark ? "dark" : "light") << ": the closest pair is slots " << first << " and " << second << " at "
+                                       << closest);
+        CHECK(closest >= (dark ? DARK_FLOOR : LIGHT_FLOOR));
+    }
+}
