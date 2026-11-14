@@ -200,3 +200,35 @@ TEST_CASE("settings.interaction_types: the example line shows a sample person an
     CHECK(rig.m_Settings.previewInteractionLine("Waved", "") == "Waved");
     CHECK(rig.m_Settings.previewInteractionLine("X", "{") == "Fix the line to see an example.");
 }
+
+TEST_CASE("settings.interaction_types: with no types in the file the editor shows the built-in ones, and the first edit keeps them",
+          "[viewmodel][settings][interaction_types]")
+{
+    Configuration configuration = sample_configuration();
+    configuration.m_InteractionTypes.clear();
+    SettingsRig rig;
+    rig.load_configuration(configuration);
+    const QAbstractItemModel& types = *rig.m_Settings.interaction_types();
+
+    // What the board shows is what the editor lists.
+    const QStringList shown = names_of(types);
+    REQUIRE(shown.size() == 6);
+    CHECK(shown.front() == QStringLiteral("Spoke with"));
+    CHECK(text_of_role(types, 0, "line") == QStringLiteral("Spoke with [person]"));
+    CHECK(text_of_role(types, 0, "asks") == QStringLiteral("person"));
+    CHECK(position_at(types, 0) == 1);
+
+    // A rename edits the built-in type: the six are now in the configuration and nothing else changed.
+    CHECK(rig.m_Settings.updateInteractionType(id_at(types, 0), "Chatted with", "Chatted with [person]").isEmpty());
+    rig.commit();
+    const QStringList after = names_of(types);
+    REQUIRE(after.size() == 6);
+    CHECK(after.front() == QStringLiteral("Chatted with"));
+    CHECK(after.back() == shown.back());
+
+    // A new type goes to the first empty tile, after the six.
+    CHECK(rig.m_Settings.addInteractionType("Waved at", "Waved at [person]").isEmpty());
+    rig.commit();
+    CHECK(names_of(types).size() == 7);
+    CHECK(position_at(types, 6) == 7);
+}
