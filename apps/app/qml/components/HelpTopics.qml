@@ -77,6 +77,13 @@ QtObject {
             "paragraphs": [qsTr("<b>Review</b> is today’s log, in the same words that you share."), qsTr("Tap an entry to edit it. Swipe an entry left for <b>Copy</b> and <b>Delete</b>."), qsTr("<b>Share log</b> opens the share sheet with the log as plain text. Only Share log marks the log as shared. <b>Copy log</b> does not."), qsTr("A past log is in History, where you can share it again.")],
             "page": "guide/sharing/",
             "anchor": "review"
+        },
+        {
+            "id": "interactionTypes",
+            "title": qsTr("Interaction types"),
+            "paragraphs": [qsTr("<b>Interaction types</b> are the tiles of the optional Interactions board: what you did around the unit. Tap <b>Add an interaction type</b> to make one."), qsTr("<b>Line in the log</b> is what gets written. Tap <b>Insert person</b> to put <b>[person]</b> where the people go, for example “Spoke with [person]”. A type with <b>[person]</b> asks who after you log it. A type without it never asks."), qsTr("Tap <b>Insert answer</b> to put <b>[answer]</b> in the line, and you are asked for an answer after you log it. With no line, the log shows the name."), qsTr("The first 11 types fill the board in the order shown. The rest are under <b>Other…</b>. A type you retire stays on the entries already logged.")],
+            "page": "guide/setup/",
+            "anchor": "the-second-board-interactions-optional"
         }
     ]
 
