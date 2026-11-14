@@ -301,16 +301,16 @@ TEST_CASE("The preferences are refused in sentences about the setting", "[viewmo
 {
     QJsonObject root = sample_json();
 
-    SECTION("a missing facilitator and a missing prefix")
+    SECTION("a missing tester and a missing prefix")
     {
         set_preference(root, "facilitator", UNDEFINED);
         set_preference(root, "unit_prefix", "");
-        CHECK(messages_of(root) == QStringList{"The facilitator is missing.", "The unit prefix is missing."});
+        CHECK(messages_of(root) == QStringList{"The tester is missing.", "The unit prefix is missing."});
     }
-    SECTION("a facilitator that is too long")
+    SECTION("a tester that is too long")
     {
         set_preference(root, "facilitator", QString(201, 'x'));
-        CHECK(messages_of(root) == QStringList{"The facilitator is longer than 200 characters."});
+        CHECK(messages_of(root) == QStringList{"The tester is longer than 200 characters."});
     }
     SECTION("a prefix with a dash")
     {
@@ -373,7 +373,7 @@ TEST_CASE("The preferences are refused in sentences about the setting", "[viewmo
     SECTION("a setting of the wrong kind that has no word of its own")
     {
         set_preference(root, "facilitator", true);
-        CHECK(messages_of(root) == QStringList{"The facilitator is not valid."});
+        CHECK(messages_of(root) == QStringList{"The tester is not valid."});
     }
 }
 

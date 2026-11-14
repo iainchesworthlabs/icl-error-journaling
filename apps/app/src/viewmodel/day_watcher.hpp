@@ -40,7 +40,7 @@ namespace ej::viewmodel
 /// empty log has nothing to share, so it is never called unshared. `changedSinceShare` is `unshared` for a log that was
 /// shared earlier, so the text can say "changed after it was last shared" and not "hasn't been shared".
 ///
-/// The prompt is offered on the first check on a later date than the open log's, whatever the gap: a facilitator who
+/// The prompt is offered on the first check on a later date than the open log's, whatever the gap: a tester who
 /// works on Mondays and Fridays is asked on Friday about Monday's log.
 ///
 /// GUI thread only. No I/O of its own: a new log is `LogSession::startNewLog` and sharing is

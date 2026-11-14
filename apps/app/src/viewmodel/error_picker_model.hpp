@@ -22,7 +22,7 @@ namespace ej::viewmodel
 ///
 /// Picking a type is `LogSession::recordError(typeId)`, the same path as a tile; the model records nothing. `addType`
 /// adds a type to the master list through `ConfigurationEditor` and does not record an entry either: the type appears
-/// under "Not on your board" once the save has committed, and the facilitator taps it as any other (Stage 3, decision
+/// under "Not on your board" once the save has committed, and the tester taps it as any other (Stage 3, decision
 /// 12), so a typo in a new name cannot log an entry she did not mean to.
 ///
 /// The filter is a case-insensitive substring match on the label (`QString::toCaseFolded`, with the filter text trimmed

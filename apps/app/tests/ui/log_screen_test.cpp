@@ -246,7 +246,7 @@ struct Options
     /// the phone's, and some have no narrow glyphs at all).
     Options& compact_header()
     {
-        m_Header.m_Facilitator = "Sam";
+        m_Header.m_Tester = "Sam";
         m_Header.m_Location = LocationValue{std::nullopt, "Site"};
         return *this;
     }
@@ -1185,7 +1185,7 @@ TEST_CASE("log.opens: the header card opens Today's details, the Last bar opens 
     CHECK(card->property("unitText").toString() == QStringLiteral("UNIT-27"));
     CHECK(card->property("locationText").toString() == QStringLiteral("North Site"));
     CHECK(card->property("versionText").toString() == QStringLiteral("1.4.2"));
-    CHECK(card->property("facilitatorText").toString() == QStringLiteral("Sam Example"));
+    CHECK(card->property("testerText").toString() == QStringLiteral("Sam Example"));
 
     // The haptic policy is told that the board is on screen, and when it is not.
     REQUIRE_FALSE(sim.bridge.m_Visible.empty());

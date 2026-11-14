@@ -158,7 +158,7 @@ All screenshot output goes under `screenshots/`, which git ignores: `screenshots
 `docs/plan/stage-7.md`). The screens are the states of `tools/ej_screenshots/screens.json`, grouped by flow: the scenes of
 the visual capture (the mock-up states, phone and iPad) and the states the design package did not draw (`extra_scenes()` in
 `visual_capture_test.cpp`: the tap hint, the hold sheet, the Other search, the environment and version-time sheets, and
-the Facilitator and Time format pages). The modes are in the same file: `light`, `dark`, and `large` (light at a text
+the Tester and Time format pages). The modes are in the same file: `light`, `dark`, and `large` (light at a text
 scale of 3.1, the largest iOS size); a mode is added there without code.
 
 The pictures come from the `ui` case `screenshots.render`, which ctest runs on every build leg (with its own timeout of

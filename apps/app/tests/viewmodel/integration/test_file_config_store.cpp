@@ -269,7 +269,7 @@ TEST_CASE("A first launch, a setup and a second launch through the real store", 
         REQUIRE(wait_for([&] { return !first.m_Settings.loading(); }));
         CHECK_FALSE(first.m_Settings.configured());
 
-        REQUIRE(first.m_Settings.setFacilitator("Sam Example").isEmpty());
+        REQUIRE(first.m_Settings.setTester("Sam Example").isEmpty());
         REQUIRE(first.m_Settings.setUnitPrefix("UNIT").isEmpty());
         REQUIRE(wait_for([&] { return first.m_Settings.configured() && !first.m_Settings.saving(); }));
         REQUIRE(first.m_Settings.addLocation("North Site").isEmpty());
@@ -278,14 +278,14 @@ TEST_CASE("A first launch, a setup and a second launch through the real store", 
 
     const auto on_disk = import_configuration(read_all(file));
     REQUIRE(on_disk.has_value());
-    CHECK(on_disk->m_Facilitator == "Sam Example");
+    CHECK(on_disk->m_Tester == "Sam Example");
     CHECK(on_disk->m_Locations.size() == 1);
 
     ThreadedSettings second(file);
     second.m_Settings.load();
     REQUIRE(wait_for([&] { return !second.m_Settings.loading(); }));
     CHECK(second.m_Settings.configured());
-    CHECK(second.m_Settings.facilitator() == "Sam Example");
+    CHECK(second.m_Settings.tester() == "Sam Example");
     CHECK(second.m_Settings.locations()->rowCount() == 1);
 }
 
@@ -303,7 +303,7 @@ TEST_CASE("A corrupt file at launch gives setup and is kept on disk", "[viewmode
     CHECK_FALSE(launch.m_Settings.load_problem().isEmpty());
     CHECK(read_all(file) == "{ this is damaged");
 
-    REQUIRE(launch.m_Settings.setFacilitator("Sam Example").isEmpty());
+    REQUIRE(launch.m_Settings.setTester("Sam Example").isEmpty());
     REQUIRE(launch.m_Settings.setUnitPrefix("UNIT").isEmpty());
     REQUIRE(wait_for([&] { return launch.m_Settings.configured(); }));
     CHECK(read_all(path_in(dir, "configuration.json.invalid")) == "{ this is damaged");

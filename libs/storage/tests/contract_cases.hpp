@@ -101,7 +101,7 @@ TEMPLATE_LIST_TEST_CASE("Creating a log makes it the open log with its header an
     CHECK(open->m_Meta.m_Id == log_id(FIRST_LOG));
     CHECK(open->m_Meta.m_CreatedUtc == sample_time(5));
     CHECK_FALSE(open->m_Meta.m_Archived);
-    CHECK(open->m_Log.initial_header().m_Facilitator == "Sam Example");
+    CHECK(open->m_Log.initial_header().m_Tester == "Sam Example");
     CHECK(open->m_Log.initial_header().m_UnitNumber->digits() == "27");
     CHECK(open->m_Log.initial_header().m_Location->m_Text == "North Site");
     CHECK(open->m_Log.entries().empty());
@@ -120,7 +120,7 @@ TEMPLATE_LIST_TEST_CASE("A header that breaks a rule does not create a log", "[c
 {
     TestType f;
     HeaderValues header = sample_header();
-    header.m_Facilitator = std::string(MAX_HEADER_TEXT_CODE_POINTS + 1, 'x');
+    header.m_Tester = std::string(MAX_HEADER_TEXT_CODE_POINTS + 1, 'x');
     CHECK(failure_of(f.repo().create_log(log_id(1), header)) == StorageErrorKind::LIMIT_EXCEEDED);
     CHECK_FALSE(f.repo().open_log().value().has_value());
     CHECK(f.repo().list_logs().value().empty());
@@ -208,7 +208,7 @@ TEMPLATE_LIST_TEST_CASE("Text of every kind comes back exactly as it went in", "
 {
     TestType f;
     HeaderValues header = sample_header();
-    header.m_Facilitator = "Sam \"Example\" caf\xC3\xA9 \xF0\x9F\x98\x80";
+    header.m_Tester = "Sam \"Example\" caf\xC3\xA9 \xF0\x9F\x98\x80";
     require_ok(f.repo().create_log(log_id(FIRST_LOG), header));
 
     const std::string nasty = std::string("line one\nline two\ttab \"quotes\" back\\slash NUL:") +
@@ -217,7 +217,7 @@ TEMPLATE_LIST_TEST_CASE("Text of every kind comes back exactly as it went in", "
     require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(2, 11, "Wrong \xE2\x86\x92 Response", nasty)));
 
     const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
-    CHECK(log.m_Log.initial_header().m_Facilitator == header.m_Facilitator);
+    CHECK(log.m_Log.initial_header().m_Tester == header.m_Tester);
     CHECK(std::get<NoteEntry>(log.m_Log.find(entry_id(1))->m_Body).m_Value == nasty);
     const auto& error = std::get<ErrorEntry>(log.m_Log.find(entry_id(2))->m_Body);
     CHECK(error.m_AttachedNote == nasty);
@@ -250,7 +250,7 @@ TEMPLATE_LIST_TEST_CASE("A log with no unit, location or version keeps them empt
 {
     TestType f;
     HeaderValues header;
-    header.m_Facilitator = "Sam Example";
+    header.m_Tester = "Sam Example";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 8;
     require_ok(f.repo().create_log(log_id(FIRST_LOG), header));
     const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
@@ -406,7 +406,7 @@ TEMPLATE_LIST_TEST_CASE("Archiving keeps the log and leaves no open log", "[cont
     REQUIRE(logs.size() == 1);
     CHECK(logs[0].m_Archived);
     CHECK(logs[0].m_LiveEntryCount == 1);
-    CHECK(logs[0].m_Header.m_Facilitator == "Sam Example");
+    CHECK(logs[0].m_Header.m_Tester == "Sam Example");
     CHECK(logs[0].m_Header.m_UnitNumber->digits() == "27");
     CHECK(logs[0].m_TotalEntryCount == 1);
     CHECK(f.repo().load_log(log_id(FIRST_LOG)).value().m_Meta.m_Archived);
@@ -469,7 +469,7 @@ TEMPLATE_LIST_TEST_CASE("A refused start leaves the old log open and creates not
     CHECK(failure_of(f.repo().start_new_log(log_id(FIRST_LOG), log_id(FIRST_LOG), sample_header())) ==
           StorageErrorKind::ALREADY_EXISTS);
     HeaderValues bad = sample_header();
-    bad.m_Facilitator = std::string(MAX_HEADER_TEXT_CODE_POINTS + 1, 'x');
+    bad.m_Tester = std::string(MAX_HEADER_TEXT_CODE_POINTS + 1, 'x');
     CHECK(failure_of(f.repo().start_new_log(log_id(FIRST_LOG), log_id(2), bad)) == StorageErrorKind::LIMIT_EXCEEDED);
 
     const auto open = f.repo().open_log().value();

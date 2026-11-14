@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# ej_dataset: a desktop tool that writes the store of a facilitator who has used the app for a year (about 80,000
+# ej_dataset: a desktop tool that writes the store of a tester who has used the app for a year (about 80,000
 # fictional entries) through the real repository, for the cold-start measurement on a device (Stage 5, M1). It holds no
 # harness code for the app: the owner puts the directory it writes on the phone with Xcode's Devices and Simulators
 # window ("Replace Container", a development-signed build only). It borrows the sample builders of the core tests and the

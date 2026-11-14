@@ -4,7 +4,7 @@
 
 ## Overview
 
-Field Test is an iPhone app that lets a facilitator log a timestamped robot error in one tap, keep a running journal of the session, and post the day's log to Slack at the end of the day. It replaces ad-hoc notes typed during sessions, where timings are lost and errors go uncounted.
+Field Test is an iPhone app that lets a tester log a timestamped robot error in one tap, keep a running journal of the session, and post the day's log to Slack at the end of the day. It replaces ad-hoc notes typed during sessions, where timings are lost and errors go uncounted.
 
 The app is an Iain Chesworth Labs product built in C++23 with Qt/QML. v1 targets the iPhone 17 first, and also runs on iPad (portrait and landscape) and Android phones. It is released on the App Store and the Google Play Store (scope widened by the owner on 9 Nov 2026).
 
@@ -14,7 +14,7 @@ The app is an Iain Chesworth Labs product built in C++23 with Qt/QML. v1 targets
 
 2.  Keep a complete, time-ordered journal of the day (errors, notes, header changes) that cannot be lost by a mis-tap.
 
-3.  Produce a Slack-ready daily log in the facilitator's existing format with one share action.
+3.  Produce a Slack-ready daily log in the tester's existing format with one share action.
 
 4.  Hold no employer data in the codebase; every work-specific value is set in the app's preferences.
 
@@ -26,7 +26,7 @@ v1 is a single-user, offline iPhone app whose only way off the device is the iOS
 
 **In scope for v1**
 
-- Daily log with a header: facilitator, date, UNIT number, location, software version.
+- Daily log with a header: tester, date, UNIT number, location, software version.
 
 - Bingo board of 11 quick-select error tiles plus an Other tile, with per-type tile colours, count badges and an undo toast.
 
@@ -42,7 +42,7 @@ v1 is a single-user, offline iPhone app whose only way off the device is the iOS
 
 - Day rollover, extra logs on the same day for a move to another unit or site, and archived past logs that can be browsed and re-shared.
 
-- Preferences: facilitator name, locations, error type list, board layout, note templates, time format, and, when the second board is on, interaction types, their layout and lines, People and how names show in shared logs.
+- Preferences: tester name, locations, error type list, board layout, note templates, time format, and, when the second board is on, interaction types, their layout and lines, People and how names show in shared logs.
 
 - iPad in portrait and landscape, with the board and the log side by side in landscape. Android phones. Public release on the App Store and the Google Play Store. Documentation online and in the app.
 
@@ -66,7 +66,7 @@ v1 is a single-user, offline iPhone app whose only way off the device is the iOS
 
 ## User and context of use
 
-The user is one facilitator running sessions with a robot at a deployed site. She logs from her own iPhone 17, usually one-handed, while her attention is on the session.
+The user is one tester running sessions with a robot at a deployed site. She logs from her own iPhone 17, usually one-handed, while her attention is on the session.
 
 The errors are frequent and small: a wrong response, a wrong song, speech latency. The same error can recur five or more times in a session. Hardware faults are rare and logged elsewhere. The app must therefore favour speed of capture over richness of detail; detail can be added or corrected later on the review screen.
 
@@ -92,11 +92,11 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 
 | ID     | Requirement                                                                                                                                                                                                                                             | Priority |
 |--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
-| HDR-01 | A new day's log is created with the facilitator name from preferences and today's local date already filled in.                                                                                                                                         | Must     |
+| HDR-01 | A new day's log is created with the tester name from preferences and today's local date already filled in.                                                                                                                                         | Must     |
 | HDR-02 | The unit number is entered on a numeric keypad as digits only and shown as \<prefix\>-\<n\> (for example UNIT-27). No leading zeros and no fixed length. The prefix is a preference. A unit may also carry an environment, picked from a list and shown as \<prefix\>-\<n\>-\<env\> (for example UNIT-27-prod); see HDR-08. | Must     |
 | HDR-03 | Location is picked from the preference list of locations, or Other with free text.                                                                                                                                                                      | Must     |
 | HDR-04 | Software version must match major.minor.patch (digits only, no suffix). The field shows a fixed "v" before the numbers, so the person types the numbers only; a typed leading v or V is accepted and dropped, never doubled. The log, the change lines and the export print the version as v1.4.2. Invalid input is flagged inline and cannot be saved. The commit of the build is a field of its own (HDR-09), not a suffix.                                                    | Must     |
-| HDR-05 | Header values persist for the day across app restarts and are cleared, except the facilitator, when a new log starts.                                                                                                                                   | Must     |
+| HDR-05 | Header values persist for the day across app restarts and are cleared, except the tester, when a new log starts.                                                                                                                                   | Must     |
 | HDR-06 | Error taps and notes are allowed before the header is complete. A banner shows which header fields are still empty.                                                                                                                                     | Must     |
 | HDR-07 | Each header field has two edit actions. **Correct** fixes a typo and rewrites the value with no log entry. **Change** records that the value changed at a point in time and adds a timestamped entry such as "Software Version changed: 1.4.2 → 1.5.0". | Must     |
 | HDR-08 | The environment of a unit is optional and is never typed. On the screens it is called the number suffix (the tester read "environment" as something else), and the row says where it goes: "Added after the number, like UNIT-27-prod". Only the wording on the screens changed; the model, the stored text and this requirement keep the word environment. Today’s details has an Environment row under the unit field. It shows None, prod or dev (or the choices of PRF-11) and opens a short list of those choices. None is the first choice and the default for a new log. The environment is saved with the unit number, so changing it is a Correct or a Change of the unit (HDR-07), and the header and the change lines print it (\<prefix\>-\<n\>-\<env\>). A new log starts with None, because the unit number does not carry over (HDR-05). | Must     |
@@ -147,8 +147,8 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 
 | ID     | Requirement                                                                                                                                                                                                                                                                                                                                                            | Priority |
 |--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
-| DAY-01 | When the app opens or returns to the foreground on a later calendar day than the open log, it offers to start a new log, naming the new date. The prompt appears on the first foreground on a later date than the open log's, whatever the gap (the facilitator may work only on some days). If the open log is unshared (REV-05: never shared, or changed since its last share), the prompt says so and offers to share it first; if everything was shared, it only offers to start a new log. Starting a new log archives the open one. Keeping it open continues logging into it, which covers sessions that run past midnight. | Must     |
-| DAY-02 | A new log can be started at any time from the menu, including on the same date. This covers the rare move to another unit or site mid-day. The new log starts with an empty header except the facilitator.                                                                                                                                                             | Must     |
+| DAY-01 | When the app opens or returns to the foreground on a later calendar day than the open log, it offers to start a new log, naming the new date. The prompt appears on the first foreground on a later date than the open log's, whatever the gap (the tester may work only on some days). If the open log is unshared (REV-05: never shared, or changed since its last share), the prompt says so and offers to share it first; if everything was shared, it only offers to start a new log. Starting a new log archives the open one. Keeping it open continues logging into it, which covers sessions that run past midnight. | Must     |
+| DAY-02 | A new log can be started at any time from the menu, including on the same date. This covers the rare move to another unit or site mid-day. The new log starts with an empty header except the tester.                                                                                                                                                             | Must     |
 | DAY-03 | A software version change during a log, such as an over-the-air update, uses the Change action (HDR-07) and stays in the same log.                                                                                                                                                                                                                                     | Must     |
 | DAY-04 | Past logs are listed newest first, grouped by date. Each can be opened, edited, copied and re-shared. A past log changed after its last share shows as not shared until it is shared again (REV-05).                                                                                                                                                                                                                                                               | Must     |
 | DAY-05 | Past logs are kept until the user deletes them, with a confirmation step.                                                                                                                                                                                                                                                                                              | Must     |
@@ -157,7 +157,7 @@ Requirements are grouped by feature. Priority is Must (v1 blocker) or Should (v1
 
 | ID     | Requirement                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Priority |
 |--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
-| PRF-01 | Facilitator name.                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Must     |
+| PRF-01 | Tester name.                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Must     |
 | PRF-02 | Unit number prefix (for example UNIT).                                                                                                                                                                                                                                                                                                                                                                                                                                    | Must     |
 | PRF-03 | Locations: add, rename, reorder, remove.                                                                                                                                                                                                                                                                                                                                                                                                                                  | Must     |
 | PRF-04 | Error types master list: add, rename, retire. A retired type disappears from pickers but stays on past entries. A new type goes onto the first empty board position, in the same change; when the board is full it is only in Other, and the app says which.                                                                                                                                                                                                              | Must     |
@@ -202,7 +202,9 @@ IDs are UUIDs. The schema carries a version number with forward migrations from 
 
 ## Export format
 
-The export is plain text in the format of the facilitator's original concept, extended with facilitator, date, header changes and attached notes. It pastes cleanly into Slack and Mail with no markup.
+The export is plain text in the format of the tester's original concept, extended with tester, date, header changes and attached notes. It pastes cleanly into Slack and Mail with no markup.
+
+The first header line keeps its label `Facilitator:` after the app's wording changed to "tester": the label is part of the format the downstream ticket indexer reads, and the owner decides whether it changes. The same holds for the stored names `facilitator` (setup file, journal, database column).
 
 ```
 Facilitator: Sam Example
@@ -261,7 +263,7 @@ The app must feel native, fast and polished on an iPhone 17, used one-handed in 
 | NFR-07 | Accessibility    | VoiceOver labels on all controls and Dynamic Type for list and note text. Tile colours avoid red–green pairs and keep label text clearly readable. The label always carries the meaning; colour is a visual aid only. Full colour-blind modes are not required.                                         |
 | NFR-08 | Durability       | No loss of committed entries or the note draft if the app crashes, is killed or the phone restarts. Loss of open-log data is a P1 defect; see Data safety.                                                                                                                                              |
 | NFR-09 | Privacy          | No network access, analytics, crash reporting SDKs or third-party services. Data stays in the app sandbox under iOS Data Protection and leaves only through the share sheet, copy, or the user's own device backup. The People list is part of the app data and so of the backup; it is not in the setup file, and it appears in a shared log only at the level of PRF-17.                                                                                                                    |
-| NFR-10 | Codebase hygiene | The repository contains no employer, site, robot or person names. The fictional stand-ins are Sam Example (the facilitator) and Alex Sample (a person the tester saved). All such values come from preferences or an imported configuration file.                                                                                                                                                              |
+| NFR-10 | Codebase hygiene | The repository contains no employer, site, robot or person names. The fictional stand-ins are Sam Example (the tester) and Alex Sample (a person the tester saved). All such values come from preferences or an imported configuration file.                                                                                                                                                              |
 | NFR-11 | Localisation     | English (Australia) only in v1. All user-facing strings are translatable.                                                                                                                                                                                                                               |
 
 ### Data safety
@@ -281,7 +283,7 @@ Losing entries from the open log is a P1 defect, because the log feeds a critica
 
 ## Technology and delivery
 
-The app follows the Iain Chesworth Labs C++23 project standard as the new repository iainchesworthlabs/icl-error-journaling, licensed GPL-3.0-or-later. It was first shipped to the facilitator through TestFlight. On 9 Nov 2026 the owner widened v1: it is released publicly on the App Store and the Google Play Store, runs on iPhone (portrait only), on iPad (portrait and landscape) and on Android phones, and has documentation online and in the app. A Mac and Windows desktop build is a nice-to-have. See the implementation plan, Stages 7 to 12.
+The app follows the Iain Chesworth Labs C++23 project standard as the new repository iainchesworthlabs/icl-error-journaling, licensed GPL-3.0-or-later. It was first shipped to the tester through TestFlight. On 9 Nov 2026 the owner widened v1: it is released publicly on the App Store and the Google Play Store, runs on iPhone (portrait only), on iPad (portrait and landscape) and on Android phones, and has documentation online and in the app. A Mac and Windows desktop build is a nice-to-have. See the implementation plan, Stages 7 to 12.
 
 **Architecture**
 
@@ -305,13 +307,13 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 **Delivery sequence**
 
-1.  Design: screens approved by the facilitator on 7 Nov 2026 (https://claude.ai/artifact/ULU3voVz6TiuaLMfQHn1ob). Tokens, dark mode and motion are finalised from them.
+1.  Design: screens approved by the tester on 7 Nov 2026 (https://claude.ai/artifact/ULU3voVz6TiuaLMfQHn1ob). Tokens, dark mode and motion are finalised from them.
 
 2.  Implementation plan, starting with the core library and its tests.
 
 3.  Core library, storage, then UI.
 
-4.  TestFlight build to the facilitator, with a configuration file prepared separately and sent by AirDrop.
+4.  TestFlight build to the tester, with a configuration file prepared separately and sent by AirDrop.
 
 ## Open items and future versions
 
@@ -319,21 +321,21 @@ The app follows the Iain Chesworth Labs C++23 project standard as the new reposi
 
 - [x] App name and repository name: decided – Field Test on the home screen, in the App Store and in every user-visible text (owner, 8 Nov 2026, replacing ICL Error Journaling); repository icl-error-journaling and bundle identifier com.iainchesworthlabs.fieldtest unchanged.
 
-- [ ] Dark mode and motion, finalised from the approved light-mode screens. The facilitator's palette of plum and deep blue, and the 11 tile colours, are approved.
+- [ ] Dark mode and motion, finalised from the approved light-mode screens. The tester's palette of plum and deep blue, and the 11 tile colours, are approved.
 
 - [x] The interactions board ([#105](https://github.com/iainchesworthlabs/icl-error-journaling/issues/105)): moved from v2 into v1 by the owner on 13 Nov 2026 as an optional second board with an optional People list; design and decisions in [Stage 14](plan/stage-14.md). Played song and Visitor interaction move to interaction types in the sample setup.
 
-- [ ] Note templates: enumerate the list with the facilitator. Played song and Visitor interaction are confirmed; list any others.
+- [ ] Note templates: enumerate the list with the tester. Played song and Visitor interaction are confirmed; list any others.
 
 - [ ] Confirm the exact spacing of the ticket marker against a line the downstream ticket indexer already picks up (proposed 10:05 T\| Wrong Response).
 
 - [ ] Header date format (proposed 7 Nov 2026).
 
-- [ ] Confirm the 11 board tiles and their order. The proposed set is the 11 named types from the facilitator's concept: Wrong Response; Sequence Out of Order; Wrong Track Played; Track Not Found; Track Skipped; Audio Drop Out; Volume Jump; Mute Delay; Speech Delay; Track Delay; Navigation Failure. This list lives in the configuration file, not the code.
+- [ ] Confirm the 11 board tiles and their order. The proposed set is the 11 named types from the tester's concept: Wrong Response; Sequence Out of Order; Wrong Track Played; Track Not Found; Track Skipped; Audio Drop Out; Volume Jump; Mute Delay; Speech Delay; Track Delay; Navigation Failure. This list lives in the configuration file, not the code.
 
 - [ ] Whether app data should be included in the phone's iCloud backup (proposed yes, as standard device backup only).
 
-- [ ] Possible use by other facilitators on the team. v1 stays single-user, but the facilitator preference and configuration file (PRF-08) already allow a second person to set it up.
+- [ ] Possible use by other testers on the team. v1 stays single-user, but the tester preference and configuration file (PRF-08) already allow a second person to set it up.
 
 **Future versions**
 

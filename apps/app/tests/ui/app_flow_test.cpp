@@ -513,31 +513,31 @@ TEST_CASE("app.navigation: each tab shows its screen, a tab that is tapped again
 
     app.choose_tab(SETTINGS_TAB);
     CHECK(app.shown(QStringLiteral("settingsScreen")));
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
 
     // The Settings tab pushes the editors on its own stack, and a second tap on the tab pops them.
     app.tap(QStringLiteral("settingsErrorTypes"));
     app.play();
     CHECK(app.shown(QStringLiteral("addRow")));
-    CHECK_FALSE(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTester")));
     CHECK(app.shown(QStringLiteral("shellTabBar")));
     app.choose_tab(SETTINGS_TAB);
     CHECK_FALSE(app.shown(QStringLiteral("addRow")));
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
 
     // The editors are pages too: the list rows of Locations and the note templates open the same way, and their own
     // "back" returns to Settings.
     app.tap(QStringLiteral("settingsLocations"));
     app.play();
-    CHECK_FALSE(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTester")));
     REQUIRE(QMetaObject::invokeMethod(app.need(QStringLiteral("settingsScreen")), "popPage"));
     app.play();
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
     app.tap(QStringLiteral("settingsTemplates"));
     app.play();
-    CHECK_FALSE(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTester")));
     app.choose_tab(SETTINGS_TAB);
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
 
     // Back on Log, the screen is where it was left.
     app.choose_tab(LOG_TAB);
@@ -2263,7 +2263,7 @@ TEST_CASE("app.keyboard_review: the note of Edit entry is above the keyboard and
 }
 
 TEST_CASE(
-    "app.keyboard_settings: the facilitator page, the editors of locations and note templates, and the sheets of the "
+    "app.keyboard_settings: the tester page, the editors of locations and note templates, and the sheets of the "
     "error types and of a location end at the keyboard",
     "[ui][app]")
 {
@@ -2274,9 +2274,9 @@ TEST_CASE(
     phone(app);
     QQuickItem* settings = app.need(QStringLiteral("settingsScreen"));
 
-    SECTION("the facilitator page: the page ends at the keyboard, and a field that is clear does not scroll it")
+    SECTION("the tester page: the page ends at the keyboard, and a field that is clear does not scroll it")
     {
-        activate(app, QStringLiteral("settingsFacilitator"));
+        activate(app, QStringLiteral("settingsTester"));
         QQuickItem* field = inside(app, QStringLiteral("settingsTextField"), settings);
         // The page in view is the last one of the stack: the list under it has a Flickable of the same name.
         const auto flicks = app.ui.find_items(QStringLiteral("settingsFlickable"), settings);
@@ -2352,7 +2352,7 @@ TEST_CASE("app.keyboard_first_launch: setting up by hand ends the page at the ke
     app.play();
     QQuickItem* page = shown_page(app);
     const double top_before = app.ui.geometry(page).top();
-    for (const char* name : {"facilitatorField", "prefixField"})
+    for (const char* name : {"testerField", "prefixField"})
     {
         CAPTURE(name);
         QQuickItem* field = inside(app, QString::fromLatin1(name), page);
@@ -2496,7 +2496,7 @@ TEST_CASE("app.keyboard_tabs: changing the tab, and pushing or popping a page, p
     SECTION("a tab change while a field of Settings has the focus")
     {
         app.choose_tab(SETTINGS_TAB);
-        activate(app, QStringLiteral("settingsFacilitator"));
+        activate(app, QStringLiteral("settingsTester"));
         QQuickItem* field =
             inside(app, QStringLiteral("settingsTextField"), app.need(QStringLiteral("settingsScreen")));
         focus_field(app, field);

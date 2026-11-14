@@ -5,7 +5,7 @@ import QtQuick.Shapes
 import ErrorJournalingApp
 
 // The miniature board of the settings screen (Stage 4, package 4.5; PRF-02, PRF-05): the 12 tiles of the board in small, so
-// that the facilitator can arrange them, and the means to do it. It shows a BoardLayoutModel and changes nothing; every
+// that the tester can arrange them, and the means to do it. It shows a BoardLayoutModel and changes nothing; every
 // change is a signal, and the board changes only when the model does. A screen connects the signals to SettingsModel.
 //
 //   model              the BoardLayoutModel (roles typeId, label, colourSlot, position, isOther, isEmpty, accessibleName)
@@ -13,7 +13,7 @@ import ErrorJournalingApp
 //   dragging           a tile is being dragged (a screen turns scrolling off while it is, so the page does not move)
 //
 //   moveRequested(fromPosition, toPosition)   settings.moveBoardTile(from, to): a drop, or Move earlier and Move later
-//   replaceRequested(position)                Change error type: the screen lets the facilitator choose a type, then
+//   replaceRequested(position)                Change error type: the screen lets the tester choose a type, then
 //                                             calls settings.assignBoardTile(position, typeId)
 //   addRequested(position)                    an empty position was tapped: the screen opens the same choice at once,
 //                                             with "New error type" at the top (no panel first)

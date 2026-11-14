@@ -68,7 +68,7 @@ TEST_CASE("The sample configuration imports and exports byte for byte", "[config
 {
     const auto text = sample();
     const auto configuration = imported(text);
-    CHECK(configuration.m_Facilitator == "Sam Example");
+    CHECK(configuration.m_Tester == "Sam Example");
     CHECK(configuration.m_UnitPrefix == "UNIT");
     CHECK(configuration.m_ErrorTypes.size() == 11);
     CHECK(configuration.m_Locations.size() == 2);
@@ -80,7 +80,7 @@ TEST_CASE("The sample configuration imports and exports byte for byte", "[config
 TEST_CASE("Import of an export equals the original, with unicode, retired types and all clock formats", "[config]")
 {
     Configuration c;
-    c.m_Facilitator = "Sam Éxample 日本 \"quoted\" \\ back\tslash";
+    c.m_Tester = "Sam Éxample 日本 \"quoted\" \\ back\tslash";
     c.m_UnitPrefix = "UNIT";
     c.m_IncludeTotals = true;
     c.m_ErrorTypes.push_back({ej::ErrorTypeId{ej::Uuid::from_random(1, 1)}, "Wrong Response", false, 3});
@@ -103,7 +103,7 @@ TEST_CASE("Import of an export equals the original, with unicode, retired types 
                     lower ? ej::MeridiemCase::LOWER : ej::MeridiemCase::UPPER;
                 const auto text = ej::export_configuration(c);
                 const auto back = imported(text);
-                CHECK(back.m_Facilitator == c.m_Facilitator);
+                CHECK(back.m_Tester == c.m_Tester);
                 CHECK(back.m_TimeFormat == c.m_TimeFormat);
                 CHECK(back.m_IncludeTotals == c.m_IncludeTotals);
                 CHECK(back.m_ErrorTypes == c.m_ErrorTypes);
@@ -121,7 +121,7 @@ TEST_CASE("A retired type keeps its board position and does not clash with a liv
 {
     // The second type is retired and shares position 3 with the first; the layout ignores it.
     Configuration c;
-    c.m_Facilitator = "Sam Example";
+    c.m_Tester = "Sam Example";
     c.m_UnitPrefix = "UNIT";
     c.m_ErrorTypes.push_back({ej::ErrorTypeId{ej::Uuid::from_random(1, 1)}, "Wrong Response", false, 3});
     c.m_ErrorTypes.push_back({ej::ErrorTypeId{ej::Uuid::from_random(2, 2)}, "wrong response", true, 3});
@@ -220,7 +220,7 @@ TEST_CASE("Ids must be UUIDs", "[config]")
               "/locations/0/id"));
 }
 
-TEST_CASE("Patterns, facilitator and prefix are validated", "[config]")
+TEST_CASE("Patterns, tester and prefix are validated", "[config]")
 {
     CHECK(has(errors_of(edited(sample(), "Played {value}", "Played")), Code::BAD_PATTERN,
               "/note_templates/0/output_pattern"));
@@ -228,14 +228,14 @@ TEST_CASE("Patterns, facilitator and prefix are validated", "[config]")
               "/note_templates/0/output_pattern"));
     CHECK(has(errors_of(edited(sample(), "Played {value}", "Played {name}")), Code::BAD_PATTERN,
               "/note_templates/0/output_pattern"));
-    CHECK(has(errors_of(edited(sample(), "\"Sam Example\"", "\"\"")), Code::OUT_OF_RANGE, "/preferences/facilitator"));
+    CHECK(has(errors_of(edited(sample(), "\"Sam Example\"", "\"\"")), Code::OUT_OF_RANGE, "/preferences/tester"));
     CHECK(has(errors_of(edited(sample(), "\"Sam Example\"", "\"   \"")), Code::OUT_OF_RANGE,
-              "/preferences/facilitator"));
+              "/preferences/tester"));
     CHECK(has(errors_of(edited(sample(), "\"UNIT\"", "\"UNIT-\"")), Code::OUT_OF_RANGE, "/preferences/unit_prefix"));
     CHECK(has(errors_of(edited(sample(), "\"UNIT\"", "\"UNIT #\"")), Code::OUT_OF_RANGE, "/preferences/unit_prefix"));
     CHECK(has(errors_of(edited(sample(), "\"UNIT\"", "\"\"")), Code::OUT_OF_RANGE, "/preferences/unit_prefix"));
-    CHECK(has(errors_of(edited(sample(), "\"facilitator\": \"Sam Example\",", "")), Code::MISSING_FIELD,
-              "/preferences/facilitator"));
+    CHECK(has(errors_of(edited(sample(), "\"tester\": \"Sam Example\",", "")), Code::MISSING_FIELD,
+              "/preferences/tester"));
 }
 
 TEST_CASE("Several faults are all reported, in file order", "[config]")
@@ -253,7 +253,7 @@ TEST_CASE("Several faults are all reported, in file order", "[config]")
         CHECK_FALSE(e.m_Message.empty());
         CHECK(e.m_Message.find(e.m_Path) != std::string::npos);
     }
-    const std::vector<std::string> expected{"/preferences/facilitator", "/error_types/1/name", "/locations/1/id",
+    const std::vector<std::string> expected{"/preferences/tester", "/error_types/1/name", "/locations/1/id",
                                             "/note_templates/1/output_pattern"};
     CHECK(paths == expected);
 }
@@ -324,7 +324,7 @@ TEST_CASE("Limits stop oversized files", "[config]")
     SECTION("500 error types pass, 501 do not")
     {
         Configuration c;
-        c.m_Facilitator = "Sam Example";
+        c.m_Tester = "Sam Example";
         c.m_UnitPrefix = "UNIT";
         for (std::uint64_t i = 1; i <= ej::CONFIG_MAX_ENTRIES_PER_LIST; ++i)
         {
@@ -814,7 +814,7 @@ TEST_CASE("config.sample_still_valid: the sample reads and keeps its old parts",
     CHECK(config.m_Locations.size() == 2);
     CHECK(config.m_Templates.size() == 2);
     CHECK(config.m_InteractionTypes.size() == 4);
-    CHECK(config.m_Facilitator == "Sam Example");
+    CHECK(config.m_Tester == "Sam Example");
     CHECK_FALSE(config.m_InteractionsBoardEnabled.has_value());
 }
 

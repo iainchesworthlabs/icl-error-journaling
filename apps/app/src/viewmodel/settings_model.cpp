@@ -39,7 +39,7 @@ constexpr int MAX_PATTERN = 500;
 const QString ANSWER_TOKEN = QStringLiteral("[answer]");
 constexpr int MAX_SORT_ORDER = 1'000'000;
 
-const QString OP_FACILITATOR = QStringLiteral("facilitator");
+const QString OP_TESTER = QStringLiteral("tester");
 const QString OP_PREFIX = QStringLiteral("unit prefix");
 const QString OP_TIME_FORMAT = QStringLiteral("time format");
 const QString OP_TOTALS = QStringLiteral("totals");
@@ -260,7 +260,7 @@ QString message_of(const std::expected<void, ConfigEditError>& result)
 
 bool is_complete(const Configuration& configuration)
 {
-    return !configuration.m_Facilitator.empty() && !configuration.m_UnitPrefix.empty();
+    return !configuration.m_Tester.empty() && !configuration.m_UnitPrefix.empty();
 }
 
 /// Writes `layout` back: the types in it get their position, the other live types are off the board. A retired type
@@ -323,9 +323,9 @@ SettingsModel::~SettingsModel() = default;
 
 // ---------------------------------------------------------------------------------------------------------- reading
 
-QString SettingsModel::facilitator() const
+QString SettingsModel::tester() const
 {
-    return QString::fromStdString(view().m_Facilitator);
+    return QString::fromStdString(view().m_Tester);
 }
 
 QString SettingsModel::unit_prefix() const
@@ -519,7 +519,7 @@ std::expected<void, ConfigEditError> SettingsModel::commit(Configuration candida
     {
         if (m_Configured)
         {
-            return fail(refused(tr("The facilitator and the unit prefix cannot be empty.")));
+            return fail(refused(tr("The tester and the unit prefix cannot be empty.")));
         }
         // A set-up in progress: kept in memory until it has what the importer needs.
         m_Setup = std::move(candidate);
@@ -601,18 +601,18 @@ void SettingsModel::publish(bool in_force_changed)
 
 // -------------------------------------------------------------------------------------------------------- the lists
 
-QString SettingsModel::setFacilitator(const QString& name)
+QString SettingsModel::setTester(const QString& name)
 {
     const auto text = checked_name(name);
     if (!text)
     {
         return text.error();
     }
-    return change_message(OP_FACILITATOR,
+    return change_message(OP_TESTER,
                           [value = *text](Configuration& configuration) -> EditResult
                           {
-                              const bool changed = configuration.m_Facilitator != value;
-                              configuration.m_Facilitator = value;
+                              const bool changed = configuration.m_Tester != value;
+                              configuration.m_Tester = value;
                               return changed;
                           });
 }

@@ -33,7 +33,7 @@ std::string encoded(const JournalRecord& record)
 std::vector<JournalRecord> every_op()
 {
     HeaderValues bare;
-    bare.m_Facilitator = "Sam Example";
+    bare.m_Tester = "Sam Example";
     bare.m_LocalDate = std::chrono::year{2026} / 11 / 8;  // no unit, location or version
 
     HeaderValues by_id = sample_header();
@@ -129,7 +129,7 @@ TEST_CASE("A decoded record holds the values that were written", "[journal]")
         decode_record(encoded(sample_record(1, CreateLogBody{sample_header(), sample_time(3), sample_id<LogId>(8)})));
     REQUIRE(created.has_value());
     const auto& create = std::get<CreateLogBody>(created->m_Body);
-    CHECK(create.m_Header.m_Facilitator == "Sam Example");
+    CHECK(create.m_Header.m_Tester == "Sam Example");
     CHECK(create.m_Header.m_LocalDate == std::chrono::year{2026} / 11 / 7);
     CHECK(create.m_Header.m_UnitNumber->digits() == "27");
     CHECK(create.m_Header.m_Location->m_Text == "North Site");
@@ -137,6 +137,14 @@ TEST_CASE("A decoded record holds the values that were written", "[journal]")
     CHECK(create.m_Header.m_SoftwareVersion->format() == "1.4.2");
     CHECK(create.m_CreatedUtc == sample_time(3));
     CHECK(create.m_Previous == sample_id<LogId>(8));
+}
+
+TEST_CASE("The tester of a log is written under the key facilitator, so older journals still read", "[journal]")
+{
+    // legacy name: the journal key stays "facilitator" after the wording changed to "tester".
+    const auto line = encoded(sample_record(1, CreateLogBody{sample_header(), sample_time(3), sample_id<LogId>(8)}));
+    CHECK(line.find("\"facilitator\":\"Sam Example\"") != std::string::npos);
+    CHECK(line.find("\"tester\"") == std::string::npos);
 }
 
 TEST_CASE("Text with controls, quotes, NUL and non-ASCII characters round trips", "[journal]")
@@ -219,11 +227,11 @@ TEST_CASE("A record with a valid checksum but an invalid value is a bad field", 
               .error() == DecodeError::BAD_FIELD);
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":2,\"op\":\"void\"," + log + ",\"body\":{\"target\":0}}")).error() ==
           DecodeError::BAD_FIELD);
-    const std::string header = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026-02-30\",\"unit\":null,"
+    const std::string header = "{\"header\":{\"tester\":\"Sam Example\",\"date\":\"2026-02-30\",\"unit\":null,"
                                "\"location\":null,\"version\":null},\"created\":0,\"prev\":null}";
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + header + "}"))
               .error() == DecodeError::BAD_FIELD);
-    const std::string unit = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":\"0x\","
+    const std::string unit = "{\"header\":{\"tester\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":\"0x\","
                              "\"location\":null,\"version\":null},\"created\":0,\"prev\":null}";
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + unit + "}"))
               .error() == DecodeError::BAD_FIELD);
@@ -368,15 +376,15 @@ TEST_CASE("An entry or header with a bad part is reported, not guessed at", "[jo
     CHECK(add(entry_start + "\"deleted\":false,\"kind\":\"note\",\"template\":7,\"value\":\"x\"}").error() ==
           DecodeError::MALFORMED);
 
-    const std::string header = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":null,"
+    const std::string header = "{\"header\":{\"tester\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":null,"
                                "\"location\":null,\"version\":\"1.2\"},\"created\":0,\"prev\":null}";
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + header + "}"))
               .error() == DecodeError::BAD_FIELD);
-    const std::string shaped = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026/02/03\",\"unit\":null,"
+    const std::string shaped = "{\"header\":{\"tester\":\"Sam Example\",\"date\":\"2026/02/03\",\"unit\":null,"
                                "\"location\":null,\"version\":null},\"created\":0,\"prev\":null}";
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + shaped + "}"))
               .error() == DecodeError::BAD_FIELD);
-    const std::string fraction = "{\"header\":{\"facilitator\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":null,"
+    const std::string fraction = "{\"header\":{\"tester\":\"Sam Example\",\"date\":\"2026-02-03\",\"unit\":null,"
                                  "\"location\":null,\"version\":null},\"created\":1.5,\"prev\":null}";
     CHECK(decode_record(with_crc("{\"v\":1,\"seq\":1,\"op\":\"create_log\"," + log + ",\"body\":" + fraction + "}"))
               .error() == DecodeError::MALFORMED);

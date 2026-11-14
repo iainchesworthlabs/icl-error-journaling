@@ -1,7 +1,7 @@
 # Stage 12: Mac and Windows desktop (v2)
 
 Plan for Stage 12 of the [implementation plan](../implementation-plan.md) ("Stages 7 to 12"). Stage 12 turns the Mac and
-Windows development builds into products that a facilitator can install, keep updated, and use with a mouse and keyboard.
+Windows development builds into products that a tester can install, keep updated, and use with a mouse and keyboard.
 
 **Decision (owner, 10 Nov 2026): desktop support is v2.** Nothing on this page is built for v1, including the Windows CI
 leg (12.1). The macOS desktop build stays a development tool, as the PRD says, and Windows stays on the developer

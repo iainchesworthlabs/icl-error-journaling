@@ -26,7 +26,7 @@ LabelledVersion labelled(const char* label, const char* version)
 HeaderValues bare_header()
 {
     HeaderValues header;
-    header.m_Facilitator = "Sam Example";
+    header.m_Tester = "Sam Example";
     header.m_LocalDate = std::chrono::year{2026} / 11 / 7;
     return header;
 }
