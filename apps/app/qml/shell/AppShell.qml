@@ -68,6 +68,8 @@ Item {
     property var boards: null
     // What the Interactions board shows (InteractionBoardModel): `boardEmpty`. Null reads as an empty board.
     property var interactionBoard: null
+    // How shared text is written (ExportPreferences): Settings shows and sets the level of a name. Null leaves that row out.
+    property var exportPreferences: null
     // The list of people (PeopleModel), for the picker of the Interactions board. Null: no picker.
     property var people: null
     // The QmlBridge: the haptics, the share sheet and the accessibility settings.
@@ -445,6 +447,7 @@ Item {
                     objectName: "settingsScreen"
                     settings: root.settings
                     boards: root.boards
+                    exportPreferences: root.exportPreferences
                     aboutText: root.aboutText
                     about: root.about
                     timingText: root.bridge.timingSummary

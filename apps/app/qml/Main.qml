@@ -77,6 +77,7 @@ Window {
         help: root.help
         boards: root.boards
         interactionBoard: root.interactionBoard
+        exportPreferences: root.exportPreferences
         people: root.people
         aboutText: qsTr("%1 · %2").arg(root.versionText).arg(root.platformText)
     }
