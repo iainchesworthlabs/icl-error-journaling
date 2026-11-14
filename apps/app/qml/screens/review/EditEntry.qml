@@ -40,8 +40,11 @@ Sheet {
     required property var timeline
     required property var picker
     required property var settings
+    // The people the person picker offers: a model with the roles personId and name (the PeopleModel), or null where there
+    // is no list of people. An interaction keeps the people it has even when they are not in it (retired, or forgotten).
+    property var people: null
 
-    // The page in front: "main" or "type".
+    // The page in front: "main", "type" or "people".
     property string page: "main"
     // The time sheet is up (EditTimeSheet follows it).
     property bool timeOpen: false
@@ -55,6 +58,12 @@ Sheet {
     property int chosenSlot: 0
     property int localSeconds: 0
     property string noteValue
+    // An interaction: the people in the order picked (ids), the names the model gave for them, and the answer.
+    property var chosenPeople: []
+    property var personNames: ({})
+    property string answerValue
+    // The interaction types the entry can be changed to ({typeId, name}).
+    property var interactionTypes: []
     // The last Save or Delete was refused by the model.
     property bool saveFailed: false
     // The sheet was opened for the note: the field takes the focus when the sheet has come up.
@@ -62,9 +71,22 @@ Sheet {
 
     readonly property string kind: original.kind ?? ""
     readonly property bool isHeaderChange: kind === "header_change"
+    readonly property bool isInteraction: kind === "interaction"
+    readonly property bool showsPeople: isInteraction && (original.asksPerson ?? false)
+    readonly property bool showsAnswer: isInteraction && (original.asksText ?? false)
+    // The people as the row says them; "(person not set)" when there are none.
+    readonly property string peopleSummary: {
+        if (chosenPeople.length === 0)
+            return qsTr("(person not set)");
+        const names = [];
+        for (let i = 0; i < chosenPeople.length; ++i)
+            names.push(nameOfPerson(chosenPeople[i]));
+        return names.join(", ");
+    }
     readonly property bool hasEntry: entryId.length > 0
     readonly property bool showingMain: page === "main"
     readonly property bool showingType: page === "type"
+    readonly property bool showingPeople: page === "people"
     // The gap between the groups of the sheet: 22 pt in the design.
     readonly property real groupGap: Theme.space.screenMargin + Theme.space.tileGap - Theme.border.hairline * 2
 
@@ -113,8 +135,57 @@ Sheet {
             edit.noteText = noteValue;
         } else if (kind === "header_change") {
             edit.newValue = noteValue;
+        } else if (kind === "interaction") {
+            edit.interactionTypeId = chosenTypeId;
+            edit.personIds = chosenPeople;
+            if (showsAnswer)
+                edit.value = answerValue;
+            edit.attachedNote = noteValue;
         }
         return edit;
+    }
+
+    // The name of a person for the rows: the list's name, else the one the model gave when the sheet opened.
+    function nameOfPerson(id: string): string {
+        if (people !== null) {
+            for (let i = 0; i < people.rowCount(); ++i) {
+                const index = people.index(i, 0);
+                if (people.data(index, Qt.UserRole + 1) === id)
+                    return people.data(index, Qt.UserRole + 2);
+            }
+        }
+        return personNames[id] ?? qsTr("someone");
+    }
+
+    // The ids of the picks that the list does not hold.
+    readonly property var outsidePeople: {
+        const inList = new Set();
+        if (people !== null) {
+            for (let i = 0; i < people.rowCount(); ++i)
+                inList.add(people.data(people.index(i, 0), Qt.UserRole + 1));
+        }
+        const outside = [];
+        for (let i = 0; i < chosenPeople.length; ++i) {
+            if (!inList.has(chosenPeople[i]))
+                outside.push(chosenPeople[i]);
+        }
+        return outside;
+    }
+
+    function hasPerson(id: string): bool {
+        return chosenPeople.indexOf(id) >= 0;
+    }
+
+    // Adds the person to the end of the picks, or takes them off.
+    function togglePerson(id: string): void {
+        const picks = chosenPeople.slice();
+        const at = picks.indexOf(id);
+        if (at >= 0)
+            picks.splice(at, 1);
+        else
+            picks.push(id);
+        chosenPeople = picks;
+        saveFailed = false;
     }
 
     // Opens the sheet on `id`. An entry that is not in the log opens nothing.
@@ -132,6 +203,20 @@ Sheet {
         chosenTypeId = data.errorTypeId ?? "";
         chosenTypeName = data.errorTypeName ?? "";
         chosenSlot = data.colourSlot ?? 0;
+        if (data.kind === "interaction") {
+            chosenTypeId = data.interactionTypeId;
+            chosenTypeName = data.interactionTypeName;
+            chosenPeople = data.personIds ?? [];
+            personNames = data.personNames ?? ({});
+            answerValue = data.value ?? "";
+            interactionTypes = timeline.interactionTypesFor(id);
+            answerInput.text = answerValue;
+        } else {
+            chosenPeople = [];
+            personNames = ({});
+            answerValue = "";
+            interactionTypes = [];
+        }
         localSeconds = data.localSeconds;
         noteValue = data.attachedNote ?? data.noteText ?? data.newValue ?? "";
         saveFailed = false;
@@ -197,9 +282,9 @@ Sheet {
         // While the time sheet is over this one, nothing on this one takes a touch or is reached by a screen reader.
         enabled: !root.timeOpen
         inSheet: true
-        title: root.showingType ? qsTr("Error type") : qsTr("Edit entry")
+        title: root.showingType ? (root.isInteraction ? qsTr("Interaction") : qsTr("Error type")) : root.showingPeople ? qsTr("People") : qsTr("Edit entry")
         leadingText: qsTr("Cancel")
-        trailingText: root.showingType ? "" : qsTr("Save")
+        trailingText: root.showingMain ? qsTr("Save") : ""
         // A draft the model refuses cannot be saved.
         trailingEnabled: root.canSave
         onLeadingTriggered: root.cancelPage()
@@ -241,13 +326,23 @@ Sheet {
 
                     ListRow {
                         objectName: "editType"
-                        visible: root.kind === "error"
-                        text: qsTr("Error")
+                        visible: root.kind === "error" || root.isInteraction
+                        text: root.isInteraction ? qsTr("Interaction") : qsTr("Error")
                         value: root.chosenTypeName
                         valueSwatch: root.chosenSlot > 0 ? Theme.tileColour(root.chosenSlot) : "transparent"
                         minimumHeight: Theme.size.rowHeightForm
                         showChevron: true
                         onActivated: root.page = "type"
+                    }
+
+                    ListRow {
+                        objectName: "editPeople"
+                        visible: root.showsPeople
+                        text: qsTr("People")
+                        value: root.peopleSummary
+                        minimumHeight: Theme.size.rowHeightForm
+                        showChevron: true
+                        onActivated: root.page = "people"
                     }
 
                     ListRow {
@@ -257,6 +352,60 @@ Sheet {
                         valueChip: true
                         minimumHeight: Theme.size.rowHeightForm
                         onActivated: root.showTimePage()
+                    }
+                }
+
+                // The answer of an interaction that has one.
+                Column {
+                    width: parent.width
+                    visible: root.showsAnswer
+
+                    Text {
+                        x: Theme.space.tileGap / 2
+                        width: parent.width - 2 * x
+                        height: implicitHeight + Theme.space.tileGap
+                        color: Theme.colour.textSecondary
+                        font: Theme.font.sectionLabel.font
+                        text: qsTr("Answer").toLocaleUpperCase()
+                        wrapMode: Text.WordWrap
+                        Accessible.ignored: true
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: Math.max(Theme.size.rowHeightForm, answerInput.implicitHeight)
+                        radius: Theme.radius.groupedList
+                        color: Theme.colour.surfaceRaised
+                        border.width: answerInput.activeFocus ? Theme.border.hairline * 2 : 0
+                        border.color: Theme.colour.primaryText
+
+                        TextArea {
+                            id: answerInput
+
+                            objectName: "editAnswer"
+                            width: parent.width
+                            height: parent.height
+                            leftPadding: Theme.space.rowPadding
+                            rightPadding: Theme.space.rowPadding
+                            topPadding: Theme.space.sectionGap
+                            bottomPadding: Theme.space.sectionGap
+                            color: Theme.colour.textPrimary
+                            font: Theme.font.body.font
+                            wrapMode: TextEdit.Wrap
+                            selectionColor: Theme.colour.primaryTint
+                            selectedTextColor: Theme.colour.textPrimary
+                            background: null
+
+                            Accessible.role: Accessible.EditableText
+                            Accessible.name: qsTr("Answer")
+
+                            onTextChanged: {
+                                if (text !== root.answerValue) {
+                                    root.answerValue = text;
+                                    root.saveFailed = false;
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -479,12 +628,34 @@ Sheet {
             width: parent.width - 2 * Theme.space.screenMargin
             bottomPadding: Theme.space.sectionGap
 
+            // The interaction types: the ones that are not retired, and the entry's own.
             GroupedList {
                 width: parent.width
+                visible: root.isInteraction
                 surface: Theme.colour.surfaceRaised
 
                 Repeater {
-                    model: root.picker
+                    model: root.isInteraction ? root.interactionTypes : []
+
+                    delegate: ListRow {
+                        required property var modelData
+
+                        objectName: "interactionTypeRow"
+                        text: modelData.name
+                        checkable: true
+                        checked: modelData.typeId === root.chosenTypeId
+                        onActivated: root.chooseType(modelData.typeId, modelData.name, 0)
+                    }
+                }
+            }
+
+            GroupedList {
+                width: parent.width
+                visible: !root.isInteraction
+                surface: Theme.colour.surfaceRaised
+
+                Repeater {
+                    model: root.isInteraction ? null : root.picker
 
                     delegate: ListRow {
                         required property string typeId
@@ -498,6 +669,83 @@ Sheet {
                         onActivated: root.chooseType(typeId, label, colourSlot)
                     }
                 }
+            }
+        }
+    }
+
+    // ---- the people of an interaction ----
+
+    Flickable {
+        id: peoplePage
+
+        y: nav.height
+        width: parent.width
+        height: Math.max(0, parent.height - y)
+        visible: root.showingPeople
+        enabled: !root.timeOpen
+        contentWidth: width
+        contentHeight: peopleColumn.height
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+
+        Column {
+            id: peopleColumn
+
+            x: Theme.space.screenMargin
+            width: parent.width - 2 * Theme.space.screenMargin
+            spacing: root.groupGap
+            bottomPadding: Theme.space.sectionGap
+
+            // The people the entry has and the list does not (retired, or forgotten): they stay until taken off.
+            GroupedList {
+                width: parent.width
+                visible: root.outsidePeople.length > 0
+                surface: Theme.colour.surfaceRaised
+
+                Repeater {
+                    model: root.outsidePeople
+
+                    delegate: ListRow {
+                        required property string modelData
+
+                        objectName: "personRow"
+                        text: root.nameOfPerson(modelData)
+                        checkable: true
+                        checked: root.hasPerson(modelData)
+                        onActivated: root.togglePerson(modelData)
+                    }
+                }
+            }
+
+            GroupedList {
+                width: parent.width
+                visible: root.people !== null && root.people.rowCount() > 0
+                surface: Theme.colour.surfaceRaised
+
+                Repeater {
+                    model: root.people
+
+                    delegate: ListRow {
+                        required property string personId
+                        required property string name
+
+                        objectName: "personRow"
+                        text: name
+                        checkable: true
+                        checked: root.hasPerson(personId)
+                        onActivated: root.togglePerson(personId)
+                    }
+                }
+            }
+
+            Text {
+                x: Theme.space.tileGap / 2
+                width: parent.width - 2 * x
+                visible: root.people === null || root.people.rowCount() === 0
+                color: Theme.colour.textSecondary
+                font: Theme.font.caption.font
+                text: qsTr("There are no people in the list yet.")
+                wrapMode: Text.WordWrap
             }
         }
     }
