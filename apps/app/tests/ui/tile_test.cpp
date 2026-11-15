@@ -522,9 +522,9 @@ TEST_CASE("tile.label: the longest configured label wraps and is not cut at scal
         CHECK(label->property("contentHeight").toDouble() <= label->height() + 0.5);
         CHECK(label->property("contentWidth").toDouble() <= label->width() + 0.5);
         CHECK(label->property("elide").toInt() == 3); // Text.ElideNone
-        // A label that fits is not shrunk: at the default size it is the size of the type scale, 13.5 pt and not
-        // rounded to 14.
-        if (test.m_Scale == 1.0)
+        // A label whose longest word fits is not shrunk: at the default size it is the size of the type scale, 13.5 pt and
+        // not rounded to 14. (A runner whose font makes "Sequence" wider than the label shrinks it, as it should.)
+        if (test.m_Scale == 1.0 && tile->property("wordFit").toDouble() == 1.0)
         {
             const QFont font = label->property("font").value<QFont>();
             const double dpi = rig.theme()->property("fontDpi").toDouble();

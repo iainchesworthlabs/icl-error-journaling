@@ -127,25 +127,45 @@ Item {
     readonly property real labelWidth: width - 2 * labelInset
     // The share of the role's size at which the longest word fills the label. A word does not get narrower in step with its
     // size: the system font of macOS and iOS spaces smaller text more loosely (its tracking depends on the size), and a whole
-    // pixel size rounds. So the share is first the ratio of the widths and then corrected twice from the word as it is
-    // measured at the size reached (the probes below), instead of being taken from the ratio alone.
+    // pixel size rounds. So the share is first the ratio of the widths, then corrected from the word as it is measured at
+    // the size reached (the probes below), twice, and the largest of the three at which the measured word fits the label is
+    // the one used: a correction of a rounded size can overshoot, and that share is then left out. If none fits, it is
+    // the floor, and wordFits says whether the word fits there.
     readonly property real wordFitRatio: wordProbe.advanceWidth > 0 ? fitShare(1, wordProbe.advanceWidth) : 1
     readonly property real wordFitFirst: fitProbeFirst.advanceWidth > 0 ? fitShare(wordFitRatio, fitProbeFirst.advanceWidth) : wordFitRatio
-    readonly property real wordFit: fitProbeSecond.advanceWidth > 0 ? fitShare(wordFitFirst, fitProbeSecond.advanceWidth) : wordFitFirst
+    readonly property real wordFitSecond: fitProbeSecond.advanceWidth > 0 ? fitShare(wordFitFirst, fitProbeSecond.advanceWidth) : wordFitFirst
+    readonly property real wordFit: {
+        const room = labelWidth + 0.5;
+        if (wordProbe.advanceWidth <= room)
+            return 1;
+        // The shares and the widths measured at them, the largest share first.
+        const tried = [
+            {
+                "share": wordFitRatio,
+                "width": fitProbeFirst.advanceWidth
+            },
+            {
+                "share": wordFitFirst,
+                "width": fitProbeSecond.advanceWidth
+            },
+            {
+                "share": wordFitSecond,
+                "width": fitProbeThird.advanceWidth
+            }
+        ].sort((a, b) => b.share - a.share);
+        for (const one of tried) {
+            if (one.width <= room)
+                return one.share;
+        }
+        return wordFitFloor;
+    }
     // A word that is wider than the tile even at that floor, as it is measured there, is the last resort: it is broken, and not cut off.
     readonly property bool wordFits: floorProbe.advanceWidth <= labelWidth + 0.5
 
-    // The label's font at a share of the role's size: a whole size is a pixel size and a fractional one a point size (Theme,
-    // FontRole.make).
+    // The label's font at a share of the role's size, made by the role (Theme, FontRole.scaledFont): a font read from the
+    // role is a reference to it, and a size set on that is not kept.
     function labelFontAt(share: real): font {
-        const sized = WindowLayout.tileLabelRole.font;
-        if (share < 1) {
-            if (sized.pixelSize > 0)
-                sized.pixelSize = Math.floor(sized.pixelSize * share);
-            else
-                sized.pointSize = sized.pointSize * share;
-        }
-        return sized;
+        return WindowLayout.tileLabelRole.scaledFont(share);
     }
 
     // The share at which the word, which measures `measured` at the share `current`, fills the label: no lower than the
@@ -290,6 +310,14 @@ Item {
             objectName: "tileWordFitProbeSecond"
             text: root.longestWord
             font: root.labelFontAt(root.wordFitFirst)
+        }
+
+        TextMetrics {
+            id: fitProbeThird
+
+            objectName: "tileWordFitProbeThird"
+            text: root.longestWord
+            font: root.labelFontAt(root.wordFitSecond)
         }
 
         Text {
