@@ -1114,21 +1114,13 @@ TEST_CASE("settings.about: without the model there is no About row", "[ui][setti
     CHECK(fixture.shown(QStringLiteral("settingsImportExport")) != nullptr);
 }
 
-TEST_CASE("settings.about: the foot of the list is a plain caption with no timing line", "[ui][settings_screen][about]")
+TEST_CASE("settings.about: the About row is the last thing in the list, with no version line below it", "[ui][settings_screen][about]")
 {
     Fixture fixture;
-    fixture.m_Screen->setProperty("aboutText", QStringLiteral("0.1.0 · ios, storage: sqlite"));
-    fixture.m_Ui.layout();
-    fixture.reveal(QStringLiteral("settingsAboutFooter"));
-    CHECK(fixture.text_of(QStringLiteral("settingsVersionCaption")) == "0.1.0 · ios, storage: sqlite");
-    QQuickItem* footer = fixture.require(QStringLiteral("settingsAboutFooter"));
-    for (int i = 0; i < 6; ++i)
-    {
-        fixture.m_Ui.tap(footer);
-    }
-    fixture.m_Ui.layout();
+    fixture.reveal(QStringLiteral("settingsAboutRow"));
+    CHECK(fixture.shown(QStringLiteral("settingsVersionCaption")) == nullptr);
+    CHECK(fixture.shown(QStringLiteral("settingsAboutFooter")) == nullptr);
     CHECK(fixture.shown(QStringLiteral("settingsTiming")) == nullptr);
-    CHECK(fixture.depth() == 1);
 }
 
 TEST_CASE("settings.about: the page says what this build is", "[ui][settings_screen][about]")

@@ -121,7 +121,6 @@ Item {
     required property var bridge
     required property var fileChooser
     required property var about
-    required property string aboutText
     // The list of people of the Interactions board and of the Edit entry sheet.
     property var people: null
 
@@ -143,7 +142,6 @@ Item {
         bridge: wrap.bridge
         fileChooser: wrap.fileChooser
         about: wrap.about
-        aboutText: wrap.aboutText
         people: wrap.people
     }
 }
@@ -330,7 +328,6 @@ struct Phone
                            {QStringLiteral("bridge"), object(bridge)},
                            {QStringLiteral("fileChooser"), object(*chooser)},
                            {QStringLiteral("about"), object(about)},
-                           {QStringLiteral("aboutText"), QStringLiteral("0.1.0")},
                            {QStringLiteral("people"), object(*root.people())}};
     }
 

@@ -20,9 +20,6 @@ SettingsPage {
     // BoardState, for the Second board group: `interactionsEnabled`. Null leaves the group out.
     property var boards: null
     property var exportPreferences: null
-    // The foot of the list: the version and platform text, as a plain caption. Empty hides it. The build's facts, the licence and
-    // the timing line (five taps on the version) are on the About page, which the last row opens.
-    property string aboutText
     // Whether the About row is there: the About model is given. The screen sets it from `about`.
     property bool aboutAvailable: false
 
@@ -422,10 +419,5 @@ SettingsPage {
                 onActivated: root.aboutRequested()
             }
         }
-    }
-
-    SettingsAbout {
-        objectName: "settingsAboutFooter"
-        aboutText: root.aboutText
     }
 }

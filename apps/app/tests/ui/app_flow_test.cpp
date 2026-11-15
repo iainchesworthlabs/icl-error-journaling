@@ -211,8 +211,7 @@ struct App
                            {QStringLiteral("bridge"), object(bridge)},
                            {QStringLiteral("fileChooser"), object(*chooser)},
                            {QStringLiteral("urlOpener"), object(*url_opener)},
-                           {QStringLiteral("about"), object(about)},
-                           {QStringLiteral("aboutText"), QStringLiteral("0.1.0 · test, storage: memory")}};
+                           {QStringLiteral("about"), object(about)}};
         if (help != nullptr)
         {
             given.insert(QStringLiteral("help"), object(*help));
@@ -946,9 +945,8 @@ TEST_CASE("app.timing: five taps on the Version row of the About page show the t
     App app;
     app.choose_tab(SETTINGS_TAB);
 
-    // The foot of the Settings list is a plain caption now: the version and platform text, and no timing line.
-    QQuickItem* caption = app.need(QStringLiteral("settingsVersionCaption"));
-    CHECK(caption->property("text").toString() == QStringLiteral("0.1.0 · test, storage: memory"));
+    // The Settings list has no version line at its foot: the build facts are on the About page.
+    CHECK_FALSE(app.shown(QStringLiteral("settingsVersionCaption")));
     CHECK_FALSE(app.shown(QStringLiteral("settingsTiming")));
 
     // The About row is at the end of the list: scroll there, as the person does, and open the page.
