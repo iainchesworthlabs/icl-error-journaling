@@ -2901,6 +2901,30 @@ TEST_CASE("board.hold_note: a hold on an interaction with an empty composer open
     CHECK(edit_sheet_open(screen));
     CHECK_FALSE(screen.open(QStringLiteral("logPersonPicker")));
 }
+
+TEST_CASE("board.hold_note: the People row of that Edit sheet opens the person picker over it, and Done closes it",
+          "[ui][log][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    sim.people.seed("Jordan Placeholder");
+    screen.rig.hold(screen.itile(SPOKE_WITH_ROW), 700ms);
+    sim.gateway.run_all();
+    screen.rig.settle();
+    screen.rig.advance(600ms);
+    REQUIRE(edit_sheet_open(screen));
+
+    screen.rig.tap(screen.inside(edit_sheet(screen), QStringLiteral("editPeople")));
+    screen.rig.advance(600ms);
+    REQUIRE(screen.open(QStringLiteral("entryPeoplePicker")));
+    CHECK(edit_sheet_open(screen));
+
+    QMetaObject::invokeMethod(screen.sheet(QStringLiteral("entryPeoplePicker")), "finish");
+    screen.rig.advance(600ms);
+    CHECK_FALSE(screen.open(QStringLiteral("entryPeoplePicker")));
+    CHECK(edit_sheet_open(screen));
+}
 #include "log_screen_test.moc"
 
 // ---- the first-run tip (Stage 10, 10.6) ----

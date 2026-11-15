@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+pragma ComponentBehavior: Bound
 import QtQuick
 import ErrorJournalingApp
 
@@ -19,7 +20,7 @@ Item {
     property var people: null
 
     readonly property alias editor: entryEditor
-    readonly property bool isOpen: entryEditor.isOpen || entryTimeSheet.isOpen
+    readonly property bool isOpen: entryEditor.isOpen || entryTimeSheet.isOpen || pickerLoader.isOpen
 
     anchors.fill: parent
 
@@ -30,6 +31,15 @@ Item {
         picker: root.picker
         settings: root.settings
         people: root.people
+        pickerOpen: pickerLoader.isOpen
+        onPeopleRequested: (picks, typeName, locationId) => {
+            const picker = pickerLoader.item as PersonPicker;
+            if (picker === null)
+                return;
+            picker.typeName = typeName;
+            picker.locationId = locationId;
+            picker.begin(picks);
+        }
     }
 
     EditTimeSheet {
@@ -38,5 +48,25 @@ Item {
         edit: entryEditor
         timeline: root.timeline
         settings: root.settings
+    }
+
+    // The people of an interaction, over the Edit entry sheet, as in Review: Done puts them in the draft of the sheet and nothing is
+    // saved until Save. Declared last, so that it stacks over both.
+    Loader {
+        id: pickerLoader
+
+        readonly property bool isOpen: (item as PersonPicker)?.isOpen ?? false
+
+        anchors.fill: parent
+        active: root.people !== null
+        sourceComponent: PersonPicker {
+            objectName: "entryPeoplePicker"
+            people: root.people
+            onDoneRequested: personIds => {
+                entryEditor.setPeople(personIds);
+                if (personIds.length > 0)
+                    root.people.touch(personIds);
+            }
+        }
     }
 }
