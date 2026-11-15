@@ -130,7 +130,7 @@ TEST_CASE("composer.edit_menu: the field asks for no text handles, so a tap does
 {
     Fixture fixture;
     const int hints = fixture.field->property("inputMethodHints").toInt();
-    CHECK((hints & Qt::ImhNoTextHandles) != 0);
+    CHECK((hints & static_cast<int>(Qt::ImhNoTextHandles)) != 0);
 }
 
 TEST_CASE("composer.draft_binding: typing reports each change, and the draft that comes back changes nothing",
