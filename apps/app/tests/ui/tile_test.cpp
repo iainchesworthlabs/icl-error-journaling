@@ -588,10 +588,14 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
                 QObject* probe = tile->findChild<QObject*>(QStringLiteral("tileWordProbe"));
                 REQUIRE(probe != nullptr);
                 // The word at the role's size, and the tile that gives it this share of its width: a word that is
-                // 2% too wide (the report), 10% too wide, and the share at which it fits only at the smallest size.
+                // 2% too wide (the report), 10% too wide, and the width at which it fits only at the smallest size.
                 const double word_width = probe->property("advanceWidth").toDouble();
                 const double padding = tile->property("padding").toDouble() * 2; // the padding of both sides
-                const double floor_share = tile->property("wordFitFloor").toDouble();
+                // The word as it measures at the smallest size, not the share of the word at the role's size: the system
+                // font of macOS and iOS spaces smaller text more loosely, so the word is wider there than that share.
+                QObject* floor_probe = tile->findChild<QObject*>(QStringLiteral("tileWordFloorProbe"));
+                REQUIRE(floor_probe != nullptr);
+                const double floor_width = floor_probe->property("advanceWidth").toDouble();
                 struct Width
                 {
                     double m_Tile;
@@ -600,8 +604,8 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
                 // The last needs the sides of the label to give up to 4 pt each, 6 pt in all here.
                 std::vector<Width> widths{Width{word_width * 0.98 + padding, true},
                                           Width{word_width * 0.9 + padding, true},
-                                          Width{word_width * (floor_share + 0.02) + padding, true},
-                                          Width{word_width * floor_share + padding - 6.0, true}};
+                                          Width{floor_width + word_width * 0.02 + padding, true},
+                                          Width{floor_width + padding - 6.0, true}};
                 for (const double tile_width : window.m_TileWidths)
                 {
                     widths.push_back(Width{tile_width, window.m_MustFit});
