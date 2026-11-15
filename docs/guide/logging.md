@@ -65,11 +65,12 @@ board like the Errors board, for what you did around the unit. **Double-tap** a 
 and **hold to add the note you typed** work as they do for errors. The **Other** tile lists the interaction types that are not on
 the board.
 
-The app has six interaction types to start with: **Spoke with**, **Played song**, **Visitor interaction**, **Gave item**,
-**Greeted** and **Helped**. A setup file can replace them (see [the setup file](setup-file.md)).
+The app has no interaction types of its own. The board shows only the types you make, in **Settings**, **Interaction types**,
+or that a setup file brings (see [the setup file](setup-file.md)). Until you make one, the board is empty and its tiles say
+**Add interaction type**.
 
-**The entry is logged first, and the question comes second.** If the type has a line with a person in it (Spoke with, Gave item,
-Helped), a list of **People** opens at once:
+**The entry is logged first, and the question comes second.** If the type has a line with a person in it (for example
+“Spoke with [person]”), a list of **People** opens at once:
 
 - The people you used last are chips under the heading **Recent**: tap one to tick it. People saved for the place in force today come first in the list.
 - Type a name in the search field. If nobody matches, tap **Add "name" as a new person**. You type a name once; next time you
