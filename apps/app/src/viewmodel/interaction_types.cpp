@@ -6,10 +6,6 @@ namespace ej::viewmodel
 
 std::vector<InteractionType> interaction_types_in_force(const Configuration& configuration)
 {
-    if (configuration.m_InteractionTypes.empty())
-    {
-        return default_interaction_types();
-    }
     return configuration.m_InteractionTypes;
 }
 

@@ -71,28 +71,35 @@ Configuration configuration_without_interactions()
 
 } // namespace
 
-TEST_CASE("With no interaction types in the setup the built-in ones are in force", "[viewmodel][interaction][unit]")
+TEST_CASE("With no interaction types in the setup there are none in force: no type is built in",
+          "[viewmodel][interaction][unit]")
 {
-    const auto types = viewmodel::interaction_types_in_force(configuration_without_interactions());
-    REQUIRE(types.size() == 6);
-    CHECK(types[0].m_Name == "Spoke with");
-    CHECK(types[0].m_Asks == InteractionAsks::PERSON);
-    CHECK(types[1].m_Asks == InteractionAsks::TEXT);
-    CHECK(types[2].m_Asks == InteractionAsks::NOTHING);
-    for (std::size_t i = 0; i < types.size(); ++i)
-    {
-        CHECK(types[i].m_BoardPosition == static_cast<int>(i) + 1);
-    }
+    CHECK(viewmodel::interaction_types_in_force(configuration_without_interactions()).empty());
 
     Configuration own = sample_configuration();
     own.m_InteractionTypes.resize(1);
     CHECK(viewmodel::interaction_types_in_force(own).size() == 1);
 }
 
-TEST_CASE("The Interactions board has twelve tiles, the types on their positions and Other last",
+TEST_CASE("With no interaction types the board is empty: twelve tiles, eleven offering setup and Other last",
           "[viewmodel][interaction][unit]")
 {
     InteractionFixture f(configuration_without_interactions());
+    REQUIRE(f.m_Board.rowCount() == 12);
+    CHECK(f.m_Board.board_empty());
+    for (int row = 0; row < OTHER; ++row)
+    {
+        CHECK(f.value(row, InteractionBoardModel::IS_EMPTY).toBool());
+        CHECK(f.value(row, InteractionBoardModel::LABEL).toString().isEmpty());
+    }
+    CHECK(f.value(OTHER, InteractionBoardModel::IS_OTHER).toBool());
+    CHECK(f.m_Board.other_types().isEmpty());
+}
+
+TEST_CASE("The Interactions board has twelve tiles, the types on their positions and Other last",
+          "[viewmodel][interaction][unit]")
+{
+    InteractionFixture f(sample_configuration());
     REQUIRE(f.m_Board.rowCount() == 12);
     CHECK_FALSE(f.m_Board.board_empty());
     CHECK(f.value(0, InteractionBoardModel::LABEL).toString() == "Spoke with");
@@ -105,8 +112,8 @@ TEST_CASE("The Interactions board has twelve tiles, the types on their positions
 TEST_CASE("Counts follow the log, and a type that is not on the board counts in Other",
           "[viewmodel][interaction][unit]")
 {
-    InteractionFixture f(configuration_without_interactions());
-    const auto types = viewmodel::interaction_types_in_force(configuration_without_interactions());
+    InteractionFixture f(sample_configuration());
+    const auto types = viewmodel::interaction_types_in_force(sample_configuration());
 
     QSignalSpy data(&f.m_Board, &QAbstractItemModel::dataChanged);
     const EntryId first = f.add(types[0].m_Id, types[0].m_Name);
@@ -125,8 +132,8 @@ TEST_CASE("Counts follow the log, and a type that is not on the board counts in 
 
 TEST_CASE("The board says what each type asks for", "[viewmodel][interaction][unit]")
 {
-    InteractionFixture f(configuration_without_interactions());
-    const auto types = viewmodel::interaction_types_in_force(configuration_without_interactions());
+    InteractionFixture f(sample_configuration());
+    const auto types = viewmodel::interaction_types_in_force(sample_configuration());
     const auto id = [&types](std::size_t i) { return QString::fromStdString(types[i].m_Id.format()); };
     CHECK(f.m_Board.asksFor(id(0)) == "person");
     CHECK(f.m_Board.asksFor(id(1)) == "text");

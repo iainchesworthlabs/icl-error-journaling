@@ -475,4 +475,10 @@ as not run on a device, per `AGENTS.md`.
   tab stays **Interactions**. An interaction with nobody involved never mentions people at all: the People row in
   Settings is shown only when the second board is on, and a type with no `{person}` slot never opens the picker.
 
+- **16. No built-in interaction types (bug report, 15 Nov 2026):** the app has no interaction type of its own, as it has
+  no error type of its own. An earlier build showed six (Spoke with, Played song, Visitor interaction, Gave item, Greeted,
+  Helped) when the setup had none; that fallback is removed. The Interactions board shows only the types the user made
+  or a setup file brought, and is empty, with tiles that offer setup, until there is one. The examples in 3.1 are
+  examples, and `config/sample-config.json` stays a demo setup the user chooses to import.
+
 **Still open:** nothing.

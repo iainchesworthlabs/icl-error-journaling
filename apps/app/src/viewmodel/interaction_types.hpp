@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
-// The interaction types in force (Stage 14, package I-6): the types of the setup file, or, when the file has none, the
-// built-in list (`default_interaction_types`), so that the Interactions board shows tiles with no setup at all.
+// The interaction types in force (Stage 14, package I-6): the types the user made, as the error types are. The app has
+// no built-in interaction type: with none in the setup the Interactions board is empty and its tiles offer setup.
 
 #include "error_journaling/configuration.hpp"
 #include "error_journaling/interaction.hpp"

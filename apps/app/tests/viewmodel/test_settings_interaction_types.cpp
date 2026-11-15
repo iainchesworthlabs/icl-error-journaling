@@ -201,7 +201,7 @@ TEST_CASE("settings.interaction_types: the example line shows a sample person an
     CHECK(rig.m_Settings.previewInteractionLine("X", "{") == "Fix the line to see an example.");
 }
 
-TEST_CASE("settings.interaction_types: with no types in the file the editor shows the built-in ones, and the first edit keeps them",
+TEST_CASE("settings.interaction_types: with no types in the file the editor lists none, and the first one added is the user's own",
           "[viewmodel][settings][interaction_types]")
 {
     Configuration configuration = sample_configuration();
@@ -210,27 +210,26 @@ TEST_CASE("settings.interaction_types: with no types in the file the editor show
     rig.load_configuration(configuration);
     const QAbstractItemModel& types = *rig.m_Settings.interaction_types();
 
-    // What the board shows is what the editor lists.
-    const QStringList shown = names_of(types);
-    REQUIRE(shown.size() == 6);
-    CHECK(shown.front() == QStringLiteral("Spoke with"));
-    CHECK(text_of_role(types, 0, "line") == QStringLiteral("Spoke with [person]"));
-    CHECK(text_of_role(types, 0, "asks") == QStringLiteral("person"));
-    CHECK(position_at(types, 0) == 1);
+    // No type is built in: the editor and the miniature board start empty.
+    CHECK(types.rowCount() == 0);
+    const QAbstractItemModel& layout = *rig.m_Settings.interaction_layout();
+    REQUIRE(layout.rowCount() == 12);
+    for (int row = 0; row < 11; ++row)
+    {
+        CHECK(text_of_role(layout, row, "typeId").isEmpty());
+    }
 
-    // A rename edits the built-in type: the six are now in the configuration and nothing else changed.
-    CHECK(rig.m_Settings.updateInteractionType(id_at(types, 0), "Chatted with", "Chatted with [person]").isEmpty());
-    rig.commit();
-    const QStringList after = names_of(types);
-    REQUIRE(after.size() == 6);
-    CHECK(after.front() == QStringLiteral("Chatted with"));
-    CHECK(after.back() == shown.back());
-
-    // A new type goes to the first empty tile, after the six.
+    // The first type goes to position 1 and is the only one.
     CHECK(rig.m_Settings.addInteractionType("Waved at", "Waved at [person]").isEmpty());
     rig.commit();
-    CHECK(names_of(types).size() == 7);
-    CHECK(position_at(types, 6) == 7);
+    REQUIRE(names_of(types) == QStringList{QStringLiteral("Waved at")});
+    CHECK(position_at(types, 0) == 1);
+
+    // The next goes to the first empty tile.
+    CHECK(rig.m_Settings.addInteractionType("Greeted", "").isEmpty());
+    rig.commit();
+    REQUIRE(types.rowCount() == 2);
+    CHECK(position_at(types, 1) == 2);
 }
 
 TEST_CASE("settings.interaction_types: the miniature layout has the 11 tiles and Other, and follows a move",
