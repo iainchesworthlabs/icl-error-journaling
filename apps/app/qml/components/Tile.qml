@@ -117,7 +117,7 @@ Item {
     // The side margin of the label: the tile's padding, or, for a word that does not fit at that floor, up to four points
     // less on each side, as much as the word needs (the bottom margin and the Other icon keep the padding).
     readonly property real labelInset: {
-        const needed = wordProbe.advanceWidth * wordFitFloor;
+        const needed = floorProbe.advanceWidth;
         const room = width - 2 * padding;
         if (needed <= room + 0.5)
             return padding;
@@ -125,9 +125,54 @@ Item {
     }
     readonly property real labelInsetGive: 4
     readonly property real labelWidth: width - 2 * labelInset
-    readonly property real wordFit: wordProbe.advanceWidth > 0 ? Math.max(wordFitFloor, Math.min(1, labelWidth / wordProbe.advanceWidth)) : 1
-    // A word that is wider than the tile even at that floor is the last resort: it is broken, and not cut off.
-    readonly property bool wordFits: wordProbe.advanceWidth * wordFitFloor <= labelWidth + 0.5
+    // The share of the role's size at which the longest word fills the label. A word does not get narrower in step with its
+    // size: the system font of macOS and iOS spaces smaller text more loosely (its tracking depends on the size), and a whole
+    // pixel size rounds. So the share is first the ratio of the widths, then corrected from the word as it is measured at
+    // the size reached (the probes below), twice, and the largest of the three at which the measured word fits the label is
+    // the one used: a correction of a rounded size can overshoot, and that share is then left out. If none fits, it is
+    // the floor, and wordFits says whether the word fits there.
+    readonly property real wordFitRatio: wordProbe.advanceWidth > 0 ? fitShare(1, wordProbe.advanceWidth) : 1
+    readonly property real wordFitFirst: fitProbeFirst.advanceWidth > 0 ? fitShare(wordFitRatio, fitProbeFirst.advanceWidth) : wordFitRatio
+    readonly property real wordFitSecond: fitProbeSecond.advanceWidth > 0 ? fitShare(wordFitFirst, fitProbeSecond.advanceWidth) : wordFitFirst
+    readonly property real wordFit: {
+        const room = labelWidth + 0.5;
+        if (wordProbe.advanceWidth <= room)
+            return 1;
+        // The shares and the widths measured at them, the largest share first.
+        const tried = [
+            {
+                "share": wordFitRatio,
+                "width": fitProbeFirst.advanceWidth
+            },
+            {
+                "share": wordFitFirst,
+                "width": fitProbeSecond.advanceWidth
+            },
+            {
+                "share": wordFitSecond,
+                "width": fitProbeThird.advanceWidth
+            }
+        ].sort((a, b) => b.share - a.share);
+        for (const one of tried) {
+            if (one.width <= room)
+                return one.share;
+        }
+        return wordFitFloor;
+    }
+    // A word that is wider than the tile even at that floor, as it is measured there, is the last resort: it is broken, and not cut off.
+    readonly property bool wordFits: floorProbe.advanceWidth <= labelWidth + 0.5
+
+    // The label's font at a share of the role's size, made by the role (Theme, FontRole.scaledFont): a font read from the
+    // role is a reference to it, and a size set on that is not kept.
+    function labelFontAt(share: real): font {
+        return WindowLayout.tileLabelRole.scaledFont(share);
+    }
+
+    // The share at which the word, which measures `measured` at the share `current`, fills the label: no lower than the
+    // floor and no higher than the role's own size.
+    function fitShare(current: real, measured: real): real {
+        return Math.max(wordFitFloor, Math.min(1, current * labelWidth / measured));
+    }
     readonly property bool dashed: isOther && !skeleton
     readonly property color fillColour: skeleton ? Theme.colour.swatch : (isOther ? Theme.colour.otherTileFill : (interactions ? Theme.interactionTileColour(colourSlot) : Theme.tileColour(colourSlot)))
 
@@ -242,6 +287,39 @@ Item {
             font: WindowLayout.tileLabelRole.font
         }
 
+        // The same word at the smallest size the label shrinks to for it, and at the two sizes of the fit: see wordFit.
+        TextMetrics {
+            id: floorProbe
+
+            objectName: "tileWordFloorProbe"
+            text: root.longestWord
+            font: root.labelFontAt(root.wordFitFloor)
+        }
+
+        TextMetrics {
+            id: fitProbeFirst
+
+            objectName: "tileWordFitProbeFirst"
+            text: root.longestWord
+            font: root.labelFontAt(root.wordFitRatio)
+        }
+
+        TextMetrics {
+            id: fitProbeSecond
+
+            objectName: "tileWordFitProbeSecond"
+            text: root.longestWord
+            font: root.labelFontAt(root.wordFitFirst)
+        }
+
+        TextMetrics {
+            id: fitProbeThird
+
+            objectName: "tileWordFitProbeThird"
+            text: root.longestWord
+            font: root.labelFontAt(root.wordFitSecond)
+        }
+
         Text {
             id: labelText
 
@@ -259,17 +337,7 @@ Item {
             visible: !root.isEmpty && !root.skeleton
             text: root.label
             color: Theme.colour.tileText
-            font: {
-                const sized = WindowLayout.tileLabelRole.font;
-                // A whole size is a pixel size and a fractional one a point size (Theme, FontRole.make).
-                if (root.wordFit < 1) {
-                    if (sized.pixelSize > 0)
-                        sized.pixelSize = Math.floor(sized.pixelSize * root.wordFit);
-                    else
-                        sized.pointSize = sized.pointSize * root.wordFit;
-                }
-                return sized;
-            }
+            font: root.labelFontAt(root.wordFit)
             // A line is 1.2 times the size, as CSS has it (16.2 pt at 13.5), not 1.2 times the font's own line. It is
             // given as a ratio of the font's line, because the label shrinks to fit (fontSizeMode) and a ratio shrinks
             // with it.

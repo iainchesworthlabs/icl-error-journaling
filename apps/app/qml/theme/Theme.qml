@@ -421,6 +421,17 @@ QtObject {
         // Qt.font() takes a whole point size only, so a fractional size is set on the font afterwards. Hinting is off, as
         // on iOS, so that a fractional size keeps its own advances on a desktop instead of those of the nearest pixel.
         function make(fontWeight: int, underline: bool): font {
+            return makeAt(fontWeight, underline, 1);
+        }
+
+        // The role's font at a share of its size, as a new font: a font read from a property is a reference to it, and
+        // setting its size changes nothing, so a smaller size is made here, as the role's own is. A whole size stays a
+        // whole pixel size (rounded down, so that the smaller font is never the larger) and a fractional one a point size.
+        function scaledFont(share: real): font {
+            return share < 1 ? makeAt(weight, false, share) : font;
+        }
+
+        function makeAt(fontWeight: int, underline: bool, share: real): font {
             const spec = {
                 "weight": fontWeight,
                 "letterSpacing": effectiveLetterSpacing,
@@ -429,7 +440,7 @@ QtObject {
             };
             const whole = Math.abs(size - Math.round(size)) < 0.001;
             if (whole)
-                spec.pixelSize = Math.round(size);
+                spec.pixelSize = share < 1 ? Math.floor(Math.round(size) * share) : Math.round(size);
             if (resolvedFamily.length > 0)
                 spec.family = resolvedFamily;
             if (tabularNumbers)
@@ -438,7 +449,7 @@ QtObject {
                 };
             const made = Qt.font(spec);
             if (!whole)
-                made.pointSize = size * 72 / dpi;
+                made.pointSize = size * share * 72 / dpi;
             return made;
         }
 
