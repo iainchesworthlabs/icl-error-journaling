@@ -214,14 +214,8 @@ int main(int argc, char* argv[])
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(1); },
         Qt::QueuedConnection);
     // The window reads the models as required properties (Stage 4, decision 3), and the root itself for its one
-    // write-failed signal, which the shell shows as a banner. The version and platform text show the libraries are
-    // linked.
+    // write-failed signal, which the shell shows as a banner.
     engine.setInitialProperties({{QStringLiteral("bridge"), QVariant::fromValue(&platform_bridge)},
-                                 {QStringLiteral("versionText"), error_journaling::version_text()},
-                                 {QStringLiteral("platformText"),
-                                  QStringLiteral("%1, storage: %2")
-                                      .arg(share_available ? QStringLiteral("ios") : QStringLiteral("desktop-stub"),
-                                           QString::fromUtf8(backend.data(), static_cast<qsizetype>(backend.size())))},
                                  {QStringLiteral("session"), QVariant::fromValue(root.session())},
                                  {QStringLiteral("undo"), QVariant::fromValue(root.undo())},
                                  {QStringLiteral("board"), QVariant::fromValue(root.board())},

@@ -56,8 +56,6 @@ Item {
     required property var share
     // AppRoot, for its `writeFailed(operation, message)`.
     required property var appRoot
-    // The version and platform text, at the foot of Settings.
-    property string aboutText
     // The AboutModel, for the About pages behind the last row of Settings (PRF-12), which also show the timing line behind five
     // taps on the Version row. Null leaves the row out.
     property var about: null
@@ -450,7 +448,6 @@ Item {
                     settings: root.settings
                     boards: root.boards
                     exportPreferences: root.exportPreferences
-                    aboutText: root.aboutText
                     about: root.about
                     timingText: root.bridge.timingSummary
                     onErrorTypesRequested: pushPage(errorTypesPage, {})

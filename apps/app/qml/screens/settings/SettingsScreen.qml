@@ -44,8 +44,6 @@ Item {
     property var boards: null
     // How shared text is written (ExportPreferences): `nameExport`. Null leaves the Names row out.
     property var exportPreferences: null
-    // The foot of the list: the version and platform text, as a plain caption (Stage 4, 4.15).
-    property string aboutText
     // The About pages (PRF-12): the AboutModel, and the bridge's timing line that five taps on the Version row show. Without a
     // model there is no About row.
     property var about: null
@@ -144,7 +142,6 @@ Item {
             settings: root.settings
             boards: root.boards
             exportPreferences: root.exportPreferences
-            aboutText: root.aboutText
             aboutAvailable: root.about !== null
             topInset: frame.topInset
             onErrorTypesRequested: root.errorTypesRequested()

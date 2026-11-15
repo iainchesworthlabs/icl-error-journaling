@@ -133,7 +133,6 @@ Item {
     required property var appRoot
     required property var bridge
     required property var fileChooser
-    required property string aboutText
 
     SafeArea.additionalMargins.top: 59
     SafeArea.additionalMargins.bottom: 34
@@ -152,7 +151,6 @@ Item {
         appRoot: wrap.appRoot
         bridge: wrap.bridge
         fileChooser: wrap.fileChooser
-        aboutText: wrap.aboutText
     }
 }
 )";
@@ -240,8 +238,7 @@ struct Phone
                                      {QStringLiteral("share"), object(*root.share())},
                                      {QStringLiteral("appRoot"), object(root)},
                                      {QStringLiteral("bridge"), object(bridge)},
-                                     {QStringLiteral("fileChooser"), object(*chooser)},
-                                     {QStringLiteral("aboutText"), QStringLiteral("0.1.0")}};
+                                     {QStringLiteral("fileChooser"), object(*chooser)}};
         REQUIRE(ui.load_source(QByteArray(WRAPPER), properties) != nullptr);
         INFO(ui.errors().toStdString());
         ui.settle();

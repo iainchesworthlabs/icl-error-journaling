@@ -37,9 +37,6 @@ Window {
     // How shared text is written (ExportPreferences): the level of a name (nameExport) and the label of an interaction line.
     property QtObject exportPreferences: null
     required property var bridge
-    // The version of the core library and which bridge and storage are linked. They are at the foot of Settings.
-    required property string versionText
-    required property string platformText
 
     width: Theme.frame.width
     height: Theme.frame.height
@@ -82,6 +79,5 @@ Window {
         exportPreferences: root.exportPreferences
         people: root.people
         peopleAdmin: root.peopleAdmin
-        aboutText: qsTr("%1 · %2").arg(root.versionText).arg(root.platformText)
     }
 }
