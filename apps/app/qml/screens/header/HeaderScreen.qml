@@ -514,7 +514,7 @@ SheetHost {
                     prefixText: "v"
                     text: root.versionDraft
                     valueFont: Theme.font.fieldValueLarge.font
-                    placeholderText: qsTr("For example 1.4.2")
+                    placeholderText: qsTr("1.4.2")
                     hint: qsTr("Numbers only, like 1.4.2. The v is added for you.")
                     errorText: root.versionError
                     valid: root.versionDraft.length > 0 && root.versionError.length === 0
