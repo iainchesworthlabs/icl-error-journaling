@@ -216,3 +216,25 @@ TEST_CASE("versions.sheet: the sheet starts from what the log has; a version is 
     rig.settle();
     CHECK(world.session().extra_versions_text() == QStringLiteral("Influencer v4.6.0"));
 }
+
+TEST_CASE("versions.sheet_carried: a name with no number is allowed, saved as not set, and the number is typed later",
+          "[ui][extra_versions]")
+{
+    HeaderWorld world(true);
+    UiRig rig(TALL_WINDOW);
+    load_screen(rig, world);
+    QQuickItem* sheet = open_sheet(rig);
+
+    rig.tap(need(rig, QStringLiteral("extraVersionAdd"), sheet));
+    rig.settle();
+    retype(rig, nth(sheet, "extraVersionLabel", 0), QStringLiteral("Influencer"));
+    // No number typed: not refused.
+    CHECK_FALSE(sheet->property("refused").toBool());
+
+    rig.tap(need(rig, QStringLiteral("navTrailing"), sheet));
+    play(rig, 500);
+    world.gateway().run_all();
+    rig.settle();
+    CHECK_FALSE(sheet->property("isOpen").toBool());
+    CHECK(world.session().extra_versions_text() == QStringLiteral("Influencer not set"));
+}

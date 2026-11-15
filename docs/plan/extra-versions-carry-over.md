@@ -6,7 +6,7 @@ owner asked for it after using the build ("If a user adds an additional version,
 remove it, ie ask them for its version every logging day. If I add an app version as a second version, I shouldn't need to add 'app
 version' every time, just set the value, until I remove app version from my additional versions").
 
-**Status:** plan, for review. No code yet.
+**Status:** approved by the owner (with the two open points answered: the banner lists a carried version with no value, and the export prints the `not set` line); built in the same pull request.
 
 ## Behaviour
 
@@ -43,26 +43,26 @@ version' every time, just set the value, until I remove app version from my addi
 | Today's details | `HeaderScreen.qml` | The row's value shows "Influencer not set"; the footer sum-up leaves them out until set (it names the versions in force) |
 | Docs | `docs/prd.md` (HDR-05, HDR-10, the rendering rules), `docs/guide/todays-details.md`, `changelog.d/` | The new rule and the new line |
 
-## Open points for the owner
+## Answers of the owner
 
-- **The banner.** Should "Not filled in yet" on the Log card list a carried version with no value (like the commit), as a reminder? The plan
-  adds nothing to it unless you say so.
-- **The downstream ticket indexer** reads the export. `Influencer Version: not set` is a line it has not seen: a line with a name and a
-  value that is not a number. Say if the line should be left out of the export instead, with "not set" only on the screens.
+- **The banner** lists a carried version with no value, as "Influencer version" (the key is `extra_version:<name>` in `missingFields`).
+- **The export** prints `Influencer Version: not set`.
 
 ## Tests
 
 | Case or test | Label | What |
 |---|---|---|
+| `extra_versions.carry_over` | unit | The names go on, in order, with no value |
 | `extra_versions.unset` | unit | A name with no value: stored as `label=`, parsed back equal, summarised, checked (no duplicate, not Robot) |
 | `extra_versions.stored_old_text` | unit | Text written before this change reads as it did |
 | `storage.extra_versions_unset` | integration | Written and read back through SQLite and through the journal record, and recovered after a crash |
-| `session.new_log_carries_names` | unit | Start a new log: the names are there with no value; the robot version, commit, unit and location are empty; the tester is kept |
+| `session.new_log_carries_names` | unit | Start a new log: the banner names each; the names are there with no value; the robot version, commit, unit and location are empty; the tester is kept |
 | `session.new_log_drops_removed` | unit | A name removed in a log is not on the next one; the earlier log still has it |
 | `session.new_log_first_launch` | unit | With no previous log there are no extra versions |
 | `export.unset_version_line` | unit | `Influencer Version: not set`; with a value the line is as before; a log with none prints exactly as before |
 | `sheet.carried_cards` | ui | A carried name has an empty Version field; Done with it empty saves not set; typing a bad number is refused; Remove takes the name off |
-| `header.other_versions_row` | ui | The row says "Influencer not set" and then "Influencer v4.5.0" after the number is typed |
+| `header_card.extra_version` | ui | The strip names a carried version with no value by its name |
+| `versions.sheet_carried` | ui | A name with no number is allowed, Done saves it as not set |
 
 ## On a device
 

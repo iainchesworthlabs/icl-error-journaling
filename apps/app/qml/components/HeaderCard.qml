@@ -58,7 +58,10 @@ Item {
         };
         const shown = [];
         for (let i = 0; i < missingCount; ++i)
-            shown.push(names[missingFields[i]] !== undefined ? names[missingFields[i]] : missingFields[i]);
+            if (missingFields[i].startsWith("extra_version:"))
+                shown.push(qsTr("%1 version").arg(missingFields[i].slice("extra_version:".length)));
+            else
+                shown.push(names[missingFields[i]] !== undefined ? names[missingFields[i]] : missingFields[i]);
         return shown.join(qsTr(", "));
     }
     readonly property bool pressed: tap.pressed

@@ -160,3 +160,52 @@ TEST_CASE("A stored label that is too long is refused and not cut", "[extra-vers
     CHECK(parse_extra_versions("123456789012345678901=1.0.0").error() == ExtraVersionsError::LABEL_TOO_LONG);
     CHECK(parse_extra_versions("12345678901234567890=1.0.0").value().at(0).label() == "12345678901234567890");
 }
+
+TEST_CASE("extra_versions.unset: a name with no value is stored as label=, read back equal and printed as not set",
+          "[unit][extra-versions]")
+{
+    const ExtraVersions versions{labelled("Influencer", "4.5.0"), LabelledVersion::unset("Gateway")};
+    CHECK_FALSE(versions.at(1).has_version());
+    CHECK(stored_extra_versions(versions) == "Influencer=4.5.0\nGateway=");
+    const auto back = parse_extra_versions("Influencer=4.5.0\nGateway=");
+    REQUIRE(back.has_value());
+    CHECK(*back == versions);
+    CHECK_FALSE(versions.at(0) == LabelledVersion::unset("Influencer"));
+    CHECK(summarize_extra_versions(versions) == "Influencer v4.5.0 \xC2\xB7 Gateway not set");
+    CHECK(extra_version_value_text(versions.at(1)) == "not set");
+    // A list of unset names is still a list, and the checks on names still apply.
+    CHECK(parse_extra_versions("Gateway=").has_value());
+    CHECK(parse_extra_versions("Gateway=\ngateway=").error() == ExtraVersionsError::DUPLICATE_LABEL);
+    CHECK(parse_extra_versions("Robot=").error() == ExtraVersionsError::LABEL_IS_ROBOT);
+}
+
+TEST_CASE("extra_versions.stored_old_text: text written before unset values existed reads as it did", "[unit][extra-versions]")
+{
+    const auto old = parse_extra_versions("Influencer=4.5.0+a1b2c3d\nGateway=2.0.1");
+    REQUIRE(old.has_value());
+    CHECK(old->at(0).has_version());
+    CHECK(old->at(0).m_Version.commit() == "a1b2c3d");
+    CHECK(stored_extra_versions(*old) == "Influencer=4.5.0+a1b2c3d\nGateway=2.0.1");
+}
+
+TEST_CASE("extra_versions.carry_over: the names go on, in order, with no value", "[unit][extra-versions]")
+{
+    const ExtraVersions last{labelled("Influencer", "4.5.0"), LabelledVersion::unset("Gateway")};
+    const ExtraVersions next = carry_over_extra_versions(last);
+    REQUIRE(next.size() == 2);
+    CHECK(next.at(0).label() == "Influencer");
+    CHECK_FALSE(next.at(0).has_version());
+    CHECK(next.at(1).label() == "Gateway");
+    CHECK_FALSE(next.at(1).has_version());
+    CHECK(carry_over_extra_versions({}).empty());
+}
+
+TEST_CASE("export.unset_version_line: a name with no value prints as not set, in its place", "[unit][export][extra-versions]")
+{
+    HeaderValues values = bare_header();
+    values.m_SoftwareVersion = SoftwareVersion::parse("1.2.3").value();
+    values.m_ExtraVersions = {LabelledVersion::unset("Influencer")};
+    CHECK(render_header(Log(values), demo_context()).value() ==
+          "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #:\nLocation:\nSoftware Version: v1.2.3\n"
+          "Influencer Version: not set");
+}

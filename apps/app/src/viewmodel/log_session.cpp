@@ -358,8 +358,9 @@ QVariantList LogSession::extra_versions() const
     {
         QVariantMap row;
         row.insert(QStringLiteral("label"), to_qstring(std::string(extra.label())));
-        row.insert(QStringLiteral("version"), to_qstring(extra.m_Version.format()));
-        row.insert(QStringLiteral("commit"), to_qstring(std::string(extra.m_Version.commit())));
+        row.insert(QStringLiteral("version"), to_qstring(extra.has_version() ? extra.m_Version.format() : std::string{}));
+        row.insert(QStringLiteral("commit"), to_qstring(extra.has_version() ? std::string(extra.m_Version.commit()) : std::string{}));
+        row.insert(QStringLiteral("unset"), !extra.has_version());
         rows.append(row);
     }
     return rows;
@@ -433,6 +434,14 @@ QStringList LogSession::missing_fields() const
     if (!header.m_SoftwareVersion || header.m_SoftwareVersion->commit().empty())
     {
         missing.push_back(QStringLiteral("software_commit"));
+    }
+    // A version that carried over from the last log and has no value yet: "extra_version:Influencer". A reminder only.
+    for (const auto& extra : header.m_ExtraVersions)
+    {
+        if (!extra.has_version())
+        {
+            missing.push_back(QStringLiteral("extra_version:") + to_qstring(std::string(extra.label())));
+        }
     }
     return missing;
 }
@@ -1179,7 +1188,9 @@ ExtraRows read_extra_rows(const QVariantList& rows)
             fail_row(kept.error());
             continue;
         }
-        const auto parsed = SoftwareVersion::parse(to_utf8(version), to_utf8(commit));
+        // A name with no number and no commit has no value yet: a version that carried over to this log and is still to be typed.
+        const bool no_value = version.isEmpty() && commit.isEmpty();
+        const auto parsed = no_value ? Result<SoftwareVersion, SoftwareVersion::Error>(*SoftwareVersion::parse("0.0.0")) : SoftwareVersion::parse(to_utf8(version), to_utf8(commit));
         if (version.contains(QLatin1Char('+')) || !parsed)
         {
             fail_row(ExtraVersionsError::INVALID_VERSION);
@@ -1192,7 +1203,7 @@ ExtraRows read_extra_rows(const QVariantList& rows)
             fail_row(ExtraVersionsError::DUPLICATE_LABEL);
             continue;
         }
-        out.m_Versions.push_back(LabelledVersion{*kept, *parsed});
+        out.m_Versions.push_back(no_value ? LabelledVersion::unset(*kept) : LabelledVersion{*kept, *parsed});
         out.m_RowOfVersion.push_back(i);
     }
     return out;
@@ -1402,10 +1413,12 @@ bool LogSession::startNewLog()
     m_StartingNewLog = true;
     emit pendingWritesChanged();
 
-    // The new log's header: the tester and today's date, nothing else (HDR-05).
+    // The new log's header: the tester and today's date, and the names of the other versions of the log being archived with no
+    // value yet (HDR-05, HDR-10). Nothing else carries over.
     HeaderValues header;
     header.m_Tester = tester_for_new_log();
     header.m_LocalDate = today();
+    header.m_ExtraVersions = carry_over_extra_versions(header_in_force().m_ExtraVersions);
     attempt_new_log(m_Environment.m_Ids.next_as<LogId>(), std::move(header));
     return true;
 }
