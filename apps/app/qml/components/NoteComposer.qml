@@ -261,6 +261,9 @@ Item {
                         enabled: !root.skeleton
                         background: null
                         EnterKey.type: Qt.EnterKeyReturn
+                        // Qt's iOS layer opens the Undo/Redo/Paste menu on every tap at the cursor, which in an empty note is every
+                        // tap. No text handles turns that overlay off, so a tap only puts the cursor in the box.
+                        inputMethodHints: Qt.ImhNoTextHandles
 
                         Accessible.ignored: root.skeleton
                         Accessible.role: Accessible.EditableText

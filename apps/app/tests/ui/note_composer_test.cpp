@@ -126,6 +126,13 @@ QStringList texts(QSignalSpy& spy)
 
 } // namespace
 
+TEST_CASE("composer.edit_menu: the field asks for no text handles, so a tap does not open the iOS edit menu", "[ui][composer]")
+{
+    Fixture fixture;
+    const int hints = fixture.field->property("inputMethodHints").toInt();
+    CHECK((hints & Qt::ImhNoTextHandles) != 0);
+}
+
 TEST_CASE("composer.draft_binding: typing reports each change, and the draft that comes back changes nothing",
           "[ui][composer]")
 {
