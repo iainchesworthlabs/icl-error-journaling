@@ -410,7 +410,7 @@ Result<std::string, RenderError> render_header(const Log& log, const ExportConte
     for (const auto& extra : header.m_ExtraVersions)
     {
         out += export_format::LINE_END;
-        append_labelled(out, extra_version_line_label(extra), extra.m_Version.display());
+        append_labelled(out, extra_version_line_label(extra), extra_version_value_text(extra));
     }
     return out;
 }

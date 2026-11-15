@@ -256,3 +256,13 @@ TEST_CASE("header_card.cross_cutting: names, targets, order and text scale, in l
         expect_clean(check_motion_reduced(rig));
     }
 }
+
+TEST_CASE("header_card.extra_version: a carried version with no value is named in the strip by its name", "[ui][header_card]")
+{
+    UiRig rig;
+    QQuickItem* card = card_of(rig, FULL);
+    card->setProperty("missingFields", QStringList{QStringLiteral("extra_version:Influencer")});
+    rig.layout();
+    CHECK(card->property("missingText").toString() == QStringLiteral("Influencer version"));
+    CHECK(shown_texts(rig, card).contains(QStringLiteral("Not filled in yet: Influencer version")));
+}

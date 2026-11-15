@@ -26,7 +26,7 @@ inline constexpr std::size_t MAX_EXTRA_LABEL_LENGTH = 20;
 class LabelledVersion
 {
 public:
-    LabelledVersion(std::string_view label, SoftwareVersion version) : m_Version(version)
+    LabelledVersion(std::string_view label, SoftwareVersion version) : m_Version(version), m_HasVersion(true)
     {
         m_LabelLength = static_cast<std::uint8_t>(std::min(label.size(), m_LabelChars.size()));
         std::copy_n(label.begin(), m_LabelLength, m_LabelChars.begin());
@@ -37,16 +37,32 @@ public:
         return {m_LabelChars.data(), m_LabelLength};
     }
 
+    /// A name with no value yet: a version that carried over to a new log (see `carry_over_extra_versions`) and has not been typed. `m_Version`
+    /// then holds a placeholder that nothing reads; ask `has_version()` first.
+    [[nodiscard]] static LabelledVersion unset(std::string_view label)
+    {
+        LabelledVersion out(label, *SoftwareVersion::parse("0.0.0"));
+        out.m_HasVersion = false;
+        return out;
+    }
+
+    /// False for a name that has no value yet.
+    [[nodiscard]] bool has_version() const
+    {
+        return m_HasVersion;
+    }
+
     SoftwareVersion m_Version;
 
     friend bool operator==(const LabelledVersion& a, const LabelledVersion& b)
     {
-        return a.label() == b.label() && a.m_Version == b.m_Version;
+        return a.label() == b.label() && a.m_HasVersion == b.m_HasVersion && (!a.m_HasVersion || a.m_Version == b.m_Version);
     }
 
 private:
     std::array<char, 20> m_LabelChars{};
     std::uint8_t m_LabelLength = 0;
+    bool m_HasVersion = true;
 };
 
 /// The other software versions of a log (HDR-10), in the order the person gave them.
@@ -63,6 +79,9 @@ enum class ExtraVersionsError
     MALFORMED             // stored text with a line that is not label=version
 };
 
+
+/// What the log, the export and the screens print for a version that has no value yet.
+inline constexpr std::string_view EXTRA_VERSION_NOT_SET = "not set";
 
 /// The name the screens and the log give to the header's own software version.
 inline constexpr std::string_view ROBOT_LABEL = "Robot";
@@ -85,6 +104,12 @@ inline constexpr std::string_view NO_EXTRA_VERSIONS = "none";
 
 /// What the log prints for one version: "Influencer Version" is the line label, and `display()` the value.
 [[nodiscard]] std::string extra_version_line_label(const LabelledVersion& version);
+
+/// The value the log prints after that label: "v4.5.0", or "not set" for a name with no value yet.
+[[nodiscard]] std::string extra_version_value_text(const LabelledVersion& version);
+
+/// The names of `previous`, each with no value, in the same order: the other versions a new log starts with.
+[[nodiscard]] ExtraVersions carry_over_extra_versions(const ExtraVersions& previous);
 
 /// A short text for a list of them: "Influencer v4.5.0 · Gateway v2.0.1", or "" for none.
 [[nodiscard]] std::string summarize_extra_versions(const ExtraVersions& versions);

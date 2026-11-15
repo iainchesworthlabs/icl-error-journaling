@@ -2143,3 +2143,57 @@ TEST_CASE("A version typed with a v is saved once and shown without the v the fi
     CHECK(rig.session->versionDisplay(QStringLiteral("V1.4.3"), QString()) == QStringLiteral("v1.4.3"));
     CHECK_FALSE(rig.session->validateVersion(QStringLiteral("vv1.4.3"), QString()).isEmpty());
 }
+
+TEST_CASE("session.new_log_carries_names: a new log starts with the names of the other versions and no value, nothing else",
+          "[unit][viewmodel][session][extra-versions]")
+{
+    SessionRig rig(Options().existing());
+    QVariantList rows{extra_row("Influencer", "4.5.0"), extra_row("Gateway", "2.0.1")};
+    REQUIRE(rig.session->correctExtraVersions(rows));
+    rig.gateway.run_all();
+    rig.world.m_Clock.advance(24h);
+    REQUIRE(rig.session->startNewLog());
+    rig.gateway.run_all();
+
+    CHECK(rig.session->extra_versions().size() == 2);
+    const QVariantMap first = rig.session->extra_versions().at(0).toMap();
+    CHECK(first.value(QStringLiteral("label")) == QStringLiteral("Influencer"));
+    CHECK(first.value(QStringLiteral("version")).toString().isEmpty());
+    CHECK(first.value(QStringLiteral("unset")).toBool());
+    CHECK(rig.session->extra_versions_text() == QString::fromUtf8("Influencer not set \xC2\xB7 Gateway not set"));
+    // The robot's version is cleared as before, and each carried name is in the banner.
+    CHECK(rig.session->version_text().isEmpty());
+    const QStringList missing = rig.session->missing_fields();
+    CHECK(missing.contains(QStringLiteral("extra_version:Influencer")));
+    CHECK(missing.contains(QStringLiteral("extra_version:Gateway")));
+
+    // Typing the number fills it, and the name goes on to the next log.
+    QVariantList filled{extra_row("Influencer", "4.6.0"), extra_row("Gateway", "")};
+    REQUIRE(rig.session->correctExtraVersions(filled));
+    rig.gateway.run_all();
+    CHECK(rig.session->extra_versions_text() == QString::fromUtf8("Influencer v4.6.0 \xC2\xB7 Gateway not set"));
+    CHECK_FALSE(rig.session->missing_fields().contains(QStringLiteral("extra_version:Influencer")));
+}
+
+TEST_CASE("session.new_log_drops_removed: a name taken off in a log is not on the next one", "[unit][viewmodel][session][extra-versions]")
+{
+    SessionRig rig(Options().existing());
+    REQUIRE(rig.session->correctExtraVersions({extra_row("Influencer", "4.5.0"), extra_row("Gateway", "2.0.1")}));
+    rig.gateway.run_all();
+    REQUIRE(rig.session->correctExtraVersions({extra_row("Gateway", "2.0.1")}));
+    rig.gateway.run_all();
+    rig.world.m_Clock.advance(24h);
+    REQUIRE(rig.session->startNewLog());
+    rig.gateway.run_all();
+    REQUIRE(rig.session->extra_versions().size() == 1);
+    CHECK(rig.session->extra_versions().at(0).toMap().value(QStringLiteral("label")) == QStringLiteral("Gateway"));
+}
+
+TEST_CASE("session.new_log_no_names: a log with no other versions starts one with none", "[unit][viewmodel][session][extra-versions]")
+{
+    SessionRig rig(Options().existing());
+    rig.world.m_Clock.advance(24h);
+    REQUIRE(rig.session->startNewLog());
+    rig.gateway.run_all();
+    CHECK(rig.session->extra_versions().isEmpty());
+}

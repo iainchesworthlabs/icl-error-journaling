@@ -103,7 +103,10 @@ std::string stored_extra_versions(const ExtraVersions& versions)
         }
         out += version.label();
         out.push_back(SEPARATOR);
-        out += version.m_Version.stored();
+        if (version.has_version())
+        {
+            out += version.m_Version.stored();
+        }
     }
     return out;
 }
@@ -124,6 +127,15 @@ Result<ExtraVersions, ExtraVersionsError> parse_extra_versions(std::string_view 
         if (separator == std::string_view::npos)
         {
             return fail(ExtraVersionsError::MALFORMED);
+        }
+        if (line.substr(0, separator).size() > MAX_EXTRA_LABEL_LENGTH)
+        {
+            return fail(ExtraVersionsError::LABEL_TOO_LONG);
+        }
+        if (separator + 1 == line.size())
+        {
+            out.push_back(LabelledVersion::unset(line.substr(0, separator)));
+            continue;
         }
         auto version = SoftwareVersion::parse_stored(line.substr(separator + 1));
         if (!version)
@@ -152,6 +164,22 @@ std::string extra_version_line_label(const LabelledVersion& version)
     return std::string(version.label()) + " Version";
 }
 
+std::string extra_version_value_text(const LabelledVersion& version)
+{
+    return version.has_version() ? version.m_Version.display() : std::string(EXTRA_VERSION_NOT_SET);
+}
+
+ExtraVersions carry_over_extra_versions(const ExtraVersions& previous)
+{
+    ExtraVersions out;
+    out.reserve(previous.size());
+    for (const auto& version : previous)
+    {
+        out.push_back(LabelledVersion::unset(version.label()));
+    }
+    return out;
+}
+
 std::string summarize_extra_versions(const ExtraVersions& versions)
 {
     std::string out;
@@ -161,7 +189,7 @@ std::string summarize_extra_versions(const ExtraVersions& versions)
         {
             out += " \xC2\xB7 ";
         }
-        out += std::string(version.label()) + ' ' + version.m_Version.display();
+        out += std::string(version.label()) + ' ' + extra_version_value_text(version);
     }
     return out;
 }
