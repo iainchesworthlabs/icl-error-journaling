@@ -81,13 +81,24 @@ class AppIconTest(unittest.TestCase):
             top_line = (x, y - icon.CELL // 2 + icon.GAP + icon.LINE // 2)  # the middle of the top line
             self.assertEqual(self.image.getpixel(top_line), rgb(icon.LEAF.tile), (row, column))
 
-    def test_the_f_is_a_solid_letter_with_the_t_in_its_notch(self) -> None:
+    def test_the_f_is_six_tiles_with_the_t_in_its_notch(self) -> None:
         # The stem and the two arms are the letter's colour; the notch between the arms is the t's left tile and the
         # one below them is an empty square.
-        for row, column in ((0, 0), (1, 0), (2, 0), (3, 0), (0, 1), (2, 1)):
+        self.assertEqual(sorted(icon.F_TILES), [(0, 0), (0, 1), (1, 0), (2, 0), (2, 1), (3, 0)])
+        for row, column in icon.F_TILES:
             self.assertEqual(self.image.getpixel(centre_of(row, column)), rgb(icon.LEAF.letter), (row, column))
         self.assertEqual(self.image.getpixel(centre_of(1, 1)), rgb(icon.LEAF.tile))
         self.assertEqual(self.image.getpixel(centre_of(3, 1)), rgb(icon.LEAF.background))
+
+    def test_the_tiles_of_the_f_are_apart_like_the_other_tiles(self) -> None:
+        # The gap between two tiles of the f is background, as between the tiles of the t.
+        x, y = centre_of(0, 0)
+        self.assertEqual(self.image.getpixel((x + icon.CELL // 2, y)), rgb(icon.LEAF.background))
+        self.assertEqual(self.image.getpixel((x, y + icon.CELL // 2)), rgb(icon.LEAF.background))
+
+    def test_no_cell_is_in_two_parts_of_the_drawing(self) -> None:
+        cells = icon.F_TILES + icon.FILLED + icon.EMPTY
+        self.assertEqual(len(cells), len(set(cells)))
 
     def test_the_f_and_the_t_stand_out_from_the_background(self) -> None:
         # The first icon had a thin outline for the f and it blurred into the background when small.

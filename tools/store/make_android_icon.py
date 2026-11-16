@@ -6,7 +6,7 @@
 
 Writes, under the Android resources folder:
 
-  drawable/ic_launcher_foreground.xml   the board as a vector: the white f, the t's tiles and the outlined squares
+  drawable/ic_launcher_foreground.xml   the board as a vector: the white tiles of the f, the t's tiles and the outlined squares
   drawable/ic_launcher_monochrome.xml   the same shapes in one colour, which Android 13 and later tint (themed icons)
   mipmap-anydpi-v26/ic_launcher.xml     the adaptive icon: background, foreground and monochrome layers
   mipmap-anydpi-v26/ic_launcher_round.xml   the same, for launchers that ask for a round icon
@@ -85,35 +85,11 @@ def rounded_box(left: float, top: float, right: float, bottom: float, radius: fl
     )
 
 
-def rounded_polygon(points: list[tuple[float, float]], radius: float) -> str:
-    """A closed path along a polygon with each corner rounded by a quadratic curve, as make_app_icon draws the f."""
-    count = len(points)
-    parts = []
-    for i in range(count):
-        before, here, after = points[i - 1], points[i], points[(i + 1) % count]
-
-        def toward(a: tuple[float, float], b: tuple[float, float]) -> tuple[float, float]:
-            dx, dy = b[0] - a[0], b[1] - a[1]
-            length = (dx * dx + dy * dy) ** 0.5
-            return a[0] + dx / length * radius, a[1] + dy / length * radius
-
-        start, end = toward(here, before), toward(here, after)
-        parts.append(
-            f"{'M' if i == 0 else 'L'}{num(start[0])},{num(start[1])}"
-            f"Q{num(here[0])},{num(here[1])} {num(end[0])},{num(end[1])}"
-        )
-    return "".join(parts) + "Z"
-
-
 def shapes(tile_colour: str, letter_colour: str) -> list[Shape]:
-    """Every shape of the icon: the solid f, the filled tiles of the t and the outlined empty squares."""
+    """Every shape of the icon: the tiles of the f, the filled tiles of the t and the outlined empty squares."""
     origin = (design.SIZE - 4 * design.CELL) // 2
     radius = dp(design.RADIUS)
     result: list[Shape] = []
-
-    inset = design.inset_polygon([(x * design.CELL, y * design.CELL) for x, y in design.F_SHAPE], design.GAP)
-    corners = [point(origin + x, origin + y) for x, y in inset]
-    result.append(Shape(rounded_polygon(corners, radius), letter_colour, False, tuple(corners)))
 
     def box(row: int, column: int, inset_by: float) -> tuple[float, float, float, float]:
         left, top = origin + column * design.CELL + inset_by, origin + row * design.CELL + inset_by
@@ -121,9 +97,10 @@ def shapes(tile_colour: str, letter_colour: str) -> list[Shape]:
         (x0, y0), (x1, y1) = point(left, top), point(left + size, top + size)
         return x0, y0, x1, y1
 
-    for row, column in design.FILLED:
-        x0, y0, x1, y1 = box(row, column, design.GAP)
-        result.append(Shape(rounded_box(x0, y0, x1, y1, radius), tile_colour, False, ((x0, y0), (x1, y1))))
+    for cells, colour in ((design.F_TILES, letter_colour), (design.FILLED, tile_colour)):
+        for row, column in cells:
+            x0, y0, x1, y1 = box(row, column, design.GAP)
+            result.append(Shape(rounded_box(x0, y0, x1, y1, radius), colour, False, ((x0, y0), (x1, y1))))
     for row, column in design.EMPTY:
         # The line is drawn on the path, so the path is half a line inside the tile's edge.
         x0, y0, x1, y1 = box(row, column, design.GAP + design.LINE / 2)

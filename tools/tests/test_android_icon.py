@@ -90,11 +90,11 @@ class AndroidIconTest(unittest.TestCase):
         self.assertEqual([p["pathData"] for p in mono], [p["pathData"] for p in colour])
         self.assertEqual({p.get("fillColor") or p.get("strokeColor") for p in mono}, {android.MONOCHROME_COLOUR})
 
-    def test_the_icon_has_the_solid_f_the_seven_tiles_and_the_three_outlined_squares(self) -> None:
+    def test_the_icon_has_the_six_tiles_of_the_f_the_seven_of_the_t_and_the_three_outlined_squares(self) -> None:
         paths = attributes(RES / "drawable" / "ic_launcher_foreground.xml")
         filled = [p for p in paths if "fillColor" in p]
         stroked = [p for p in paths if "strokeColor" in p]
-        self.assertEqual([p["fillColor"] for p in filled], [design.LEAF.letter] + [design.LEAF.tile] * len(design.FILLED))
+        self.assertEqual([p["fillColor"] for p in filled], [design.LEAF.letter] * len(design.F_TILES) + [design.LEAF.tile] * len(design.FILLED))
         self.assertEqual([p["strokeColor"] for p in stroked], [design.LEAF.tile] * len(design.EMPTY))
 
     def test_everything_is_inside_the_area_every_launcher_shape_shows(self) -> None:
