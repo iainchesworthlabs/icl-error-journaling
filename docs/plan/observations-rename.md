@@ -8,11 +8,15 @@ writes no production code (the stage gate in `AGENTS.md`). The stand-ins are **S
 **Owner decisions, 17 and 18 Nov 2026:**
 
 1. The board, its tab and every word the user reads change from Interactions to **Observations**. The icon is an **eye**.
-2. The **stored** names change too: setup-file keys, the journal entry kind, the database tables and columns, the export wording
-   (see decision O-1 below, which is still open), through a schema step that **still reads the old names**.
+2. The **stored** names change too: setup-file keys, the journal entry kind, the database tables and columns, and the export
+   wording (`(Observation)`; decided 18 Nov 2026), through a schema step that **still reads the old names** so that data
+   written before the update opens. The old word is removed everywhere else: it survives only in that reading code, marked
+   `legacy`, and in the old-format test fixtures.
 3. The app ships as **1.0.0** to the App Store. The facilitator already uses a build with the old names, so her log, her
    journals, her database and her setup file must keep working after she updates. Nothing she holds is lost or rewritten
    into something an update cannot read.
+4. There will be **another round of TestFlight builds for iPad and iPhone** (owner, 18 Nov 2026), so the rename is tried on real
+   devices, with the facilitator's copied log, before 1.0.0 goes to review.
 
 The word "people" (the person picker, `{person}`, People in Settings) is **not** renamed. Only the board and its entries are.
 
@@ -26,7 +30,7 @@ The word "people" (the person picker, `{person}`, People in Settings) is **not**
 - no user-visible text, accessibility name, guide page, store text or review note in the repository says "interaction" for the
   board (the check in O-8 fails until it does), and the remaining uses of the old word are listed and are all in
   compatibility code;
-- the owner has tried the app on a phone with the facilitator's real log copied in, and the log reads the same.
+- the owner has tried the app on an iPhone and an iPad (the next TestFlight round) with the facilitator's real log copied in, and the log reads the same.
 
 ## 1. Where the word is today
 
@@ -92,9 +96,8 @@ questionnaire term, not ours, and stays.
    (database), `board_state.cpp` and `export_preferences.cpp` (preference files). Nothing above them knows the old word.
 4. **The schema moves by one step**, 4 to 5, with the Stage 2 framework (backup copy, rollback, `foreign_key_check`,
    `integrity_check`); a build that sees a higher `user_version` refuses it, as every build does (Stage 2, 2.9).
-5. **Downgrade is unsupported**, as in Stage 14 (decision 9). The facilitator updates forward. The one exception to worry about is
-   a **setup file** written by the new build and read by an old build: see 4.1 (O-1 writes both keys for one release, the owner
-   decides).
+5. **Downgrade is unsupported**, as in Stage 14 (decision 9). The facilitator updates forward. A **setup file** written by the new
+   build is not read by an old build (it refuses the new keys); the old word is not kept to prevent that (4.1).
 6. **The 1.0.0 build is the first to carry only the new names in new data.** There is no public release that has the old names;
    the old formats exist on the owner's, the facilitator's and one tester's devices. That limits the reader's lifetime question to
    those few files (section 9, decision O-4).
@@ -173,9 +176,9 @@ and the reason the journals are left alone.
 ### 4.4 Small preference files
 
 On load, `BoardState` reads `boards/last` with either word and writes the new one. `ExportPreferences` reads
-`export/observation_marker` and falls back to `export/interaction_marker`, then writes the new key and leaves the old one for one
-release (it is harmless). A stored marker value is **never** rewritten: if the person typed their own word, it is theirs. A stored
-value equal to the old default `(Interaction)` is a policy question (decision O-1).
+`export/observation_marker` and falls back to `export/interaction_marker`, then writes the new key and leaves the old one in the file
+unread. A stored marker the person typed is kept as typed. A stored value exactly equal to the old default `(Interaction)` was
+never a choice, so it is read as the new default `(Observation)` and the new key is written.
 
 ### 4.5 What the migration does not touch
 
@@ -187,8 +190,8 @@ not change, so Undo history, the "(person not set)" markers and Review links kee
 ### 5.1 Words
 
 `Observations` for the tab, strip, Settings row and screens; `Observation types`, `Observation board layout`, `Observation
-templates`; `Edit observation`. The one-sentence explanations in Settings, the help topics (`observationTypes`, with the old id
-kept as an alias for any saved link), the toasts and the empty state change. Every `Accessible.name`, `Accessible.description`
+templates`; `Edit observation`. The one-sentence explanations in Settings, the help topics (`observationTypes`; the old id is
+dropped, nothing outside the app links to it), the toasts and the empty state change. Every `Accessible.name`, `Accessible.description`
 and VoiceOver announcement is on the list in O-6; the QML tests that look strings up by name are updated with them.
 
 ### 5.2 The eye icon
@@ -232,15 +235,15 @@ rename, so a fixture is what the facilitator really holds. They use only the sta
 | T-O3-5 `recovery.old_db_new_reader` | integration | O-3 | The database is deleted: the log is rebuilt from a journal in the old spelling and from a mixed one; the same entries, the same order. |
 | T-O3-6 `repo.observation_parity` | unit | O-3 | The memory and SQLite repositories give the same results for add, edit, delete, restore, void (the Stage 14 parity test, renamed). |
 | T-O4-1 `prefs.read_old_files` | unit | O-4 | `boards/last = Interactions` opens the Observations board; the old marker key is read, the new one written; a user's own marker word is never changed. |
-| T-O4-2 `prefs.default_marker_policy` | unit | O-4 | The behaviour of decision O-1 for a stored value equal to the old default. |
-| T-O5-1 `export.golden_observations` | unit | O-5 | The golden files renamed (`observations-full`, `-initials`, `-hidden`, `-no-label`) give the lines of the decision O-1; a log made of old entries and a log made of new ones export identically. |
+| T-O4-2 `prefs.default_marker_policy` | unit | O-4 | A stored marker exactly `(Interaction)` reads as `(Observation)`; any other stored word is kept as typed. |
+| T-O5-1 `export.golden_observations` | unit | O-5 | The golden files renamed (`observations-full`, `-initials`, `-hidden`, `-no-label`) give `(Observation)` lines; a log made of old entries and a log made of new ones export identically. |
 | T-O5-2 `export.indexer_contract` | integration | O-5 | The tickets-only view of the export (the lines that start `T\|`) is byte for byte what it was for the same log before the rename, and the observation lines carry no `T\|`. |
 | T-O5-3 `export.label_empty` | unit | O-5 | An empty marker drops the label, as today. |
 | T-O6-1 `ui.observations_words` | ui | O-6 | The tab, strip, Settings row, picker headline, Edit sheet and toasts say Observations; no QML text or `Accessible.name` contains `nteraction`. |
 | T-O6-2 `ui.eye_states` | ui | O-6 | The five states of 5.2; the filled pupil only when selected; contrast in both schemes. |
 | T-O6-3 `shell.tab_label_cap` | ui | O-6 | The five labels do not truncate at 375 pt at the largest allowed scale (T-I5-3 for the longer word). |
 | T-O6-4 `ui.voiceover_names` | ui | O-6 | The tab reads "Observations, tab, 2 of 5"; tile, picker chips and sheets as in T-I6-5. |
-| T-O6-5 `help.links` | unit | O-6 | `check_help_links.py` passes; the old topic id is still an alias. |
+| T-O6-5 `help.links` | unit | O-6 | `check_help_links.py` passes with the new topic ids. |
 | T-O7-1 `docs.no_old_word` | unit | O-7, O-8 | A repository check (`tools/ci/check_observation_word.py`) fails on the old word anywhere except the allow-list of compatibility files and the plan pages that describe the history. |
 | T-O7-2 `guide.screens` | unit | O-7 | `check_guide_screenshots.py` passes with the new pictures. |
 | T-O9-1 `system.facilitator_upgrade` | system | O-9 | The end-to-end run of section 8, on the facilitator-style fixture set. |
@@ -252,30 +255,20 @@ VoiceOver reading, the migration on the facilitator's own file) is listed in eac
 
 ## 7. The downstream ticket indexer
 
-**What is known.** The export line of an interaction today is `10:12 (Interaction) Spoke with Alex Sample`: no `T|` marker, a
-bracketed label in the style of `(Free Text)`. The downstream ticket indexer reads `T|` lines. Stage 14 (3.6) recorded that
-whether it ignores an unknown bracket tag was *for its owner to confirm before release*. This page cannot find that out from the
-repository.
+**Decided 18 Nov 2026:** the old word is removed everywhere, so the export line becomes `10:12 (Observation) Spoke with Alex Sample`.
+No setting keeps the old label, and a past log re-shared from the new build also reads `(Observation)` (the label is a preference,
+not stored in the entry).
 
-**What changes either way.** Stored data changes name; the **exported text** changes only if the owner decides it should. The
-risk to guard against is a change of wording that the indexer, or a person reading the log, mistakes for something else, in a
-release that is 1.0.0.
+**The risk that remains.** The line still has no `T|` marker and a bracketed label in the style of `(Free Text)`. The downstream
+ticket indexer reads `T|` lines. Stage 14 (3.6) left it *for the indexer's owner to confirm* that it ignores an unknown bracket tag.
+This page cannot find that out from the repository. A new tag reaching it on the first day of 1.0.0 is harmless if it behaves as
+it does for `(Free Text)`; if not, observation lines could be dropped or mistaken. Mitigations in the plan:
 
-**Options for the label (decision O-1):**
-
-| | Option | For | Against |
-|---|---|---|---|
-| A | **Keep `(Interaction)` in the export**, rename only inside the app and in storage. | No change to anything that leaves the device; the indexer and anyone who already pastes logs see the same lines; the facilitator's past exports and the new ones read alike. | The app says Observation and the log says Interaction; the two words for one thing confuse a reader of both. A support question waits to happen. |
-| B | **Change to `(Observation)`.** | One word everywhere. The log reads as the app does. | A new bracket tag reaches the indexer on the first day of 1.0.0. If it handles unknown tags like `(Free Text)` it costs nothing; if it does not, observation lines may be dropped, mis-sorted or mistaken. Past and new logs differ. |
-| C | **`(Observation)` by default, with the old word as a setting** (`observation_marker`, default `(Observation)`, which the person can set to `(Interaction)`), and a stored `(Interaction)` kept as it was typed. | The person who needs the old line can have it; a custom marker is never touched. | A setting that exists for one release. The default is still a change to the line. |
-| D | **Keep the old word for logs that already have it, new word for new logs** (the label follows the entry's stored spelling). | Past exports re-share unchanged. | A single log can hold both words; worst of both. **Not recommended.** |
-
-**Recommendation: C**, with these two conditions: the owner (or the indexer's owner) confirms the indexer accepts an unknown
-bracket tag *before* O-5 merges, and a stored `observation_marker` that was never set is read as the new default while one that
-was set to anything else, including the old default typed by hand, is left alone. If the indexer cannot be checked before the
-release, **fall back to A** for 1.0.0 and change the label in 1.0.1; that costs a word, not a log. Option A is also the safe
-default if the owner would rather not decide now: package O-5 is written so that the label is one constant, and the rest of the
-rename does not depend on it. The guard test T-O5-2 holds the `T|` lines of the export fixed under every option.
+1. The owner (or the indexer's owner) checks the indexer with a sample export holding `(Observation)` lines **before O-5 merges**.
+   The next TestFlight round is the natural place: send a real export of the test log through it.
+2. T-O5-2 keeps the `T|` lines of any export byte for byte what they were, so the indexer's input does not move.
+3. The label is one constant and one preference (`observation_marker`), so if the check fails the fix is a one-line change, not a
+   rename of anything stored.
 
 ## 8. Order of work, small pull requests
 
@@ -289,8 +282,8 @@ still what the UI shows until then.
 | **O-1 Setup file** | The reader accepts both spellings, the writer writes the new, the sample file, the legacy fixture, `docs/guide/setup-file.md` and `check_setup_doc.py`. The code type is still `InteractionType` (only the file's words change). | O-0 |
 | **O-2 Journal** | `observation` at `v:3` is read and written, `interaction` at `v:2` is read; the version check; mixed-file test. The in-memory type is still `InteractionEntry`. | O-0 |
 | **O-3 Database** | Step 4 to 5, the rebuild and copy, restore on failure, the repository's SQL on the new names, recovery tests, the kill test from an old-format store. Nothing outside `libs/storage` and its tests. | O-2 |
-| **O-4 Preference files** | `boards/last`, `observation_marker`, the policy of decision O-1 for the marker. | O-0 |
-| **O-5 Export** | The label per decision O-1, the golden files, the indexer contract test. If the owner chooses A, this package only renames the constant and the files. | O-2, decision O-1 |
+| **O-4 Preference files** | `boards/last`, `observation_marker`, a stored `(Interaction)` read as the new default. | O-0 |
+| **O-5 Export** | The `(Observation)` label, the golden files, the indexer contract test; merges after the indexer check of section 7. | O-2 |
 | **O-6 Code and UI words** | Rename types, files, QML ids, models and tests in one mechanical pull request (nothing stored changes in it); the visible words, the eye icon and its states, accessibility names, help topics with the alias, `observationAccent`. Split in two if it exceeds review size: C++ names, then QML and words. | O-1 to O-5 |
 | **O-7 Documents and mock-ups** | PRD, architecture, testing, guide pages and pictures, privacy page, design package and `tools/visual/`, `tools/ej_screenshots/screens.json`, the repository check for the old word. | O-6 |
 | **O-8 Store text and review notes** | The listing text, the age and privacy answers in `docs/plan/stage-11.md`, the App Review notes for 1.0.0, in the new word. Docs only. | O-7 |
@@ -310,15 +303,15 @@ note at the top (added by O-7) that it describes the board under its old name an
 
 | # | Question | Recommendation | Decision |
 |---|---|---|---|
-| O-1 | **Does the export label change from `(Interaction)` to `(Observation)`?** Options A to D in section 7. | C, if the indexer's owner confirms an unknown bracket tag is harmless; otherwise A for 1.0.0. | **open** |
+| O-1 | Does the export label change from `(Interaction)` to `(Observation)`? | Yes. | **decided 18 Nov 2026**: the old word is removed everywhere. The indexer check of section 7 stays open. |
 | O-2 | Singular and plural: "an observation" for an entry, "Observations" for the board. | Yes. | proposed |
 | O-3 | Raise `CONFIG_SCHEMA_VERSION` to 2 for the new keys? | No. The reader refuses unknown keys either way; the version adds nothing and costs a migration of the number. | **open** |
-| O-4 | How long does the reader keep the old names? | For ever. The cost is a few lines per layer, and a file of the facilitator's can be any age. Revisit only if a later release wants the code gone. | **open** |
+| O-4 | How long does the reader keep the old names? | For ever, only in the reading code. The cost is a few lines per layer, and the facilitator's data can be any age. | **open** |
 | O-5 | The setup file's old keys on **write**: only the new ones, or both for one release so an old build can still read a file the new one wrote? | Only the new. Setup files are prepared and read on the same build, and writing both makes the file confusing. | **open** |
 | O-6 | Database step 4 to 5 now, or fold the rename into a later schema step? | Now, as its own step, so the rebuild is tested alone (the riskiest part of Stage 14 was this kind of step). | proposed |
 | O-7 | Journals: leave old records as they are (recommended) or rewrite files to the new names? | Leave. | proposed |
 | O-8 | Does the app icon or the splash change? | No; only the tab icon. | proposed |
-| O-9 | Does the facilitator get the rename in a TestFlight build before 1.0.0 goes to review, so her real log is the test? | Yes: O-9 is not done until her copy has opened. | **open** |
+| O-9 | Does the facilitator get the rename in a TestFlight build before 1.0.0 goes to review, so her real log is the test? | Yes: package O-9 is not done until her copy has opened. | **decided 18 Nov 2026**: yes, another round of TestFlight builds for iPad and iPhone. |
 
 **Not done by this page:** no code, no test, no setup-file or journal change, no tag or release. The facilitator's real files are
 never copied into the repository (NFR-10); the fixtures are made by the old build from stand-in data.
