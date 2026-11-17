@@ -257,7 +257,7 @@ Sheet {
         // While the time sheet is over this one, nothing on this one takes a touch or is reached by a screen reader.
         enabled: !root.timeOpen && !root.pickerOpen
         inSheet: true
-        title: root.showingType ? (root.isInteraction ? qsTr("Interaction") : qsTr("Error type")) : qsTr("Edit entry")
+        title: root.showingType ? (root.isInteraction ? qsTr("Observation") : qsTr("Error type")) : qsTr("Edit entry")
         leadingText: qsTr("Cancel")
         trailingText: root.showingMain ? qsTr("Save") : ""
         // A draft the model refuses cannot be saved.
@@ -302,7 +302,7 @@ Sheet {
                     ListRow {
                         objectName: "editType"
                         visible: root.kind === "error" || root.isInteraction
-                        text: root.isInteraction ? qsTr("Interaction") : qsTr("Error")
+                        text: root.isInteraction ? qsTr("Observation") : qsTr("Error")
                         value: root.chosenTypeName
                         valueSwatch: root.chosenSlot > 0 ? Theme.tileColour(root.chosenSlot) : "transparent"
                         minimumHeight: Theme.size.rowHeightForm

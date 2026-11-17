@@ -746,7 +746,7 @@ Item {
             anchors.topMargin: Theme.space.sectionGap
             visible: root.onInteractions
             Accessible.role: Accessible.Heading
-            Accessible.name: qsTr("Interactions board. Swipe here to switch to the Errors board.")
+            Accessible.name: qsTr("Observations board. Swipe here to switch to the Errors board.")
             Accessible.onPressAction: root.boardSwitchRequested("errors")
 
             // The contents are made only on the Interactions board, so the Errors board pays two items for the strip (perf.scene).
@@ -771,7 +771,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             color: Theme.colour.interactionAccent
                             font: Theme.font.bodySmall.selectedFont
-                            text: qsTr("Interactions")
+                            text: qsTr("Observations")
                             Accessible.ignored: true
                         }
                     }
@@ -837,7 +837,7 @@ Item {
 
                 objectName: "interactionsEmptyBoard"
                 Accessible.role: Accessible.Grouping
-                Accessible.name: qsTr("Your interactions board is empty")
+                Accessible.name: qsTr("Your observations board is empty")
 
                 Shadow {
                     anchors.fill: interactionsCard
@@ -874,7 +874,7 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         color: Theme.colour.textPrimary
                         font: Theme.font.sheetTitle.font
-                        text: qsTr("Your interactions board is empty")
+                        text: qsTr("Your observations board is empty")
                         wrapMode: Text.WordWrap
                         Accessible.ignored: true
                     }
@@ -884,7 +884,7 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         color: Theme.colour.textSecondary
                         font: Theme.font.bodySmall.font
-                        text: qsTr("Add the interaction types you log. Each one becomes a tile here.")
+                        text: qsTr("Add the observation types you log. Each one becomes a tile here.")
                         wrapMode: Text.WordWrap
                         Accessible.role: Accessible.StaticText
                         Accessible.name: text
@@ -893,7 +893,7 @@ Item {
                     PrimaryButton {
                         objectName: "addInteractionTypes"
                         width: parent.width
-                        text: qsTr("Add interaction types")
+                        text: qsTr("Add observation types")
                         onClicked: root.interactionSetupRequested()
                     }
                 }
@@ -1080,7 +1080,7 @@ Item {
             objectName: "logInteractionAnswerSheet"
             templateName: root.interactionBoard !== null ? root.interactionBoard.typeName(root.askType) : ""
             valuePrompt: qsTr("Answer")
-            footerText: qsTr("Cancel leaves the interaction in the log as it is.")
+            footerText: qsTr("Cancel leaves the observation in the log as it is.")
             previewText: root.interactionBoard !== null ? root.interactionBoard.previewLine(root.askType, answerSheet.value) : ""
             onAddRequested: value => {
                 if (root.session.setInteractionValue(root.askEntry, value)) {

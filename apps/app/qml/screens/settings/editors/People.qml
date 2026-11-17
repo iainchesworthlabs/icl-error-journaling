@@ -305,7 +305,7 @@ SheetHost {
                     wrapMode: Text.WordWrap
                     color: Theme.colour.textSecondary
                     font: Theme.font.footnote.font
-                    text: !root.people.available ? qsTr("People are not available right now.") : qsTr("The people you can name on an interaction such as “Spoke with [person]”. Names stay on this device; a shared log shows them as you choose in Settings.")
+                    text: !root.people.available ? qsTr("People are not available right now.") : qsTr("The people you can name on an observation such as “Spoke with [person]”. Names stay on this device; a shared log shows them as you choose in Settings.")
                 }
 
                 Item {

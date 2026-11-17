@@ -91,11 +91,11 @@ SheetHost {
 
     EditorPage {
         anchors.fill: parent
-        title: qsTr("Interaction types")
+        title: qsTr("Observation types")
         leadingText: qsTr("Settings")
         leadingAccessibleName: qsTr("Back to Settings")
         trailingText: qsTr("Done")
-        helpName: qsTr("Help with interaction types")
+        helpName: qsTr("Help with observation types")
         onHelpRequested: root.helpRequested("interactionTypes")
         onLeadingTriggered: root.closeRequested()
         onTrailingTriggered: root.closeRequested()
@@ -137,7 +137,7 @@ SheetHost {
                     width: parent.width - 2 * x
                     color: Theme.colour.textSecondary
                     font: Theme.font.sectionLabel.font
-                    text: qsTr("Your interaction board").toLocaleUpperCase()
+                    text: qsTr("Your observation board").toLocaleUpperCase()
                     wrapMode: Text.WordWrap
                     Accessible.ignored: true
                 }
@@ -153,8 +153,8 @@ SheetHost {
                     objectName: "interactionMiniBoard"
                     width: parent.width
                     model: root.settings.interactionLayout
-                    addText: qsTr("Add interaction type")
-                    changeText: qsTr("Change interaction type")
+                    addText: qsTr("Add observation type")
+                    changeText: qsTr("Change observation type")
                     onMoveRequested: (fromPosition, toPosition) => root.moveTile(fromPosition, toPosition)
                     onReplaceRequested: position => tilePicker.openFor(position, miniBoard.tileItem(position - 1).typeId)
                     onAddRequested: position => tilePicker.openFor(position, "")
@@ -172,7 +172,7 @@ SheetHost {
                     wrapMode: Text.WordWrap
                     color: Theme.colour.textSecondary
                     font: Theme.font.bodySmall.font
-                    text: boardRepeater.count + otherRepeater.count === 0 ? qsTr("These are the tiles of the Interactions board: what you did around the unit. Add one, for example “Spoke with [person]”. A type with [person] asks who after you log it.") : qsTr("Types with a position are on the Interactions board. The rest are in Other. A type with [person] asks who after you log it.")
+                    text: boardRepeater.count + otherRepeater.count === 0 ? qsTr("These are the tiles of the Observations board: what you did around the unit. Add one, for example “Spoke with [person]”. A type with [person] asks who after you log it.") : qsTr("Types with a position are on the Observations board. The rest are in Other. A type with [person] asks who after you log it.")
                 }
 
                 Item {
@@ -187,7 +187,7 @@ SheetHost {
                         objectName: "addRow"
                         action: true
                         minimumHeight: Theme.size.listRowHeight
-                        text: qsTr("Add an interaction type")
+                        text: qsTr("Add an observation type")
                         onActivated: editSheet.openForNew()
                     }
                 }

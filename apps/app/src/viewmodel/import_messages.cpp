@@ -44,7 +44,7 @@ Noun noun_of(const std::string& section)
     }
     if (section == "interaction_types")
     {
-        return {translate("Interaction type"), translate("Interaction types")};
+        return {translate("Observation type"), translate("Observation types")};
     }
     return {translate("Note template"), translate("Note templates")};
 }

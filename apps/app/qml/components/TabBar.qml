@@ -4,7 +4,7 @@ import QtQuick
 import ErrorJournalingApp
 
 // The tab bar (Stage 4, package 4.4): Log, Review, History and Settings along the bottom of the window. With the second board
-// on (`interactionsEnabled`, Stage 14, package I-5) there are five: Errors (the Log tab under its new name), Interactions,
+// on (`interactionsEnabled`, Stage 14, package I-5) there are five: Errors (the Log tab under its new name), Observations,
 // Review, History and Settings. The first tab keeps its object name `tabLog` and its place whichever the count, so the four of
 // v1 are exactly what they were while the second board is off. Five labels share the width, so at a large text size the
 // label of a tab is shrunk to fit its tab, down to its size at the default text size (the cap of the tab labels), and never
@@ -48,8 +48,8 @@ Item {
         },
         {
             "key": "Interactions",
-            "label": qsTr("Interactions"),
-            "icon": "speech"
+            "label": qsTr("Observations"),
+            "icon": "eye"
         },
         {
             "key": "Review",

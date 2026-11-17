@@ -215,7 +215,7 @@ SettingsPage {
 
             SettingsSwitchRow {
                 objectName: "settingsSecondBoardRow"
-                text: qsTr("Second board: Interactions")
+                text: qsTr("Second board: Observations")
                 description: qsTr("For what you did, as well as what went wrong")
                 checked: root.boards !== null && root.boards.interactionsEnabled
                 onToggled: wanted => {
@@ -231,7 +231,7 @@ SettingsPage {
             ListRow {
                 objectName: "settingsInteractionTypes"
                 visible: root.boards !== null && root.boards.interactionsEnabled
-                text: qsTr("Interaction types")
+                text: qsTr("Observation types")
                 minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
                 onActivated: root.interactionTypesRequested()

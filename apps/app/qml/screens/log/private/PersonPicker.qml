@@ -62,7 +62,7 @@ Sheet {
             next.splice(at, 1);
             notice = "";
         } else if (next.length >= maximum) {
-            notice = qsTr("An interaction can name up to %1 people.").arg(maximum);
+            notice = qsTr("An observation can name up to %1 people.").arg(maximum);
             return;
         } else {
             next.push(personId);
@@ -77,7 +77,7 @@ Sheet {
             if (next.indexOf(id) < 0 && next.length < maximum)
                 next.push(id);
         }
-        notice = next.length >= maximum && everyoneIds.length > next.length ? qsTr("An interaction can name up to %1 people.").arg(maximum) : "";
+        notice = next.length >= maximum && everyoneIds.length > next.length ? qsTr("An observation can name up to %1 people.").arg(maximum) : "";
         picked = next;
     }
 
@@ -207,7 +207,7 @@ Sheet {
                 visible: !root.people.available
                 color: Theme.colour.textSecondary
                 font: Theme.font.bodySmall.font
-                text: qsTr("People are not available right now. Tap Skip to leave this interaction as it is.")
+                text: qsTr("People are not available right now. Tap Skip to leave this observation as it is.")
                 wrapMode: Text.WordWrap
                 Accessible.role: Accessible.StaticText
                 Accessible.name: text

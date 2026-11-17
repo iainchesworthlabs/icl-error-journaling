@@ -62,7 +62,7 @@ TEST_CASE("settings.interaction_types: the miniature board shows the tiles, and 
     QQuickItem* bar = find_item(world.m_Ui.root(), QStringLiteral("tilePickerBar"));
     REQUIRE(bar != nullptr);
     REQUIRE(bar->isVisible());
-    CHECK(bar->property("title").toString() == QStringLiteral("Add interaction type"));
+    CHECK(bar->property("title").toString() == QStringLiteral("Add observation type"));
 
     QQuickItem* helped = row_with(world, QStringLiteral("tilePickerType"), QStringLiteral("Helped"));
     REQUIRE(helped != nullptr);

@@ -3007,7 +3007,7 @@ TEST_CASE("shell.five_tabs: Errors, Interactions, Review, History and Settings i
             return QString();
         };
         CHECK(label_of(QStringLiteral("tabLog")) == QStringLiteral("Errors"));
-        CHECK(label_of(QStringLiteral("tabInteractions")) == QStringLiteral("Interactions"));
+        CHECK(label_of(QStringLiteral("tabInteractions")) == QStringLiteral("Observations"));
         CHECK(label_of(QStringLiteral("tabReview")) == QStringLiteral("Review"));
     }
     SECTION("iPad compact (a narrow window): the tabs share the whole bar")
@@ -3259,7 +3259,7 @@ TEST_CASE("shell.board_area: the Interactions board shares the header, composer 
     CHECK(app.ui.geometry(app.need(QStringLiteral("logComposer"))) == composer_errors);
     CHECK(app.shown(QStringLiteral("logLastBar")));
     CHECK_FALSE(app.shown(QStringLiteral("logBoard")));
-    CHECK(app.need(QStringLiteral("interactionsStripTitle"))->property("text").toString() == QStringLiteral("Interactions"));
+    CHECK(app.need(QStringLiteral("interactionsStripTitle"))->property("text").toString() == QStringLiteral("Observations"));
     CHECK(app.need(QStringLiteral("addInteractionTypes"))->isVisible());
 
     const QQuickItem* screen = app.need(QStringLiteral("logScreen"));
@@ -3427,6 +3427,6 @@ TEST_CASE("fold.state_kept: a fold or unfold on the Interactions board loses no 
         CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("interactions"));
         CHECK(app.shown(QStringLiteral("interactionsStrip")));
         CHECK(app.services.root().timeline()->rowCount() == entries);
-        CHECK(app.need(QStringLiteral("interactionsStripTitle"))->property("text").toString() == QStringLiteral("Interactions"));
+        CHECK(app.need(QStringLiteral("interactionsStripTitle"))->property("text").toString() == QStringLiteral("Observations"));
     }
 }

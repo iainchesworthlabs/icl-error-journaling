@@ -349,7 +349,7 @@ TEST_CASE("edit.interaction: the sheet shows an interaction and Save and Cancel 
     Editor e(&people, list.get());
 
     e.open(1);
-    CHECK(e.in("editType")->property("text").toString() == QStringLiteral("Interaction"));
+    CHECK(e.in("editType")->property("text").toString() == QStringLiteral("Observation"));
     CHECK(e.in("editType")->property("value").toString() == QStringLiteral("Spoke with"));
     CHECK(e.in("editPeople")->property("value").toString() == QStringLiteral("Alex Sample"));
     CHECK(e.preview() == QStringLiteral("10:10 (Interaction) Spoke with Alex Sample"));

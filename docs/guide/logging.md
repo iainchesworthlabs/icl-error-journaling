@@ -58,16 +58,16 @@ The **Last** bar shows the latest entry and how many entries you have today. Tap
 
 Next: [Today's details](todays-details.md).
 
-## The Interactions board (optional)
+## The Observations board (optional)
 
-With the second board turned on (see [Setup](setup.md#the-second-board-interactions-optional)), the **Interactions** tab is a
+With the second board turned on (see [Setup](setup.md#the-second-board-observations-optional)), the **Observations** tab is a
 board like the Errors board, for what you did around the unit. **Double-tap** a tile to log it; a count badge, the undo message
-and **hold to add the note you typed** work as they do for errors. The **Other** tile lists the interaction types that are not on
+and **hold to add the note you typed** work as they do for errors. The **Other** tile lists the observation types that are not on
 the board.
 
-The app has no interaction types of its own. The board shows only the types you make, in **Settings**, **Interaction types**,
+The app has no observation types of its own. The board shows only the types you make, in **Settings**, **Observation types**,
 or that a setup file brings (see [the setup file](setup-file.md)). Until you make one, the board is empty and its tiles say
-**Add interaction type**.
+**Add observation type**.
 
 **The entry is logged first, and the question comes second.** If the type has a line with a person in it (for example
 “Spoke with [person]”), a list of **People** opens at once:
