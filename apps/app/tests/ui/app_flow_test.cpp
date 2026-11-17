@@ -1721,6 +1721,65 @@ TEST_CASE("ipad.log_pane: the log pane lists the log, shows the newest entry, an
     CHECK(std::abs(anchor.m_Height - share.height()) <= 1.0);
 }
 
+TEST_CASE("ipad.log_pane_title: the title and the count never overlap, and the title stays clear of Copy all",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    log_entries(app, 3);
+    for (const double scale : {1.0, 1.3, 2.0, 3.1})
+    {
+        CAPTURE(scale);
+        app.ui.set_text_scale(scale);
+        app.ui.layout();
+        QQuickItem* count = app.need(QStringLiteral("logPaneCount"));
+        QQuickItem* copy = app.need(QStringLiteral("logPaneCopyAll"));
+        QQuickItem* row = app.need(QStringLiteral("logPaneTitle"));
+        const QRectF c = app.ui.geometry(copy);
+        const QRectF r = app.ui.geometry(row);
+        // The title is the first Text of the row; it is the heading.
+        QQuickItem* title = nullptr;
+        for (QQuickItem* child : row->childItems())
+        {
+            if (child->property("text").toString() == QStringLiteral("Today’s log"))
+                title = child;
+        }
+        REQUIRE(title != nullptr);
+        const QRectF t = app.ui.geometry(title);
+        CHECK(t.right() <= c.left() + 8.0);
+        CHECK(t.top() >= r.top() - 0.5);
+        CHECK(t.bottom() <= r.bottom() + 0.5);
+        if (count->isVisible())
+            CHECK(app.ui.geometry(count).left() >= t.right());
+        INFO("title " << t.width() << " count " << count->width() << " row " << r.width() << " copy " << c.width());
+        if (scale <= 1.0)
+            CHECK(count->isVisible());
+    }
+}
+
+TEST_CASE("ipad.header_nav: Today's details has its title and Back in the form column of a wide window, as on the phone",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    app.ui.layout();
+    app.tap(QStringLiteral("logHeaderCard"));
+    app.play();
+    QQuickItem* nav = app.need(QStringLiteral("headerNav"));
+    CHECK(std::abs(nav->property("sideInset").toDouble() - 16.0) <= 0.01);
+    for (const QSize size : {QSize(820, 1180), QSize(1180, 820)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.ui.layout();
+        const double column = std::min(640.0, size.width() - 48.0);
+        CHECK(std::abs(nav->property("sideInset").toDouble() - (size.width() - column) / 2) <= 1.0);
+    }
+}
+
 TEST_CASE("ipad.log_pane_empty: a log with no entries says so, and has nothing to copy or share", "[ui][app][ipad]")
 {
     App app;
