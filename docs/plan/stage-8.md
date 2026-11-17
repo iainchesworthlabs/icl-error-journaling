@@ -332,14 +332,16 @@ not a pass or fail test, and it is not the device checklist: D1 still needs an i
   content under them sat in the form column, so on a 820 pt window the title was 100 pt left of the list. `NavBar` has a
   `sideInset`, which these pages set to their own margin; on the phone it is the screen margin, as before.
 
+**Fixed after the visual pass**
+- Edit entry is a card as tall as its first page (the Content detent in a form sheet; the phone's sheet and the page of
+  types stay Large), so it matches its mock-up. The other sheets that are `Large` on the phone are lists, and stay 720 pt.
+- On the Settings page the miniature board is in a card (surface colour, 16 pt corners, 12 pt padding) when the window is
+  not Compact. Its tiles keep the phone's 6 pt gap and 11.5 pt label; the mock-up draws 8 pt and 13 pt. That is the only
+  difference left.
+- First launch: the mock-up (`tools/visual/ipad_mockups.py`) now draws the app's two buttons, Set up by hand and Import a
+  setup file, as the phone's redesign (#112) has them.
+
 **Seen, and left as they are**
-- Edit entry, and the other sheets that are `Large` on the phone, are a 720 pt card on an iPad, taller than their mock-up,
-  which fits its content. The content is not wrong, and the card is within the plan's 720 pt maximum. A Content detent for
-  the card needs the sheet's content height measured, which is a change to a sheet that the phone also uses.
-- On the Settings page the miniature board is not in a card, and its tiles are a little smaller than the mock-up's. The
-  board is the phone's component, and was left as it is.
-- First launch: the app's two buttons (Import a setup file and Set up by hand) are the phone's redesign (#112); the
-  mock-up's cards with chevrons were drawn before it. The mock-up is the one that is out of date.
 - The pairs differ in the data of the state (the log's entries, error type names in Other), which come from the capture's
   own sample setup and not from the layout.
 

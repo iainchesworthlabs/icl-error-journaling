@@ -170,14 +170,33 @@ SettingsPage {
             height: Theme.space.tileGap
         }
 
-        MiniBoard {
-            id: board
+        // On the phone the board sits straight on the page. In a larger window it is in a card, as the iPad mock-ups draw it
+        // (BoardSettings.ipad-*): the surface colour, 16 pt corners and 12 pt of padding.
+        Rectangle {
+            id: boardCard
 
+            readonly property bool carded: !WindowLayout.compact
+            readonly property real padding: carded ? Theme.space.sectionGap : 0
+
+            objectName: "settingsBoardCard"
             width: parent.width
-            model: root.settings.boardLayout
-            onMoveRequested: (fromPosition, toPosition) => root.move(fromPosition, toPosition)
-            onReplaceRequested: position => root.replaceRequested(position, board.tileItem(position - 1).typeId)
-            onAddRequested: position => root.replaceRequested(position, "")
+            height: board.height + 2 * padding
+            radius: Theme.radius.card
+            color: carded ? Theme.colour.surface : "transparent"
+
+            MiniBoard {
+                id: board
+
+                objectName: "settingsBoard"
+
+                x: boardCard.padding
+                y: boardCard.padding
+                width: boardCard.width - 2 * boardCard.padding
+                model: root.settings.boardLayout
+                onMoveRequested: (fromPosition, toPosition) => root.move(fromPosition, toPosition)
+                onReplaceRequested: position => root.replaceRequested(position, board.tileItem(position - 1).typeId)
+                onAddRequested: position => root.replaceRequested(position, "")
+            }
         }
 
         // 10 pt under the resting board and 8 pt under the panel of a selected tile, as the two mock-ups have it.
