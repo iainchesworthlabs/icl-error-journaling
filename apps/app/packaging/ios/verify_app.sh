@@ -90,6 +90,11 @@ done
 # The setup file type: exported, named by a document type, opened by copy and not in place, and no file sharing.
 [ "$(key UTExportedTypeDeclarations:0:UTTypeIdentifier)" = "$bundle_id.config" ] || fail "UTExportedTypeDeclarations does not export $bundle_id.config"
 [ "$(key UTExportedTypeDeclarations:0:UTTypeTagSpecification:public.filename-extension:0)" = "ejconfig" ] || fail "the exported type does not have the extension ejconfig"
+# Not public.json: the system previews JSON, and an AirDropped setup file would open as text and not in the application.
+[ "$(key UTExportedTypeDeclarations:0:UTTypeConformsTo:0)" = "public.data" ] || fail "the exported type does not conform to public.data"
+for index in 0 1 2 3; do
+  [ "$(key "UTExportedTypeDeclarations:0:UTTypeConformsTo:$index")" != "public.json" ] || fail "the exported type conforms to public.json: AirDrop would show a preview of the setup file"
+done
 [ "$(key CFBundleDocumentTypes:0:LSItemContentTypes:0)" = "$bundle_id.config" ] || fail "CFBundleDocumentTypes does not name $bundle_id.config"
 [ "$(key LSSupportsOpeningDocumentsInPlace)" = "false" ] || fail "LSSupportsOpeningDocumentsInPlace is '$(key LSSupportsOpeningDocumentsInPlace)', expected false"
 [ "$(key CADisableMinimumFrameDurationOnPhone)" = "true" ] || fail "CADisableMinimumFrameDurationOnPhone is '$(key CADisableMinimumFrameDurationOnPhone)', expected true: a ProMotion phone would run the application at 60 Hz"

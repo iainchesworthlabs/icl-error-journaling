@@ -5,6 +5,9 @@ and where they sit on the board, your places, your note templates, the interacti
 extension `.ejconfig`. You can export one from the app, change it in a text editor and import it again, or prepare one for
 someone else.
 
+On an iPhone or iPad a setup file sent by AirDrop opens in the app and starts the import. A file saved in Files opens
+the same way when you tap it.
+
 A setup file has **no logs** in it. Importing one replaces your setup and leaves every past log as it is.
 
 This page is for whoever prepares a file. If you only set up the board in the app, you do not need it.

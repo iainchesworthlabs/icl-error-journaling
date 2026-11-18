@@ -50,8 +50,8 @@
     <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
 
     <!-- The setup file. The application exports one type of its own, with the extension ejconfig, so that it is the only
-         thing the phone offers for that file, and registers plain JSON as an alternate so that a file that was not renamed
-         still offers the application. The identifier is the bundle identifier plus config and, with the extension and the
+         thing the phone offers for that file and opens in the application from AirDrop, and registers plain JSON as an
+         alternate so that a file that was not renamed still offers the application. The identifier is the bundle identifier plus config and, with the extension and the
          description, is one of the constants in libs/ios_bridge/include/error_journaling/document_types.hpp:
          tools/ci/check_ios_plist.py fails when the two differ. -->
     <key>UTExportedTypeDeclarations</key>
@@ -61,9 +61,13 @@
             <string>com.iainchesworthlabs.fieldtest.config</string>
             <key>UTTypeDescription</key>
             <string>Field Test setup</string>
+            <!-- Not public.json: the system can show JSON in Quick Look, and an AirDropped file of a type it can show opened
+                 as a page of text instead of in the application. public.data and public.content leave nothing to preview.
+                 The importer reads the bytes and checks them, so it does not need the JSON type. -->
             <key>UTTypeConformsTo</key>
             <array>
-                <string>public.json</string>
+                <string>public.data</string>
+                <string>public.content</string>
             </array>
             <key>UTTypeTagSpecification</key>
             <dict>
