@@ -135,7 +135,7 @@ or a third-party partner can get at it for longer than it takes to serve a reque
 sends nothing anywhere. The log leaves the device only when the user shares it through the system share sheet, copies it,
 or backs up the device. In each case the user sends it, to a destination they choose. The developer never receives it.
 
-What the code shows, checked on `develop` at 92080f9:
+What the code shows, checked on `develop` at 05de140 (18 November 2026, re-checked for the people list, interaction entries and dictation):
 
 | Check | Evidence | Result |
 |---|---|---|
