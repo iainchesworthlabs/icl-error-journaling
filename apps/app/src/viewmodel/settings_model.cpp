@@ -49,7 +49,7 @@ const QString OP_ERROR_PREFIX = QStringLiteral("error prefix");
 const QString OP_LOCATION = QStringLiteral("location");
 const QString OP_ENVIRONMENT = QStringLiteral("unit environment");
 const QString OP_ERROR_TYPE = QStringLiteral("error type");
-const QString OP_INTERACTION_TYPE = QStringLiteral("interaction type");
+const QString OP_INTERACTION_TYPE = QStringLiteral("observation type");
 const QString OP_BOARD =QStringLiteral("board");
 const QString OP_TEMPLATE = QStringLiteral("template");
 const QString OP_IMPORT = QStringLiteral("import");
@@ -1277,7 +1277,7 @@ std::expected<std::optional<std::string>, QString> checked_interaction_line(cons
 QString interaction_name_taken(const std::string& name)
 {
     // The quotes are typographic (U+201C, U+201D), as in the designs.
-    return SettingsModel::tr("There is already an interaction type called \xE2\x80\x9C%1\xE2\x80\x9D. Names must be "
+    return SettingsModel::tr("There is already an observation type called \xE2\x80\x9C%1\xE2\x80\x9D. Names must be "
                              "different.")
         .arg(QString::fromStdString(name));
 }
@@ -1297,7 +1297,7 @@ QString SettingsModel::previewInteractionLine(const QString& name, const QString
     {
         return tr("Fix the line to see an example.");
     }
-    const QString label = name.trimmed().isEmpty() ? tr("Interaction") : name.trimmed();
+    const QString label = name.trimmed().isEmpty() ? tr("Observation") : name.trimmed();
     const QString value = tr("Morning Medley");
     const std::optional<std::string> answer = std::string(value.toStdString());
     return QString::fromStdString(

@@ -17,7 +17,7 @@ import ErrorJournalingApp
 //                (2.2) and the plus of the new-log row (2.2) do.
 //
 // Kinds: chevronRight, chevronLeft, plus, close, check, warning, info, ring (an empty circle), search, share (upload),
-// file, list, music, mic (dictation), speech (a speech bubble), calendar, grip (six dots), copy, trash, swap (Change error type), board (the
+// file, list, music, mic (dictation), speech (a speech bubble), eye (the Observations tab), calendar, grip (six dots), copy, trash, swap (Change error type), board (the
 // Log tab: four rounded squares), help (a question mark in a circle), external (an arrow leaving a box), sun (the Settings tab: a ring with eight rays). The tabs use list for Review and
 // calendar for History. An unknown kind draws nothing.
 Item {
@@ -45,6 +45,7 @@ Item {
             "music": "M9 18V5l12-2v13 M3 18a3 3 0 1 0 6 0a3 3 0 1 0 -6 0z M15 16a3 3 0 1 0 6 0a3 3 0 1 0 -6 0z",
             "mic": "M12 1a3 3 0 0 0 -3 3v8a3 3 0 0 0 6 0v-8a3 3 0 0 0 -3 -3z M19 10v2a7 7 0 0 1 -14 0v-2 M12 19v4 M8 23h8",
             "speech": "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+            "eye": "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z M9 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0z",
             "calendar": "M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M16 2v4M8 2v4M3 10h18",
             "grip": "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01",
             "copy": "M11 9h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1",

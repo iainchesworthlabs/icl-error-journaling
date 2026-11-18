@@ -2,7 +2,7 @@
 
 ## Review
 
-The **Review** tab is today's log, in the same words that you share, except that an interaction shows the person's full
+The **Review** tab is today's log, in the same words that you share, except that an observation shows the person's full
 name here and is shared at the level you choose (see below). It shows the header and every entry in time order.
 
 ![Review: the log header and the entries, one per line with its time, and a Share log button.](img/review.png){ width="270" }
@@ -12,24 +12,24 @@ name here and is shared at the level you choose (see below). It shows the header
 - **Copy or delete an entry:** swipe it left for **Copy** and **Delete**.
 - **Copy log** at the top copies the whole log.
 
-### Interactions in Review
+### Observations in Review
 
-If you use the second board, an interaction shows on its own line in the same words as the export, for example
+If you use the second board, an observation shows on its own line in the same words as the export, for example
 `Spoke with Alex Sample`, with the full name.
 
-![Review with an error and four interactions; one reads Spoke with (person not set).](img/review-interactions.png){ width="270" }
+![Review with an error and four observations; one reads Spoke with (person not set).](img/review-observations.png){ width="270" }
 
 On the screen the name is always in full; what **Copy log** and **Share log** carry follows the name setting in Settings
-(initials by default). A person you have forgotten reads as **someone**. An interaction that asks for a person but has
+(initials by default). A person you have forgotten reads as **someone**. An observation that asks for a person but has
 none shows **(person not set)**.
 
-Tap an interaction to open **Edit entry**. You can change the interaction, the people, the answer, the time and the
+Tap an observation to open **Edit entry**. You can change the observation, the people, the answer, the time and the
 note. **People** opens the same picker as the board: tick or untick people, search, add a new person, or tick
 **Everyone here**; people who are retired or forgotten stay on the entry until you untick them. **Save** keeps the change
 and **Cancel** leaves the entry as it was; nothing is saved until you tap **Save**. This is also how you add the people
 to an entry you logged with **Skip** and left without a person. Swipe, Copy, Delete and Undo work as for an error.
 
-![The Edit entry sheet of an interaction: the interaction, People showing (person not set), the time and the note.](img/edit-interaction.png){ width="270" }
+![The Edit entry sheet of an observation: the observation, People showing (person not set), the time and the note.](img/edit-observation.png){ width="270" }
 
 ![The Edit entry sheet: the error, the time, the note, and a Delete entry button.](img/edit-entry.png){ width="270" }
 
@@ -48,7 +48,7 @@ An error line is the time, the error prefix `T|`, the error type, and then the n
 indexer reads the `T|` marker, so do not change the lines after you share. A note on its own, with no error, is marked
 `(Free Text)` instead. The prefix can be changed in Settings if your tool reads a different one.
 
-If you use the second board, an interaction is a line of its own, marked `(Interaction)` and with no `T|`, so the ticket
+If you use the second board, an observation is a line of its own, marked `(Interaction)` and with no `T|`, so the ticket
 indexer does not read it:
 
 ```

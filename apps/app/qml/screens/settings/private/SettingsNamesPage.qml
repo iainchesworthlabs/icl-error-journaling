@@ -24,7 +24,7 @@ SettingsPage {
 
     GroupedList {
         width: parent.width
-        footer: qsTr("This is how a person's name is written when a log leaves the app, for example Alex Sample as A.S. Review and the Interactions board always show the full name.")
+        footer: qsTr("This is how a person's name is written when a log leaves the app, for example Alex Sample as A.S. Review and the Observations board always show the full name.")
 
         ListRow {
             objectName: "settingsNamesInitials"

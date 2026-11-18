@@ -83,7 +83,7 @@ Sheet {
             root.retireRefusal = message;
     }
 
-    accessibleName: root.adding ? qsTr("New interaction type") : qsTr("Interaction type")
+    accessibleName: root.adding ? qsTr("New observation type") : qsTr("Observation type")
     detent: Sheet.Content
     contentImplicitHeight: root.height - root.sheetTopOffset - root.grabberZone - root.bottomInset
     readonly property real sheetTopOffset: 120 // literal-ok: as ErrorTypeEdit, which this sheet follows
@@ -94,7 +94,7 @@ Sheet {
         y: -Theme.space.tileGap
         width: parent.width
         inSheet: true
-        title: root.adding ? qsTr("New interaction type") : qsTr("Interaction type")
+        title: root.adding ? qsTr("New observation type") : qsTr("Observation type")
         leadingText: qsTr("Cancel")
         trailingText: qsTr("Save")
         trailingEnabled: root.refusal.length === 0 && root.lineMessage.length === 0
@@ -276,7 +276,7 @@ Sheet {
                     height: Math.max(Theme.size.primaryButtonHeight, retireLabel.implicitHeight + 2 * Theme.space.sectionGap)
                     activeFocusOnTab: true
                     Accessible.role: Accessible.Button
-                    Accessible.name: qsTr("Retire this interaction type")
+                    Accessible.name: qsTr("Retire this observation type")
                     Accessible.focusable: true
                     Accessible.onPressAction: root.retire()
                     onActivated: root.retire()
@@ -300,7 +300,7 @@ Sheet {
                         horizontalAlignment: Text.AlignHCenter
                         color: Theme.colour.destructive
                         font: Theme.font.sheetTitle.font
-                        text: qsTr("Retire this interaction type")
+                        text: qsTr("Retire this observation type")
                         wrapMode: Text.WordWrap
                         Accessible.ignored: true
                     }

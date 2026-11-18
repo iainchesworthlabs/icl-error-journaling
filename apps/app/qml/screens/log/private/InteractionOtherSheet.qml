@@ -19,7 +19,7 @@ Sheet {
         open();
     }
 
-    accessibleName: qsTr("Log another interaction")
+    accessibleName: qsTr("Log another observation")
     detent: Sheet.Medium
     contentUnderHomeIndicator: true
 
@@ -29,7 +29,7 @@ Sheet {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        title: qsTr("Log another interaction")
+        title: qsTr("Log another observation")
         inSheet: true
         leadingText: qsTr("Cancel")
         onLeadingTriggered: root.close()
@@ -58,7 +58,7 @@ Sheet {
                 visible: root.types.length === 0
                 color: Theme.colour.textSecondary
                 font: Theme.font.bodySmall.font
-                text: qsTr("Every interaction type is on the board.")
+                text: qsTr("Every observation type is on the board.")
                 wrapMode: Text.WordWrap
                 Accessible.role: Accessible.StaticText
                 Accessible.name: text

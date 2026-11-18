@@ -33,7 +33,7 @@ Sheet {
         open();
     }
 
-    accessibleName: qsTr("Choose an interaction type")
+    accessibleName: qsTr("Choose an observation type")
     detent: Sheet.Large
 
     NavBar {
@@ -41,7 +41,7 @@ Sheet {
 
         objectName: "tilePickerBar"
         width: parent.width
-        title: root.currentTypeId.length > 0 ? qsTr("Change interaction type") : qsTr("Add interaction type")
+        title: root.currentTypeId.length > 0 ? qsTr("Change observation type") : qsTr("Add observation type")
         leadingText: qsTr("Cancel")
         onLeadingTriggered: root.close()
     }
@@ -81,8 +81,8 @@ Sheet {
 
                 ListRow {
                     objectName: "tilePickerNewType"
-                    text: qsTr("New interaction type…")
-                    accessibleName: qsTr("New interaction type for position %1").arg(root.position)
+                    text: qsTr("New observation type…")
+                    accessibleName: qsTr("New observation type for position %1").arg(root.position)
                     leadingIcon: "plus"
                     leadingIconStroke: Theme.border.hairline * 2.2
                     labelColour: Theme.colour.primaryText
@@ -106,7 +106,7 @@ Sheet {
             GroupedList {
                 width: parent.width
                 visible: typeRows.count > 0
-                title: qsTr("Interaction types")
+                title: qsTr("Observation types")
                 surface: Theme.colour.surfaceRaised
 
                 Repeater {

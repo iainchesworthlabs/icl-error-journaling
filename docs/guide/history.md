@@ -7,7 +7,7 @@ shared. Today's log is on the Review tab.
 
 ## Open a past log
 
-Tap a log to read it, in the same words as it was shared (a person's name in an interaction shows in full here, and is
+Tap a log to read it, in the same words as it was shared (a person's name in an observation shows in full here, and is
 written at the level you chose in Settings when you share again). You can edit an entry, copy the log, or tap **Share log again**.
 A log changed after its last share shows **Changed since sharing** until you share it again.
 

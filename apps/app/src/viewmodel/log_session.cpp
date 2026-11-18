@@ -674,7 +674,7 @@ bool LogSession::attachDraft(const QString& entryId)
             interaction->m_AttachedNote = text;
             return std::nullopt;
         }
-        return "Only an error or an interaction takes a note.";
+        return "Only an error or an observation takes a note.";
     };
     {
         Entry probe = *found;

@@ -123,7 +123,7 @@ Item {
             readonly property bool offered: !isOther && !isEmpty && index >= root.coveredTiles
             Accessible.role: Accessible.Button
             Accessible.name: qsTr("Log %1 with note").arg(label)
-            Accessible.description: root.interactions ? qsTr("Logs this interaction with the note you typed") : qsTr("Logs this error with the note you typed")
+            Accessible.description: root.interactions ? qsTr("Logs this observation with the note you typed") : qsTr("Logs this error with the note you typed")
             Accessible.ignored: !offered
             Accessible.focusable: offered
             Accessible.onPressAction: {

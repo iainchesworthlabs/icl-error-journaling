@@ -1033,7 +1033,7 @@ Result<TimelineModel::Edit, QString> TimelineModel::work_out_edit(EntryId id, co
             const auto uuid = Uuid::parse(utf8_of(edit.value(QStringLiteral("interactionTypeId")).toString()));
             if (!uuid)
             {
-                return fail(tr("That interaction type is not known."));
+                return fail(tr("That observation type is not known."));
             }
             // The same type keeps the name it has, even when the configuration lost it; a new type takes a new one.
             if (InteractionTypeId(*uuid) != interaction->m_Type)
@@ -1042,7 +1042,7 @@ Result<TimelineModel::Edit, QString> TimelineModel::work_out_edit(EntryId id, co
                                                     &InteractionType::m_Id);
                 if (type == configuration.m_InteractionTypes.end() || type->m_Retired || type->m_Name.empty())
                 {
-                    return fail(tr("That interaction type is not known."));
+                    return fail(tr("That observation type is not known."));
                 }
                 interaction->m_Type = type->m_Id;
                 interaction->m_TypeLabel = type->m_Name;
@@ -1060,7 +1060,7 @@ Result<TimelineModel::Edit, QString> TimelineModel::work_out_edit(EntryId id, co
                 }
                 if (!add_person_pick(people, PersonId(*uuid)))
                 {
-                    return fail(tr("An interaction can name at most %1 people.").arg(MAX_PEOPLE_PER_INTERACTION));
+                    return fail(tr("An observation can name at most %1 people.").arg(MAX_PEOPLE_PER_INTERACTION));
                 }
             }
             interaction->m_People = std::move(people);

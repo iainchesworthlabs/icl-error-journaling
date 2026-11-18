@@ -170,7 +170,7 @@ TEST_CASE("board.rows: a tile with a type, an empty tile and Other each answer e
     // The retired type and the ones with no usable position are on no tile: tile 4 and tile 5 are empty.
     CHECK(f.value(3, InteractionBoardModel::IS_EMPTY).toBool());
     CHECK(f.value(3, InteractionBoardModel::LABEL).toString().isEmpty());
-    CHECK(f.value(3, InteractionBoardModel::ACCESSIBLE_NAME).toString() == "Position 4, empty. Add interaction type");
+    CHECK(f.value(3, InteractionBoardModel::ACCESSIBLE_NAME).toString() == "Position 4, empty. Add observation type");
 
     CHECK(f.value(OTHER, InteractionBoardModel::IS_OTHER).toBool());
     CHECK_FALSE(f.value(OTHER, InteractionBoardModel::IS_EMPTY).toBool());
@@ -338,7 +338,7 @@ TEST_CASE("settings.mini_board: the Interactions miniature shows live types on t
 
     CHECK(model.data(model.index(5), BoardLayoutModel::IS_EMPTY).toBool());
     CHECK(model.data(model.index(5), BoardLayoutModel::ACCESSIBLE_NAME).toString() ==
-          "Position 6, empty. Add interaction type");
+          "Position 6, empty. Add observation type");
     CHECK(model.data(model.index(OTHER), BoardLayoutModel::IS_OTHER).toBool());
     CHECK(model.data(model.index(OTHER), BoardLayoutModel::ACCESSIBLE_NAME).toString() == "Other");
 

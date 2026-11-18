@@ -76,35 +76,35 @@ If the file has problems, the app lists every one, in the order they appear in t
 
 [The setup file](setup-file.md) explains every key and every message, for whoever prepares the file.
 
-## The second board: Interactions (optional)
+## The second board: Observations (optional)
 
-The app can show a second board, **Interactions**, for what you did as well as what went wrong. It is **off** until you turn it
+The app can show a second board, **Observations**, for what you did as well as what went wrong. It is **off** until you turn it
 on, and while it is off the app looks and works as it always has: four tabs, and the first one is **Log**.
 
-To turn it on, open **Settings** and turn on **Second board: Interactions** (the **Second board** group, above the list of
-setup rows). A fifth tab, **Interactions**, appears at once, and the first tab is now called **Errors**. The tabs are
-**Errors**, **Interactions**, **Review**, **History** and **Settings**.
+To turn it on, open **Settings** and turn on **Second board: Observations** (the **Second board** group, above the list of
+setup rows). A fifth tab, **Observations**, appears at once, and the first tab is now called **Errors**. The tabs are
+**Errors**, **Observations**, **Review**, **History** and **Settings**.
 
 - The header card, the note box and the **Last** bar at the top are the same on both boards, so there is one note draft and
   **Last** shows the latest entry of either kind.
-- The Interactions board has a strip with its name, and its tiles are a different set of colours from the Errors board, so you
+- The Observations board has a strip with its name, and its tiles are a different set of colours from the Errors board, so you
   can tell the boards apart. The tab, the strip and the label of each tile say which board you are on; do not rely on colour.
-- To change board, tap the tab, or swipe along the strip that says **Interactions**. A swipe anywhere else does nothing, so a
+- To change board, tap the tab, or swipe along the strip that says **Observations**. A swipe anywhere else does nothing, so a
   slip over a tile never changes board.
 - The app opens on the board you used last.
-- The board has no interaction types to start with: every type is one you made, as the error types are. Until there is one, the board is empty and offers **Add interaction types**. A setup file with `interaction_types` brings its own.
+- The board has no observation types to start with: every type is one you made, as the error types are. Until there is one, the board is empty and offers **Add observation types**. A setup file with `interaction_types` brings its own.
 
 Turning the switch off hides the tab and the board. **Nothing is deleted:** the entries stay in the log and in Review and
-History, and what you set up is kept for the next time. If you were on the Interactions board, the app goes to the Errors board.
+History, and what you set up is kept for the next time. If you were on the Observations board, the app goes to the Errors board.
 
 
-### Setting up the Interactions board
+### Setting up the Observations board
 
-With the second board on, **Settings** shows two more rows in the **Second board** group: **Interaction types** and
-**People**. The **Interactions** tab leads there too: while the board is empty, **Add interaction types** opens the
+With the second board on, **Settings** shows two more rows in the **Second board** group: **Observation types** and
+**People**. The **Observations** tab leads there too: while the board is empty, **Add observation types** opens the
 editor at once, and turning the switch on with nothing set up opens it for you.
 
-**Interaction types** works like **Error types**. Tap **Add an interaction type**, give it a name and, if you want, a
+**Observation types** works like **Error types**. Tap **Add an observation type**, give it a name and, if you want, a
 **Line in the log**:
 
 - Tap **Insert person** to put **[person]** in the line, for example “Spoke with [person]”. A type with **[person]** asks who
@@ -113,7 +113,7 @@ editor at once, and turning the switch on with nothing set up opens it for you.
   log it.
 - With no line, the log shows the name of the type.
 
-The line is the template of the type: there is no separate list of interaction templates. “Spoke with [person]” with the
+The line is the template of the type: there is no separate list of observation templates. “Spoke with [person]” with the
 name “Spoke with” writes “Spoke with Alex Sample” when you pick Alex Sample.
 
 The miniature board at the top shows the 11 tiles. Tap a tile to move it earlier or later or to change its type, tap an empty
@@ -123,7 +123,7 @@ handle, or use the arrows, to change it. The rest are under
 
 ### People
 
-**People** is the list of names an interaction can use. It is optional: a type with no **[person]** in its line never asks
+**People** is the list of names an observation can use. It is optional: a type with no **[person]** in its line never asks
 who. In **Settings**, **Second board**, tap **People**:
 
 - Type a name under **New person** and tap **Add person**. If you have locations, choose the one the person belongs to;
@@ -140,4 +140,4 @@ shared logs**.
 
 **Names in shared logs** (also in the **Second board** group) sets how a person's name is written when a log leaves the app,
 in Copy, Share and a re-shared past log: **Initials** (the default, for example “A.S.”), **Full name**, or **Someone** for no
-name at all. **Review** and the **Interactions** board always show the full name, because that stays on the device.
+name at all. **Review** and the **Observations** board always show the full name, because that stays on the device.

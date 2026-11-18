@@ -74,7 +74,7 @@ QVariant InteractionBoardModel::data(const QModelIndex& index, int role) const
     case ACCESSIBLE_NAME:
         if (empty)
         {
-            return tr("Position %1, empty. Add interaction type").arg(index.row() + 1);
+            return tr("Position %1, empty. Add observation type").arg(index.row() + 1);
         }
         return tile.m_Count > 0 ? tr("%1, %2 today").arg(label).arg(tile.m_Count) : label;
     default:

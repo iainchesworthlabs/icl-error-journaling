@@ -31,7 +31,8 @@ TEST_CASE("icon.kinds: every kind of the design has a path, and an unknown kind 
                             QStringLiteral("share"),        QStringLiteral("file"),        QStringLiteral("list"),
                             QStringLiteral("music"),        QStringLiteral("speech"),      QStringLiteral("calendar"),
                             QStringLiteral("grip"),         QStringLiteral("copy"),        QStringLiteral("trash"),
-                            QStringLiteral("swap"),         QStringLiteral("board"),       QStringLiteral("sun")};
+                            QStringLiteral("swap"),         QStringLiteral("board"),       QStringLiteral("sun"),
+                            QStringLiteral("eye")};
     for (const QString& kind : kinds)
     {
         INFO(kind.toStdString());
