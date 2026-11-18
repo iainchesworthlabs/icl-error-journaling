@@ -14,8 +14,9 @@ i18n.strings, qml.tests and motion.animators, and qml.format and qml.lint with a
 And check_setup_doc.py, which holds the setup-file page of the guide to the reader in libs/core,
 check_guide_screenshots.py, which holds the guide's pictures, their list and the screens file to each other, and
 check_site_address.py, which holds the files that name the documentation site to `site_url` in mkdocs.yml, and
-check_help_links.py, which holds the app's help topics and the pages and headings of the guide they open to each other
-(docs/ci.md).
+check_help_links.py, which holds the app's help topics and the pages and headings of the guide they open to each other, and
+check_site_kit.py, which holds the copy of the company's site kit and the Field Test palette (docs/theme.css) to the company's
+rules, and check_site_pages.py, which builds the site and checks the Field Test pages (docs/ci.md).
 """
 
 from __future__ import annotations
@@ -28,7 +29,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 QML_CHECKS = ["check_qml_platform.py", "check_qml_literals.py", "check_qml_strings.py", "check_qml_tests.py", "check_qml_motion.py"]
-DOC_CHECKS = ["check_setup_doc.py", "check_guide_screenshots.py", "check_site_address.py", "check_help_links.py"]
+DOC_CHECKS = ["check_setup_doc.py", "check_guide_screenshots.py", "check_site_address.py", "check_help_links.py", "check_site_kit.py"]
+# Builds the site, so it needs the packages of requirements/docs.txt; CI installs them. Skipped here when they are missing.
+SITE_CHECK = "check_site_pages.py"
 
 
 def find_infra() -> Path | None:
@@ -63,6 +66,11 @@ def main() -> int:
     for script in DOC_CHECKS:
         if subprocess.call([sys.executable, str(HERE / script), "--root", str(root)]) != 0:
             status = 1
+    if subprocess.call([sys.executable, "-c", "import mkdocs, material"], stderr=subprocess.DEVNULL) == 0:
+        if subprocess.call([sys.executable, str(HERE / SITE_CHECK), "--root", str(root)]) != 0:
+            status = 1
+    else:
+        print(f"{SITE_CHECK}: skipped, mkdocs-material is not installed (pip install -r requirements/docs.txt)")
     return status
 
 

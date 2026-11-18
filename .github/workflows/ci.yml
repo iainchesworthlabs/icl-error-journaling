@@ -381,6 +381,12 @@ jobs:
         run: python3 tools/ci/check_site_address.py
       - name: Check the help links of the app against the guide
         run: python3 tools/ci/check_help_links.py
+      - name: Check the site kit and the Field Test palette
+        run: python3 tools/ci/check_site_kit.py
+      - name: Build the site and check the Field Test pages
+        run: |
+          python3 -m pip install --quiet -r requirements/docs.txt
+          python3 tools/ci/check_site_pages.py
       - name: Check for confidential terms
         env:
           CONFIDENTIAL_TERMS: ${{ secrets.CONFIDENTIAL_TERMS }}
