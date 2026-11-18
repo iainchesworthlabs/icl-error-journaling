@@ -46,9 +46,9 @@ QString text_of(UiRig& rig, const char* name)
 TEST_CASE("last_bar.line: shows the latest line and the count of today", "[ui][last_bar]")
 {
     UiRig rig;
-    QQuickItem* bar = load_bar(rig, QStringLiteral("10:20  T| Mute Delay"), 7);
+    QQuickItem* bar = load_bar(rig, QStringLiteral("10:20  T| Stopped Responding"), 7);
 
-    CHECK(text_of(rig, "lastBarLine") == QStringLiteral("10:20  T| Mute Delay"));
+    CHECK(text_of(rig, "lastBarLine") == QStringLiteral("10:20  T| Stopped Responding"));
     CHECK(text_of(rig, "lastBarCount") == QStringLiteral("7 today"));
     CHECK(text_of(rig, "lastBarCaption") == QStringLiteral("LAST"));
     CHECK(require_item(rig, QStringLiteral("lastBarCount"))->isVisible());
@@ -101,7 +101,7 @@ TEST_CASE("last_bar.line: on one row the caption sits on the line's baseline", "
     for (const int count : {0, 7})
     {
         UiRig rig;
-        load_bar(rig, count > 0 ? QStringLiteral("10:20  T| Mute Delay") : QString(), count);
+        load_bar(rig, count > 0 ? QStringLiteral("10:20  T| Stopped Responding") : QString(), count);
         QQuickItem* caption = require_item(rig, QStringLiteral("lastBarCaption"));
         QQuickItem* line = require_item(rig, QStringLiteral("lastBarLine"));
         const double caption_baseline = rig.geometry(caption).top() + caption->baselineOffset();
@@ -132,7 +132,7 @@ TEST_CASE("last_bar.line: a long line is cut on the row, and the name keeps it w
 TEST_CASE("last_bar.line: a tap opens Review, once", "[ui][last_bar]")
 {
     UiRig rig;
-    QQuickItem* bar = load_bar(rig, QStringLiteral("10:20  T| Mute Delay"), 7);
+    QQuickItem* bar = load_bar(rig, QStringLiteral("10:20  T| Stopped Responding"), 7);
     QSignalSpy tapped(bar, SIGNAL(tapped()));
 
     rig.tap(bar);
@@ -153,7 +153,7 @@ TEST_CASE("last_bar.line: a tap opens Review, once", "[ui][last_bar]")
 TEST_CASE("last_bar.skeleton: the shape only, with no text, role or touch", "[ui][last_bar]")
 {
     UiRig rig;
-    QQuickItem* bar = load_bar(rig, QStringLiteral("10:20  T| Mute Delay"), 7, true);
+    QQuickItem* bar = load_bar(rig, QStringLiteral("10:20  T| Stopped Responding"), 7, true);
     CHECK(rig.geometry(bar).height() == 44);
     CHECK_FALSE(require_item(rig, QStringLiteral("lastBarLine"))->isVisible());
     CHECK_FALSE(require_item(rig, QStringLiteral("lastBarCaption"))->isVisible());
@@ -178,7 +178,7 @@ TEST_CASE("last_bar.a11y: names, 44 pt target and the text scales, in light and 
         rig.set_dark(dark);
         for (const int count : {0, 1, 7, 128})
         {
-            const QString line = count == 0 ? QString() : QStringLiteral("10:20  T| Mute Delay");
+            const QString line = count == 0 ? QString() : QStringLiteral("10:20  T| Stopped Responding");
             QQuickItem* bar = load_bar(rig, line, count);
             INFO((dark ? "dark" : "light") << ", " << count << " entries");
             expect_clean(check_everything(rig));

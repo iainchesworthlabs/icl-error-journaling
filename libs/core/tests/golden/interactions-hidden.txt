@@ -6,7 +6,7 @@ Software Version: v1.4.2
 
 10:05 T| Wrong Response
 10:12 (Interaction) Spoke with someone
-10:20 T| Mute Delay
+10:20 T| Stopped Responding
 10:31 (Interaction) Played Morning Medley
 10:40 (Interaction) Spoke with someone
 10:45 (Free Text) Device restarted

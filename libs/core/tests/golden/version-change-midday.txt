@@ -6,7 +6,7 @@ Software Version: v1.4.2
 
 10:05 T| Wrong Response
 11:00 Software Version changed: v1.4.2 → v1.5.0
-11:30 T| Mute Delay
+11:30 T| Stopped Responding
 12:00 UNIT # changed: UNIT-27 → UNIT-31
 13:00 Location changed: North Site → South Site
-13:30 T| Speech Delay
+13:30 T| Timed Out

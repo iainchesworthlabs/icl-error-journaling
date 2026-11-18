@@ -59,9 +59,9 @@ MIXED = [
     ("09:42", "T|", "Wrong Response"),
     ("10:05", "T|", "Wrong Response"),
     ("10:20", "(Interaction)", "Spoke with Alex Sample"),
-    ("10:30", "T|", "Mute Delay"),
+    ("10:30", "T|", "Stopped Responding"),
     ("10:48", "(Interaction)", "Played Morning Medley"),
-    ("11:02", "T|", "Wrong Track Played – asked for Evening Song"),
+    ("11:02", "T|", "Wrong Output – asked for Evening Song"),
     ("11:15", "(Interaction)", "Greeted"),
 ]
 
@@ -124,7 +124,7 @@ class Page(fold.Page):
         return mixed(lambda: fold.Page.log_strip(self, rows))
 
     def last_bar(self) -> str:
-        return super().last_bar().replace("10:20  T| Mute Delay", "11:15  (Interaction) Greeted")
+        return super().last_bar().replace("10:20  T| Stopped Responding", "11:15  (Interaction) Greeted")
 
     # ---- the board ----
 

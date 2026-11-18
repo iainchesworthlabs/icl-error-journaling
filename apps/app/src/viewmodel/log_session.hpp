@@ -299,8 +299,8 @@ signals:
     void unsharedChanged();
     /// A tap on an error type could not be saved: the commit failed or too many writes were waiting. Emitted just after
     /// the `writeFailed("recordError", ...)` of the same failure, which is unchanged, so a screen that wants the name
-    /// of the type listens to this one. `title` is "Mute Delay wasn't saved" and `message` is "Nothing was added to the
-    /// log. Tap Mute Delay again to log it.", with the typographic apostrophe, both through `tr`.
+    /// of the type listens to this one. `title` is "Stopped Responding wasn't saved" and `message` is "Nothing was added to the
+    /// log. Tap Stopped Responding again to log it.", with the typographic apostrophe, both through `tr`.
     void recordFailed(const QString& errorTypeId, const QString& errorTypeName, const QString& title,
                       const QString& message);
     void newLogStarted(); // Stage 4 opens Today's details

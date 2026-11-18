@@ -236,7 +236,7 @@ TEST_CASE("The board layout puts a type on the tile of its position and never re
 
     model.refresh(configuration);
 
-    CHECK(model.data(model.index(0), BoardLayoutModel::LABEL).toString() == "Navigation Failure");
+    CHECK(model.data(model.index(0), BoardLayoutModel::LABEL).toString() == "Stopped Unexpectedly");
     CHECK(model.data(model.index(0), BoardLayoutModel::COLOUR_SLOT).toInt() == 11);
     CHECK(model.data(model.index(10), BoardLayoutModel::COLOUR_SLOT).toInt() == 1);
     CHECK(model.data(model.index(4), BoardLayoutModel::IS_EMPTY).toBool());

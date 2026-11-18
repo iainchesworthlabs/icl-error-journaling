@@ -28,10 +28,10 @@ QString list()
         rows += QStringLiteral(R"(
             SwipeRow {
                 objectName: "row%1"
-                accessibleName: "10:%2 Mute Delay"
+                accessibleName: "10:%2 Stopped Responding"
                 Text {
                     width: parent.width
-                    text: "Mute Delay"
+                    text: "Stopped Responding"
                     color: Theme.colour.textPrimary
                     font: Theme.font.bodySmall.font
                     wrapMode: Text.WordWrap
@@ -307,7 +307,7 @@ TEST_CASE("swipe_row.accessible: the row is a button, and Copy and Delete are re
     QAccessibleInterface* iface = QAccessible::queryAccessibleInterface(face);
     REQUIRE(iface != nullptr);
     CHECK(iface->role() == QAccessible::Button);
-    CHECK(iface->text(QAccessible::Name) == QStringLiteral("10:14 Mute Delay"));
+    CHECK(iface->text(QAccessible::Name) == QStringLiteral("10:14 Stopped Responding"));
     press_action(face);
     CHECK(activated.count() == 1);
 
@@ -320,8 +320,8 @@ TEST_CASE("swipe_row.accessible: the row is a button, and Copy and Delete are re
             names.push_back(node.m_Name);
         }
     }
-    CHECK(names == QStringList{QStringLiteral("10:14 Mute Delay"), QStringLiteral("Copy, 10:14 Mute Delay"),
-                               QStringLiteral("Delete, 10:14 Mute Delay")});
+    CHECK(names == QStringList{QStringLiteral("10:14 Stopped Responding"), QStringLiteral("Copy, 10:14 Stopped Responding"),
+                               QStringLiteral("Delete, 10:14 Stopped Responding")});
 
     QAccessibleInterface* copy = QAccessible::queryAccessibleInterface(rig.find(QStringLiteral("copyAction"), row));
     QAccessibleInterface* del = QAccessible::queryAccessibleInterface(rig.find(QStringLiteral("deleteAction"), row));
@@ -381,9 +381,9 @@ TEST_CASE("swipe_row.labels: in a tall row the action labels stay within a touch
     REQUIRE(load_host(rig, QStringLiteral(R"(
         SwipeRow {
             objectName: "tall"
-            accessibleName: "10:20 Mute Delay"
+            accessibleName: "10:20 Stopped Responding"
             minimumHeight: 240
-            Text { width: parent.width; text: "Mute Delay" }
+            Text { width: parent.width; text: "Stopped Responding" }
         })")) != nullptr);
     QQuickItem* row = rig.find(QStringLiteral("tall"));
     REQUIRE(row != nullptr);
@@ -396,8 +396,8 @@ TEST_CASE("swipe_row.labels: in a tall row the action labels stay within a touch
     REQUIRE(load_host(normal, QStringLiteral(R"(
         SwipeRow {
             objectName: "short"
-            accessibleName: "10:20 Mute Delay"
-            Text { width: parent.width; text: "Mute Delay" }
+            accessibleName: "10:20 Stopped Responding"
+            Text { width: parent.width; text: "Stopped Responding" }
         })")) != nullptr);
     QQuickItem* short_row = normal.find(QStringLiteral("short"));
     QQuickItem* short_label = normal.find(QStringLiteral("swipeActionLabel"), short_row);

@@ -81,8 +81,8 @@ TEST_CASE("The context resolves live, retired and renamed types, locations and t
     Sample sample;
     Configuration configuration = sample.configuration();
     const ErrorTypeId live = type_named(configuration, "Wrong Response");
-    const ErrorTypeId retired = type_named(configuration, "Volume Jump");
-    const ErrorTypeId renamed = type_named(configuration, "Mute Delay");
+    const ErrorTypeId retired = type_named(configuration, "Value Out of Range");
+    const ErrorTypeId renamed = type_named(configuration, "Stopped Responding");
     for (ErrorType& type : configuration.m_ErrorTypes)
     {
         if (type.m_Id == retired)
@@ -100,7 +100,7 @@ TEST_CASE("The context resolves live, retired and renamed types, locations and t
     const ExportContext context = ExportContextBuilder(sample.m_Source, sample.m_Zones).build();
 
     CHECK(context.m_ErrorTypeName(live) == "Wrong Response");
-    CHECK(context.m_ErrorTypeName(retired) == "Volume Jump"); // retired types still resolve (a past log uses them)
+    CHECK(context.m_ErrorTypeName(retired) == "Value Out of Range"); // retired types still resolve (a past log uses them)
     CHECK(context.m_ErrorTypeName(renamed) == "Mute Lag");    // the lookup gives the current name
     CHECK(context.m_LocationName(location_named(configuration, "North Site")) == "North Site");
     CHECK(context.m_LocationName(location_named(configuration, "South Site")) == "South Site"); // retired
@@ -186,7 +186,7 @@ TEST_CASE("Building the context twice from an unchanged configuration renders id
     sample.m_Source.set(configuration);
     Log log(prd_header(configuration));
     REQUIRE(log.add(error_at(1, 10, 5, type_named(configuration, "Wrong Response"), "Wrong Response")));
-    REQUIRE(log.add(error_at(2, 10, 20, type_named(configuration, "Mute Delay"), "Mute Delay")));
+    REQUIRE(log.add(error_at(2, 10, 20, type_named(configuration, "Stopped Responding"), "Stopped Responding")));
     REQUIRE(log.add(error_at(3, 11, 2, type_named(configuration, "Wrong Response"), "Wrong Response")));
     const ExportContextBuilder builder(sample.m_Source, sample.m_Zones);
 
@@ -249,22 +249,22 @@ TEST_CASE("export_text of a log built by commands is the PRD example, byte for b
                                                             rig.storage().memory().load_log(day).value());
 
     const ErrorTypeId wrong_response = type_named(configuration, "Wrong Response");
-    const ErrorTypeId mute_delay = type_named(configuration, "Mute Delay");
-    const ErrorTypeId wrong_track = type_named(configuration, "Wrong Track Played");
-    const ErrorTypeId speech_delay = type_named(configuration, "Speech Delay");
+    const ErrorTypeId stopped_responding = type_named(configuration, "Stopped Responding");
+    const ErrorTypeId wrong_track = type_named(configuration, "Wrong Output");
+    const ErrorTypeId speech_delay = type_named(configuration, "Timed Out");
     Entry note;
     note.m_Id = sample_id<EntryId>(3);
     note.m_Captured = on_day(10, 30);
     note.m_Body = NoteEntry{std::nullopt, "Played Morning Medley"};
 
     REQUIRE(rig.document->add_entry(error_at(1, 10, 5, wrong_response, "Wrong Response"), Origin::USER, {}));
-    REQUIRE(rig.document->add_entry(error_at(2, 10, 20, mute_delay, "Mute Delay"), Origin::USER, {}));
+    REQUIRE(rig.document->add_entry(error_at(2, 10, 20, stopped_responding, "Stopped Responding"), Origin::USER, {}));
     REQUIRE(rig.document->add_entry(std::move(note), Origin::USER, {}));
-    REQUIRE(rig.document->add_entry(error_at(4, 11, 2, wrong_track, "Wrong Track Played", "asked for Evening Song"),
+    REQUIRE(rig.document->add_entry(error_at(4, 11, 2, wrong_track, "Wrong Output", "asked for Evening Song"),
                                     Origin::USER, {}));
     REQUIRE(
         rig.document->change_header(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(13, 15), sample_id<EntryId>(5), {}));
-    REQUIRE(rig.document->add_entry(error_at(6, 13, 40, speech_delay, "Speech Delay"), Origin::USER, {}));
+    REQUIRE(rig.document->add_entry(error_at(6, 13, 40, speech_delay, "Timed Out"), Origin::USER, {}));
     rig.gateway().run_all();
 
     const ExportContext context = ExportContextBuilder(sample.m_Source, sample.m_Zones).build();
@@ -299,9 +299,9 @@ TEST_CASE("A renamed type reads as it did when the entry was tapped; an entry wi
 {
     Sample sample;
     Configuration configuration = sample.configuration();
-    const ErrorTypeId mute = type_named(configuration, "Mute Delay");
+    const ErrorTypeId mute = type_named(configuration, "Stopped Responding");
     Log log(prd_header(configuration));
-    REQUIRE(log.add(error_at(1, 10, 20, mute, "Mute Delay")));
+    REQUIRE(log.add(error_at(1, 10, 20, mute, "Stopped Responding")));
     REQUIRE(log.add(error_at(2, 10, 40, mute, ""))); // written before name snapshots existed
 
     for (ErrorType& type : configuration.m_ErrorTypes)
@@ -316,6 +316,6 @@ TEST_CASE("A renamed type reads as it did when the entry was tapped; an entry wi
     const auto text = export_text(log, ExportContextBuilder(sample.m_Source, sample.m_Zones).build());
 
     REQUIRE(text.has_value());
-    CHECK(text->find("\n10:20 T| Mute Delay") != std::string::npos);
+    CHECK(text->find("\n10:20 T| Stopped Responding") != std::string::npos);
     CHECK(text->find("\n10:40 T| Mute Lag") != std::string::npos);
 }

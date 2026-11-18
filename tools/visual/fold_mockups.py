@@ -588,11 +588,11 @@ def other_inner(p: Page) -> str:
     )
     on = "".join(
         [
-            row("Navigation Failure", p.tiles[10]),
-            row("Audio Drop Out", p.tiles[5]),
-            row("Track Not Found", p.tiles[3]),
+            row("Stopped Unexpectedly", p.tiles[10]),
+            row("Connection Lost", p.tiles[5]),
+            row("File Not Found", p.tiles[3]),
             row("Wrong Response", p.tiles[0], "2 today"),
-            row("Mute Delay", p.tiles[7], "1 today", last=True),
+            row("Stopped Responding", p.tiles[7], "1 today", last=True),
         ]
     )
     return (
@@ -670,7 +670,7 @@ def edit_entry_screen(p: Page) -> str:
         base.sheet_nav(p, "Cancel", "Edit entry", "Save")
         + f'<div style="padding: 0 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden">'
         f'<div style="background: {c["surfaceRaised"]}; border-radius: 14px; overflow: hidden; flex-shrink: 0">'
-        f"{field('Error', 'Wrong Track Played')}"
+        f"{field('Error', 'Wrong Output')}"
         f'<div style="display: flex; align-items: center; height: 48px; padding: 0 14px; font-size: 16px"><span style="flex-grow: 1">Time</span>'
         f'<span style="padding: 6px 10px; border-radius: 8px; background: {c["timeChipBackground"]}; font-size: 16px; font-weight: 500; '
         f'font-variant-numeric: tabular-nums">11:02</span></div></div>'
@@ -680,7 +680,7 @@ def edit_entry_screen(p: Page) -> str:
         f'margin-left: 1px; vertical-align: -3px; background: {c["primaryText"]}"></span></div>'
         f"{p.section_label('In the shared log')}"
         f'<div style="background: {c["surfaceRaised"]}; border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.45">'
-        f"11:02 T| Wrong Track Played – asked for Evening Song</div></div>"
+        f"11:02 T| Wrong Output – asked for Evening Song</div></div>"
     )
     fold = int(p.f.fold_at)
     left, right = p.content()

@@ -311,8 +311,8 @@ TEST_CASE("Another tile takes the slot, and the earlier tap can no longer be und
     {
         UndoRig rig;
         rig.commit(tap(1, melbourne(10, 20), 1, "Wrong Response"));
-        rig.commit(tap(2, melbourne(10, 21), 2, "Mute Delay"));
-        CHECK(rig.text() == "Mute Delay logged at 10:21");
+        rig.commit(tap(2, melbourne(10, 21), 2, "Stopped Responding"));
+        CHECK(rig.text() == "Stopped Responding logged at 10:21");
         CHECK(rig.controller.repeat_count() == 1);
 
         REQUIRE(rig.controller.undo());
@@ -326,7 +326,7 @@ TEST_CASE("Another tile takes the slot, and the earlier tap can no longer be und
     {
         UndoRig rig;
         rig.commit(tap(1, melbourne(10, 20), 1, "Wrong Response"));
-        rig.commit(tap(2, melbourne(10, 21), 2, "Mute Delay"));
+        rig.commit(tap(2, melbourne(10, 21), 2, "Stopped Responding"));
         rig.commit(tap(3, melbourne(10, 22), 1, "Wrong Response"));
         CHECK(rig.text() == "Wrong Response logged at 10:22");
         CHECK(rig.controller.repeat_count() == 1);
@@ -732,7 +732,7 @@ TEST_CASE("A delete replaces a tap toast, which can then no longer be undone", "
 {
     UndoRig rig;
     rig.commit(tap(1, melbourne(10, 20)));
-    rig.commit(tap(2, melbourne(10, 21), 2, "Mute Delay"));
+    rig.commit(tap(2, melbourne(10, 21), 2, "Stopped Responding"));
     REQUIRE(rig.document->set_deleted(entry_id(1), true, Origin::USER, rig.count(rig.m_Done)));
     rig.gateway().run_all();
 
@@ -740,7 +740,7 @@ TEST_CASE("A delete replaces a tap toast, which can then no longer be undone", "
     REQUIRE(rig.controller.undo());
     rig.gateway().run_all();
     CHECK_FALSE(rig.deleted(1)); // restored
-    CHECK_FALSE(rig.deleted(2)); // Mute Delay stays
+    CHECK_FALSE(rig.deleted(2)); // Stopped Responding stays
 }
 
 // ------------------------------------------------------------------------------------------- new log and archive

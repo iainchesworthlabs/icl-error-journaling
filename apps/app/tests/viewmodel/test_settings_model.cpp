@@ -596,7 +596,7 @@ TEST_CASE("A file that cannot be imported is refused with messages in file order
     SECTION("duplicate ids and names are all reported, in the order of the file")
     {
         std::string text = replace_first(sample_text(), "0000000000a2", "0000000000a1");
-        text = replace_first(text, "Wrong Track Played", "Wrong Response");
+        text = replace_first(text, "Wrong Output", "Wrong Response");
         rig.store().add_file("/f.json", text);
         rig.m_Settings.loadImport("/f.json");
         rig.m_Gateway.run_all();

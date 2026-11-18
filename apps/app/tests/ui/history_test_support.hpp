@@ -199,12 +199,12 @@ private:
     {
         std::vector<Entry> entries;
         entries.push_back(review::error_at(m_Configuration, 1, 10, 5));
-        entries.push_back(review::error_at(m_Configuration, 2, 10, 20, "Mute Delay"));
+        entries.push_back(review::error_at(m_Configuration, 2, 10, 20, "Stopped Responding"));
         entries.push_back(review::note_at(3, 10, 30, "Played Morning Medley"));
         entries.push_back(
-            review::error_at(m_Configuration, 4, 11, 2, "Wrong Track Played", std::string("asked for Evening Song")));
+            review::error_at(m_Configuration, 4, 11, 2, "Wrong Output", std::string("asked for Evening Song")));
         entries.push_back(review::change_at(5, 13, 15, HeaderField::SOFTWARE_VERSION, "1.5.0"));
-        entries.push_back(review::error_at(m_Configuration, 6, 13, 40, "Speech Delay"));
+        entries.push_back(review::error_at(m_Configuration, 6, 13, 40, "Timed Out"));
         return entries;
     }
 

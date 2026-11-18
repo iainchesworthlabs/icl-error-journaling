@@ -57,7 +57,7 @@ as the application, plus the stubs in `tests/ui/stubs/` that only the rig's own 
 TEST_CASE("tile: the second tap of a double-tap asks on its touch-down", "[ui][tile]")
 {
     ej::ui::UiRig rig;
-    QQuickItem* tile = rig.load("Tile", {{"typeId", "mute-delay"}, {"label", "Mute Delay"} /* required properties */});
+    QQuickItem* tile = rig.load("Tile", {{"typeId", "mute-delay"}, {"label", "Stopped Responding"} /* required properties */});
     REQUIRE(tile != nullptr);                     // rig.errors() says why not
     rig.tap(tile);                                // the first tap asks for nothing
     const int finger = rig.press(tile);           // touch-down of the second tap: the handler has run

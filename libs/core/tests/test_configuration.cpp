@@ -392,7 +392,7 @@ TEST_CASE("An error says what it is about as data, as well as in words", "[confi
 
     SECTION("a blank name")
     {
-        const auto errors = errors_of(edited(base, "\"name\": \"Mute Delay\"", "\"name\": \" \""));
+        const auto errors = errors_of(edited(base, "\"name\": \"Stopped Responding\"", "\"name\": \" \""));
         REQUIRE(errors.size() == 1);
         CHECK(errors[0].m_Problem == Problem::EMPTY);
         CHECK(errors[0].m_Section == "error_types");
@@ -411,7 +411,7 @@ TEST_CASE("An error says what it is about as data, as well as in words", "[confi
     }
     SECTION("a name that is too long")
     {
-        const auto errors = errors_of(edited(base, "\"name\": \"Mute Delay\"", "\"name\": \"" + std::string(201, 'x') + "\""));
+        const auto errors = errors_of(edited(base, "\"name\": \"Stopped Responding\"", "\"name\": \"" + std::string(201, 'x') + "\""));
         REQUIRE(errors.size() == 1);
         CHECK(errors[0].m_Problem == Problem::TOO_LONG);
         CHECK(errors[0].m_Limit == 200);

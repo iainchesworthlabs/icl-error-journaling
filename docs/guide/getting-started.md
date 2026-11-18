@@ -40,6 +40,6 @@ one becomes a tile. [Setting up the board](setup.md) shows how.
 2. **Double-tap** a tile. A message says what was logged and when, and the tile's count goes up.
 3. If you tapped the wrong tile, tap **Undo** on the message within five seconds.
 
-![The Log screen with a board of tiles, the count on each tile and a message that says Mute Delay logged at 10:20 with an Undo button.](img/log-board.png){ width="270" }
+![The Log screen with a board of tiles, the count on each tile and a message that says Stopped Responding logged at 10:20 with an Undo button.](img/log-board.png){ width="270" }
 
 Next: [A day of logging](logging.md).

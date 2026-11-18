@@ -531,7 +531,7 @@ TEST_CASE("export.interaction_lines: error lines are byte for byte as they were 
     Log log(sample_header());
     REQUIRE(log.add(sample_error(1, 3)).has_value());
     REQUIRE(log.add(sample_interaction(2, 5)).has_value());
-    REQUIRE(log.add(sample_error(3, 20, "Mute Delay", "heard it twice")).has_value());
+    REQUIRE(log.add(sample_error(3, 20, "Stopped Responding", "heard it twice")).has_value());
 
     ExportContext context;
     context.m_Zones = &zones;
@@ -540,7 +540,7 @@ TEST_CASE("export.interaction_lines: error lines are byte for byte as they were 
     REQUIRE(first.has_value());
     REQUIRE(second.has_value());
     CHECK(*first == "00:03 T| Wrong Response");
-    CHECK(*second == "00:20 T| Mute Delay \xE2\x80\x93 heard it twice");
+    CHECK(*second == "00:20 T| Stopped Responding \xE2\x80\x93 heard it twice");
 
     for (const NameLevel level : {NameLevel::FULL, NameLevel::INITIALS, NameLevel::HIDDEN})
     {

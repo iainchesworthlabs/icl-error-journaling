@@ -43,7 +43,7 @@ namespace
 {
 
 constexpr const char* WRONG_RESPONSE = "00000000-0000-4000-8000-0000000000a1";
-constexpr const char* MUTE_DELAY = "00000000-0000-4000-8000-0000000000a8";
+constexpr const char* STOPPED_RESPONDING = "00000000-0000-4000-8000-0000000000a8";
 constexpr int OTHER_ROW = 11;
 
 /// The Settings screen over a real SettingsModel that holds the sample configuration. The gateway and the clock of the
@@ -564,8 +564,8 @@ TEST_CASE("settings.board_layout: Move later calls moveBoardTile once and the bo
     const QString fourth = fixture.tile_label(3);
     const int third_slot = log_slot(2);
     const int fourth_slot = log_slot(3);
-    CHECK(third == "Wrong Track Played");
-    CHECK(fourth == "Track Not Found");
+    CHECK(third == "Wrong Output");
+    CHECK(fourth == "File Not Found");
 
     fixture.tap(QStringLiteral("miniTile2"));
     fixture.tap(QStringLiteral("miniMoveLater"));
@@ -626,14 +626,14 @@ TEST_CASE(
     QQuickItem* own = fixture.require(QStringLiteral("settingsPickerType_%1").arg(WRONG_RESPONSE));
     CHECK(own->property("checked").toBool());
     CHECK(own->property("value").toString() == "Position 1");
-    CHECK_FALSE(fixture.require(QStringLiteral("settingsPickerType_%1").arg(MUTE_DELAY))->property("checked").toBool());
+    CHECK_FALSE(fixture.require(QStringLiteral("settingsPickerType_%1").arg(STOPPED_RESPONDING))->property("checked").toBool());
 
     // A type that is on the board elsewhere swaps places with the tile's.
-    fixture.m_Ui.tap(fixture.require(QStringLiteral("settingsPickerType_%1").arg(MUTE_DELAY)));
+    fixture.m_Ui.tap(fixture.require(QStringLiteral("settingsPickerType_%1").arg(STOPPED_RESPONDING)));
     fixture.m_Ui.settle();
     fixture.m_Ui.advance(500ms);
     CHECK(fixture.saves() == before + 1);
-    CHECK(fixture.tile_label(0) == "Mute Delay");
+    CHECK(fixture.tile_label(0) == "Stopped Responding");
     CHECK(fixture.tile_label(7) == "Wrong Response");
     CHECK(fixture.shown(QStringLiteral("sheetPanel")) == nullptr);
 
@@ -657,7 +657,7 @@ TEST_CASE(
     CHECK(fixture.shown(QStringLiteral("sheetPanel")) == nullptr);
 }
 
-/// The sample with Track Skipped retired, so that position 5 is empty.
+/// The sample with Step Skipped retired, so that position 5 is empty.
 void empty_position_five(Fixture& fixture)
 {
     REQUIRE(fixture.settings().retireErrorType(QStringLiteral("00000000-0000-4000-8000-0000000000a5")).isEmpty());
@@ -739,7 +739,7 @@ TEST_CASE("settings.new_type: a taken name is refused in the sheet and nothing i
     fixture.m_Ui.advance(500ms);
     fixture.tap(QStringLiteral("settingsPickerNewType"));
     fixture.m_Ui.advance(500ms);
-    replace_text(fixture, QStringLiteral("mute delay"));
+    replace_text(fixture, QStringLiteral("stopped responding"));
     fixture.tap(QStringLiteral("navTrailing"));
     fixture.m_Ui.settle();
 
@@ -803,7 +803,7 @@ TEST_CASE("settings.board_limit: a change the model refuses shows its words inli
     // The first save finishes; the refusal stays until it is dismissed or another call succeeds.
     fixture.m_Ui.settle();
     CHECK(fixture.saves() == before + 1);
-    CHECK(fixture.tile_label(3) == "Wrong Track Played");
+    CHECK(fixture.tile_label(3) == "Wrong Output");
     CHECK(fixture.shown(QStringLiteral("settingsMessage")) != nullptr);
     fixture.tap(QStringLiteral("bannerClose"));
     CHECK(fixture.shown(QStringLiteral("settingsMessage")) == nullptr);
@@ -813,7 +813,7 @@ TEST_CASE("settings.board_limit: a change the model refuses shows its words inli
     CHECK(fixture.settings().saving());
     fixture.tap(QStringLiteral("miniReplace"));
     fixture.m_Ui.advance(500ms);
-    fixture.m_Ui.tap(fixture.require(QStringLiteral("settingsPickerType_%1").arg(MUTE_DELAY)));
+    fixture.m_Ui.tap(fixture.require(QStringLiteral("settingsPickerType_%1").arg(STOPPED_RESPONDING)));
     fixture.m_Ui.advance(500ms);
     CHECK(fixture.shown(QStringLiteral("sheetPanel")) != nullptr);
     CHECK(fixture.shown(QStringLiteral("settingsPickerMessage")) != nullptr);
@@ -828,7 +828,7 @@ TEST_CASE("settings.board_limit: a write that fails shows the model's words", "[
     fixture.tap(QStringLiteral("miniTile2"));
     fixture.tap(QStringLiteral("miniMoveLater"));
     fixture.m_Ui.settle();
-    CHECK(fixture.tile_label(2) == "Wrong Track Played");
+    CHECK(fixture.tile_label(2) == "Wrong Output");
     CHECK(fixture.shown(QStringLiteral("settingsMessage")) != nullptr);
 }
 
@@ -968,7 +968,7 @@ TEST_CASE("settings.voiceover: rows read their label and value, the switch reads
     CHECK(name_of(QStringLiteral("miniReplace")).m_Role == QAccessible::Button);
     CHECK(accessible_press(fixture.require(QStringLiteral("miniMoveLater"))));
     fixture.m_Ui.settle();
-    CHECK(fixture.tile_label(5) == "Track Skipped");
+    CHECK(fixture.tile_label(5) == "Step Skipped");
 
     // The pages: rows are buttons, a choice reads as checked.
     CHECK(accessible_press(fixture.require(QStringLiteral("settingsTimeFormat"))));
@@ -1043,7 +1043,7 @@ TEST_CASE("settings.a11y: the picker sheet passes the checks on its own, in ligh
                       {QStringLiteral("overrideBottom"), 34}});
         REQUIRE(picker != nullptr);
         INFO(rig.errors().toStdString());
-        QMetaObject::invokeMethod(picker, "openFor", Q_ARG(int, 3), Q_ARG(QString, QString(MUTE_DELAY)));
+        QMetaObject::invokeMethod(picker, "openFor", Q_ARG(int, 3), Q_ARG(QString, QString(STOPPED_RESPONDING)));
         rig.advance(500ms);
         expect_clean(check_everything(rig, min_target));
         expect_clean(check_safe_area(rig, 59, 0));

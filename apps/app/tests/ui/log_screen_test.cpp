@@ -84,7 +84,7 @@ namespace
 {
 
 constexpr int WRONG_RESPONSE_ROW = 0;
-constexpr int MUTE_DELAY_ROW = 7;
+constexpr int STOPPED_RESPONDING_ROW = 7;
 constexpr int OTHER_ROW = 11;
 constexpr int COVERED_BY_TOAST_FROM = 9;
 constexpr int ROWS = 12;
@@ -648,7 +648,7 @@ TEST_CASE(
     CHECK_FALSE(screen.named(QStringLiteral("noteInput"))->isEnabled());
 
     // A touch does nothing: no haptic, nothing sent to the session.
-    screen.rig.tap(screen.tile(MUTE_DELAY_ROW));
+    screen.rig.tap(screen.tile(STOPPED_RESPONDING_ROW));
     screen.rig.tap(screen.named(QStringLiteral("logHeaderCard")));
     CHECK(sim.events.count(EventKind::HAPTIC) == 0);
     CHECK(sim.gateway.pending() == 0);
@@ -659,9 +659,9 @@ TEST_CASE(
     screen.rig.layout();
 
     // The labels are there now, and the shapes are where they were.
-    CHECK(screen.inside(screen.tile(MUTE_DELAY_ROW), QStringLiteral("tileLabel"))->property("text").toString() ==
-          QStringLiteral("Mute Delay"));
-    CHECK(screen.inside(screen.tile(MUTE_DELAY_ROW), QStringLiteral("tileLabel"))->isVisible());
+    CHECK(screen.inside(screen.tile(STOPPED_RESPONDING_ROW), QStringLiteral("tileLabel"))->property("text").toString() ==
+          QStringLiteral("Stopped Responding"));
+    CHECK(screen.inside(screen.tile(STOPPED_RESPONDING_ROW), QStringLiteral("tileLabel"))->isVisible());
     for (int row = 0; row < ROWS; ++row)
     {
         CAPTURE(row);
@@ -682,7 +682,7 @@ TEST_CASE("log.tap_flow: the haptic comes first, then the commit, then the count
     CHECK_FALSE(screen.toast_shown());
 
     // One tap logs nothing: no impact, no entry asked for.
-    QQuickItem* mute = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* mute = screen.tile(STOPPED_RESPONDING_ROW);
     screen.rig.tap(mute);
     CHECK(sim.events.count(EventKind::HAPTIC) == 0);
     CHECK(sim.gateway.pending() == 0);
@@ -693,7 +693,7 @@ TEST_CASE("log.tap_flow: the haptic comes first, then the commit, then the count
     CHECK(sim.events.count(EventKind::HAPTIC, "impact") == 1);
     CHECK(sim.events.count(EventKind::COMMIT) == 0);
     CHECK(sim.gateway.pending() == 1);
-    CHECK_FALSE(screen.badge_visible(MUTE_DELAY_ROW));
+    CHECK_FALSE(screen.badge_visible(STOPPED_RESPONDING_ROW));
     CHECK_FALSE(screen.toast_shown());
     CHECK(screen.last_line() == QStringLiteral("No entries yet"));
     screen.rig.release(finger);
@@ -714,18 +714,18 @@ TEST_CASE("log.tap_flow: the haptic comes first, then the commit, then the count
     CHECK(*commit < *toast);
     CHECK(*commit < *confirmation);
 
-    CHECK(screen.badge_visible(MUTE_DELAY_ROW));
-    CHECK(screen.badge_text(MUTE_DELAY_ROW) == QStringLiteral("1"));
+    CHECK(screen.badge_visible(STOPPED_RESPONDING_ROW));
+    CHECK(screen.badge_text(STOPPED_RESPONDING_ROW) == QStringLiteral("1"));
     CHECK(screen.toast_shown());
-    CHECK(screen.toast_text() == QStringLiteral("Mute Delay logged at 08:55"));
-    CHECK(screen.last_line().contains(QStringLiteral("Mute Delay")));
+    CHECK(screen.toast_text() == QStringLiteral("Stopped Responding logged at 08:55"));
+    CHECK(screen.last_line().contains(QStringLiteral("Stopped Responding")));
     CHECK(screen.text_of(QStringLiteral("lastBarCount")) == QStringLiteral("1 today"));
 
     // Another double-tap on the same tile, while the toast shows: the count and the toast say two, and the toast stays
     // open.
     screen.rig.advance(WINDOW_RUN_OUT);
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
-    CHECK(screen.badge_text(MUTE_DELAY_ROW) == QStringLiteral("2"));
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
+    CHECK(screen.badge_text(STOPPED_RESPONDING_ROW) == QStringLiteral("2"));
     CHECK(screen.toast_text().contains(times(2)));
     CHECK(screen.toast_shown());
     CHECK(sim.events.count(EventKind::HAPTIC) == 2);
@@ -761,7 +761,7 @@ TEST_CASE("log.slide_off: the second touch slides off the tile and lifts: one ha
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
 
     screen.rig.tap(tile);
     screen.rig.advance(DOUBLE_TAP_GAP);
@@ -773,7 +773,7 @@ TEST_CASE("log.slide_off: the second touch slides off the tile and lifts: one ha
 
     CHECK(sim.events.count(EventKind::HAPTIC, "impact") == 1);
     CHECK(sim.entries().size() == 1);
-    CHECK(screen.badge_text(MUTE_DELAY_ROW) == QStringLiteral("1"));
+    CHECK(screen.badge_text(STOPPED_RESPONDING_ROW) == QStringLiteral("1"));
     CHECK(screen.toast_shown());
 }
 
@@ -782,9 +782,9 @@ TEST_CASE("log.undo: Undo removes the latest entry, closes the toast and the cou
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     REQUIRE(screen.toast_shown());
-    REQUIRE(screen.badge_visible(MUTE_DELAY_ROW));
+    REQUIRE(screen.badge_visible(STOPPED_RESPONDING_ROW));
     sim.events.clear();
 
     screen.rig.tap(screen.named(QStringLiteral("toastUndo")));
@@ -794,7 +794,7 @@ TEST_CASE("log.undo: Undo removes the latest entry, closes the toast and the cou
     CHECK(sim.entries().empty());
     CHECK_FALSE(sim.undo.active());
     CHECK_FALSE(screen.toast_shown());
-    CHECK_FALSE(screen.badge_visible(MUTE_DELAY_ROW));
+    CHECK_FALSE(screen.badge_visible(STOPPED_RESPONDING_ROW));
     CHECK(screen.last_line() == QStringLiteral("No entries yet"));
     // An undo gives no haptic of its own.
     CHECK(sim.events.count(EventKind::HAPTIC) == 0);
@@ -808,7 +808,7 @@ TEST_CASE("log.voiceover: activating a tile records once and fires the impact fi
     Screen screen(sim);
     QSignalSpy announced(screen.named(QStringLiteral("logToast")), SIGNAL(announced(QString)));
 
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
     REQUIRE(accessible_press(tile));
     CHECK(sim.events.count(EventKind::HAPTIC, "impact") == 1);
     CHECK(sim.gateway.pending() == 1);
@@ -819,13 +819,13 @@ TEST_CASE("log.voiceover: activating a tile records once and fires the impact fi
     CHECK(sim.entries().size() == 1);
     CHECK(sim.events.count(EventKind::HAPTIC) == 1);
     CHECK(announced.count() == 1);
-    CHECK(announced.first().first().toString() == QStringLiteral("Mute Delay logged at 08:55"));
+    CHECK(announced.first().first().toString() == QStringLiteral("Stopped Responding logged at 08:55"));
     // One activation is the double-tap of VoiceOver itself: no second is asked for, and no hint follows.
     screen.rig.advance(WINDOW_RUN_OUT);
     CHECK(sim.entries().size() == 1);
     CHECK_FALSE(screen.hint_shown());
     // The name carries the count once there is one.
-    CHECK(tile->property("accessibleName").toString().contains(QStringLiteral("Mute Delay")));
+    CHECK(tile->property("accessibleName").toString().contains(QStringLiteral("Stopped Responding")));
 }
 
 TEST_CASE("log.other: the Other tile opens the picker and never records", "[ui][log]")
@@ -1002,11 +1002,11 @@ TEST_CASE("log.dictation: the microphone starts and stops it, the words go into 
 
     screen.rig.tap(mic);
     CHECK(dictation.m_Starts == 1);
-    emit dictation.dictationText(QStringLiteral("mute delay"));
-    emit dictation.dictationText(QStringLiteral("mute delay near the stage"));
+    emit dictation.dictationText(QStringLiteral("stopped responding"));
+    emit dictation.dictationText(QStringLiteral("stopped responding near the stage"));
     screen.rig.layout();
-    CHECK(sim.session.draft() == QStringLiteral("mute delay near the stage"));
-    CHECK(screen.named(QStringLiteral("noteInput"))->property("text").toString() == QStringLiteral("mute delay near the stage"));
+    CHECK(sim.session.draft() == QStringLiteral("stopped responding near the stage"));
+    CHECK(screen.named(QStringLiteral("noteInput"))->property("text").toString() == QStringLiteral("stopped responding near the stage"));
 
     screen.rig.tap(mic);
     CHECK(dictation.m_Stops == 1);
@@ -1181,7 +1181,7 @@ TEST_CASE("log.banner: an empty header lists the missing fields in the card, tap
     CHECK(card->property("unitPrompt").toString() == QString::fromUtf8("UNIT \xE2\x80\x94"));
 
     // Nothing is blocked.
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     CHECK(sim.entries().size() == 1);
 
     REQUIRE(sim.session.correctHeader(QStringLiteral("unit_number"), QStringLiteral("27")));
@@ -1200,7 +1200,7 @@ TEST_CASE("log.banner: an empty header lists the missing fields in the card, tap
     CHECK(card->property("unitText").toString() == QStringLiteral("UNIT-27"));
     QQuickItem* strip = screen.named(QStringLiteral("headerStrip"));
     CHECK(strip->isVisible());
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     CHECK(sim.entries().size() == 2);
 
     REQUIRE(sim.session.correctVersion(QStringLiteral("1.4.2"), QStringLiteral("A1B2C3D")));
@@ -1224,18 +1224,18 @@ TEST_CASE("log.write_failed: a failing commit shows the banner, no count, no toa
     const QRectF board_before = screen.rig.geometry(screen.named(QStringLiteral("logBoard")));
 
     sim.storage.repository().fail_next(RepositoryOp::ADD_ENTRY);
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
 
     CHECK(banner->isVisible());
     // The banner names the type that was not saved (`session.recordFailed`), and there is one banner for it.
-    CHECK(screen.text_of(QStringLiteral("bannerTitle")) == QString::fromUtf8("Mute Delay wasn\xE2\x80\x99t saved"));
+    CHECK(screen.text_of(QStringLiteral("bannerTitle")) == QString::fromUtf8("Stopped Responding wasn\xE2\x80\x99t saved"));
     CHECK(screen.text_of(QStringLiteral("bannerMessage")) ==
-          QStringLiteral("Nothing was added to the log. Tap Mute Delay again to log it."));
+          QStringLiteral("Nothing was added to the log. Tap Stopped Responding again to log it."));
     CHECK(banner->property("floating").toBool());
     CHECK(sim.events.count(EventKind::WRITE_FAILED, "recordError") == 1);
     CHECK(sim.events.count(EventKind::CONFIRMATION) == 0);
     CHECK(sim.entries().empty());
-    CHECK_FALSE(screen.badge_visible(MUTE_DELAY_ROW));
+    CHECK_FALSE(screen.badge_visible(STOPPED_RESPONDING_ROW));
     CHECK_FALSE(screen.toast_shown());
     // The impact answered the finger, which is what it is for; there is no success haptic.
     CHECK(sim.events.count(EventKind::HAPTIC, "success") == 0);
@@ -1245,7 +1245,7 @@ TEST_CASE("log.write_failed: a failing commit shows the banner, no count, no toa
     CHECK(screen.rig.geometry(banner).top() == 59.0);
 
     // The next tap works, and the old complaint goes with it.
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     CHECK(sim.entries().size() == 1);
     CHECK_FALSE(banner->isVisible());
     CHECK(screen.toast_shown());
@@ -1258,7 +1258,7 @@ TEST_CASE("log.write_failed: the banner can be closed, and a failed undo shows i
     Screen screen(sim);
     QQuickItem* banner = screen.named(QStringLiteral("logWriteFailedBanner"));
 
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     sim.storage.repository().fail_next(RepositoryOp::SET_ENTRY_DELETED);
     screen.rig.tap(screen.named(QStringLiteral("toastUndo")));
     sim.gateway.run_all();
@@ -1286,7 +1286,7 @@ TEST_CASE("log.recovery_notice: a notice shows once, with its action, and can be
     CHECK(screen.inside(banner, QStringLiteral("bannerMessage"))->property("text").toString() ==
           sim.session.recovery_notice());
     // The tiles under it work.
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     CHECK(sim.entries().size() == 1);
 
     screen.rig.tap(screen.inside(banner, QStringLiteral("bannerClose")));
@@ -1434,7 +1434,7 @@ TEST_CASE("log.geometry: the cards and the board sit where the design has them",
     }
 
     // The toast floats 12 pt above the 83 pt tab bar, across the foot of the board, and moves nothing.
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     screen.rig.advance(400ms);
     const QRectF toast = screen.rig.geometry(screen.named(QStringLiteral("logToast")));
     CHECK(toast.bottom() == 874.0 - 83.0 - 12.0);
@@ -1453,7 +1453,7 @@ TEST_CASE("log.safe_area: nothing interactive is in the insets, at 59 and 34 and
     LogRig sim(Options().existing().short_templates());
     sim.load();
     Screen screen(sim);
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     screen.rig.advance(400ms);
 
     expect_clean(check_safe_area(screen.rig, 59, 34));
@@ -1505,7 +1505,7 @@ TEST_CASE("log.accessibility: the tree is named and reads in order with the mess
     };
 
     // Failure banner and toast both showing.
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     sim.storage.repository().fail_next(RepositoryOp::SET_ENTRY_DELETED);
     screen.rig.tap(screen.named(QStringLiteral("toastUndo")));
     sim.gateway.run_all();
@@ -1624,7 +1624,7 @@ TEST_CASE("longpress.opens_note: a hold beyond 500 ms on an empty composer opens
     Screen screen(sim);
 
     // A press shorter than the hold is a tap, and a tap logs nothing: no entry, no sheet.
-    screen.rig.hold(screen.tile(MUTE_DELAY_ROW), SHORT_PRESS);
+    screen.rig.hold(screen.tile(STOPPED_RESPONDING_ROW), SHORT_PRESS);
     sim.gateway.run_all();
     screen.rig.settle();
     screen.rig.advance(600ms);
@@ -1634,7 +1634,7 @@ TEST_CASE("longpress.opens_note: a hold beyond 500 ms on an empty composer opens
     CHECK(edit_sheet(screen) == nullptr);
 
     // A hold: the hold records the entry, and the sheet is open on it.
-    const int finger = screen.rig.press(screen.tile(MUTE_DELAY_ROW));
+    const int finger = screen.rig.press(screen.tile(STOPPED_RESPONDING_ROW));
     screen.rig.advance(400ms);
     CHECK(sim.gateway.pending() == 0); // not yet: the finger has been down for 400 ms
     CHECK_FALSE(edit_sheet_open(screen));
@@ -1679,7 +1679,7 @@ TEST_CASE("longpress.opens_note: Other, an empty position and a finger that slid
     CHECK(sim.entries().empty());
 
     // A finger that slides off the tile before 500 ms has gone: no sheet when the time comes.
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
     const int finger = screen.rig.press(tile);
     screen.rig.advance(200ms);
     screen.rig.move(finger, tile, QPointF(tile->width() + 60, tile->height() / 2));
@@ -1701,25 +1701,25 @@ TEST_CASE("longpress.records_once: a hold records one entry, not two, with one h
     Screen screen(sim);
 
     // Empty composer: the sheet path.
-    hold_and_commit(screen, sim, MUTE_DELAY_ROW);
+    hold_and_commit(screen, sim, STOPPED_RESPONDING_ROW);
     screen.rig.advance(500ms);
     CHECK(sim.entries().size() == 1);
     CHECK(sim.events.count(EventKind::HAPTIC, "impact") == 1);
     CHECK(sim.events.count(EventKind::HAPTIC) == 1);
     CHECK(sim.timeline.entry_count() == 1);
-    CHECK(screen.badge_text(MUTE_DELAY_ROW) == QStringLiteral("1"));
+    CHECK(screen.badge_text(STOPPED_RESPONDING_ROW) == QStringLiteral("1"));
     CHECK(edit_sheet_open(screen));
 
     // Cancel, then the draft path on the same tile: a second entry, and the count says two, not three.
     screen.rig.tap(screen.inside(edit_sheet(screen), QStringLiteral("navLeading")));
     screen.rig.advance(1000ms);
     type_draft(screen, sim, DEVICE_NOTE);
-    hold_and_commit(screen, sim, MUTE_DELAY_ROW);
+    hold_and_commit(screen, sim, STOPPED_RESPONDING_ROW);
     sim.gateway.run_all();
     screen.rig.settle();
     CHECK(sim.entries().size() == 2);
     CHECK(sim.events.count(EventKind::HAPTIC, "impact") == 2);
-    CHECK(screen.badge_text(MUTE_DELAY_ROW) == QStringLiteral("2"));
+    CHECK(screen.badge_text(STOPPED_RESPONDING_ROW) == QStringLiteral("2"));
     CHECK(sim.feedback.recorded().size() == 2);
 }
 
@@ -1730,7 +1730,7 @@ TEST_CASE("longpress.save: Save attaches the note to the entry, and it is on the
     sim.load();
     Screen screen(sim);
 
-    hold_and_commit(screen, sim, MUTE_DELAY_ROW);
+    hold_and_commit(screen, sim, STOPPED_RESPONDING_ROW);
     screen.rig.advance(500ms);
     REQUIRE(edit_sheet_open(screen));
     QQuickItem* sheet = edit_sheet(screen);
@@ -1748,7 +1748,7 @@ TEST_CASE("longpress.save: Save attaches the note to the entry, and it is on the
     CHECK(attached_note(entries.front()) == DEVICE_NOTE);
     // One line: the error and its note, as the shared log has it, and not a second line.
     CHECK(sim.timeline.entry_count() == 1);
-    CHECK(screen.last_line().contains(QStringLiteral("Mute Delay")));
+    CHECK(screen.last_line().contains(QStringLiteral("Stopped Responding")));
     CHECK(screen.last_line().contains(DEVICE_NOTE));
     CHECK(screen.text_of(QStringLiteral("lastBarCount")) == QStringLiteral("1 today"));
 }
@@ -1759,7 +1759,7 @@ TEST_CASE("longpress.cancel: Cancel closes the sheet and leaves the entry as the
     sim.load();
     Screen screen(sim);
 
-    hold_and_commit(screen, sim, MUTE_DELAY_ROW);
+    hold_and_commit(screen, sim, STOPPED_RESPONDING_ROW);
     screen.rig.advance(500ms);
     REQUIRE(edit_sheet_open(screen));
     QQuickItem* sheet = edit_sheet(screen);
@@ -1786,7 +1786,7 @@ TEST_CASE("longpress.slow_commit: the hold records the entry, and the sheet wait
     sim.load();
     Screen screen(sim);
 
-    const int finger = screen.rig.press(screen.tile(MUTE_DELAY_ROW));
+    const int finger = screen.rig.press(screen.tile(STOPPED_RESPONDING_ROW));
     screen.rig.advance(HOLD);
     screen.rig.release(finger);
     screen.rig.advance(500ms);
@@ -1813,7 +1813,7 @@ TEST_CASE("longpress.voiceover: no gesture is needed: activating a tile records 
     sim.load();
     Screen screen(sim);
 
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
     REQUIRE(accessible_press(tile));
     sim.gateway.run_all();
     screen.rig.settle();
@@ -1839,7 +1839,7 @@ TEST_CASE("longpress.draft_attaches: a hold with a draft attaches it to the same
     type_draft(screen, sim, DEVICE_NOTE);
 
     // Down, 500 ms: the hold records the entry and the draft is attached to it, and the finger is still on the tile.
-    const int finger = screen.rig.press(screen.tile(MUTE_DELAY_ROW));
+    const int finger = screen.rig.press(screen.tile(STOPPED_RESPONDING_ROW));
     screen.rig.advance(400ms);
     CHECK(sim.events.count(EventKind::HAPTIC) == 0); // a press alone has recorded nothing and has not touched the draft
     CHECK(sim.session.draft() == DEVICE_NOTE);
@@ -1861,8 +1861,8 @@ TEST_CASE("longpress.draft_attaches: a hold with a draft attaches it to the same
     CHECK(sim.timeline.entry_count() == 1);
     CHECK(screen.last_line().contains(DEVICE_NOTE));
     CHECK(screen.text_of(QStringLiteral("lastBarCount")) == QStringLiteral("1 today"));
-    CHECK(screen.badge_text(MUTE_DELAY_ROW) == QStringLiteral("1"));
-    CHECK(screen.toast_text() == QStringLiteral("Mute Delay logged at 08:55 with note"));
+    CHECK(screen.badge_text(STOPPED_RESPONDING_ROW) == QStringLiteral("1"));
+    CHECK(screen.toast_text() == QStringLiteral("Stopped Responding logged at 08:55 with note"));
     // One impact for the touch, and the note-saved confirmation after the commit (the sink's, as for a note).
     CHECK(sim.events.count(EventKind::HAPTIC, "impact") == 1);
     CHECK(sim.feedback.recorded().size() == 1);
@@ -1877,7 +1877,7 @@ TEST_CASE("longpress.draft_undo: one Undo removes the entry with its note and pu
     Screen screen(sim);
     QQuickItem* input = screen.named(QStringLiteral("noteInput"));
     type_draft(screen, sim, DEVICE_NOTE);
-    hold_and_commit(screen, sim, MUTE_DELAY_ROW);
+    hold_and_commit(screen, sim, STOPPED_RESPONDING_ROW);
     sim.gateway.run_all();
     screen.rig.settle();
     REQUIRE(sim.entries().size() == 1);
@@ -1891,7 +1891,7 @@ TEST_CASE("longpress.draft_undo: one Undo removes the entry with its note and pu
     // Gone, note and all: nothing is left of the entry and nothing of a note entry either.
     CHECK(sim.entries().empty());
     CHECK(sim.timeline.entry_count() == 0);
-    CHECK_FALSE(screen.badge_visible(MUTE_DELAY_ROW));
+    CHECK_FALSE(screen.badge_visible(STOPPED_RESPONDING_ROW));
     CHECK_FALSE(screen.toast_shown());
     // The draft is back in the composer, with the cursor at its end.
     CHECK(sim.session.draft() == DEVICE_NOTE);
@@ -1909,7 +1909,7 @@ TEST_CASE("longpress.draft_tap: a double-tap with a draft leaves the draft alone
     Screen screen(sim);
     type_draft(screen, sim, DEVICE_NOTE);
 
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     screen.rig.advance(600ms);
 
     const std::vector<Entry> entries = sim.entries();
@@ -1917,7 +1917,7 @@ TEST_CASE("longpress.draft_tap: a double-tap with a draft leaves the draft alone
     CHECK(attached_note(entries.front()).isEmpty());
     CHECK(sim.session.draft() == DEVICE_NOTE);
     CHECK(screen.named(QStringLiteral("noteInput"))->property("text").toString() == DEVICE_NOTE);
-    CHECK(screen.toast_text() == QStringLiteral("Mute Delay logged at 08:55"));
+    CHECK(screen.toast_text() == QStringLiteral("Stopped Responding logged at 08:55"));
     CHECK_FALSE(edit_sheet_open(screen));
     CHECK(sim.feedback.saved_notes().empty());
 
@@ -1937,7 +1937,7 @@ TEST_CASE("longpress.draft_slow_commit: a hold with a draft that passes before t
     Screen screen(sim);
     type_draft(screen, sim, DEVICE_NOTE);
 
-    const int finger = screen.rig.press(screen.tile(MUTE_DELAY_ROW));
+    const int finger = screen.rig.press(screen.tile(STOPPED_RESPONDING_ROW));
     screen.rig.advance(HOLD);
     screen.rig.release(finger);
     CHECK(sim.entries().empty());
@@ -1963,7 +1963,7 @@ TEST_CASE("longpress.draft_failed: when the attach cannot be saved the entry sta
     Screen screen(sim);
     type_draft(screen, sim, DEVICE_NOTE);
 
-    const int finger = screen.rig.press(screen.tile(MUTE_DELAY_ROW));
+    const int finger = screen.rig.press(screen.tile(STOPPED_RESPONDING_ROW));
     // The edit is the write to fail; the entry before it is saved.
     sim.storage.repository().fail_next(RepositoryOp::EDIT_ENTRY);
     screen.rig.advance(HOLD);
@@ -1979,7 +1979,7 @@ TEST_CASE("longpress.draft_failed: when the attach cannot be saved the entry sta
     CHECK(screen.named(QStringLiteral("logWriteFailedBanner"))->isVisible());
     CHECK(sim.feedback.saved_notes().empty());
     // The toast is the plain log's, and says so.
-    CHECK(screen.toast_text() == QStringLiteral("Mute Delay logged at 08:55"));
+    CHECK(screen.toast_text() == QStringLiteral("Stopped Responding logged at 08:55"));
 }
 
 TEST_CASE("longpress.note_action: with a draft each tile has a VoiceOver element 'Log <name> with note' that logs with it; "
@@ -2013,7 +2013,7 @@ TEST_CASE("longpress.note_action: with a draft each tile has a VoiceOver element
     CHECK(names.size() == 11);
     // A delegate for each row, over its tile; only the eleven that can be held are offered.
     CHECK(screen.rig.find_items(QStringLiteral("boardNoteAction")).size() == static_cast<std::size_t>(ROWS));
-    CHECK(names.contains(QStringLiteral("Log Mute Delay with note")));
+    CHECK(names.contains(QStringLiteral("Log Stopped Responding with note")));
     CHECK_FALSE(names.contains(QStringLiteral("Log Other with note")));
 
     // Spaces alone are no draft.
@@ -2026,7 +2026,7 @@ TEST_CASE("longpress.note_action: with a draft each tile has a VoiceOver element
     // VoiceOver activates it: no gesture, one entry, the draft on its line.
     const std::vector<QQuickItem*> actions = screen.rig.find_items(QStringLiteral("boardNoteAction"));
     REQUIRE(actions.size() == static_cast<std::size_t>(ROWS));
-    REQUIRE(accessible_press(actions[MUTE_DELAY_ROW]));
+    REQUIRE(accessible_press(actions[STOPPED_RESPONDING_ROW]));
     CHECK(sim.events.count(EventKind::HAPTIC, "impact") == 1);
     sim.gateway.run_all(); // the entry and the attach behind it
     screen.rig.settle();
@@ -2039,7 +2039,7 @@ TEST_CASE("longpress.note_action: with a draft each tile has a VoiceOver element
     screen.rig.advance(32ms);
     CHECK(with_note_names().isEmpty());
     CHECK(screen.rig.find_items(QStringLiteral("boardNoteAction")).empty());
-    CHECK(screen.toast_text() == QStringLiteral("Mute Delay logged at 08:55 with note"));
+    CHECK(screen.toast_text() == QStringLiteral("Stopped Responding logged at 08:55 with note"));
 }
 
 // ------------------------------------------------------------------------------------------------- the double-tap
@@ -2051,7 +2051,7 @@ TEST_CASE(
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
     QObject* pressing = screen.child(tile, QStringLiteral("tilePressIn"));
 
     // The first tap: no haptic, no press animation, nothing asked of the session.
@@ -2080,13 +2080,13 @@ TEST_CASE(
     // One entry, one haptic, the toast as it was, and no hint.
     CHECK(sim.entries().size() == 1);
     CHECK(sim.events.count(EventKind::HAPTIC) == 1);
-    CHECK(screen.badge_text(MUTE_DELAY_ROW) == QStringLiteral("1"));
-    CHECK(screen.toast_text() == QStringLiteral("Mute Delay logged at 08:55"));
+    CHECK(screen.badge_text(STOPPED_RESPONDING_ROW) == QStringLiteral("1"));
+    CHECK(screen.toast_text() == QStringLiteral("Stopped Responding logged at 08:55"));
     CHECK_FALSE(screen.hint_shown());
     CHECK(screen.hint() == nullptr);
 
     // Another double-tap while the toast shows is "x2" on it.
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     CHECK(sim.entries().size() == 2);
     CHECK(screen.toast_text().contains(times(2)));
 }
@@ -2097,7 +2097,7 @@ TEST_CASE("doubletap.window: two taps 250 ms apart log, two taps 400 ms apart ar
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
 
     screen.rig.tap(tile);
     screen.rig.advance(250ms);
@@ -2132,7 +2132,7 @@ TEST_CASE("doubletap.triple: a triple-tap logs once, and the fourth tap starts a
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
 
     const auto tap_after_gap = [&]
     {
@@ -2174,7 +2174,7 @@ TEST_CASE("doubletap.slide_off: a first tap that slides off is no tap, and a sec
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
     const QPointF outside(tile->width() + 60, tile->height() / 2);
 
     // The slid-off touch is nothing, so the tap after it is a first tap, and there is no hint for the lost one.
@@ -2207,7 +2207,7 @@ TEST_CASE("doubletap.hint: one tap shows 'Double-tap to log' after the window, a
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
     CHECK(screen.hint() == nullptr); // a board nobody taps wrongly pays nothing for it
 
     screen.rig.tap(tile);
@@ -2224,7 +2224,7 @@ TEST_CASE("doubletap.hint: one tap shows 'Double-tap to log' after the window, a
     CHECK(sim.entries().empty());
     CHECK(sim.events.count(EventKind::HAPTIC) == 0);
     CHECK_FALSE(screen.toast_shown());
-    CHECK_FALSE(screen.badge_visible(MUTE_DELAY_ROW));
+    CHECK_FALSE(screen.badge_visible(STOPPED_RESPONDING_ROW));
 
     // It takes no touch: nothing in it is a control or a pointer handler, and it is named for a screen reader.
     for (const Node& node : screen.rig.tree(hint))
@@ -2256,7 +2256,7 @@ TEST_CASE("doubletap.hint: it stands above the undo toast and never covers it", 
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    screen.double_tap_tile(sim, MUTE_DELAY_ROW);
+    screen.double_tap_tile(sim, STOPPED_RESPONDING_ROW);
     REQUIRE(screen.toast_shown());
 
     screen.rig.tap(screen.tile(0));
@@ -2277,7 +2277,7 @@ TEST_CASE("doubletap.hold: a tap and then a hold records once, at the second tou
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
 
     screen.rig.tap(tile);
     screen.rig.advance(DOUBLE_TAP_GAP);
@@ -2305,9 +2305,9 @@ TEST_CASE("doubletap.hold_then_tap: a hold is not a tap, so the tap after it sta
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    QQuickItem* tile = screen.tile(MUTE_DELAY_ROW);
+    QQuickItem* tile = screen.tile(STOPPED_RESPONDING_ROW);
 
-    hold_and_commit(screen, sim, MUTE_DELAY_ROW);
+    hold_and_commit(screen, sim, STOPPED_RESPONDING_ROW);
     screen.rig.advance(500ms);
     REQUIRE(sim.entries().size() == 1);
     // Close the sheet that the hold opened.
@@ -2327,7 +2327,7 @@ TEST_CASE("doubletap.voiceover: one activation logs once, as the double-tap of V
     sim.load();
     Screen screen(sim);
 
-    REQUIRE(accessible_press(screen.tile(MUTE_DELAY_ROW)));
+    REQUIRE(accessible_press(screen.tile(STOPPED_RESPONDING_ROW)));
     sim.gateway.run_all();
     screen.rig.settle();
     screen.rig.advance(WINDOW_RUN_OUT);
@@ -2336,7 +2336,7 @@ TEST_CASE("doubletap.voiceover: one activation logs once, as the double-tap of V
     CHECK(screen.hint() == nullptr);
 
     // A second activation is a second entry, as it always was.
-    REQUIRE(accessible_press(screen.tile(MUTE_DELAY_ROW)));
+    REQUIRE(accessible_press(screen.tile(STOPPED_RESPONDING_ROW)));
     sim.gateway.run_all();
     screen.rig.settle();
     CHECK(sim.entries().size() == 2);

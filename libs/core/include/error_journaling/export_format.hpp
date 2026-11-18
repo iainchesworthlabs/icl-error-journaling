@@ -59,7 +59,7 @@ inline constexpr std::string_view CHANGED_SUFFIX = " changed: ";
 inline constexpr std::string_view CHANGE_ARROW = " \xE2\x86\x92 ";
 
 // Totals line (PRF-10). PROVISIONAL: the PRD does not give the wording (plan, open question 1), so this is the plan's
-// proposal: "Totals: Wrong Response 3, Mute Delay 1". Changing it means editing these three constants and regenerating
+// proposal: "Totals: Wrong Response 3, Stopped Responding 1". Changing it means editing these three constants and regenerating
 // totals-on.txt, totals-on-empty.txt and deleted-entries.txt.
 inline constexpr std::string_view TOTALS_PREFIX = "Totals: ";
 inline constexpr std::string_view TOTALS_SEPARATOR = ", ";

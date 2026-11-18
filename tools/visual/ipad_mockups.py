@@ -47,24 +47,24 @@ HEADER_CARD = 64
 TYPES = [
     ("Wrong Response", 2),
     ("Sequence Out of Order", 0),
-    ("Wrong Track Played", 1),
-    ("Track Not Found", 0),
-    ("Track Skipped", 0),
-    ("Audio Drop Out", 0),
-    ("Volume Jump", 0),
-    ("Mute Delay", 1),
-    ("Speech Delay", 1),
-    ("Track Delay", 0),
-    ("Navigation Failure", 0),
+    ("Wrong Output", 1),
+    ("File Not Found", 0),
+    ("Step Skipped", 0),
+    ("Connection Lost", 0),
+    ("Value Out of Range", 0),
+    ("Stopped Responding", 1),
+    ("Timed Out", 1),
+    ("Slow Response", 0),
+    ("Stopped Unexpectedly", 0),
 ]
 
 ENTRIES = [
     ("09:42", "T|", "Wrong Response"),
     ("10:05", "T|", "Wrong Response"),
-    ("10:20", "T|", "Mute Delay"),
+    ("10:20", "T|", "Stopped Responding"),
     ("10:30", "(Free Text)", "Played Morning Medley"),
-    ("11:02", "T|", "Wrong Track Played – asked for Evening Song"),
-    ("11:40", "T|", "Speech Delay"),
+    ("11:02", "T|", "Wrong Output – asked for Evening Song"),
+    ("11:40", "T|", "Timed Out"),
     ("12:10", "(Free Text)", "Played Evening Song"),
 ]
 
@@ -187,7 +187,7 @@ class Page:
             f'padding: 0 14px; background: {c["surface"]}; border-radius: 14px; text-decoration: none; color: {c["textPrimary"]}; '
             f'box-shadow: {self.shadow()}">'
             f'<span style="font-size: 12px; font-weight: 600; color: {c["textSecondary"]}; text-transform: uppercase; letter-spacing: 0.5px">Last</span>'
-            f'<span style="font-size: 14px; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">10:20  T| Mute Delay</span>'
+            f'<span style="font-size: 14px; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">10:20  T| Stopped Responding</span>'
             f'<span style="font-size: 13px; color: {c["textSecondary"]}; white-space: nowrap">7 today</span>'
             f'{icon("chevron", c["textSecondary"], 14)}</a>'
         )
@@ -229,7 +229,7 @@ class Page:
             f'<div role="status" style="position: absolute; left: {left}px; width: {width}px; bottom: {bottom}px; height: 52px; '
             f'border-radius: 14px; background: {c["toastBackground"]}; color: {c["toastText"]}; display: flex; align-items: center; '
             f'gap: 10px; padding: 0 8px 0 14px; box-sizing: border-box; box-shadow: 0 8px 24px rgba(20,33,43,0.25)">'
-            f'{icon("tick", c["toastAccent"], 20, 2.5)}<span style="flex-grow: 1; font-size: 14px">Mute Delay logged at 10:20</span>'
+            f'{icon("tick", c["toastAccent"], 20, 2.5)}<span style="flex-grow: 1; font-size: 14px">Stopped Responding logged at 10:20</span>'
             f'<button style="height: 40px; padding: 0 14px; border-radius: 10px; border: 0; background: {c["toastButton"]}; '
             f'color: {c["toastAccent"]}; font-family: inherit; font-size: 15px; font-weight: 600">Undo</button></div>'
         )
@@ -478,12 +478,12 @@ def other_screen(p: Page) -> str:
     off = row("[Your other error type]", c["swatch"]) + row("[Another error type]", c["swatch"], last=True)
     on = "".join(
         [
-            row("Navigation Failure", p.tiles[10]),
-            row("Audio Drop Out", p.tiles[5]),
-            row("Track Not Found", p.tiles[3]),
+            row("Stopped Unexpectedly", p.tiles[10]),
+            row("Connection Lost", p.tiles[5]),
+            row("File Not Found", p.tiles[3]),
             row("Wrong Response", p.tiles[0], "2 today"),
-            row("Mute Delay", p.tiles[7], "1 today"),
-            row("Wrong Track Played", p.tiles[2], "1 today", last=True),
+            row("Stopped Responding", p.tiles[7], "1 today"),
+            row("Wrong Output", p.tiles[2], "1 today", last=True),
         ]
     )
     inner = (
@@ -536,7 +536,7 @@ def edit_entry_screen(p: Page) -> str:
         sheet_nav(p, "Cancel", "Edit entry", "Save")
         + f'<div style="padding: 0 16px; display: flex; flex-direction: column; gap: 12px">'
         f'<div style="background: {c["surfaceRaised"]}; border-radius: 14px; overflow: hidden">'
-        f'{field("Error", "Wrong Track Played")}'
+        f'{field("Error", "Wrong Output")}'
         f'<div style="display: flex; align-items: center; height: 52px; padding: 0 14px; font-size: 16px"><span style="flex-grow: 1">Time</span>'
         f'<span style="padding: 6px 10px; border-radius: 8px; background: {c["timeChipBackground"]}; font-size: 16px; font-weight: 500; '
         f'font-variant-numeric: tabular-nums">11:02</span></div></div>'
@@ -545,7 +545,7 @@ def edit_entry_screen(p: Page) -> str:
         f"asked for Evening Song</div>"
         f'{p.section_label("In the shared log")}'
         f'<div style="background: {c["surfaceRaised"]}; border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.45">'
-        f'11:02 T| Wrong Track Played – asked for Evening Song<div style="margin-top: 6px; font-size: 13px; color: {c["textSecondary"]}">'
+        f'11:02 T| Wrong Output – asked for Evening Song<div style="margin-top: 6px; font-size: 13px; color: {c["textSecondary"]}">'
         f"Logged at 11:02 on UNIT-27, version 1.4.2 (a1b2c3d).</div></div>"
         f'<div style="height: 52px; display: flex; align-items: center; justify-content: center; background: {c["surfaceRaised"]}; '
         f'border-radius: 14px; color: {c["destructive"]}; font-size: 16px; font-weight: 600">Delete entry</div></div>'

@@ -44,7 +44,7 @@ TEST_CASE("Rule 1: the header block holds the start values and the log's date, w
     // An entry on the next day does not change the Date line.
     Timestamp next_day = on_day(10, 0);
     next_day.m_Utc += std::chrono::hours(24);
-    must_add(scenario.m_Log, error_entry(2, next_day, ERROR_MUTE_DELAY));
+    must_add(scenario.m_Log, error_entry(2, next_day, ERROR_STOPPED_RESPONDING));
     const auto text = render(scenario);
     CHECK(text.starts_with(std::string(HEADER) + "\n\n"));
 }
@@ -65,11 +65,11 @@ TEST_CASE("Rule 3: an error line, with an attached note after an en dash", "[exp
 {
     auto scenario = blank_scenario();
     must_add(scenario.m_Log, error_entry(1, on_day(10, 5), ERROR_WRONG_RESPONSE));
-    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_MUTE_DELAY, "asked for Evening Song"));
+    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_STOPPED_RESPONDING, "asked for Evening Song"));
     must_add(scenario.m_Log, error_entry(3, on_day(10, 7), ERROR_SPEECH_DELAY, "   "));  // blank note: no dash
     CHECK(render(scenario)
-          == std::string(HEADER) + "\n\n10:05 T| Wrong Response\n10:06 T| Mute Delay " + DASH
-                 + " asked for Evening Song\n10:07 T| Speech Delay");
+          == std::string(HEADER) + "\n\n10:05 T| Wrong Response\n10:06 T| Stopped Responding " + DASH
+                 + " asked for Evening Song\n10:07 T| Timed Out");
 }
 
 TEST_CASE("Rule 4: a note line is (Free Text) and the rendered template or the free text", "[export][rule4]")
@@ -117,21 +117,21 @@ TEST_CASE("Rule 6: each entry is shown in the zone it was captured in, in the ch
 {
     auto scenario = blank_scenario();
     must_add(scenario.m_Log, error_entry(1, on_day(10, 5), ERROR_WRONG_RESPONSE));
-    must_add(scenario.m_Log, error_entry(2, on_day(8, 10, 0, 0, "Australia/Perth"), ERROR_MUTE_DELAY));
+    must_add(scenario.m_Log, error_entry(2, on_day(8, 10, 0, 0, "Australia/Perth"), ERROR_STOPPED_RESPONDING));
     must_add(scenario.m_Log, error_entry(3, on_day(0, 20, 0, 0, "UTC"), ERROR_SPEECH_DELAY));
     CHECK(render(scenario)
-          == std::string(HEADER) + "\n\n10:05 T| Wrong Response\n08:10 T| Mute Delay\n00:20 T| Speech Delay");
+          == std::string(HEADER) + "\n\n10:05 T| Wrong Response\n08:10 T| Stopped Responding\n00:20 T| Timed Out");
 
     scenario.m_Context.m_TimeFormat = TimeFormat{TimeStyle::H12, true, MeridiemCase::LOWER};
     CHECK(render(scenario)
-          == std::string(HEADER) + "\n\n10:05:00 am T| Wrong Response\n08:10:00 am T| Mute Delay\n12:20:00 am T| Speech Delay");
+          == std::string(HEADER) + "\n\n10:05:00 am T| Wrong Response\n08:10:00 am T| Stopped Responding\n12:20:00 am T| Timed Out");
 }
 
 TEST_CASE("Rule 7: deleted entries are skipped, and totals follow a blank line when on", "[export][rule7]")
 {
     auto scenario = blank_scenario();
     must_add(scenario.m_Log, error_entry(1, on_day(10, 5), ERROR_WRONG_RESPONSE));
-    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_MUTE_DELAY));
+    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_STOPPED_RESPONDING));
     must_add(scenario.m_Log, error_entry(3, on_day(10, 7), ERROR_WRONG_RESPONSE));
     REQUIRE(scenario.m_Log.set_deleted(test_id<EntryId>(2), true).has_value());
     CHECK(render(scenario) == std::string(HEADER) + "\n\n10:05 T| Wrong Response\n10:07 T| Wrong Response");
@@ -145,15 +145,15 @@ TEST_CASE("Rule 7: totals are in the declared order, zero counts are left out, u
 {
     auto scenario = blank_scenario();
     scenario.m_Context.m_IncludeTotals = true;
-    scenario.m_Context.m_TotalsOrder = {test_id<ErrorTypeId>(ERROR_SPEECH_DELAY), test_id<ErrorTypeId>(ERROR_MUTE_DELAY),
+    scenario.m_Context.m_TotalsOrder = {test_id<ErrorTypeId>(ERROR_SPEECH_DELAY), test_id<ErrorTypeId>(ERROR_STOPPED_RESPONDING),
                                         test_id<ErrorTypeId>(ERROR_LATE_GREETING)};
     must_add(scenario.m_Log, error_entry(1, on_day(10, 1), ERROR_WRONG_RESPONSE));  // not in the order: last
-    must_add(scenario.m_Log, error_entry(2, on_day(10, 2), ERROR_MUTE_DELAY));
+    must_add(scenario.m_Log, error_entry(2, on_day(10, 2), ERROR_STOPPED_RESPONDING));
     must_add(scenario.m_Log, error_entry(3, on_day(10, 3), ERROR_SPEECH_DELAY));
     must_add(scenario.m_Log, error_entry(4, on_day(10, 4), ERROR_SPEECH_DELAY));
     must_add(scenario.m_Log, error_entry(5, on_day(10, 5), ERROR_WRONG_TRACK_PLAYED));  // also not listed
     const auto text = render(scenario);
-    CHECK(text.ends_with("\n\nTotals: Speech Delay 2, Mute Delay 1, Wrong Response 1, Wrong Track Played 1"));
+    CHECK(text.ends_with("\n\nTotals: Timed Out 2, Stopped Responding 1, Wrong Response 1, Wrong Output 1"));
 }
 
 TEST_CASE("Rule 7: no totals line when there are no errors", "[export][rule7]")
@@ -181,12 +181,12 @@ TEST_CASE("Rule 9: line breaks and runs of white space in free text collapse to 
     auto scenario = blank_scenario();
     must_add(scenario.m_Log, free_note_entry(1, on_day(10, 1), "one\ntwo\r\n\r\nthree"));
     must_add(scenario.m_Log, free_note_entry(2, on_day(10, 2), "tab\there  and   spaces   "));
-    must_add(scenario.m_Log, error_entry(3, on_day(10, 3), ERROR_MUTE_DELAY, "  note\nwith\tbreaks  "));
+    must_add(scenario.m_Log, error_entry(3, on_day(10, 3), ERROR_STOPPED_RESPONDING, "  note\nwith\tbreaks  "));
     must_add(scenario.m_Log, template_note_entry(4, on_day(10, 4), TEMPLATE_PLAYED, "Two\nLines"));
     must_add(scenario.m_Log, free_note_entry(5, on_day(10, 5), std::string("next\xC2\x85line\xE2\x80\xA8sep")));
     CHECK(render(scenario)
           == std::string(HEADER)
-                 + "\n\n10:01 (Free Text) one two three\n10:02 (Free Text) tab here and spaces\n10:03 T| Mute Delay " + DASH
+                 + "\n\n10:01 (Free Text) one two three\n10:02 (Free Text) tab here and spaces\n10:03 T| Stopped Responding " + DASH
                  + " note with breaks\n10:04 (Free Text) Played Two Lines\n10:05 (Free Text) next line sep");
 }
 
@@ -324,18 +324,18 @@ TEST_CASE("PRF-13: the error prefix is in front of the error name; empty means n
 {
     auto scenario = blank_scenario();
     must_add(scenario.m_Log, error_entry(1, on_day(10, 5), ERROR_WRONG_RESPONSE));
-    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_MUTE_DELAY, "asked for Evening Song"));
+    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_STOPPED_RESPONDING, "asked for Evening Song"));
     const std::string header = std::string(HEADER) + "\n\n";
 
     // The default is T|.
     CHECK(scenario.m_Context.m_ErrorPrefix == "T|");
-    CHECK(render(scenario) == header + "10:05 T| Wrong Response\n10:06 T| Mute Delay " + DASH + " asked for Evening Song");
+    CHECK(render(scenario) == header + "10:05 T| Wrong Response\n10:06 T| Stopped Responding " + DASH + " asked for Evening Song");
 
     scenario.m_Context.m_ErrorPrefix = "ERR:";
-    CHECK(render(scenario) == header + "10:05 ERR: Wrong Response\n10:06 ERR: Mute Delay " + DASH + " asked for Evening Song");
+    CHECK(render(scenario) == header + "10:05 ERR: Wrong Response\n10:06 ERR: Stopped Responding " + DASH + " asked for Evening Song");
 
     scenario.m_Context.m_ErrorPrefix = "";
-    CHECK(render(scenario) == header + "10:05 Wrong Response\n10:06 Mute Delay " + DASH + " asked for Evening Song");
+    CHECK(render(scenario) == header + "10:05 Wrong Response\n10:06 Stopped Responding " + DASH + " asked for Evening Song");
 }
 
 TEST_CASE("without_note_marker drops the marker of a note line for the screens and leaves the export alone",

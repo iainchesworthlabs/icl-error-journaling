@@ -184,10 +184,10 @@ TEST_CASE("composer.add: the Add button emits submit once with the text, and Ret
     Fixture f;
     QSignalSpy submitted(f.composer, SIGNAL(submit(QString)));
 
-    f.host->setProperty("draft", QStringLiteral("Mute Delay at the gate"));
+    f.host->setProperty("draft", QStringLiteral("Stopped Responding at the gate"));
     f.rig.tap(f.add);
     REQUIRE(submitted.count() == 1);
-    CHECK(submitted.at(0).at(0).toString() == QStringLiteral("Mute Delay at the gate"));
+    CHECK(submitted.at(0).at(0).toString() == QStringLiteral("Stopped Responding at the gate"));
 
     f.field->forceActiveFocus();
     f.rig.key(Qt::Key_Return);
@@ -328,12 +328,12 @@ TEST_CASE("composer.dictation: the field takes text committed by the input metho
 
     f.field->forceActiveFocus();
     QInputMethodEvent event;
-    event.setCommitString(QStringLiteral("Mute Delay near the stage"));
+    event.setCommitString(QStringLiteral("Stopped Responding near the stage"));
     QCoreApplication::sendEvent(f.field, &event);
-    CHECK(f.text() == QStringLiteral("Mute Delay near the stage"));
+    CHECK(f.text() == QStringLiteral("Stopped Responding near the stage"));
     REQUIRE(edited.count() >= 1);
-    CHECK(edited.last().at(0).toString() == QStringLiteral("Mute Delay near the stage"));
-    CHECK(f.host->property("draft").toString() == QStringLiteral("Mute Delay near the stage"));
+    CHECK(edited.last().at(0).toString() == QStringLiteral("Stopped Responding near the stage"));
+    CHECK(f.host->property("draft").toString() == QStringLiteral("Stopped Responding near the stage"));
 }
 
 TEST_CASE("composer.multiline: Return keeps a line break in the field and the draft, and the Add button submits it whole",
@@ -344,10 +344,10 @@ TEST_CASE("composer.multiline: Return keeps a line break in the field and the dr
     QSignalSpy submitted(f.composer, SIGNAL(submit(QString)));
 
     f.field->forceActiveFocus();
-    f.rig.type(QStringLiteral("Mute Delay"));
+    f.rig.type(QStringLiteral("Stopped Responding"));
     f.rig.key(Qt::Key_Return);
     f.rig.type(QStringLiteral("near the stage"));
-    const QString expected = QStringLiteral("Mute Delay\nnear the stage");
+    const QString expected = QStringLiteral("Stopped Responding\nnear the stage");
     CHECK(f.text() == expected);
     CHECK(f.host->property("draft").toString() == expected);
     CHECK(edited.last().at(0).toString() == expected);
@@ -512,16 +512,16 @@ TEST_CASE("composer.dictation_text: each guess replaces the one before it, a new
     QMetaObject::invokeMethod(f.composer, "dictationSegment");
     QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("mute")));
     CHECK(f.text() == QStringLiteral("North Site: mute"));
-    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("mute delay near")));
-    CHECK(f.text() == QStringLiteral("North Site: mute delay near"));
-    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("mute delay near the stage")));
-    CHECK(f.text() == QStringLiteral("North Site: mute delay near the stage"));
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("stopped responding near")));
+    CHECK(f.text() == QStringLiteral("North Site: stopped responding near"));
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("stopped responding near the stage")));
+    CHECK(f.text() == QStringLiteral("North Site: stopped responding near the stage"));
     CHECK(f.cursor() == f.text().length());
 
     // The recogniser paused and a new stretch begins: it is added, not substituted.
     QMetaObject::invokeMethod(f.composer, "dictationSegment");
     QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("then it recovered")));
-    CHECK(f.text() == QStringLiteral("North Site: mute delay near the stage then it recovered"));
+    CHECK(f.text() == QStringLiteral("North Site: stopped responding near the stage then it recovered"));
 
     // Every change was reported as typed, so the draft has it and it survives the app being closed (NOTE-03).
     CHECK(f.host->property("draft").toString() == f.text());
@@ -529,7 +529,7 @@ TEST_CASE("composer.dictation_text: each guess replaces the one before it, a new
 
     // Empty text, as a recogniser sends before it has heard anything, changes nothing.
     QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QString()));
-    CHECK(f.text() == QStringLiteral("North Site: mute delay near the stage then it recovered"));
+    CHECK(f.text() == QStringLiteral("North Site: stopped responding near the stage then it recovered"));
 }
 
 TEST_CASE("composer.dictation_text: in an empty box, or after a line break, there is no space in front",

@@ -10,7 +10,7 @@ The only permissions are the microphone and speech recognition, asked for at the
 HOW TO TRY IT (ABOUT TWO MINUTES)
 Option 1, by hand:
 1. On first launch, choose "Set up by hand".
-2. Add two or three error types, for example "Wrong Response" and "Track Skipped".
+2. Add two or three error types, for example "Wrong Response" and "Step Skipped".
 3. On the Log screen, tap a tile. The count rises and an undo bar appears. Tap Undo once to see it.
 4. Add a note, or use a note template.
 5. Open Review to see the day's entries in time order. Edit or delete one.

@@ -59,10 +59,10 @@ TEST_CASE("A name in use is refused in the words of the designs, for each kind o
     rig.load_sample();
 
     const QString error_type =
-        "There is already an error type called " + curly("Mute Delay") + ". Names must be different.";
-    CHECK(rig.m_Settings.addErrorType("Mute Delay") == error_type);
-    CHECK(rig.m_Settings.renameErrorType(WRONG_RESPONSE, "mute delay") ==
-          "There is already an error type called " + curly("mute delay") + ". Names must be different.");
+        "There is already an error type called " + curly("Stopped Responding") + ". Names must be different.";
+    CHECK(rig.m_Settings.addErrorType("Stopped Responding") == error_type);
+    CHECK(rig.m_Settings.renameErrorType(WRONG_RESPONSE, "stopped responding") ==
+          "There is already an error type called " + curly("stopped responding") + ". Names must be different.");
 
     CHECK(rig.m_Settings.addLocation("North Site") ==
           "There is already a location called " + curly("North Site") + ". Names must be different.");
@@ -120,7 +120,7 @@ TEST_CASE("Each colour slot has a name, and the error types carry theirs", "[vie
     const QAbstractItemModel& types = *rig.m_Settings.error_types();
     REQUIRE(types.rowCount() >= 8);
     CHECK(text_at(types, 0, "colourName") == "Sky");
-    CHECK(text_at(types, 7, "name") == "Mute Delay");
+    CHECK(text_at(types, 7, "name") == "Stopped Responding");
     CHECK(text_at(types, 7, "colourSlot") == "8");
     CHECK(text_at(types, 7, "colourName") == "Periwinkle");
     for (int row = 0; row < types.rowCount(); ++row)

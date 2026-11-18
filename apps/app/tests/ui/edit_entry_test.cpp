@@ -176,7 +176,7 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
     REQUIRE(e.is_open());
     const QString before = prd_example_lines()[3];
 
-    CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Track Played"));
+    CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Output"));
     CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("11:02"));
     CHECK(e.in("editSheet", "editNote")->property("text").toString() == QStringLiteral("asked for Evening Song"));
     CHECK(e.preview() == before);
@@ -185,24 +185,24 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
     SECTION("the note")
     {
         e.set_note(QStringLiteral("asked for Morning Medley"));
-        CHECK(e.preview() == QStringLiteral("11:02 T| Wrong Track Played – asked for Morning Medley"));
-        CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Track Played"));
+        CHECK(e.preview() == QStringLiteral("11:02 T| Wrong Output – asked for Morning Medley"));
+        CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Output"));
         CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("11:02"));
     }
 
     SECTION("an empty note takes the dash out of the line")
     {
         e.set_note(QString());
-        CHECK(e.preview() == QStringLiteral("11:02 T| Wrong Track Played"));
+        CHECK(e.preview() == QStringLiteral("11:02 T| Wrong Output"));
     }
 
     SECTION("the type")
     {
-        e.choose_type(QStringLiteral("Mute Delay"));
+        e.choose_type(QStringLiteral("Stopped Responding"));
         CHECK_FALSE((e.page() == QStringLiteral("type")));
         CHECK(e.is_open());
-        CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Mute Delay"));
-        CHECK(e.preview() == QStringLiteral("11:02 T| Mute Delay – asked for Evening Song"));
+        CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Stopped Responding"));
+        CHECK(e.preview() == QStringLiteral("11:02 T| Stopped Responding – asked for Evening Song"));
         CHECK(e.in("editSheet", "editNote")->property("text").toString() == QStringLiteral("asked for Evening Song"));
     }
 
@@ -215,13 +215,13 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
             if (row->property("checked").toBool())
             {
                 ++checked;
-                CHECK(row->property("text").toString() == QStringLiteral("Wrong Track Played"));
+                CHECK(row->property("text").toString() == QStringLiteral("Wrong Output"));
             }
         }
         CHECK(checked == 1);
         e.tap_in("editSheet", "navLeading");
         CHECK_FALSE((e.page() == QStringLiteral("type")));
-        CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Track Played"));
+        CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Output"));
     }
 
     SECTION("the time, with Cancel putting the old time back")
@@ -236,7 +236,7 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
         e.set_time(9, 30);
         e.done_time();
         CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("09:30"));
-        CHECK(e.preview() == QStringLiteral("09:30 T| Wrong Track Played – asked for Evening Song"));
+        CHECK(e.preview() == QStringLiteral("09:30 T| Wrong Output – asked for Evening Song"));
     }
 }
 
@@ -245,7 +245,7 @@ TEST_CASE("edit.preview: the line is previewLine of the edit, and saving puts ex
 {
     Editor e;
     e.open(2);
-    e.choose_type(QStringLiteral("Speech Delay"));
+    e.choose_type(QStringLiteral("Timed Out"));
     e.set_note(QStringLiteral("after the greeting"));
     e.set_time(10, 45);
     e.done_time();
@@ -255,11 +255,11 @@ TEST_CASE("edit.preview: the line is previewLine of the edit, and saving puts ex
     edit.insert(QStringLiteral("localDate"), QStringLiteral("2026-11-07"));
     edit.insert(QStringLiteral("localSeconds"), 10 * 3600 + 45 * 60);
     edit.insert(QStringLiteral("errorTypeId"),
-                QString::fromStdString(type_named(e.m_World.configuration(), "Speech Delay").format()));
+                QString::fromStdString(type_named(e.m_World.configuration(), "Timed Out").format()));
     edit.insert(QStringLiteral("attachedNote"), QStringLiteral("after the greeting"));
     const QString expected = e.m_World.timeline().previewLine(id_text(2), edit);
     REQUIRE_FALSE(expected.isEmpty());
-    CHECK(expected == QStringLiteral("10:45 T| Speech Delay – after the greeting"));
+    CHECK(expected == QStringLiteral("10:45 T| Timed Out – after the greeting"));
     CHECK(e.preview() == expected);
 
     e.save();
@@ -280,7 +280,7 @@ TEST_CASE("edit.save_cancel: Cancel writes nothing, Save saves once, and an unch
     SECTION("Cancel")
     {
         e.open(1);
-        e.choose_type(QStringLiteral("Mute Delay"));
+        e.choose_type(QStringLiteral("Stopped Responding"));
         e.set_note(QStringLiteral("not wanted"));
         e.cancel();
         e.commit();
@@ -293,13 +293,13 @@ TEST_CASE("edit.save_cancel: Cancel writes nothing, Save saves once, and an unch
     SECTION("Save")
     {
         e.open(1);
-        e.choose_type(QStringLiteral("Mute Delay"));
+        e.choose_type(QStringLiteral("Stopped Responding"));
         e.save();
         CHECK_FALSE(e.is_open());
         e.commit();
         CHECK(e.m_World.gateway().posted() > posted);
         std::vector<QString> expected = prd_example_lines();
-        expected[0] = QStringLiteral("10:05 T| Mute Delay");
+        expected[0] = QStringLiteral("10:05 T| Stopped Responding");
         CHECK(joined(e.lines()) == joined(expected));
     }
 
@@ -356,7 +356,7 @@ TEST_CASE("edit.time_order: an earlier time moves the row", "[ui][edit]")
     e.commit();
     const std::vector<QString> lines = e.lines();
     REQUIRE(lines.size() == 6);
-    CHECK(lines[0] == QStringLiteral("09:00 T| Wrong Track Played – asked for Evening Song"));
+    CHECK(lines[0] == QStringLiteral("09:00 T| Wrong Output – asked for Evening Song"));
     CHECK(lines[1] == prd_example_lines()[0]);
     CHECK(e.m_World.timeline().rowOf(id_text(4)) == 0);
 }
@@ -800,7 +800,7 @@ TEST_CASE("edit.voiceover: Cancel, Save and Delete entry are buttons, and the sh
     CHECK(names.contains(QStringLiteral("Cancel")));
     CHECK(names.contains(QStringLiteral("Save")));
     CHECK(names.contains(QStringLiteral("Delete entry")));
-    CHECK(names.contains(QStringLiteral("Error, Wrong Track Played")));
+    CHECK(names.contains(QStringLiteral("Error, Wrong Output")));
     CHECK(names.contains(QStringLiteral("Time, 11:02")));
     // The sheet cannot be dismissed by a swipe: Cancel and Save are the ways out.
     CHECK_FALSE(e.sheet()->property("dismissible").toBool());

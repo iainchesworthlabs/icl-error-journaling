@@ -496,13 +496,13 @@ TEST_CASE("Retiring an error type removes it from the list and the board but kee
     REQUIRE(board_changed.count() == 1);
     QAbstractItemModel& board = *rig.m_Settings.board_layout();
     CHECK(board.data(board.index(2, 0), role_named(board, "isEmpty")).toBool());
-    CHECK(text_at(board, 3, role_named(board, "label")) == "Track Not Found");
+    CHECK(text_at(board, 3, role_named(board, "label")) == "File Not Found");
     // The file still has it, retired, so past entries still name it.
     const auto read_back = import_configuration(*rig.store().saved());
     REQUIRE(read_back.has_value());
     REQUIRE(read_back->m_ErrorTypes.size() == 11);
     CHECK(read_back->m_ErrorTypes[2].m_Retired);
-    CHECK(read_back->m_ErrorTypes[2].m_Name == "Wrong Track Played");
+    CHECK(read_back->m_ErrorTypes[2].m_Name == "Wrong Output");
 
     CHECK_FALSE(rig.m_Settings.retireErrorType(third).isEmpty());
     CHECK_FALSE(rig.m_Settings.renameErrorType(third, "Something Else").isEmpty());
@@ -554,7 +554,7 @@ TEST_CASE("The board layout is 12 tiles: eleven positions and Other", "[viewmode
     CHECK(text_at(board, 0, role_named(board, "typeId")) == "00000000-0000-4000-8000-0000000000a1");
     CHECK(number_at(board, 0, role_named(board, "colourSlot")) == 1);
     CHECK(number_at(board, 0, role_named(board, "position")) == 1);
-    CHECK(text_at(board, 10, role_named(board, "label")) == "Navigation Failure");
+    CHECK(text_at(board, 10, role_named(board, "label")) == "Stopped Unexpectedly");
     CHECK(number_at(board, 10, role_named(board, "colourSlot")) == 11);
     CHECK(text_at(board, 0, role_named(board, "accessibleName")) == "Wrong Response");
     for (int row = 0; row < 11; ++row)
@@ -603,7 +603,7 @@ TEST_CASE("A drag moves the tile; the tiles between shift; colours stay with the
     rig.commit();
 
     CHECK(labels_in(board).mid(0, 4) ==
-          QStringList{"Sequence Out of Order", "Wrong Track Played", "Wrong Response", "Track Not Found"});
+          QStringList{"Sequence Out of Order", "Wrong Output", "Wrong Response", "File Not Found"});
     REQUIRE(changed.count() == 1);
     CHECK(changed.at(0).at(0).value<QModelIndex>().row() == 0);
     CHECK(changed.at(0).at(1).value<QModelIndex>().row() == 2);
@@ -617,7 +617,7 @@ TEST_CASE("A drag moves the tile; the tiles between shift; colours stay with the
     // And back.
     CHECK(rig.m_Settings.moveBoardTile(3, 1).isEmpty());
     rig.commit();
-    CHECK(labels_in(board).mid(0, 3) == QStringList{"Wrong Response", "Sequence Out of Order", "Wrong Track Played"});
+    CHECK(labels_in(board).mid(0, 3) == QStringList{"Wrong Response", "Sequence Out of Order", "Wrong Output"});
     CHECK(import_configuration(*rig.store().saved()).has_value());
 }
 
@@ -658,7 +658,7 @@ TEST_CASE("Assigning a type that is on the board elsewhere swaps the two tiles",
     CHECK(rig.m_Settings.assignBoardTile(1, fifth).isEmpty());
     rig.commit();
 
-    CHECK(text_at(board, 0, role_named(board, "label")) == "Track Skipped");
+    CHECK(text_at(board, 0, role_named(board, "label")) == "Step Skipped");
     CHECK(text_at(board, 4, role_named(board, "label")) == "Wrong Response");
     CHECK(text_at(board, 1, role_named(board, "label")) == "Sequence Out of Order");
     REQUIRE(changed.count() == 1);

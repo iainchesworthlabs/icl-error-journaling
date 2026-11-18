@@ -40,8 +40,8 @@ Tap **Share log** at the end of the day. The share sheet opens with the log as p
 The log has a header (tester, date, unit, location, software version) and one line for each entry:
 
 ```
-10:20 T| Mute Delay
-11:02 T| Wrong Track Played – asked for Evening Song
+10:20 T| Stopped Responding
+11:02 T| Wrong Output – asked for Evening Song
 ```
 
 An error line is the time, the error prefix `T|`, the error type, and then the note after a dash. The downstream ticket

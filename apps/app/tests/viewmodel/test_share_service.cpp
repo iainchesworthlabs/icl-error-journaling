@@ -88,19 +88,19 @@ struct Fixture
             const Configuration sample = sample_configuration();
             REQUIRE(document->add_entry(error_at(1, 10, 5, type_named(sample, "Wrong Response"), "Wrong Response"),
                                         Origin::USER, {}));
-            REQUIRE(document->add_entry(error_at(2, 10, 20, type_named(sample, "Mute Delay"), "Mute Delay"),
+            REQUIRE(document->add_entry(error_at(2, 10, 20, type_named(sample, "Stopped Responding"), "Stopped Responding"),
                                         Origin::USER, {}));
             Entry note;
             note.m_Id = sample_id<EntryId>(3);
             note.m_Captured = on_day(10, 30);
             note.m_Body = NoteEntry{std::nullopt, "Played Morning Medley"};
             REQUIRE(document->add_entry(std::move(note), Origin::USER, {}));
-            REQUIRE(document->add_entry(error_at(4, 11, 2, type_named(sample, "Wrong Track Played"),
-                                                 "Wrong Track Played", "asked for Evening Song"),
+            REQUIRE(document->add_entry(error_at(4, 11, 2, type_named(sample, "Wrong Output"),
+                                                 "Wrong Output", "asked for Evening Song"),
                                         Origin::USER, {}));
             REQUIRE(document->change_header(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(13, 15),
                                             sample_id<EntryId>(5), {}));
-            REQUIRE(document->add_entry(error_at(6, 13, 40, type_named(sample, "Speech Delay"), "Speech Delay"),
+            REQUIRE(document->add_entry(error_at(6, 13, 40, type_named(sample, "Timed Out"), "Timed Out"),
                                         Origin::USER, {}));
             m_Rig.gateway().run_all();
         }
@@ -191,7 +191,7 @@ TEST_CASE("The text is what the screen showed: a committed edit is in it, one st
 {
     Fixture fixture;
     const Configuration sample = sample_configuration();
-    REQUIRE(fixture.document->add_entry(error_at(7, 14, 3, type_named(sample, "Track Delay"), "Track Delay"),
+    REQUIRE(fixture.document->add_entry(error_at(7, 14, 3, type_named(sample, "Slow Response"), "Slow Response"),
                                         Origin::USER, {}));
     REQUIRE(fixture.document->pending() == 1);
 
@@ -203,7 +203,7 @@ TEST_CASE("The text is what the screen showed: a committed edit is in it, one st
     fixture.m_Rig.gateway().run_all();
     REQUIRE(fixture.service->shareOpenLog());
     REQUIRE(fixture.m_Platform.sheets_presented() == 2);
-    CHECK(fixture.m_Platform.shared_texts()[1].find("\n14:03 T| Track Delay") != std::string::npos);
+    CHECK(fixture.m_Platform.shared_texts()[1].find("\n14:03 T| Slow Response") != std::string::npos);
 }
 
 TEST_CASE("The text on the sheet writes a name at the chosen level, and the re-shared past log does too",

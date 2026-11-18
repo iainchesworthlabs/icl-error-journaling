@@ -86,8 +86,8 @@ struct SettingsRig
     configuration.m_Tester = "Sam Example";
     configuration.m_UnitPrefix = "UNIT";
     const std::pair<std::uint64_t, const char*> errors[] = {
-        {ERROR_WRONG_RESPONSE, "Wrong Response"},         {ERROR_MUTE_DELAY, "Mute Delay"},
-        {ERROR_WRONG_TRACK_PLAYED, "Wrong Track Played"}, {ERROR_SPEECH_DELAY, "Speech Delay"},
+        {ERROR_WRONG_RESPONSE, "Wrong Response"},         {ERROR_STOPPED_RESPONDING, "Stopped Responding"},
+        {ERROR_WRONG_TRACK_PLAYED, "Wrong Output"}, {ERROR_SPEECH_DELAY, "Timed Out"},
         {ERROR_LATE_GREETING, "Late Greeting"},           {ERROR_ECHO_DELAY_RETIRED, "Echo Delay"}};
     int position = 1;
     for (const auto& [number, name] : errors)

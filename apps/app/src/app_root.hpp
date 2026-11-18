@@ -242,7 +242,7 @@ signals:
     void writeFailed(const QString& operation, const QString& message);
 
     /// A tap on an error type could not be saved (`LogSession::recordFailed`), with the name of the type for the
-    /// banner: `title` "Mute Delay wasn't saved", `message` "Nothing was added to the log. Tap Mute Delay again to log
+    /// banner: `title` "Stopped Responding wasn't saved", `message` "Nothing was added to the log. Tap Stopped Responding again to log
     /// it.". It follows the `writeFailed("recordError", ...)` of the same failure, which is still emitted.
     void recordFailed(const QString& errorTypeId, const QString& errorTypeName, const QString& title,
                       const QString& message);

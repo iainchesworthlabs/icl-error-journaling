@@ -5,11 +5,11 @@ Location: North Site
 Software Version: v1.4.2
 
 09:00 T| Wrong Response
-09:10 T| Mute Delay
+09:10 T| Stopped Responding
 09:20 T| Wrong Response
 09:30 (Free Text) Played Morning Medley
 09:45 T| Wrong Response
-10:00 T| Wrong Track Played – asked for Evening Song
+10:00 T| Wrong Output – asked for Evening Song
 10:15 T| Echo Delay
-10:30 T| Wrong Track Played
+10:30 T| Wrong Output
 10:40 Software Version changed: v1.4.2 → v1.5.0

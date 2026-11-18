@@ -144,8 +144,8 @@ public:
         make(LAST_YEAR, 2025, 11, 7, LocationValue{north, {}}, {error_at(11, 9, 0), error_at(12, 9, 10)}, true);
         make(YESTERDAY, 2026, 11, 6, LocationValue{std::nullopt, "South Elsewhere"}, {error_at(21, 9, 0)}, true);
         make(MORNING, 2026, 11, 7, LocationValue{north, {}},
-             {error_at(31, 10, 5), error_at(32, 10, 20, "Mute Delay"), error_at(33, 11, 2, "Wrong Track Played"),
-              error_at(34, 13, 40, "Speech Delay")},
+             {error_at(31, 10, 5), error_at(32, 10, 20, "Stopped Responding"), error_at(33, 11, 2, "Wrong Output"),
+              error_at(34, 13, 40, "Timed Out")},
              true);
         REQUIRE(m_Storage.memory().mark_shared(sample_id<LogId>(MORNING), utc(2026, 11, 7, 21, 5)));
         make(EVENING, 2026, 11, 7, LocationValue{north, {}}, {error_at(41, 16, 0)}, true);
@@ -526,9 +526,9 @@ TEST_CASE("Opening a log binds a timeline with its lines; closing unbinds", "[vi
     const TimelineModel& review = *history.review_model();
     REQUIRE(review.rowCount() == 4);
     CHECK(timeline_line(review, 0) == "10:05 T| Wrong Response");
-    CHECK(timeline_line(review, 1) == "10:20 T| Mute Delay");
-    CHECK(timeline_line(review, 2) == "11:02 T| Wrong Track Played");
-    CHECK(timeline_line(review, 3) == "13:40 T| Speech Delay");
+    CHECK(timeline_line(review, 1) == "10:20 T| Stopped Responding");
+    CHECK(timeline_line(review, 2) == "11:02 T| Wrong Output");
+    CHECK(timeline_line(review, 3) == "13:40 T| Timed Out");
     CHECK(review.entry_count() == 4);
     CHECK(review.ready());
     CHECK(review.header_text().startsWith("Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27"));
@@ -700,7 +700,7 @@ TEST_CASE("Editing and deleting an entry of a past log persists and re-renders",
     fixture.settle();
 
     CHECK(review.rowCount() == 3);
-    CHECK(timeline_line(review, 1) == "11:02 T| Wrong Track Played");
+    CHECK(timeline_line(review, 1) == "11:02 T| Wrong Output");
     const auto stored = fixture.storage().memory().load_log(sample_id<LogId>(MORNING));
     REQUIRE(stored.has_value());
     CHECK(stored->m_Log.find(sample_id<EntryId>(32))->m_Deleted);
@@ -757,7 +757,7 @@ TEST_CASE("The undo toast works on a past log", "[viewmodel][history][unit]")
 
     CHECK_FALSE(undo.active());
     CHECK(review.rowCount() == 4);
-    CHECK(timeline_line(review, 2) == "11:02 T| Wrong Track Played");
+    CHECK(timeline_line(review, 2) == "11:02 T| Wrong Output");
     CHECK(cell(history, row, HistoryModel::ENTRY_COUNT).toInt() == 4);
     const auto stored = fixture.storage().memory().load_log(sample_id<LogId>(MORNING));
     REQUIRE(stored.has_value());

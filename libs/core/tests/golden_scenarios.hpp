@@ -58,7 +58,7 @@ struct Scenario
 
 /// The fictional names of the scenario world, for tests that build their own logs.
 inline constexpr std::uint64_t ERROR_WRONG_RESPONSE = 1;
-inline constexpr std::uint64_t ERROR_MUTE_DELAY = 2;
+inline constexpr std::uint64_t ERROR_STOPPED_RESPONDING = 2;
 inline constexpr std::uint64_t ERROR_WRONG_TRACK_PLAYED = 3;
 inline constexpr std::uint64_t ERROR_SPEECH_DELAY = 4;
 inline constexpr std::uint64_t ERROR_LATE_GREETING = 5;

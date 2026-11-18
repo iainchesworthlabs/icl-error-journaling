@@ -32,7 +32,7 @@ namespace
 constexpr int OFF = ErrorPickerModel::OFF_BOARD;
 constexpr int ON = ErrorPickerModel::ON_BOARD;
 
-/// The sample configuration with Navigation Failure taken off the board, a new "Écho Delay" that was never on it, and a
+/// The sample configuration with Stopped Unexpectedly taken off the board, a new "Écho Delay" that was never on it, and a
 /// retired type. Master list indices: 0 to 10 the sample types, 11 Écho Delay, 12 the retired type.
 Configuration picker_configuration()
 {
@@ -140,11 +140,11 @@ TEST_CASE("The picker lists the live types in two sections with today's counts",
 
     // Not on your board first, then on your board, each in master-list order; the retired type is absent.
     REQUIRE(picker.rowCount() == 12);
-    CHECK(fixture.label(0) == "Navigation Failure");
+    CHECK(fixture.label(0) == "Stopped Unexpectedly");
     CHECK(fixture.label(1) == "\xC3\x89"
                               "cho Delay");
     CHECK(fixture.label(2) == "Wrong Response");
-    CHECK(fixture.label(11) == "Track Delay");
+    CHECK(fixture.label(11) == "Slow Response");
     CHECK_FALSE(fixture.labels().contains("Retired Type"));
 
     CHECK(fixture.value(0, ErrorPickerModel::SECTION).toInt() == OFF);
@@ -257,11 +257,11 @@ TEST_CASE("The filter is a case-insensitive substring match with one reset per c
         picker.set_filter("DELAY");
         CHECK(fixture.labels() == QStringList{"\xC3\x89"
                                               "cho Delay",
-                                              "Mute Delay", "Speech Delay", "Track Delay"});
+                                              "Stopped Responding", "Timed Out", "Slow Response"});
         picker.set_filter("mute");
-        CHECK(fixture.labels() == QStringList{"Mute Delay"});
+        CHECK(fixture.labels() == QStringList{"Stopped Responding"});
         picker.set_filter("ute DEL");
-        CHECK(fixture.labels() == QStringList{"Mute Delay"});
+        CHECK(fixture.labels() == QStringList{"Stopped Responding"});
     }
 
     SECTION("letters beyond ASCII fold too, and accents are not removed")
@@ -305,7 +305,7 @@ TEST_CASE("The filter is a case-insensitive substring match with one reset per c
     SECTION("white space around the filter is ignored and an empty filter lists everything")
     {
         picker.set_filter("  mute ");
-        CHECK(fixture.labels() == QStringList{"Mute Delay"});
+        CHECK(fixture.labels() == QStringList{"Stopped Responding"});
         CHECK(picker.filter() == "  mute "); // the property reads back what was typed
         picker.set_filter("   ");
         CHECK(picker.rowCount() == 12);
@@ -315,7 +315,7 @@ TEST_CASE("The filter is a case-insensitive substring match with one reset per c
 
     SECTION("counts are on the filtered rows")
     {
-        fixture.tap_and_commit(fixture.type(7)); // Mute Delay
+        fixture.tap_and_commit(fixture.type(7)); // Stopped Responding
         picker.set_filter("mute");
         REQUIRE(picker.rowCount() == 1);
         CHECK(fixture.value(0, ErrorPickerModel::COUNT).toInt() == 1);
@@ -432,7 +432,7 @@ TEST_CASE("addType refuses what the editor refuses and says why", "[viewmodel][p
         {
             fixture.m_Editor.refuse_next(
                 viewmodel::ConfigEditError{viewmodel::ConfigEditError::Code::REFUSED, message});
-            CHECK(picker.addType("Mute delay").isEmpty());
+            CHECK(picker.addType("Stopped responding").isEmpty());
             CHECK(picker.add_type_error() == message);
         }
     }
@@ -497,11 +497,11 @@ TEST_CASE("A configuration change keeps the filter and resets only when the list
     SECTION("a type moves between the sections")
     {
         Configuration configuration = fixture.m_Config.configuration();
-        configuration.m_ErrorTypes[7].m_BoardPosition.reset(); // Mute Delay leaves the board
+        configuration.m_ErrorTypes[7].m_BoardPosition.reset(); // Stopped Responding leaves the board
         fixture.m_Config.set(std::move(configuration));
         CHECK(spies.m_Reset.size() == 1);
         REQUIRE(picker.rowCount() == 4);
-        CHECK(fixture.label(0) == "Mute Delay");
+        CHECK(fixture.label(0) == "Stopped Responding");
         CHECK(fixture.label(1) == "É"
                                   "cho Delay");
         CHECK(fixture.value(0, ErrorPickerModel::SECTION).toInt() == OFF);

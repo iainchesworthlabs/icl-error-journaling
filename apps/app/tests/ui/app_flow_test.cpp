@@ -621,7 +621,7 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     // and the toast follow it. The first tap logs nothing.
     events.clear();
     app.services.go_to(7, 10, 5);
-    const QString mute = app.tile(QStringLiteral("Mute Delay"));
+    const QString mute = app.tile(QStringLiteral("Stopped Responding"));
     app.ui.tap(app.need(mute));
     CHECK(events.count(EventKind::HAPTIC, "impact") == 0);
     const int finger = app.ui.press(app.need(mute));
@@ -636,7 +636,7 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     REQUIRE(commit >= 0);
     CHECK(haptic < commit);
     CHECK(events.count(EventKind::HAPTIC, "impact") == 1);
-    CHECK(app.count_of(QStringLiteral("Mute Delay")) == 1);
+    CHECK(app.count_of(QStringLiteral("Stopped Responding")) == 1);
     CHECK(undo.active());
     app.ui.advance(400ms); // the toast, and the window of the double-tap runs out
     CHECK(app.shown(QStringLiteral("logToast")));
@@ -647,7 +647,7 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     app.ui.tap(app.need(mute));
     app.ui.tap(app.need(mute));
     app.ui.settle();
-    CHECK(app.count_of(QStringLiteral("Mute Delay")) == 2);
+    CHECK(app.count_of(QStringLiteral("Stopped Responding")) == 2);
     CHECK(undo.repeat_count() == 2);
     CHECK(events.count(EventKind::HAPTIC, "impact") == 2);
 
@@ -655,7 +655,7 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     app.tap(QStringLiteral("toastUndo"));
     app.ui.settle();
     app.play();
-    CHECK(app.count_of(QStringLiteral("Mute Delay")) == 1);
+    CHECK(app.count_of(QStringLiteral("Stopped Responding")) == 1);
 
     // A note: type it, Add; the success haptic follows the commit, the field clears.
     events.clear();
@@ -712,14 +712,14 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     app.play();
     CHECK(app.services.platform().sheets_presented() == 1);
     REQUIRE_FALSE(app.services.platform().shared_texts().empty());
-    CHECK(app.services.platform().shared_texts().front().find("Mute Delay") != std::string::npos);
+    CHECK(app.services.platform().shared_texts().front().find("Stopped Responding") != std::string::npos);
 
     // Settings, and back to Log.
     app.choose_tab(SETTINGS_TAB);
     CHECK(app.shown(QStringLiteral("settingsScreen")));
     app.choose_tab(LOG_TAB);
     CHECK(app.shown(QStringLiteral("logScreen")));
-    CHECK(app.count_of(QStringLiteral("Mute Delay")) == 1);
+    CHECK(app.count_of(QStringLiteral("Stopped Responding")) == 1);
 }
 
 TEST_CASE(
@@ -3223,11 +3223,11 @@ TEST_CASE("shell.toggle: the switch shows and hides the tab, an empty board offe
     App app(true, false);
     app.with_boards(false);
     app.load();
-    const QString mute = app.tile(QStringLiteral("Mute Delay"));
+    const QString mute = app.tile(QStringLiteral("Stopped Responding"));
     app.ui.tap(app.need(mute));
     app.ui.tap(app.need(mute));
     app.ui.settle();
-    const int entries = app.count_of(QStringLiteral("Mute Delay"));
+    const int entries = app.count_of(QStringLiteral("Stopped Responding"));
     REQUIRE(entries == 1);
 
     // On, in Settings: the tab is there at once, and the row says what turning it off does.
@@ -3255,7 +3255,7 @@ TEST_CASE("shell.toggle: the switch shows and hides the tab, an empty board offe
     CHECK(shell_tab(app) == 0);
     CHECK_FALSE(app.shown(QStringLiteral("tabInteractions")));
     CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("errors"));
-    CHECK(app.count_of(QStringLiteral("Mute Delay")) == entries);
+    CHECK(app.count_of(QStringLiteral("Stopped Responding")) == entries);
 
     // On again: the tab is back and the board is as it was.
     app.boards->setProperty("interactionsEnabled", true);

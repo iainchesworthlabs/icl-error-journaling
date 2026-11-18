@@ -26,7 +26,7 @@ import ErrorJournalingApp
 // The hold records the entry (the tile sends `pressed` at the hold when no double-tap has already; a double-tap that goes on
 // into a hold has recorded at its second touch, and the hold adds to that entry, so the entry is recorded once) and then:
 //   - a draft is typed: `session.attachDraft` puts it on the entry's line and clears the composer, and the undo toast takes the
-//     entry and the note away together and gives the draft back ("Mute Delay logged at 10:30 with note");
+//     entry and the note away together and gives the draft back ("Stopped Responding logged at 10:30 with note");
 //   - the composer is empty: the Edit entry sheet opens on the new entry with the cursor in the note; Save attaches what is
 //     typed and Cancel leaves the entry as it was.
 // A hold waits for `entryRecorded` and then does the same, which is always the case when the hold itself recorded the entry. A

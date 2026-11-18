@@ -113,24 +113,24 @@ class Component extends DCLogic {
     this.types = [
       { id: 'hal', name: 'Wrong Response', bg: '#DCE8F7' },
       { id: 'seq', name: 'Sequence Out of Order', bg: '#E6E0F5' },
-      { id: 'wrongsong', name: 'Wrong Track Played', bg: '#FBE3CF' },
-      { id: 'findsong', name: 'Track Not Found', bg: '#D3ECEE' },
-      { id: 'skip', name: 'Track Skipped', bg: '#F3DDEB' },
-      { id: 'drop', name: 'Audio Drop Out', bg: '#FFF0C2' },
-      { id: 'vol', name: 'Volume Jump', bg: '#E0E6EE' },
-      { id: 'mute', name: 'Mute Delay', bg: '#D9E2FB' },
-      { id: 'speech', name: 'Speech Delay', bg: '#F6E2D6' },
-      { id: 'songlat', name: 'Track Delay', bg: '#ECE5D3' },
-      { id: 'auto', name: 'Navigation Failure', bg: '#F5D9E0' }
+      { id: 'wrongsong', name: 'Wrong Output', bg: '#FBE3CF' },
+      { id: 'findsong', name: 'File Not Found', bg: '#D3ECEE' },
+      { id: 'skip', name: 'Step Skipped', bg: '#F3DDEB' },
+      { id: 'drop', name: 'Connection Lost', bg: '#FFF0C2' },
+      { id: 'vol', name: 'Value Out of Range', bg: '#E0E6EE' },
+      { id: 'mute', name: 'Stopped Responding', bg: '#D9E2FB' },
+      { id: 'speech', name: 'Timed Out', bg: '#F6E2D6' },
+      { id: 'songlat', name: 'Slow Response', bg: '#ECE5D3' },
+      { id: 'auto', name: 'Stopped Unexpectedly', bg: '#F5D9E0' }
     ];
     this.state = {
       counts: { hal: 2, wrongsong: 1, mute: 1, speech: 1 },
       entryCount: 7,
-      lastLine: '10:20  T| Mute Delay',
+      lastLine: '10:20  T| Stopped Responding',
       draft: '',
       showToast: true,
       showHint: false,
-      toastText: 'Mute Delay logged at 10:20',
+      toastText: 'Stopped Responding logged at 10:20',
       undoInfo: null,
       repeat: 1,
       lastTypeId: 'mute'
