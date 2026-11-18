@@ -8,8 +8,8 @@ The Field Test pages use the shell of iainchesworthlabs.com (its stylesheet, hea
 build or run time: tools/docs/site-kit/v1/ is a pinned copy of the company's kit (its README says how it is published).
 This check fails when
 
-- a file of the copy differs from the hash recorded in the copy's own SHA256SUMS (line endings are not compared), or a file
-  that SHA256SUMS lists is missing, or a file is there that it does not list;
+- a file of the copy differs from the hash recorded in the copy's own SHA256SUMS.txt (line endings are not compared), or a file
+  that SHA256SUMS.txt lists is missing, or a file is there that it does not list;
 - docs/theme.css, the Field Test palette (the 8 colour roles, light and dark), does not pass the company's checker,
   kit/check-palette.mjs (shape and WCAG 2.2 AA contrast against the shell's own neutrals). The checker is Node 20 or later.
 
@@ -40,9 +40,9 @@ def digest(path: Path) -> str:
 def check_sums(root: Path) -> list[str]:
     problems: list[str] = []
     base = root / KIT
-    sums = base / "kit" / "SHA256SUMS"
+    sums = base / "kit" / "SHA256SUMS.txt"
     if not sums.is_file():
-        return [f"{KIT}/kit/SHA256SUMS is missing"]
+        return [f"{KIT}/kit/SHA256SUMS.txt is missing"]
     listed: set[str] = set()
     for line in sums.read_text(encoding="utf-8").splitlines():
         if not line.strip():
@@ -51,13 +51,13 @@ def check_sums(root: Path) -> list[str]:
         listed.add(name)
         path = base / name
         if not path.is_file():
-            problems.append(f"{KIT}/{name} is listed in SHA256SUMS and is missing")
+            problems.append(f"{KIT}/{name} is listed in SHA256SUMS.txt and is missing")
         elif digest(path) != expected:
-            problems.append(f"{KIT}/{name} differs from the kit's SHA256SUMS: it was edited. Copy the kit file again instead")
+            problems.append(f"{KIT}/{name} differs from the kit's SHA256SUMS.txt: it was edited. Copy the kit file again instead")
     for path in sorted(base.rglob("*")):
         name = path.relative_to(base).as_posix()
-        if path.is_file() and name not in listed and name != "kit/SHA256SUMS":
-            problems.append(f"{KIT}/{name} is not in the kit's SHA256SUMS: do not add files to the copy")
+        if path.is_file() and name not in listed and name != "kit/SHA256SUMS.txt":
+            problems.append(f"{KIT}/{name} is not in the kit's SHA256SUMS.txt: do not add files to the copy")
     return problems
 
 
@@ -90,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"::error::{problem}")
     if problems:
         return 1
-    version = (args.root / KIT / "kit" / "VERSION").read_text(encoding="utf-8").strip()
+    version = (args.root / KIT / "kit" / "VERSION.txt").read_text(encoding="utf-8").strip()
     print(f"Site kit {version} and the Field Test palette: ok")
     return 0
 

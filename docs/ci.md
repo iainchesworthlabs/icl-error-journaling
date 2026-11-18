@@ -367,7 +367,7 @@ blocks every script. The guide is still MkDocs Material, with its colours set fr
 - `docs/theme.css` is the Field Test palette: eight colour roles, light and dark, in one file. To change a colour (the
   purple header card may turn green), change that file only.
 - `docs/assets/field-test.css` is the layout the shell does not have. It uses the shell's variables and holds no colour.
-- `check_site_kit.py` fails when a file of the copy differs from the kit's `SHA256SUMS`, or the palette fails the
+- `check_site_kit.py` fails when a file of the copy differs from the kit's `SHA256SUMS.txt`, or the palette fails the
   company's checker (`check-palette.mjs`, Node 20 or later: shape, and WCAG 2.2 AA contrast against the shell's neutrals).
 - `check_site_pages.py` builds the site (`mkdocs build --strict`) and fails on a page that has no title, no canonical
   address or not one `h1`; a Field Test page that has a `<script>` (except JSON-LD), a `<style>` or `style=`, loads

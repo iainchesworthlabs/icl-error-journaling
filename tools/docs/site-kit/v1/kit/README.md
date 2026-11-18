@@ -13,8 +13,8 @@ All files are public, plain files under `https://iainchesworthlabs.com/assets/v1
 | `kit/partials/header.html`, `kit/partials/footer.html` | Header and footer, already in the skeleton. For MkDocs or other templates. |
 | `kit/theme.css` | Template for `<slug>/theme.css` (8 colours). |
 | `kit/check-palette.mjs` | Contrast and shape check for `theme.css`. Node 20 or later, no dependencies. |
-| `kit/VERSION` | The kit version. |
-| `kit/SHA256SUMS` | SHA-256 of every kit file and `icl.css`. |
+| `kit/VERSION.txt` | The kit version. |
+| `kit/SHA256SUMS.txt` | SHA-256 of every kit file and `icl.css`. |
 
 ## Use in an app repo
 
@@ -23,10 +23,10 @@ Download at build time, pinned to the SHA-256 recorded in your repo. Do not comm
 ```bash
 base=https://iainchesworthlabs.com/assets/v1
 mkdir -p kit && cd kit
-for f in kit/SHA256SUMS icl.css kit/check-palette.mjs kit/app-page.html; do curl -fsSLO "$base/$f"; done
+for f in kit/SHA256SUMS.txt icl.css kit/check-palette.mjs kit/app-page.html; do curl -fsSLO "$base/$f"; done
 ```
 
-Keep the expected hash of `SHA256SUMS` in your repo and compare it before you trust the rest, then run `sha256sum -c SHA256SUMS`
+Keep the expected hash of `SHA256SUMS.txt` in your repo and compare it before you trust the rest, then run `sha256sum -c SHA256SUMS.txt`
 (the sums use paths relative to `/assets/v1/`, so download with the same folder layout if you want the check to find every file).
 Then, in CI:
 

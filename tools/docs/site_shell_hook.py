@@ -2,7 +2,7 @@
 """MkDocs hook: the company shell for the Field Test pages.
 
 The shell (iainchesworthlabs.com's shared stylesheet, header and footer) is a pinned copy of the company kit in
-tools/docs/site-kit/v1/, checked against the kit's own SHA256SUMS by tools/ci/check_site_kit.py. Nothing is fetched at build
+tools/docs/site-kit/v1/, checked against the kit's own SHA256SUMS.txt by tools/ci/check_site_kit.py. Nothing is fetched at build
 or run time. This hook
 
 - lets templates include the kit's header and footer as `icl-kit/header.html` and `icl-kit/footer.html`, so the pinned
