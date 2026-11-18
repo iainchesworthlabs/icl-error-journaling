@@ -1,1 +1,0 @@
-**The version line at the foot of Settings is gone.** The “About Field Test” row, the last row of Settings, already opens the page with the version, build, platform and storage, so the same text is no longer repeated under it. Not yet run on a device.

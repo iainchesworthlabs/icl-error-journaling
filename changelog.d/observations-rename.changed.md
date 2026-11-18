@@ -1,1 +1,0 @@
-**The Interactions board is now called Observations.** The fifth tab, the board, its settings (**Second board: Observations**, **Observation types**), the Edit entry sheet, the person list, the empty board, the in-app help and the user guide use the new word, and the tab has an eye in place of the speech bubble. Not yet run on a device.

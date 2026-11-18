@@ -37,7 +37,7 @@ description: "Three steps cover a normal day with Field Test: set up the board, 
 </ol>
 <p><a href="../guide/logging/">A day of logging</a> in the Guide.</p>
 </div>
-<figure class="icl-device"><img src="../guide/img/log-board.png" width="402" height="874" loading="lazy" alt="The Log screen with a board of tiles and the message Mute Delay logged at 10:20 with an Undo button."></figure>
+<figure class="icl-device"><img src="../guide/img/log-board.png" width="402" height="874" loading="lazy" alt="The Log screen with a board of tiles and the message Stopped Responding logged at 10:20 with an Undo button."></figure>
 </div>
 </div></section>
 
@@ -46,8 +46,8 @@ description: "Three steps cover a normal day with Field Test: set up the board, 
 <div>
 <h2>Step 3: Share the log</h2>
 <p>At the end of the day, open <strong>Review</strong>. It is today's log in the same words you will send. Tap an entry to fix it. Tap <strong>Share log</strong> and choose where it goes: a chat app, Mail, Files or the clipboard.</p>
-<pre class="ft-log">10:20 T| Mute Delay
-11:02 T| Wrong Track Played – asked for Evening Song</pre>
+<pre class="ft-log">10:20 T| Stopped Responding
+11:02 T| Incorrect Action – asked for task 2</pre>
 <p>Only Share log marks a log as shared. Copying does not. The next morning the app offers to start a new log. Yesterday's stays in History.</p>
 <p><a href="../guide/sharing/">Sharing and the next day</a> and <a href="../guide/history/">History</a> in the Guide.</p>
 </div>
