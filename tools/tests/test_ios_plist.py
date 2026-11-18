@@ -32,7 +32,7 @@ GOOD = {
         {
             "UTTypeIdentifier": IDENTIFIER,
             "UTTypeDescription": "Sample setup",
-            "UTTypeConformsTo": ["public.json"],
+            "UTTypeConformsTo": ["public.data", "public.content"],
             "UTTypeTagSpecification": {"public.filename-extension": ["ejconfig"]},
         }
     ],
@@ -115,8 +115,13 @@ class PlistCheckTest(unittest.TestCase):
 
         self.assertTrue(any("extension" in p for p in broken(change)))
 
-    def test_exported_type_must_conform_to_json(self) -> None:
-        self.assertTrue(any("public.json" in p for p in broken(lambda p: p["UTExportedTypeDeclarations"][0].update(UTTypeConformsTo=[]))))
+    def test_exported_type_must_conform_to_data(self) -> None:
+        self.assertTrue(any("public.data" in p for p in broken(lambda p: p["UTExportedTypeDeclarations"][0].update(UTTypeConformsTo=[]))))
+
+    def test_exported_type_must_not_conform_to_json(self) -> None:
+        # The system previews JSON, so an AirDropped setup file would open as text instead of in the application.
+        problems = broken(lambda p: p["UTExportedTypeDeclarations"][0].update(UTTypeConformsTo=["public.data", "public.json"]))
+        self.assertTrue(any("must not conform to public.json" in p for p in problems))
 
     def test_missing_document_type_fails(self) -> None:
         self.assertTrue(any(IDENTIFIER in p for p in broken(lambda p: p["CFBundleDocumentTypes"].pop(0))))
