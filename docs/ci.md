@@ -15,7 +15,7 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Change to what the iOS build reads, or a manual run | iOS compile check for a device (`ios-build.yml`, not required). A pull request runs it only for Apple paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
 | Change to what the Android build reads, or a manual run | Android build (`android-build.yml`, not required): the unsigned APK and bundle of `android-release`, checked by `tools/ci/check_android_package.py`. A pull request runs it for the Android paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
 | Push to `develop`, a manual run, or a pull request with the label `android-emulator` | Android emulator smoke test (`android-emulator.yml`, not required, below): the x86_64 build starts on an API 36 emulator and survives Home and a return |
-| Change to the documentation site (`docs/`, `mkdocs.yml`, `tools/docs/`, `config/sample-config.json`) | The site build (`docs.yml`). The push to `main` publishes it. The hook `tools/docs/demo_setup_hook.py` adds `demo/demo-setup.ejconfig`, a copy of the sample setup, for App Review (Stage 11, 11.3) |
+| Change to the documentation site (`docs/`, `mkdocs.yml`, `tools/docs/`, `config/sample-config.json`) | The site build (`docs.yml`). A push to `develop` that changes one of those paths publishes it; a push that changes only app code does not. The hook `tools/docs/demo_setup_hook.py` adds `demo/demo-setup.ejconfig`, a copy of the sample setup, for App Review (Stage 11, 11.3) |
 | Nightly | CodeQL; the kill harness at 1,000 random kills (`kill-nightly.yml`); the weekly CI metrics (`ci-metrics.yml`, Mondays 06:00 UTC) |
 | Hourly | The Actions cache prune (`cache-prune.yml`, below) |
 | Every 15 minutes | Cancel the runs of merge-queue entries that are gone (`cancel-orphan-queue-runs.yml`, below) |
@@ -324,7 +324,12 @@ tracked file. The unit tests are in `tools/tests/test_store_text.py`.
 ## The site address
 
 The guide, support and privacy pages are one MkDocs site, published by `docs.yml` to a private S3 bucket behind CloudFront, at `https://iainchesworthlabs.com/field-test/`, on a
-push to `main`. `docs.yml` builds the site once (`site-artifact: docs-site`) and calls `docs-deploy-aws.yml` of
+push to `develop` that changes the site's inputs (`docs/**`, `mkdocs.yml`, `requirements/docs.txt`, `tools/docs/**`,
+`config/sample-config.json` or `docs.yml`), so the site publishes independently of app releases. A push of app code alone
+does not deploy it, a change of both does both, and a run from the Actions tab (`workflow_dispatch`, from `develop`)
+republishes it. The site is not deployed from `main`: that branch only fast-forwards to what `develop` already published,
+and the production role trusts a push to `develop` only. If the role's trust does not allow that, the deploy job fails
+and `Explain a failed deploy` names the cause (the owner runs the site stack's deploy). `docs.yml` builds the site once (`site-artifact: docs-site`) and calls `docs-deploy-aws.yml` of
 `icl-common-infra` (prefix `field-test`), which assumes an IAM role by OIDC (no stored keys), syncs the
 prefix and invalidates it. The role, bucket and distribution come from the repository **secrets** `DOCS_ROLE_ARN`,
 `DOCS_BUCKET` and `DOCS_DISTRIBUTION_ID`, which the owner sets (secrets, so the public logs show `***`); none of those values is written in the repository. A pull

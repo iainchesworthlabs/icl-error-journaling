@@ -81,7 +81,7 @@ These come from the TestFlight feedback so far and are added to by the Stage 7 f
 **Recommendation: keep the one MkDocs Material site built from this repository, with the guide at its root, served at `https://iainchesworthlabs.com/field-test/` (S3 behind CloudFront; it was first on GitHub Pages).**
 
 What is there already: `mkdocs.yml` (Material theme, `strict: true`), `.github/workflows/docs.yml` (builds the site on
-every pull request that touches `docs/`, and on a push to `main` builds and deploys it with the reusable workflows of
+every pull request that touches `docs/`, and on a push to `develop` that touches them builds and deploys it with the reusable workflows of
 `icl-common-infra`, the deploy being `docs-deploy-aws.yml`: OIDC, no secrets), and HTTPS is enforced by CloudFront. The
 address is `https://iainchesworthlabs.com/field-test/`. It is empty until `main` has had a release.
 
@@ -110,9 +110,9 @@ change of domain is one edit and one test.
 
 1. Set the repository secrets `DOCS_ROLE_ARN`, `DOCS_PREVIEW_ROLE_ARN`, `DOCS_BUCKET` and `DOCS_DISTRIBUTION_ID`
    (`docs/ci.md`, "The site address"), and turn GitHub Pages off on this repository once the new address answers.
-2. Publish: the guide goes live with the first release to `main`. App Review and Play review fetch the support and
-   privacy URLs, so a release to `main` that contains 10.1 has to happen before the Stage 11 submission. If that is too
-   late, the owner can choose decision 2's alternative.
+2. Publish: the guide goes live from a push to `develop` that changes the documentation, with no release needed (decision
+   2's alternative, chosen by the owner). App Review and Play review fetch the support and privacy URLs, so the pages
+   have to be live before the Stage 11 submission.
 3. The domain is decided (decision 3): `iainchesworthlabs.com`, set before Stage 11 submits, because a store URL that
    changes later needs a new submission.
 4. Choose the support contact (decision 4).
@@ -326,9 +326,9 @@ Run after the first release to `main` that contains 10.1 to 10.7:
 
 1. **Hosting.** One MkDocs site built from this repo and served at `iainchesworthlabs.com/field-test/`, guide at the root and developer pages under "For developers"
    (recommended), or the guide alone on the site and the developer pages left in the repository only.
-2. **When the site publishes.** On a release to `main`, so the guide matches the released app (recommended), or from
-   `develop` until the first public release, so the support and privacy URLs are live sooner. The second changes
-   `docs.yml` (a workflow change, `docs/ci.md`).
+2. **When the site publishes.** Decided by the owner: from `develop` when the documentation changes, independently of
+   app releases (the alternative was a release to `main`, so that the guide matches the released app). See `docs/ci.md`,
+   "The site address".
 3. **Custom domain.** Decided: `iainchesworthlabs.com`, under the prefix `field-test` (it was the `github.io` address before). To be fixed
    before Stage 11 submits.
 4. **Support contact.** An email address the owner gives (shown on the support page), GitHub issues, or both. Apple
