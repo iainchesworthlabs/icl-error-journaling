@@ -1,0 +1,1 @@
+**The website now describes Field Test as for software and hardware testing.** The home, press, features and how-to-use pages, the page description for search engines, and the sample log lines on them no longer mention robots or songs.

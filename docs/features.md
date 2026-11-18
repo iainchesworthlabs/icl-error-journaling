@@ -23,7 +23,7 @@ description: "What Field Test does: double-tap logging, notes, the day's log, pl
 <div class="ft-row ft-row--flip">
 <div>
 <h2>Notes</h2>
-<p>Type a note, or hold a tile to log the error with one. Note templates cover what you write every day, such as the song that was playing. Where your phone can recognise speech on the phone, you can dictate a note.</p>
+<p>Type a note, or hold a tile to log the error with one. Note templates cover what you write every day, such as which task you began. Where your phone can recognise speech on the phone, you can dictate a note.</p>
 <p><a href="../guide/logging/#notes">Guide: notes</a></p>
 </div>
 <figure class="icl-device"><img src="../guide/img/log-hold-note.png" width="402" height="874" loading="lazy" alt="The Edit entry sheet for a Wrong Response entry at 10:20, with an empty note field and the line as it will read in the shared log."></figure>

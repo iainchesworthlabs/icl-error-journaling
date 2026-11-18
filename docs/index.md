@@ -16,7 +16,7 @@ description: "Log software and hardware test errors as they happen and share the
 </div>
 <p class="icl-hero__meta">iPhone and iPad &middot; 6.99 USD, once &middot; No account &middot; Works offline &middot; Data Not Collected</p>
 </div>
-<figure class="icl-device"><img src="guide/img/log-board.png" width="402" height="874" alt="The Log screen: a purple card for UNIT-27 at North Site, a row of note chips, and a board of coloured tiles including Wrong Response, with a message that says Mute Delay logged at 10:20."></figure>
+<figure class="icl-device"><img src="guide/img/log-board.png" width="402" height="874" alt="The Log screen: a purple card for UNIT-27 at North Site, a row of note chips, and a board of coloured tiles including Wrong Response, with a message that says Stopped Responding logged at 10:20."></figure>
 </div></div></section>
 
 <section class="icl-section icl-section--tint" id="how"><div class="icl-wrap">
@@ -43,9 +43,9 @@ description: "Log software and hardware test errors as they happen and share the
 <div class="ft-row ft-row--flip">
 <div>
 <h3>Notes</h3>
-<p>Type a note, or hold a tile to log the error with one. Note templates cover what you write every day, such as the song that was playing. Where your phone can recognise speech on the phone, you can dictate a note.</p>
+<p>Type a note, or hold a tile to log the error with one. Note templates cover what you write every day, such as which task you began. Where your phone can recognise speech on the phone, you can dictate a note.</p>
 </div>
-<figure class="icl-device"><img src="guide/img/log-template-value.png" width="402" height="874" loading="lazy" alt="The Played song sheet with the answer Morning Medley typed and the line in the log below it."></figure>
+<figure class="icl-device"><img src="guide/img/log-template-value.png" width="402" height="874" loading="lazy" alt="The Began task sheet with the answer 1 typed and the line in the log below it."></figure>
 </div>
 
 <div class="ft-row">
