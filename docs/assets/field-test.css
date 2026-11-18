@@ -22,12 +22,7 @@
 .ft-head h1 { font-size: var(--icl-step-4); max-width: 22ch; }
 .ft-head .icl-lead { max-width: 52ch; }
 
-/* Three facts, steps */
-.ft-tags { margin-top: var(--icl-space-5); }
-.ft-facts { display: grid; gap: var(--icl-space-4); grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin: 0; padding: 0; list-style: none; }
-.ft-facts li { padding: var(--icl-space-4) var(--icl-space-5); background: var(--icl-surface-2); border: 1px solid var(--icl-border); border-radius: var(--icl-radius-m); }
-.ft-facts h3 { margin-bottom: var(--icl-space-1); }
-.ft-facts p { margin: 0; color: var(--icl-fg-muted); }
+/* Steps */
 .ft-steps { display: grid; gap: var(--icl-space-5); grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin: 0; padding: 0; list-style: none; counter-reset: step; }
 .ft-steps li { counter-increment: step; }
 .ft-steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; margin-bottom: var(--icl-space-3); border-radius: 50%; background: var(--app-primary); color: var(--app-on-primary); font-weight: 750; }

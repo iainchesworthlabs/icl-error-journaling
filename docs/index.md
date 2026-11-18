@@ -14,19 +14,10 @@ description: "Log robot session errors as they happen and share the day's log as
 <span class="ft-get">Coming to the App Store</span>
 <a class="icl-button" href="how-to-use/">How to use it</a>
 </div>
-<p class="icl-hero__meta">iPhone and iPad &middot; 6.99 USD, once &middot; English (Australia)</p>
+<p class="icl-hero__meta">iPhone and iPad &middot; 6.99 USD, once &middot; No account &middot; Works offline &middot; Data Not Collected</p>
 </div>
 <figure class="icl-device"><img src="guide/img/log-board.png" width="402" height="874" alt="The Log screen: a purple card for UNIT-27 at North Site, a row of note chips, and a board of coloured tiles including Wrong Response, with a message that says Mute Delay logged at 10:20."></figure>
 </div></div></section>
-
-<section class="icl-section"><div class="icl-wrap">
-<ul class="ft-facts">
-<li><h3>No account</h3><p>Open it and start.</p></li>
-<li><h3>Works offline</h3><p>The app does not use the network.</p></li>
-<li><h3>Stays on your device</h3><p>The log leaves your device only when you share it.</p></li>
-</ul>
-<ul class="icl-tags ft-tags"><li>Data Not Collected</li><li>6.99 USD, once</li><li>iPhone and iPad</li><li>On-device</li></ul>
-</div></section>
 
 <section class="icl-section icl-section--tint" id="how"><div class="icl-wrap">
 <h2>How it works</h2>
