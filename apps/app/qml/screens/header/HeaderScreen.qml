@@ -350,6 +350,8 @@ SheetHost {
             objectName: "headerNav"
             z: 2
             width: parent.width
+            // The title and Back start at the form column, as on Settings, not at the edge of a wide window.
+            sideInset: root.side
             title: qsTr("Today’s details")
             large: true
             scrollPosition: scroller.contentY + scroller.topMargin

@@ -1637,6 +1637,16 @@ TEST_CASE("screenshots.render: every state of screens.json renders in every mode
     static const QString family = register_fonts();
     INFO("font family: " << family.toStdString());
     const QStringList only = qEnvironmentVariable("EJ_SCREENSHOT_ONLY").split(QLatin1Char(','), Qt::SkipEmptyParts);
+    // EJ_SCREENSHOT_SIZE, such as 1133x744, draws the iPad states in a window of that size (an iPad mini, a Split View
+    // window) instead of the mock-up's, and adds the size to the file names. The phone's states are not drawn.
+    QSize size_override;
+    {
+        const QStringList parts = qEnvironmentVariable("EJ_SCREENSHOT_SIZE").split(QLatin1Char('x'), Qt::SkipEmptyParts);
+        if (parts.size() == 2)
+        {
+            size_override = QSize(parts.at(0).toInt(), parts.at(1).toInt());
+        }
+    }
     const QJsonArray modes = list.value(QStringLiteral("modes")).toArray();
     REQUIRE_FALSE(modes.isEmpty());
 
@@ -1648,7 +1658,16 @@ TEST_CASE("screenshots.render: every state of screens.json renders in every mode
             continue;
         }
         CAPTURE(scene.m_Name.toStdString());
-        Phone phone(scene.m_Start, scene.m_Device);
+        Device device = scene.m_Device;
+        if (size_override.isValid())
+        {
+            if (device.m_Size == PHONE.m_Size)
+            {
+                continue;
+            }
+            device.m_Size = size_override;
+        }
+        Phone phone(scene.m_Start, device);
         scene.m_Build(phone);
         for (const QJsonValue value : modes)
         {
@@ -1666,7 +1685,8 @@ TEST_CASE("screenshots.render: every state of screens.json renders in every mode
             }
             const QImage image = phone.ui.grab();
             REQUIRE_FALSE(image.isNull());
-            const QString file = scene.m_Name + QLatin1Char('.') + mode_name + QStringLiteral(".png");
+            const QString sized = size_override.isValid() ? QStringLiteral("@%1x%2").arg(size_override.width()).arg(size_override.height()) : QString();
+            const QString file = scene.m_Name + sized + QLatin1Char('.') + mode_name + QStringLiteral(".png");
             REQUIRE(image.save(QDir(dir).filePath(file)));
             written.append(QJsonObject{{QStringLiteral("state"), scene.m_Name},
                                        {QStringLiteral("mode"), mode_name},
