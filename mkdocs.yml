@@ -32,24 +32,37 @@ theme:
   name: material
   custom_dir: tools/docs/theme  # the Field Test pages (marketing.html) and the guide's colours; see tools/docs/site_shell_hook.py
   font: false  # no web font: the site loads nothing from other sites
+  # One palette. Dark follows the device through docs/assets/guide.css: Material would remember the first palette it
+  # chose and keep it when the device setting changed.
   palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
+    scheme: default
   features:
     - navigation.sections
+    - navigation.footer  # previous and next page
+    - toc.follow
     - content.code.copy
 # The Field Test pages (marketing.html) are not in the guide's menu. The menu holds the guide only.
 nav:
   - Guide:
       - Guide contents: guide/index.md
-      - Getting started: guide/getting-started.md
-      - Setting up the board: guide/setup.md
-      - A day of logging: guide/logging.md
-      - "Today's details": guide/todays-details.md
-      - Sharing and the next day: guide/sharing.md
-      - History: guide/history.md
-      - The setup file: guide/setup-file.md
-      - Questions and answers: guide/faq.md
-      - Troubleshooting: guide/troubleshooting.md
+      - Start:
+          - Getting started: guide/getting-started.md
+          - Quick reference: guide/quick-reference.md
+      - Use:
+          - Setting up the board: guide/setup.md
+          - A day of logging: guide/logging.md
+          - "Today's details": guide/todays-details.md
+          - Sharing and the next day: guide/sharing.md
+          - History: guide/history.md
+          - Observations: guide/observations.md
+      - Teams and tools:
+          - Rolling out to a team: guide/rolling-out.md
+          - The setup file: guide/setup-file.md
+          - The shared log format: guide/shared-log-format.md
+      - Reference:
+          - Settings: guide/settings.md
+          - Where your data is kept: guide/your-data.md
+          - Glossary: guide/glossary.md
+      - Help:
+          - Questions and answers: guide/faq.md
+          - Troubleshooting: guide/troubleshooting.md
