@@ -43,7 +43,7 @@ TEST_CASE("editor.error_types: the types are listed in board order, one line eac
     REQUIRE(listed.size() == 11);
     CHECK(listed.front() == QStringLiteral("Wrong Response"));
     CHECK(listed.at(1) == QStringLiteral("Sequence Out of Order"));
-    CHECK(listed.back() == QStringLiteral("Stopped Unexpectedly"));
+    CHECK(listed.back() == QStringLiteral("Unexpected Stop"));
 
     QQuickItem* first = row_with(world, TYPES, QStringLiteral("Wrong Response"));
     REQUIRE(first != nullptr);
@@ -265,7 +265,7 @@ TEST_CASE("editor.error_types: the arrows move a type along the board and its co
     CHECK(names(world).front() == QStringLiteral("Wrong Response"));
 
     // The last type cannot move later.
-    QQuickItem* last = row_with(world, TYPES, QStringLiteral("Stopped Unexpectedly"));
+    QQuickItem* last = row_with(world, TYPES, QStringLiteral("Unexpected Stop"));
     CHECK_FALSE(child(last, QStringLiteral("editorMoveLater"))->isEnabled());
 }
 

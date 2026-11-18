@@ -656,7 +656,7 @@ void history_day(Phone& phone)
                             QStringLiteral("Stopped Responding"),         QStringLiteral("Incorrect Action"),
                             QStringLiteral("Timed Out"),       QStringLiteral("Audio Dropout"),
                             QStringLiteral("Lost Connection"),     QStringLiteral("Wi-Fi Connect Failed"),
-                            QStringLiteral("Stopped Unexpectedly"), QStringLiteral("Slow Response")};
+                            QStringLiteral("Unexpected Stop"), QStringLiteral("Slow Response")};
     const auto entries = [&](int day, int count, int first_hour, int first_minute)
     {
         for (int i = 0; i < count; ++i)
@@ -684,7 +684,7 @@ void history_day(Phone& phone)
     record(phone, QStringLiteral("Lost Connection"), 5, 16, 5);
     record(phone, QStringLiteral("Wi-Fi Connect Failed"), 5, 16, 20);
     record(phone, QStringLiteral("Slow Response"), 5, 16, 35);
-    record(phone, QStringLiteral("Stopped Unexpectedly"), 5, 16, 40);
+    record(phone, QStringLiteral("Unexpected Stop"), 5, 16, 40);
     note(phone, QStringLiteral("Began task 2"), 5, 16, 45);
     close_log(phone, 5, 16, 58, true, 6);
 

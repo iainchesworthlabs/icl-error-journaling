@@ -55,7 +55,7 @@ TYPES = [
     ("Stopped Responding", 1),
     ("Timed Out", 1),
     ("Slow Response", 0),
-    ("Stopped Unexpectedly", 0),
+    ("Unexpected Stop", 0),
 ]
 
 ENTRIES = [
@@ -478,7 +478,7 @@ def other_screen(p: Page) -> str:
     off = row("[Your other error type]", c["swatch"]) + row("[Another error type]", c["swatch"], last=True)
     on = "".join(
         [
-            row("Stopped Unexpectedly", p.tiles[10]),
+            row("Unexpected Stop", p.tiles[10]),
             row("Lost Connection", p.tiles[5]),
             row("Audio Dropout", p.tiles[3]),
             row("Wrong Response", p.tiles[0], "2 today"),

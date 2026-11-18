@@ -578,7 +578,7 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
         rig.set_text_scale(scale);
         for (const QString& word : words)
         {
-            for (const QString& text : {word, QStringLiteral("Observer ") + word})
+            for (const QString& text : {word, QStringLiteral("Test ") + word})
             {
                 QQuickItem* tile = rig.load(QStringLiteral("Tile"), tile_properties(text, 2));
                 REQUIRE(tile != nullptr);
@@ -649,9 +649,9 @@ TEST_CASE("tile.label_whole_words: the twelve tiles of the Interactions board ke
     // interactionTile0 to interactionTile11, 96 pt high, in a phone and in a Regular window.
     const QStringList labels{QStringLiteral("Paired with"),     QStringLiteral("Began task"),
                              QStringLiteral("Entered room 1"), QStringLiteral("Assigned"),
-                             QStringLiteral("Disconnection"),  QStringLiteral("Stopped Unexpectedly"),
+                             QStringLiteral("Disconnection"),  QStringLiteral("Unexpected Stop"),
                              QStringLiteral("Sequence Out of Order"), QStringLiteral("Interaction"),
-                             QStringLiteral("Observer Disconnection"), QStringLiteral("Navigation"),
+                             QStringLiteral("Test Disconnection"), QStringLiteral("Navigation"),
                              QStringLiteral("Sequence"),       QStringLiteral("Other")};
     QString rows;
     for (const QString& label : labels)

@@ -274,7 +274,7 @@ TEST_CASE("import.sample: the sample file imports and the board, the picker and 
     const int label = board.roleNames().key("label");
     CHECK(board.data(board.index(0), label).toString() == QStringLiteral("Wrong Response"));
     CHECK(board.data(board.index(1), label).toString() == QStringLiteral("Sequence Out of Order"));
-    CHECK(board.data(board.index(10), label).toString() == QStringLiteral("Stopped Unexpectedly"));
+    CHECK(board.data(board.index(10), label).toString() == QStringLiteral("Unexpected Stop"));
 
     viewmodel::ErrorPickerModel picker(world.model(), open_log, world.model());
     CHECK(picker.rowCount() >= 11);

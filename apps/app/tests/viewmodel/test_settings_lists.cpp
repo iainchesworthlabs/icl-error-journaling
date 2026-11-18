@@ -554,7 +554,7 @@ TEST_CASE("The board layout is 12 tiles: eleven positions and Other", "[viewmode
     CHECK(text_at(board, 0, role_named(board, "typeId")) == "00000000-0000-4000-8000-0000000000a1");
     CHECK(number_at(board, 0, role_named(board, "colourSlot")) == 1);
     CHECK(number_at(board, 0, role_named(board, "position")) == 1);
-    CHECK(text_at(board, 10, role_named(board, "label")) == "Stopped Unexpectedly");
+    CHECK(text_at(board, 10, role_named(board, "label")) == "Unexpected Stop");
     CHECK(number_at(board, 10, role_named(board, "colourSlot")) == 11);
     CHECK(text_at(board, 0, role_named(board, "accessibleName")) == "Wrong Response");
     for (int row = 0; row < 11; ++row)

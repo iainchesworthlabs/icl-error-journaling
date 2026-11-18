@@ -588,7 +588,7 @@ def other_inner(p: Page) -> str:
     )
     on = "".join(
         [
-            row("Stopped Unexpectedly", p.tiles[10]),
+            row("Unexpected Stop", p.tiles[10]),
             row("Lost Connection", p.tiles[5]),
             row("Audio Dropout", p.tiles[3]),
             row("Wrong Response", p.tiles[0], "2 today"),

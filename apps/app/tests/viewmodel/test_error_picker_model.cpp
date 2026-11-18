@@ -32,7 +32,7 @@ namespace
 constexpr int OFF = ErrorPickerModel::OFF_BOARD;
 constexpr int ON = ErrorPickerModel::ON_BOARD;
 
-/// The sample configuration with Stopped Unexpectedly taken off the board, a new "Écho Timeout" that was never on it, and a
+/// The sample configuration with Unexpected Stop taken off the board, a new "Écho Timeout" that was never on it, and a
 /// retired type. Master list indices: 0 to 10 the sample types, 11 Écho Timeout, 12 the retired type.
 Configuration picker_configuration()
 {
@@ -140,7 +140,7 @@ TEST_CASE("The picker lists the live types in two sections with today's counts",
 
     // Not on your board first, then on your board, each in master-list order; the retired type is absent.
     REQUIRE(picker.rowCount() == 12);
-    CHECK(fixture.label(0) == "Stopped Unexpectedly");
+    CHECK(fixture.label(0) == "Unexpected Stop");
     CHECK(fixture.label(1) == "\xC3\x89"
                               "cho Timeout");
     CHECK(fixture.label(2) == "Wrong Response");

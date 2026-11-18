@@ -56,7 +56,7 @@ const QString ON_GROUP = QStringLiteral("On your board");
 const QString ECHO = QString::fromUtf8("\xC3\x89"
                                        "cho Timeout");
 
-/// The sample configuration with Stopped Unexpectedly taken off the board, "Écho Timeout" added to the master list without
+/// The sample configuration with Unexpected Stop taken off the board, "Écho Timeout" added to the master list without
 /// a place on it, and a retired type that no sheet lists.
 Configuration picker_configuration()
 {
@@ -336,7 +336,7 @@ TEST_CASE("other.sections: the types by section, the counts, the swatches and th
     REQUIRE(all.size() == 12);
 
     // Not on your board first, then on your board, each in master-list order; the retired type is not listed.
-    CHECK(labels_in(all, OFF_GROUP) == QStringList{QStringLiteral("Stopped Unexpectedly"), ECHO});
+    CHECK(labels_in(all, OFF_GROUP) == QStringList{QStringLiteral("Unexpected Stop"), ECHO});
     const QStringList on = labels_in(all, ON_GROUP);
     REQUIRE(on.size() == 10);
     CHECK(on.first() == QStringLiteral("Wrong Response"));
@@ -350,10 +350,10 @@ TEST_CASE("other.sections: the types by section, the counts, the swatches and th
     CHECK(value_of(all, QStringLiteral("Wrong Response")) == QStringLiteral("2 today"));
     CHECK(value_of(all, QStringLiteral("Stopped Responding")) == QStringLiteral("1 today"));
     CHECK(value_of(all, QStringLiteral("Slow Response")).isEmpty());
-    CHECK(value_of(all, QStringLiteral("Stopped Unexpectedly")).isEmpty());
+    CHECK(value_of(all, QStringLiteral("Unexpected Stop")).isEmpty());
 
     // The swatch is the colour of the tile on the board and neutral off it.
-    CHECK(swatch_colour(*row_for(all, QStringLiteral("Stopped Unexpectedly"))) == theme_colour(f.m_Rig, "swatch"));
+    CHECK(swatch_colour(*row_for(all, QStringLiteral("Unexpected Stop"))) == theme_colour(f.m_Rig, "swatch"));
     CHECK(swatch_colour(*row_for(all, ECHO)) == theme_colour(f.m_Rig, "swatch"));
     const Row* wrong_response = row_for(all, QStringLiteral("Wrong Response"));
     REQUIRE(wrong_response != nullptr);
@@ -372,8 +372,8 @@ TEST_CASE("other.sections: the types by section, the counts, the swatches and th
     }
 
     // The counts follow a commit while the sheet is open.
-    f.record(QStringLiteral("Stopped Unexpectedly"));
-    CHECK(value_of(rows(f), QStringLiteral("Stopped Unexpectedly")) == QStringLiteral("1 today"));
+    f.record(QStringLiteral("Unexpected Stop"));
+    CHECK(value_of(rows(f), QStringLiteral("Unexpected Stop")) == QStringLiteral("1 today"));
     f.record(QStringLiteral("Stopped Responding"));
     CHECK(value_of(rows(f), QStringLiteral("Stopped Responding")) == QStringLiteral("2 today"));
 }
@@ -420,7 +420,7 @@ TEST_CASE("other.filter: typing narrows both sections with one reset for each ch
     f.m_Rig.type(QStringLiteral("unexp"));
     all = rows(f);
     REQUIRE(all.size() == 1);
-    CHECK(all.front().m_Text == QStringLiteral("Stopped Unexpectedly"));
+    CHECK(all.front().m_Text == QStringLiteral("Unexpected Stop"));
     CHECK(all.front().m_Group == OFF_GROUP);
     CHECK(input->property("activeFocus").toBool());
 
@@ -500,13 +500,13 @@ TEST_CASE("other.pick: a type that is not on the board is recorded like any othe
     Fixture f;
     f.open();
     const std::vector<Row> listed = rows(f);
-    const Row* navigation = row_for(listed, QStringLiteral("Stopped Unexpectedly"));
+    const Row* navigation = row_for(listed, QStringLiteral("Unexpected Stop"));
     REQUIRE(navigation != nullptr);
     f.m_Rig.tap(navigation->m_Item);
     f.commit();
 
     CHECK(f.m_Bridge->m_Impacts == 1);
-    CHECK(f.model_count(QStringLiteral("Stopped Unexpectedly")) == 1);
+    CHECK(f.model_count(QStringLiteral("Unexpected Stop")) == 1);
     CHECK(f.model_count(QStringLiteral("Wrong Response")) == 0);
 }
 
@@ -669,7 +669,7 @@ TEST_CASE("other.voiceover: rows read \"label, n today\" and a screen reader's a
     }
     REQUIRE(names.size() == 12);
     CHECK(names.contains(QStringLiteral("Wrong Response, 2 today")));
-    CHECK(names.contains(QStringLiteral("Stopped Unexpectedly")));
+    CHECK(names.contains(QStringLiteral("Unexpected Stop")));
 
     const std::vector<Row> listed = rows(f);
     const Row* track = row_for(listed, QStringLiteral("Step Skipped"));

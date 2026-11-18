@@ -325,7 +325,7 @@ TEST_CASE("A tap raises its tile and not Other, and the signals follow the commi
 TEST_CASE("A tap on a type that is not on the board raises Other only", "[viewmodel][board]")
 {
     Configuration configuration = sample_configuration();
-    configuration.m_ErrorTypes[10].m_BoardPosition.reset(); // Stopped Unexpectedly leaves the board
+    configuration.m_ErrorTypes[10].m_BoardPosition.reset(); // Unexpected Stop leaves the board
     BoardFixture fixture(std::move(configuration));
     const Spies spies(fixture.m_Board);
 
