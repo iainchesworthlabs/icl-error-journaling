@@ -16,7 +16,7 @@ The state of the nine labels today, from reading the code and the tests:
 |---|---|---|---|
 | VoiceOver | Role and name on every control; reading order; a VoiceOver activation is one press action | `a11y.names`, `a11y.reading_order`, `audit.names_complete`, `tile.voiceover`, `log.voiceover`, `doubletap.voiceover` | Not run on a device |
 | Voice Control | The same names | None that checks label in name | The check; the device pass |
-| Larger Text | Dynamic Type to 3.1 times; tile labels, tab labels and the count badge are capped at 1.3 by design (`scaleCap: 1.3` in `Theme.qml`) | `a11y.text_scale` at 1.0, 1.3 and 3.1 | The caps, and a device pass |
+| Larger Text | Dynamic Type to 3.1 times; tile labels, tab labels and the count badge are capped at 1.3 by design (`scaleCap: 1.3` in `Theme.qml`) | `a11y.text_scale` at 1.0, 1.3 and 3.1 | The caps are decided and stay (see Decided). A device pass |
 | Dark Interface | A dark scheme for every screen | Rig tests in light and dark (`set_dark`), `contrast_test.cpp` | Not run on a device |
 | Differentiate Without Colour Alone | Each tile carries a label as well as a colour; state is not colour alone | `a11y.*`, `tile_test.cpp` | Not run on a device |
 | Sufficient Contrast | `Theme.contrastPairs` walked in both schemes | `contrast_test.cpp` | Four light pairs are recorded exceptions; another session is fixing them and the Increase Contrast and Bold Text settings. Not touched here |
@@ -68,6 +68,13 @@ not look at `Accessible.ignored` on the `Text`: it is a rule about what is drawn
 This is the strict reading (every visible word), not "the first line of the control". If it turns up controls where that is
 wrong on purpose, they are brought back to the owner; no allowance list is added silently.
 
+## Decided
+
+- **The 1.3 cap stays.** The owner has decided to keep the 1.3 times cap on tile labels, tab labels and the count badge
+  (their geometry is fixed by design). It is recorded as a decided limit, not an open gap, in the Larger Text section of the
+  record (see Decision for where the record lives). Whether Larger Text is then declared still depends on Apple's current
+  criteria, which the page quotes and the owner reads before declaring. No code changes for it.
+
 ## Open questions for the owner
 
 1. **Where does the nine-label record go?** Proposed: the new internal `docs/accessibility-labels.md`, with the public page
@@ -78,13 +85,7 @@ wrong on purpose, they are brought back to the owner; no allowance list is added
 3. **Fixes change what VoiceOver speaks.** A fix that rewords a name is a user-visible change and gets a `changelog.d/`
    fragment. Names will keep what they say and add the label rather than drop words (a tile stays "Label, n today"). Proposed:
    accepted.
-4. **Larger Text and the 1.3 cap.** Tile labels, tab labels and the count badge stop growing at 1.3 times, because their
-   geometry is fixed by design (the board is a fixed 4 by 3 grid with no scrolling). Whether that still allows the Larger Text
-   label depends on Apple's criteria, which the old plan cited at
-   developer.apple.com/help/app-store-connect/manage-app-accessibility/overview-of-accessibility-nutrition-labels. The page
-   records the cap as a known limit and the proposed declaration as "owner decides after reading Apple's current criteria".
-   This is the owner's call, not the code's.
-5. **Two elements match one label while a note is typed.** The board adds "Log <name> with note" for each tile that can be held,
+4. **Two elements match one label while a note is typed.** The board adds "Log <name> with note" for each tile that can be held,
    so "Tap <name>" matches the tile and that element, and Voice Control asks which with numbers. Proposed: leave it, say so in
    the known limits, and check on the device that the numbers appear.
 
@@ -114,7 +115,7 @@ wrong on purpose, they are brought back to the owner; no allowance list is added
      A second "Tap" is a second entry. A tile that has a count ("Label, 2 today") is still found by its label.
    - `voicecontrol.tap_undo`: after a log, saying "Undo" finds the toast's button, and activating it removes the entry.
    - `voicecontrol.unique_labels`: no two controls on the board answer one label, except a tile and its "with note" element
-     (open question 5).
+     (open question 4).
    If the existing tests already pass for the right reason, these add only the lookup by label; they do not repeat
    `log.voiceover`.
 6. `docs/accessibility-labels.md`: the page, nine sections of the shape above, plus the list of common tasks that the
