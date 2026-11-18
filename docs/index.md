@@ -7,7 +7,6 @@ description: "Log robot session errors as they happen and share the day's log as
 <section class="icl-hero icl-hero--app"><div class="icl-wrap"><div class="icl-hero__grid">
 <div>
 <img class="icl-hero__icon" src="assets/img/icon-256.png" width="80" height="80" alt="">
-<p><span class="ft-chip">Data Not Collected</span></p>
 <h1>Log robot errors during a session</h1>
 <p class="icl-lead">Field Test is an error log for people who run sessions with a robot. Each common error has its own tile. Double-tap a tile to log the error with the time. At the end of the day, share the log as plain text.</p>
 <div class="icl-actions" id="get">
@@ -26,6 +25,7 @@ description: "Log robot session errors as they happen and share the day's log as
 <li><h3>Works offline</h3><p>The app does not use the network.</p></li>
 <li><h3>Stays on your device</h3><p>The log leaves your device only when you share it.</p></li>
 </ul>
+<ul class="icl-tags ft-tags"><li>Data Not Collected</li><li>6.99 USD, once</li><li>iPhone and iPad</li><li>On-device</li></ul>
 </div></section>
 
 <section class="icl-section icl-section--tint" id="how"><div class="icl-wrap">
@@ -96,7 +96,7 @@ description: "Log robot session errors as they happen and share the day's log as
 <section class="icl-section"><div class="icl-wrap ft-two">
 <div>
 <h2>Privacy</h2>
-<p>Field Test has no account, no analytics, no advertising and no crash reporting, and the app does not use the network. Your logs stay on your device, protected by the device's data protection. They leave only when you share them.</p>
+<p>Field Test has no account, no analytics, no advertising and no crash reporting, and the app does not use the network. Your logs stay on your device, protected by the device's data protection. They leave only when you share them. The App Store lists the app as Data Not Collected.</p>
 <p><a href="privacy/">Read the privacy page</a>. The source code is public, under the GNU General Public License, version 3 or later.</p>
 </div>
 <div>
