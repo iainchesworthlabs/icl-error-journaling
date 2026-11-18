@@ -632,6 +632,7 @@ Item {
             picker: root.picker
             settings: root.settings
             people: root.people
+            observationsOn: root.interactionsOn
             bottomClearance: tabBar.height
             onHeaderRequested: root.showDetails(StackView.view)
             onHelpRequested: topic => root.showHelp(topic)

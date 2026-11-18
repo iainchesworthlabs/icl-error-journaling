@@ -12,6 +12,7 @@
 #include "viewmodel/log_document.hpp"
 #include "viewmodel/log_observer.hpp"
 #include "viewmodel/open_log_source.hpp"
+#include "viewmodel/timeline_filter_model.hpp"
 
 #include <QAbstractListModel>
 #include <QByteArray>
@@ -52,6 +53,9 @@ class TimelineModel : public QAbstractListModel,
     Q_PROPERTY(QString headerText READ header_text NOTIFY summaryChanged) // render_header: the start values
     Q_PROPERTY(QString titleText READ title_text NOTIFY summaryChanged)   // "Sat 7 Nov · 7 entries"
     Q_PROPERTY(bool ready READ ready NOTIFY summaryChanged)
+    // The rows that match the filter of the review screen, over this model (the whole log). The count, the last line
+    // and Copy all above are always the whole log's.
+    Q_PROPERTY(ej::viewmodel::TimelineFilterModel* filtered READ filtered CONSTANT)
 
 public:
     /// QML role names: entryId, timeText, lineText, fullLine, kind, prefixText, restText. `Qt::DisplayRole` is the
@@ -106,6 +110,12 @@ public:
     [[nodiscard]] QString header_text() const;
     [[nodiscard]] QString title_text() const;
     [[nodiscard]] bool ready() const;
+
+    /// The filter over this model's rows. It is cleared whenever another log is shown.
+    [[nodiscard]] TimelineFilterModel* filtered()
+    {
+        return &m_Filtered;
+    }
 
     // QAbstractListModel. Qt's names, so these overrides keep them.
 
@@ -264,6 +274,8 @@ private:
     LogDocument* m_Document = nullptr;
     std::vector<Row> m_Rows;
     Summary m_Summary;
+    // After the rows: it reads them, and it is taken off this model first in the destructor.
+    TimelineFilterModel m_Filtered;
 };
 
 } // namespace ej::viewmodel
