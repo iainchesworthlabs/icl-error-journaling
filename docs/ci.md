@@ -325,9 +325,9 @@ tracked file. The unit tests are in `tools/tests/test_store_text.py`.
 
 The guide, support and privacy pages are one MkDocs site, published by `docs.yml` to a private S3 bucket behind CloudFront, at `https://iainchesworthlabs.com/field-test/`, on a
 push to `main`. `docs.yml` builds the site once (`site-artifact: docs-site`) and calls `docs-deploy-aws.yml` of
-`icl-common-infra` (prefix `field-test`), which assumes an IAM role by OIDC (no stored keys, no secrets), syncs the
-prefix and invalidates it. The role, bucket and distribution come from the repository variables `DOCS_ROLE_ARN`,
-`DOCS_BUCKET` and `DOCS_DISTRIBUTION_ID`, which the owner sets; none of those values is written in the repository. A pull
+`icl-common-infra` (prefix `field-test`), which assumes an IAM role by OIDC (no stored keys), syncs the
+prefix and invalidates it. The role, bucket and distribution come from the repository **secrets** `DOCS_ROLE_ARN`,
+`DOCS_BUCKET` and `DOCS_DISTRIBUTION_ID`, which the owner sets (secrets, so the public logs show `***`); none of those values is written in the repository. A pull
 request from this repository gets a preview at `https://iainchesworthlabs.com/_preview/field-test/pr-<n>/` (role
 `DOCS_PREVIEW_ROLE_ARN`, limited to `_preview/field-test/*`), removed when the pull request closes. A pull request from a
 fork or from Dependabot builds the site and deploys nothing. Its address is written in one place: `site_url` in

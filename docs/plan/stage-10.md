@@ -108,7 +108,7 @@ change of domain is one edit and one test.
 
 **Owner actions:**
 
-1. Set the repository variables `DOCS_ROLE_ARN`, `DOCS_PREVIEW_ROLE_ARN`, `DOCS_BUCKET` and `DOCS_DISTRIBUTION_ID`
+1. Set the repository secrets `DOCS_ROLE_ARN`, `DOCS_PREVIEW_ROLE_ARN`, `DOCS_BUCKET` and `DOCS_DISTRIBUTION_ID`
    (`docs/ci.md`, "The site address"), and turn GitHub Pages off on this repository once the new address answers.
 2. Publish: the guide goes live with the first release to `main`. App Review and Play review fetch the support and
    privacy URLs, so a release to `main` that contains 10.1 has to happen before the Stage 11 submission. If that is too

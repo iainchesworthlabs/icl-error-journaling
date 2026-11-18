@@ -16,7 +16,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@ad95a5a5201bb6dd3126ae3ffd21499e92028689 # v0.1.27
     with:
       site-artifact: docs-site
 
@@ -25,7 +25,7 @@ jobs:
     if: github.event_name == 'push'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@ad95a5a5201bb6dd3126ae3ffd21499e92028689 # v0.1.27
     with:
       site-artifact: docs-site
 
@@ -39,12 +39,14 @@ jobs:
       contents: read
       id-token: write
       pull-requests: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ad95a5a5201bb6dd3126ae3ffd21499e92028689 # v0.1.27
     with:
       prefix: field-test
-      role-arn: ${{ vars.DOCS_ROLE_ARN }}
-      bucket: ${{ vars.DOCS_BUCKET }}
-      distribution-id: ${{ vars.DOCS_DISTRIBUTION_ID }}
+    secrets:
+      DOCS_ROLE_ARN: ${{ secrets.DOCS_ROLE_ARN }}
+      DOCS_PREVIEW_ROLE_ARN: ${{ secrets.DOCS_PREVIEW_ROLE_ARN }}
+      DOCS_BUCKET: ${{ secrets.DOCS_BUCKET }}
+      DOCS_DISTRIBUTION_ID: ${{ secrets.DOCS_DISTRIBUTION_ID }}
 
   # Preview of a pull request from this repository, at https://iainchesworthlabs.com/_preview/field-test/pr-<n>/.
   preview:
@@ -58,14 +60,16 @@ jobs:
       contents: read
       id-token: write
       pull-requests: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ad95a5a5201bb6dd3126ae3ffd21499e92028689 # v0.1.27
     with:
       prefix: field-test
       preview: true
       pr-number: ${{ github.event.pull_request.number }}
-      role-arn: ${{ vars.DOCS_PREVIEW_ROLE_ARN }}
-      bucket: ${{ vars.DOCS_BUCKET }}
-      distribution-id: ${{ vars.DOCS_DISTRIBUTION_ID }}
+    secrets:
+      DOCS_ROLE_ARN: ${{ secrets.DOCS_ROLE_ARN }}
+      DOCS_PREVIEW_ROLE_ARN: ${{ secrets.DOCS_PREVIEW_ROLE_ARN }}
+      DOCS_BUCKET: ${{ secrets.DOCS_BUCKET }}
+      DOCS_DISTRIBUTION_ID: ${{ secrets.DOCS_DISTRIBUTION_ID }}
 
   remove-preview:
     name: Remove preview
@@ -77,11 +81,13 @@ jobs:
       contents: read
       id-token: write
       pull-requests: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ad95a5a5201bb6dd3126ae3ffd21499e92028689 # v0.1.27
     with:
       mode: remove-preview
       prefix: field-test
       pr-number: ${{ github.event.pull_request.number }}
-      role-arn: ${{ vars.DOCS_PREVIEW_ROLE_ARN }}
-      bucket: ${{ vars.DOCS_BUCKET }}
-      distribution-id: ${{ vars.DOCS_DISTRIBUTION_ID }}
+    secrets:
+      DOCS_ROLE_ARN: ${{ secrets.DOCS_ROLE_ARN }}
+      DOCS_PREVIEW_ROLE_ARN: ${{ secrets.DOCS_PREVIEW_ROLE_ARN }}
+      DOCS_BUCKET: ${{ secrets.DOCS_BUCKET }}
+      DOCS_DISTRIBUTION_ID: ${{ secrets.DOCS_DISTRIBUTION_ID }}
