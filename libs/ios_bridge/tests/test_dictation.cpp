@@ -183,6 +183,34 @@ TEST_CASE("dictation.words: each guess replaces the one before it, and a second 
     CHECK(rec.m_Ended.at(0) == QStringLiteral("finished"));
 }
 
+TEST_CASE("dictation.cancel: ends at once, and words or an end that arrive afterwards are dropped", "[unit][dictation]")
+{
+    DesktopRig rig;
+    Recorder rec(*rig.m_Bridge);
+    rig.m_Bridge->startDictation();
+    rig.m_Fake->say("mute delay");
+    REQUIRE(rec.m_Words.size() == 1);
+
+    rig.m_Bridge->cancelDictation();
+    CHECK_FALSE(rig.m_Bridge->dictating());
+    CHECK(rig.m_Fake->m_Stops == 1);
+    REQUIRE(rec.m_Ended.size() == 1);
+    CHECK(rec.m_Ended.at(0) == QStringLiteral("finished"));
+
+    // The recogniser's last words and its end come after the cancel: nobody hears them.
+    rig.m_Fake->say("mute delay near the stage");
+    rig.m_Fake->end(bridge::DictationEnd::FINISHED);
+    pump(50);
+    CHECK(rec.m_Words.size() == 1);
+    CHECK(rec.m_Ended.size() == 1);
+    CHECK(rig.m_Fake->m_Starts == 1);
+
+    // Cancelling when not listening does nothing.
+    rig.m_Bridge->cancelDictation();
+    CHECK(rec.m_Ended.size() == 1);
+    CHECK(rig.m_Fake->m_Stops == 1);
+}
+
 TEST_CASE("dictation.stop: a recogniser that does not answer is closed after a moment", "[unit][dictation]")
 {
     DesktopRig rig;

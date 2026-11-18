@@ -407,6 +407,42 @@ TEST_CASE("composer.mic: no microphone where the phone cannot recognise speech o
     }
 }
 
+TEST_CASE("composer.mic: no scroll mark beside the microphone while the note fits the box, with focus or not",
+          "[ui][composer][dictation]")
+{
+    Fixture f;
+    f.composer->setProperty("dictationAvailable", true);
+    f.rig.layout();
+    QQuickItem* mark = f.rig.find(QStringLiteral("overflowMark"));
+    REQUIRE(mark != nullptr);
+    CHECK_FALSE(mark->isVisible());
+
+    // Focus comes back after the permission prompts, and the app becomes active again.
+    f.field->forceActiveFocus();
+    f.rig.layout();
+    CHECK_FALSE(mark->isVisible());
+    f.host->setProperty("draft", QStringLiteral("A short note"));
+    f.rig.layout();
+    CHECK_FALSE(mark->isVisible());
+
+    // Dictation puts the note on two lines: the box opens to hold both, nothing scrolls, and no mark is drawn at its edge.
+    f.host->setProperty("draft", QString());
+    f.rig.layout();
+    type_lines(f, {"one", "two"});
+    f.rig.layout();
+    CHECK_FALSE(mark->isVisible());
+    f.add->forceActiveFocus();
+    f.rig.layout();
+    CHECK_FALSE(mark->isVisible());
+    f.field->forceActiveFocus();
+
+    // A note taller than the box still shows it.
+    f.rig.key(Qt::Key_Return);
+    type_lines(f, {"three", "four", "five", "six", "seven", "eight"});
+    f.rig.layout();
+    CHECK(mark->isVisible());
+}
+
 TEST_CASE("composer.mic: the microphone is on the first line at the trailing edge, 44 pt, named, and a tap toggles",
           "[ui][composer][dictation]")
 {
