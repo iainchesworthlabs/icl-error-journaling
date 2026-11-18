@@ -181,7 +181,7 @@ writes `index.html`. The pictures are not golden files and are not compared; CI 
 
 ### Store screenshots
 
-`tools/ej_screenshots/store_screenshots.py` makes the App Store and Google Play screenshots (Stage 11, 11.4). `tools/ej_screenshots/store_shots.json` is the fixed shot list: the sets (iPhone 6.9", iPad 13" in
+`tools/ej_screenshots/store_screenshots.py` makes the App Store and Google Play screenshots (Stage 11, 11.4). `tools/ej_screenshots/store_shots.json` is the fixed shot list: the sets (iPhone 6.9", iPhone 6.3", iPad 13" in
 portrait and in landscape, Play phone, Play large screen in portrait and in landscape), their exact pixel sizes, and for each
 shot the state of `screens.json`, the mode and the file name. The script renders those states (the phone at a scale of 3,
 the iPad at 2), draws a neutral status bar (9:41, signal, battery) in the safe-area band, fits the picture to the canvas with
