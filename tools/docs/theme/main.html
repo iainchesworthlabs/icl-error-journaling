@@ -1,0 +1,18 @@
+{#- SPDX-License-Identifier: GPL-3.0-or-later
+    The guide's pages (MkDocs Material). A slim bar above Material's header takes the reader back to the Field Test pages,
+    and docs/assets/guide.css sets Material's colours from the palette in docs/theme.css. No web font is loaded. -#}
+{% extends "base.html" %}
+{% block extrahead %}
+<link rel="icon" href="/assets/v1/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="{{ base_url }}/theme.css">
+<link rel="stylesheet" href="{{ base_url }}/assets/guide.css">
+{{ super() }}
+{% endblock %}
+{% block announce %}
+<div class="ft-guidebar"><div class="ft-guidebar__in">
+  <a href="{{ base_url }}/">&larr; Field Test</a>
+  <a href="{{ base_url }}/how-to-use/">How to use</a>
+  <a href="{{ base_url }}/privacy/">Privacy</a>
+  <a href="{{ base_url }}/support/">Support</a>
+</div></div>
+{% endblock %}

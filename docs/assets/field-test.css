@@ -1,0 +1,78 @@
+/* Field Test's own layout on top of the company shell (assets/icl.css). Colours come only from the shell's variables and
+   the palette in theme.css. No web font, no image from another site, no inline style anywhere. */
+
+/* Menu for narrow screens: the shell hides the app bar's links below 40rem, so a native <details> carries them. */
+.ft-menu { position: relative; }
+.ft-menu summary { cursor: pointer; list-style: none; min-height: 2.75rem; display: inline-flex; align-items: center; padding-inline: var(--icl-space-3); font-weight: 650; border: 1px solid var(--icl-border); border-radius: 999px; }
+.ft-menu summary::-webkit-details-marker { display: none; }
+.ft-menu ul { position: absolute; right: 0; top: 100%; z-index: 5; min-width: 12rem; margin: var(--icl-space-2) 0 0; padding: var(--icl-space-2); list-style: none; background: var(--icl-surface); border: 1px solid var(--icl-border); border-radius: var(--icl-radius-m); }
+.ft-menu li a { display: block; padding: var(--icl-space-3); color: var(--icl-fg); text-decoration: none; font-weight: 560; }
+.ft-menu li a:hover, .ft-menu li a[aria-current] { text-decoration: underline; }
+@media (min-width: 40rem) { .ft-menu { display: none; } }
+
+/* Hero */
+.ft-chip { display: inline-block; padding: 0.125rem var(--icl-space-3); border: 1px solid currentColor; border-radius: 999px; font-size: var(--icl-step--1); font-weight: 650; }
+.ft-get { display: inline-block; padding: var(--icl-space-3) var(--icl-space-5); border: 2px solid currentColor; border-radius: 999px; font-weight: 680; }
+.icl-hero--app a { color: var(--app-on-gradient); }
+.icl-hero--app .icl-button { background: var(--app-on-gradient); color: var(--app-gradient-from); border-color: var(--app-on-gradient); }
+.icl-hero--app h1 { max-width: 18ch; font-size: var(--icl-step-4); }
+.icl-hero--app .icl-lead { max-width: 46ch; }
+
+/* Pages that are not the home page start with a plain heading */
+.ft-head { padding-block: clamp(var(--icl-space-6), 6vw, var(--icl-space-8)) var(--icl-space-5); }
+.ft-head h1 { font-size: var(--icl-step-4); max-width: 22ch; }
+.ft-head .icl-lead { max-width: 52ch; }
+
+/* Three facts, steps */
+.ft-facts { display: grid; gap: var(--icl-space-4); grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin: 0; padding: 0; list-style: none; }
+.ft-facts li { padding: var(--icl-space-4) var(--icl-space-5); background: var(--icl-surface-2); border: 1px solid var(--icl-border); border-radius: var(--icl-radius-m); }
+.ft-facts h3 { margin-bottom: var(--icl-space-1); }
+.ft-facts p { margin: 0; color: var(--icl-fg-muted); }
+.ft-steps { display: grid; gap: var(--icl-space-5); grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.ft-steps li { counter-increment: step; }
+.ft-steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; margin-bottom: var(--icl-space-3); border-radius: 50%; background: var(--app-primary); color: var(--app-on-primary); font-weight: 750; }
+.ft-steps p { margin: 0; color: var(--icl-fg-muted); }
+
+/* Feature rows with a phone picture. The picture sits in a frame of the shell's (.icl-device). */
+.ft-row { display: grid; gap: var(--icl-space-6); align-items: center; padding-block: var(--icl-space-6); }
+.ft-row p { color: var(--icl-fg-muted); max-width: 50ch; }
+.ft-row .icl-device { width: min(100%, 14rem); }
+@media (min-width: 52rem) {
+  .ft-row { grid-template-columns: 1fr 1fr; gap: var(--icl-space-8); }
+  .ft-row--flip .icl-device { order: -1; }
+}
+.ft-two { display: grid; gap: var(--icl-space-7); }
+@media (min-width: 52rem) { .ft-two { grid-template-columns: 1fr 1fr; } }
+.ft-two p { max-width: 50ch; }
+.ft-cards { display: grid; gap: var(--icl-space-4); grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin: 0; padding: 0; list-style: none; }
+.ft-cards li { padding: var(--icl-space-4) var(--icl-space-5); border: 1px solid var(--icl-border); border-radius: var(--icl-radius-m); }
+.ft-cards a { font-weight: 650; }
+.ft-cards p { margin: var(--icl-space-1) 0 0; color: var(--icl-fg-muted); font-size: var(--icl-step--1); }
+
+/* Text pages */
+.ft-text { width: min(100% - 2 * var(--icl-gutter), 46rem); margin-inline: auto; padding-bottom: var(--icl-space-8); }
+.ft-text h2 { font-size: var(--icl-step-2); margin-top: var(--icl-space-7); }
+.ft-text h3 { margin-top: var(--icl-space-5); }
+.ft-text ul, .ft-text ol { padding-left: 1.25rem; }
+.ft-text li { margin-bottom: var(--icl-space-2); }
+.ft-log { margin: var(--icl-space-4) 0; padding: var(--icl-space-4) var(--icl-space-5); background: var(--icl-surface-2); border: 1px solid var(--icl-border); border-radius: var(--icl-radius-s); overflow-x: auto; font-family: var(--icl-font-mono); font-size: var(--icl-step--1); }
+.ft-qa dt { font-weight: 680; margin-top: var(--icl-space-5); }
+.ft-qa dd { margin: var(--icl-space-1) 0 0; color: var(--icl-fg-muted); }
+.ft-icon { display: block; width: 8rem; height: 8rem; border-radius: 1.75rem; margin-block: var(--icl-space-4); }
+
+/* Markdown pages inside .icl-prose (Privacy, Support) */
+.icl-prose table { border-collapse: collapse; }
+.icl-prose th, .icl-prose td { border: 1px solid var(--icl-border); padding: var(--icl-space-2) var(--icl-space-3); text-align: left; }
+.icl-prose ul, .icl-prose ol { padding-left: 1.25rem; }
+.icl-prose li { margin-bottom: var(--icl-space-2); }
+
+/* The row of links above the company footer */
+.ft-more { padding-block: var(--icl-space-6); border-top: 1px solid var(--icl-border); font-size: var(--icl-step--1); }
+.ft-more p { margin: 0 0 var(--icl-space-3); color: var(--icl-fg-muted); }
+.ft-more ul { display: flex; flex-wrap: wrap; gap: var(--icl-space-1) var(--icl-space-5); margin: 0; padding: 0; list-style: none; }
+.ft-more a { display: inline-block; padding: var(--icl-space-2) 0; }
+
+/* Keep the FAQ and body text on the left edge of the page, with a readable line length */
+.icl-section .icl-faq { margin-inline: 0; }
+.icl-section > .icl-wrap > p { max-width: var(--icl-measure); }
+.ft-row > div { min-width: 0; }

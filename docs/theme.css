@@ -1,0 +1,15 @@
+/* The Field Test palette: the one file that holds its colours. Eight roles, each light-dark(light, dark).
+   Held to the company contract by tools/ci/check_site_kit.py (WCAG 2.2 AA, light and dark). Change a colour here and
+   run: python tools/ci/check_site_kit.py
+   The app's Today's details card is purple (the hero gradient starts there). If the card turns green, change
+   --app-gradient-from and --app-gradient-to here, and nothing else. */
+[data-app="field-test"] {
+  --app-primary:       light-dark(#1e5b7a, #7bb8dd);
+  --app-on-primary:    light-dark(#ffffff, #0b1620);
+  --app-accent:        light-dark(#2a7d47, #4caf6a);
+  --app-link:          light-dark(#1e5b7a, #8fc6e6);
+  --app-tint:          light-dark(#e3edf3, #1b2f3d);
+  --app-gradient-from: light-dark(#5b2a63, #3a1b42);
+  --app-gradient-to:   light-dark(#1e5b7a, #173f55);
+  --app-on-gradient:   light-dark(#ffffff, #ffffff);
+}
