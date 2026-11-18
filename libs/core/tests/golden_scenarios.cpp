@@ -47,8 +47,8 @@ std::unique_ptr<World> make_world(bool real_zones)
                 {"Australia/Melbourne", 11h}, {"Australia/Perth", 8h}, {"UTC", 0h}});
     }
     const std::pair<std::uint64_t, const char*> errors[] = {
-        {ERROR_WRONG_RESPONSE, "Wrong Response"}, {ERROR_MUTE_DELAY, "Mute Delay"},
-        {ERROR_WRONG_TRACK_PLAYED, "Wrong Track Played"}, {ERROR_SPEECH_DELAY, "Speech Delay"},
+        {ERROR_WRONG_RESPONSE, "Wrong Response"}, {ERROR_STOPPED_RESPONDING, "Stopped Responding"},
+        {ERROR_WRONG_TRACK_PLAYED, "Incorrect Action"}, {ERROR_SPEECH_DELAY, "Timed Out"},
         {ERROR_LATE_GREETING, "Late Greeting"}, {ERROR_ECHO_DELAY_RETIRED, "Echo Delay"}};
     for (const auto& [number, name] : errors)
     {
@@ -59,9 +59,9 @@ std::unique_ptr<World> make_world(bool real_zones)
     world->m_LocationNames[test_id<LocationId>(LOCATION_SOUTH_SITE)] = "South Site";
 
     const std::tuple<std::uint64_t, const char*, const char*> templates[] = {
-        {TEMPLATE_PLAYED, "Played song", "Played {value}"},
-        {TEMPLATE_VISITOR, "Visitor", "Visitor interaction: {value}"},
-        {TEMPLATE_REQUESTED, "Requested song", "Song {value} requested twice"}};
+        {TEMPLATE_PLAYED, "Began task", "Began task {value}"},
+        {TEMPLATE_OBSERVER, "Observer", "Entered room 1: {value}"},
+        {TEMPLATE_REQUESTED, "Requested task", "Task {value} requested twice"}};
     for (const auto& [number, name, pattern] : templates)
     {
         NoteTemplate t;
@@ -72,11 +72,11 @@ std::unique_ptr<World> make_world(bool real_zones)
         world->m_Templates[t.m_Id] = t;
     }
     const std::tuple<std::uint64_t, const char*, const char*> interactions[] = {
-        {INTERACTION_GREETED, "Greeted", ""},
-        {INTERACTION_SPOKE_WITH, "Spoke with", "Spoke with {person}"},
-        {INTERACTION_PLAYED_SONG, "Played song", "Played {value}"},
-        {INTERACTION_VISITOR, "Visitor interaction", ""},
-        {INTERACTION_GAVE, "Gave", "Gave {person} {value}"}};
+        {INTERACTION_START_TASK, "Start task", ""},
+        {INTERACTION_PAIRED_WITH, "Paired with", "Paired with {person}"},
+        {INTERACTION_PLAYED_SONG, "Began task", "Began task {value}"},
+        {INTERACTION_OBSERVER, "Entered room 1", ""},
+        {INTERACTION_ASSIGNED, "Assigned", "Assigned {person} {value}"}};
     for (const auto& [number, name, pattern] : interactions)
     {
         const auto id = test_id<InteractionTypeId>(number);
@@ -246,11 +246,11 @@ Timestamp utc_at(std::string_view zone, int y, unsigned m, unsigned d, int hh, i
 void busy_day(Builder& b)
 {
     b.error(on_day(9, 0), ERROR_WRONG_RESPONSE);
-    b.error(on_day(9, 10), ERROR_MUTE_DELAY);
+    b.error(on_day(9, 10), ERROR_STOPPED_RESPONDING);
     b.error(on_day(9, 20), ERROR_WRONG_RESPONSE);
-    b.templated(on_day(9, 30), TEMPLATE_PLAYED, "Morning Medley");
+    b.templated(on_day(9, 30), TEMPLATE_PLAYED, "1");
     b.error(on_day(9, 45), ERROR_WRONG_RESPONSE);
-    b.error(on_day(10, 0), ERROR_WRONG_TRACK_PLAYED, "asked for Evening Song");
+    b.error(on_day(10, 0), ERROR_WRONG_TRACK_PLAYED, "asked for task 2");
     b.error(on_day(10, 15), ERROR_ECHO_DELAY_RETIRED);
     b.error(on_day(10, 30), ERROR_WRONG_TRACK_PLAYED);
     b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(10, 40));
@@ -261,16 +261,16 @@ void busy_day(Builder& b)
 void interaction_day(Builder& b)
 {
     b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);                                       // 1
-    b.interaction(on_day(10, 12), INTERACTION_SPOKE_WITH, {PERSON_ALEX});               // 2
-    b.error(on_day(10, 20), ERROR_MUTE_DELAY);                                          // 3
-    b.interaction(on_day(10, 31), INTERACTION_PLAYED_SONG, {}, "Morning Medley");       // 4
-    b.interaction(on_day(10, 40), INTERACTION_SPOKE_WITH, {PERSON_ALEX, PERSON_JORDAN, PERSON_PAT});  // 5
-    b.note(on_day(10, 45), "Robot restarted");                                          // 6
-    b.interaction(on_day(10, 48), INTERACTION_VISITOR, {}, std::nullopt, "asked about the schedule");  // 7
-    b.interaction(on_day(11, 0), INTERACTION_GAVE, {PERSON_JORDAN}, "a card");          // 8
-    b.interaction(on_day(11, 10), INTERACTION_SPOKE_WITH, {PERSON_FORGOTTEN});          // 9
-    b.interaction(on_day(11, 20), INTERACTION_SPOKE_WITH);                              // 10: nobody picked yet
-    b.interaction(on_day(11, 30), INTERACTION_GREETED);                                 // 11: deleted
+    b.interaction(on_day(10, 12), INTERACTION_PAIRED_WITH, {PERSON_ALEX});               // 2
+    b.error(on_day(10, 20), ERROR_STOPPED_RESPONDING);                                          // 3
+    b.interaction(on_day(10, 31), INTERACTION_PLAYED_SONG, {}, "1");       // 4
+    b.interaction(on_day(10, 40), INTERACTION_PAIRED_WITH, {PERSON_ALEX, PERSON_JORDAN, PERSON_PAT});  // 5
+    b.note(on_day(10, 45), "Device restarted");                                          // 6
+    b.interaction(on_day(10, 48), INTERACTION_OBSERVER, {}, std::nullopt, "asked about the schedule");  // 7
+    b.interaction(on_day(11, 0), INTERACTION_ASSIGNED, {PERSON_JORDAN}, "a card");          // 8
+    b.interaction(on_day(11, 10), INTERACTION_PAIRED_WITH, {PERSON_FORGOTTEN});          // 9
+    b.interaction(on_day(11, 20), INTERACTION_PAIRED_WITH);                              // 10: nobody picked yet
+    b.interaction(on_day(11, 30), INTERACTION_START_TASK);                                 // 11: deleted
     b.error(on_day(11, 40), ERROR_WRONG_RESPONSE);                                      // 12
     if (!b.log().set_deleted(test_id<EntryId>(11), true))
     {
@@ -288,9 +288,9 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
          {
              Builder b;
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
-             b.error(on_day(10, 20), ERROR_MUTE_DELAY);
-             b.templated(on_day(10, 30), TEMPLATE_PLAYED, "Morning Medley");
-             b.error(on_day(11, 2), ERROR_WRONG_TRACK_PLAYED, "asked for Evening Song");
+             b.error(on_day(10, 20), ERROR_STOPPED_RESPONDING);
+             b.templated(on_day(10, 30), TEMPLATE_PLAYED, "1");
+             b.error(on_day(11, 2), ERROR_WRONG_TRACK_PLAYED, "asked for task 2");
              b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(13, 15));
              b.error(on_day(13, 40), ERROR_SPEECH_DELAY);
              return b.finish();
@@ -333,8 +333,8 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
          {
              Builder b(empty_header());
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
-             b.note(on_day(10, 15), "Robot restarted");
-             b.error(on_day(10, 25), ERROR_MUTE_DELAY);
+             b.note(on_day(10, 15), "Device restarted");
+             b.error(on_day(10, 25), ERROR_STOPPED_RESPONDING);
              return b.finish();
          }},
         {"partial-header",
@@ -345,16 +345,16 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b(header);
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
              b.change(HeaderField::LOCATION, "Back Room Annex", on_day(10, 30));
-             b.error(on_day(10, 45), ERROR_MUTE_DELAY);
+             b.error(on_day(10, 45), ERROR_STOPPED_RESPONDING);
              return b.finish();
          }},
         {"attached-note",
          []
          {
              Builder b;
-             b.error(on_day(10, 5), ERROR_WRONG_RESPONSE, "asked for Evening Song");
-             b.error(on_day(10, 20), ERROR_MUTE_DELAY, "caller said wait");
-             b.note(on_day(10, 20, 30), "Restarted the robot");
+             b.error(on_day(10, 5), ERROR_WRONG_RESPONSE, "asked for task 2");
+             b.error(on_day(10, 20), ERROR_STOPPED_RESPONDING, "caller said wait");
+             b.note(on_day(10, 20, 30), "Restarted the device");
              b.error(on_day(10, 40), ERROR_WRONG_TRACK_PLAYED, "went from side A \xE2\x86\x92 side B \xE2\x80\x93 twice");
              return b.finish();
          }},
@@ -362,10 +362,10 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
          []
          {
              Builder b;
-             b.templated(on_day(9, 0), TEMPLATE_PLAYED, "Morning Medley");
-             b.templated(on_day(9, 30), TEMPLATE_VISITOR, "Sam Example waved");
-             b.templated(on_day(10, 0), TEMPLATE_REQUESTED, "Evening Song");
-             b.templated(on_day(10, 15), TEMPLATE_PLAYED, "  Spaced Song  ");
+             b.templated(on_day(9, 0), TEMPLATE_PLAYED, "1");
+             b.templated(on_day(9, 30), TEMPLATE_OBSERVER, "Sam Example waved");
+             b.templated(on_day(10, 0), TEMPLATE_REQUESTED, "2");
+             b.templated(on_day(10, 15), TEMPLATE_PLAYED, "  Spaced Out  ");
              b.note(on_day(10, 30), "Calibration done");
              return b.finish();
          }},
@@ -375,7 +375,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b;
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
              b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(11, 0));
-             b.error(on_day(11, 30), ERROR_MUTE_DELAY);
+             b.error(on_day(11, 30), ERROR_STOPPED_RESPONDING);
              b.change(HeaderField::UNIT_NUMBER, "31", on_day(12, 0));
              b.change(HeaderField::LOCATION, location_text(LOCATION_SOUTH_SITE), on_day(13, 0));
              b.error(on_day(13, 30), ERROR_SPEECH_DELAY);
@@ -398,7 +398,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
                  std::abort();
              }
              b.change(HeaderField::UNIT_NUMBER, "31", on_day(12, 0));
-             b.error(on_day(12, 30), ERROR_MUTE_DELAY);
+             b.error(on_day(12, 30), ERROR_STOPPED_RESPONDING);
              return b.finish();
          }},
         {"header-change-from-empty",
@@ -443,8 +443,8 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b;
              b.totals = true;
              b.error(on_day(10, 0), ERROR_WRONG_RESPONSE);
-             b.error(on_day(10, 10), ERROR_MUTE_DELAY);  // 2: deleted
-             b.note(on_day(10, 20), "Robot restarted");
+             b.error(on_day(10, 10), ERROR_STOPPED_RESPONDING);  // 2: deleted
+             b.note(on_day(10, 20), "Device restarted");
              b.note(on_day(10, 30), "Deleted note");  // 4: deleted
              const EntryId first_change = b.change(HeaderField::SOFTWARE_VERSION, "1.4.9", on_day(11, 0));
              const EntryId second_change = b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(12, 0));
@@ -465,7 +465,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b;
              b.time_format = TimeFormat{TimeStyle::H12, false, MeridiemCase::UPPER};
              b.error(on_day(0, 0), ERROR_WRONG_RESPONSE);
-             b.error(on_day(0, 5), ERROR_MUTE_DELAY);
+             b.error(on_day(0, 5), ERROR_STOPPED_RESPONDING);
              b.error(on_day(9, 7), ERROR_WRONG_RESPONSE);
              b.error(on_day(12, 0), ERROR_WRONG_TRACK_PLAYED);
              b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(13, 15));
@@ -479,7 +479,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b;
              b.time_format = TimeFormat{TimeStyle::H12, false, MeridiemCase::LOWER};
              b.error(on_day(0, 0), ERROR_WRONG_RESPONSE);
-             b.error(on_day(9, 7), ERROR_MUTE_DELAY);
+             b.error(on_day(9, 7), ERROR_STOPPED_RESPONDING);
              b.error(on_day(12, 0), ERROR_WRONG_TRACK_PLAYED);
              b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(13, 15));
              b.error(on_day(23, 59), ERROR_SPEECH_DELAY);
@@ -491,7 +491,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b;
              b.time_format = TimeFormat{TimeStyle::H24, true, MeridiemCase::UPPER};
              b.error(on_day(0, 0, 0), ERROR_WRONG_RESPONSE);
-             b.error(on_day(9, 7, 3), ERROR_MUTE_DELAY);
+             b.error(on_day(9, 7, 3), ERROR_STOPPED_RESPONDING);
              b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(13, 15, 59));
              b.error(on_day(23, 59, 59, 999), ERROR_SPEECH_DELAY);
              return b.finish();
@@ -502,7 +502,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b;
              b.time_format = TimeFormat{TimeStyle::H12, true, MeridiemCase::UPPER};
              b.error(on_day(0, 0, 0), ERROR_WRONG_RESPONSE);
-             b.error(on_day(9, 7, 3), ERROR_MUTE_DELAY);
+             b.error(on_day(9, 7, 3), ERROR_STOPPED_RESPONDING);
              b.error(on_day(13, 15, 59), ERROR_SPEECH_DELAY);
              return b.finish();
          }},
@@ -512,7 +512,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b;
              b.time_format = TimeFormat{TimeStyle::H12, true, MeridiemCase::LOWER};
              b.error(on_day(0, 0, 0), ERROR_WRONG_RESPONSE);
-             b.error(on_day(9, 7, 3), ERROR_MUTE_DELAY);
+             b.error(on_day(9, 7, 3), ERROR_STOPPED_RESPONDING);
              b.error(on_day(13, 15, 59), ERROR_SPEECH_DELAY);
              return b.finish();
          }},
@@ -525,7 +525,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              b.prefix = "DEMO";
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
              b.change(HeaderField::UNIT_NUMBER, "12", on_day(11, 0));
-             b.error(on_day(11, 30), ERROR_MUTE_DELAY);
+             b.error(on_day(11, 30), ERROR_STOPPED_RESPONDING);
              return b.finish();
          }},
         {"unit-environment",
@@ -537,7 +537,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
              // The environment changes, the number stays; then the unit leaves the environment and takes a new number.
              b.change(HeaderField::UNIT_NUMBER, "27-dev", on_day(11, 0));
-             b.error(on_day(11, 30), ERROR_MUTE_DELAY);
+             b.error(on_day(11, 30), ERROR_STOPPED_RESPONDING);
              b.change(HeaderField::UNIT_NUMBER, "31", on_day(12, 0));
              b.error(on_day(12, 30), ERROR_SPEECH_DELAY);
              return b.finish();
@@ -552,7 +552,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
              // A new version with its own commit, the same version without one, then the commit alone.
              b.change(HeaderField::SOFTWARE_VERSION, "1.5.0+e4f5a6b", on_day(11, 0));
-             b.error(on_day(11, 30), ERROR_MUTE_DELAY);
+             b.error(on_day(11, 30), ERROR_STOPPED_RESPONDING);
              b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(12, 0));
              b.change(HeaderField::SOFTWARE_VERSION, "1.5.0+0123456789ab", on_day(12, 15));
              b.error(on_day(12, 30), ERROR_SPEECH_DELAY);
@@ -564,7 +564,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b;
              // Added out of time order. Sorted by UTC; the same millisecond keeps insertion order.
              b.error(on_day(10, 5, 40, 500), ERROR_WRONG_RESPONSE);
-             b.error(on_day(10, 5, 10), ERROR_MUTE_DELAY);
+             b.error(on_day(10, 5, 10), ERROR_STOPPED_RESPONDING);
              b.error(on_day(10, 5, 40, 500), ERROR_WRONG_TRACK_PLAYED);
              b.note(on_day(10, 5, 40, 500), "Same millisecond note");
              b.error(on_day(10, 5, 10), ERROR_SPEECH_DELAY);
@@ -575,7 +575,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
          {
              Builder b;
              b.error(on_day(23, 50), ERROR_WRONG_RESPONSE);
-             b.error(Timestamp{on_day(0, 10).m_Utc + 24h, "Australia/Melbourne"}, ERROR_MUTE_DELAY);
+             b.error(Timestamp{on_day(0, 10).m_Utc + 24h, "Australia/Melbourne"}, ERROR_STOPPED_RESPONDING);
              return b.finish();
          }},
         {"melbourne-dst-spring",
@@ -588,7 +588,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              b.error(utc_at("Australia/Melbourne", 2026, 10, 3, 15, 50), ERROR_WRONG_RESPONSE);  // 01:50 AEST
              // An entry edited into the missing hour: 02:30 does not exist, so the provider resolves it.
              const auto resolved = b.world().m_Zones->to_utc(local(2026, 10, 4, 2, 30), "Australia/Melbourne");
-             b.error(Timestamp{resolved.value(), "Australia/Melbourne"}, ERROR_MUTE_DELAY);
+             b.error(Timestamp{resolved.value(), "Australia/Melbourne"}, ERROR_STOPPED_RESPONDING);
              b.error(utc_at("Australia/Melbourne", 2026, 10, 3, 16, 5), ERROR_SPEECH_DELAY);  // 03:05 AEDT
              return b.finish();
          }},
@@ -600,7 +600,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b(header, true);
              // 2026-04-05 03:00 AEDT becomes 02:00 AEST. Instants are UTC on 2026-04-04.
              b.error(utc_at("Australia/Melbourne", 2026, 4, 4, 14, 50), ERROR_WRONG_RESPONSE);  // 01:50 AEDT
-             b.error(utc_at("Australia/Melbourne", 2026, 4, 4, 15, 30), ERROR_MUTE_DELAY);      // 02:30 AEDT
+             b.error(utc_at("Australia/Melbourne", 2026, 4, 4, 15, 30), ERROR_STOPPED_RESPONDING);      // 02:30 AEDT
              b.error(utc_at("Australia/Melbourne", 2026, 4, 4, 16, 30), ERROR_SPEECH_DELAY);    // 02:30 AEST
              b.error(utc_at("Australia/Melbourne", 2026, 4, 4, 17, 10), ERROR_WRONG_TRACK_PLAYED);  // 03:10 AEST
              return b.finish();
@@ -610,7 +610,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
          {
              Builder b;
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
-             b.error(on_day(8, 10, 0, 0, "Australia/Perth"), ERROR_MUTE_DELAY);
+             b.error(on_day(8, 10, 0, 0, "Australia/Perth"), ERROR_STOPPED_RESPONDING);
              b.error(on_day(0, 20, 0, 0, "UTC"), ERROR_WRONG_TRACK_PLAYED);
              b.note(on_day(12, 0), "Back in Melbourne");
              return b.finish();
@@ -680,11 +680,11 @@ Entry interaction_entry(std::uint64_t id, Timestamp when, std::uint64_t type, st
     // The snapshot of the type's name, as the app writes it at the tap.
     switch (type)
     {
-    case INTERACTION_GREETED: body.m_TypeLabel = "Greeted"; break;
-    case INTERACTION_SPOKE_WITH: body.m_TypeLabel = "Spoke with"; break;
-    case INTERACTION_PLAYED_SONG: body.m_TypeLabel = "Played song"; break;
-    case INTERACTION_VISITOR: body.m_TypeLabel = "Visitor interaction"; break;
-    default: body.m_TypeLabel = "Gave"; break;
+    case INTERACTION_START_TASK: body.m_TypeLabel = "Start task"; break;
+    case INTERACTION_PAIRED_WITH: body.m_TypeLabel = "Paired with"; break;
+    case INTERACTION_PLAYED_SONG: body.m_TypeLabel = "Began task"; break;
+    case INTERACTION_OBSERVER: body.m_TypeLabel = "Entered room 1"; break;
+    default: body.m_TypeLabel = "Assigned"; break;
     }
     for (const auto person : people)
     {

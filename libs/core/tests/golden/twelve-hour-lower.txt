@@ -5,7 +5,7 @@ Location: North Site
 Software Version: v1.4.2
 
 12:00 am T| Wrong Response
-09:07 am T| Mute Delay
-12:00 pm T| Wrong Track Played
+09:07 am T| Stopped Responding
+12:00 pm T| Incorrect Action
 01:15 pm Software Version changed: v1.4.2 → v1.5.0
-11:59 pm T| Speech Delay
+11:59 pm T| Timed Out

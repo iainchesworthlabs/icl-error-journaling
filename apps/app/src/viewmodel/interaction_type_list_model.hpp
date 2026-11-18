@@ -18,7 +18,7 @@ struct InteractionTypeRow
 {
     InteractionTypeId m_Id;
     QString m_Name;
-    QString m_Line;          // the line as the field shows it: "Spoke with [person]"; empty when the type has none
+    QString m_Line;          // the line as the field shows it: "Paired with [person]"; empty when the type has none
     QString m_Asks;          // "nothing", "person" or "text"
     int m_BoardPosition = 0; // 1 to 11, or 0 when the type is not on the board
 

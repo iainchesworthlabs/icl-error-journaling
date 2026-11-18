@@ -17,7 +17,7 @@ files in docs/design are not touched:
     capture of the app uses;
   * `Main` (light and dark) is the only page with `<sc-for>`, `<sc-if>` and `{{...}}` bindings. A small shim, a stand-in for
     the runtime, runs the page's own `class Component extends DCLogic` and expands the bindings with its `renderVals()`
-    from the initial state (7 entries, a toast for Mute Delay). Nothing else is simulated: no hover, no click, no timer;
+    from the initial state (7 entries, a toast for Stopped Responding). Nothing else is simulated: no hover, no click, no timer;
   * `<x-dc>` and `<helmet>` are unknown elements and render without help.
 
 Edge is the one at "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" unless --edge or EDGE says otherwise.

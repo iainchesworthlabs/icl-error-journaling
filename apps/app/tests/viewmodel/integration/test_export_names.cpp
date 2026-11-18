@@ -62,9 +62,9 @@ Configuration configuration_with_interactions()
 {
     Configuration configuration = sample_configuration();
     InteractionType spoke;
-    spoke.m_Id = test_id<InteractionTypeId>(INTERACTION_SPOKE_WITH);
-    spoke.m_Name = "Spoke with";
-    spoke.m_LinePattern = "Spoke with {person}";
+    spoke.m_Id = test_id<InteractionTypeId>(INTERACTION_PAIRED_WITH);
+    spoke.m_Name = "Paired with";
+    spoke.m_LinePattern = "Paired with {person}";
     spoke.m_Asks = InteractionAsks::PERSON;
     configuration.m_InteractionTypes = {spoke};
     return configuration;
@@ -88,8 +88,8 @@ struct Fixture
         const LogId id = sample_id<LogId>(1);
         REQUIRE(m_Storage.memory().create_log(id, sample_header()));
         const std::vector<Entry> entries = {
-            error_at(1, 10, 5), interaction_entry(2, on_day(10, 12), INTERACTION_SPOKE_WITH, {PERSON_ALEX}),
-            interaction_entry(3, on_day(10, 40), INTERACTION_SPOKE_WITH, {PERSON_ALEX, PERSON_JORDAN})};
+            error_at(1, 10, 5), interaction_entry(2, on_day(10, 12), INTERACTION_PAIRED_WITH, {PERSON_ALEX}),
+            interaction_entry(3, on_day(10, 40), INTERACTION_PAIRED_WITH, {PERSON_ALEX, PERSON_JORDAN})};
         for (const Entry& entry : entries)
         {
             REQUIRE(m_Storage.memory().add_entry(id, entry));
@@ -128,15 +128,15 @@ TEST_CASE("export.name_levels: the screen shows the full name, sharing writes th
 
     const auto screen = viewmodel::export_text(log, fixture.builder().build());
     REQUIRE(screen.has_value());
-    CHECK(screen->find("10:12 (Interaction) Spoke with Alex Sample\n") != std::string::npos);
-    CHECK(screen->find("Spoke with Alex Sample and Jordan Placeholder") != std::string::npos);
+    CHECK(screen->find("10:12 (Interaction) Paired with Alex Sample\n") != std::string::npos);
+    CHECK(screen->find("Paired with Alex Sample and Jordan Placeholder") != std::string::npos);
 
     // The default is initials.
     CHECK(fixture.m_Preferences.name_export() == "initials");
     const auto initials = viewmodel::export_text(log, fixture.builder().build_for_sharing());
     REQUIRE(initials.has_value());
-    CHECK(initials->find("10:12 (Interaction) Spoke with A.S.\n") != std::string::npos);
-    CHECK(initials->find("10:40 (Interaction) Spoke with A.S. and J.P.") != std::string::npos);
+    CHECK(initials->find("10:12 (Interaction) Paired with A.S.\n") != std::string::npos);
+    CHECK(initials->find("10:40 (Interaction) Paired with A.S. and J.P.") != std::string::npos);
     CHECK(initials->find("Alex") == std::string::npos);
     CHECK(initials->find("Jordan") == std::string::npos);
     CHECK(initials->find("10:05 T| Wrong Response\n") != std::string::npos);
@@ -145,8 +145,8 @@ TEST_CASE("export.name_levels: the screen shows the full name, sharing writes th
     fixture.m_Preferences.set_name_export("hidden");
     const auto hidden = viewmodel::export_text(log, fixture.builder().build_for_sharing());
     REQUIRE(hidden.has_value());
-    CHECK(hidden->find("10:12 (Interaction) Spoke with someone\n") != std::string::npos);
-    CHECK(hidden->find("10:40 (Interaction) Spoke with someone") != std::string::npos);
+    CHECK(hidden->find("10:12 (Interaction) Paired with someone\n") != std::string::npos);
+    CHECK(hidden->find("10:40 (Interaction) Paired with someone") != std::string::npos);
 
     fixture.m_Preferences.set_name_export("full");
     const auto full = viewmodel::export_text(log, fixture.builder().build_for_sharing());
@@ -167,24 +167,24 @@ TEST_CASE("export.name_levels: Copy line and Copy all follow the setting, Review
 
     // Review: the rows keep the full name whatever the setting is.
     CHECK(model.data(model.index(2), TimelineModel::FULL_LINE).toString() ==
-          QStringLiteral("10:40 (Interaction) Spoke with Alex Sample and Jordan Placeholder"));
+          QStringLiteral("10:40 (Interaction) Paired with Alex Sample and Jordan Placeholder"));
 
     REQUIRE(model.copyLine(2));
-    CHECK(fixture.m_Clipboard.text() == "10:40 (Interaction) Spoke with A.S. and J.P.");
+    CHECK(fixture.m_Clipboard.text() == "10:40 (Interaction) Paired with A.S. and J.P.");
     REQUIRE(model.copyLine(0));
     CHECK(fixture.m_Clipboard.text() == "10:05 T| Wrong Response"); // an error line is untouched
 
     REQUIRE(model.copyAll());
     CHECK(fixture.m_Clipboard.text().find("Alex") == std::string::npos);
-    CHECK(fixture.m_Clipboard.text().find("\n10:12 (Interaction) Spoke with A.S.\n") != std::string::npos);
+    CHECK(fixture.m_Clipboard.text().find("\n10:12 (Interaction) Paired with A.S.\n") != std::string::npos);
 
     // The setting is read at the time of the copy: a log that is copied again uses the current level.
     fixture.m_Preferences.set_name_export("full");
     REQUIRE(model.copyLine(1));
-    CHECK(fixture.m_Clipboard.text() == "10:12 (Interaction) Spoke with Alex Sample");
+    CHECK(fixture.m_Clipboard.text() == "10:12 (Interaction) Paired with Alex Sample");
     fixture.m_Preferences.set_name_export("hidden");
     REQUIRE(model.copyAll());
-    CHECK(fixture.m_Clipboard.text().find("Spoke with someone") != std::string::npos);
+    CHECK(fixture.m_Clipboard.text().find("Paired with someone") != std::string::npos);
     CHECK(fixture.m_Clipboard.text().find("Sample") == std::string::npos);
 }
 
@@ -194,12 +194,12 @@ TEST_CASE("export.name_levels: the label is the preference", "[viewmodel][export
     fixture.m_Preferences.set_interaction_marker("(Chat)");
     auto text = viewmodel::export_text(fixture.m_Document->log(), fixture.builder().build_for_sharing());
     REQUIRE(text.has_value());
-    CHECK(text->find("10:12 (Chat) Spoke with A.S.\n") != std::string::npos);
+    CHECK(text->find("10:12 (Chat) Paired with A.S.\n") != std::string::npos);
 
     fixture.m_Preferences.set_interaction_marker("");
     text = viewmodel::export_text(fixture.m_Document->log(), fixture.builder().build_for_sharing());
     REQUIRE(text.has_value());
-    CHECK(text->find("10:12 Spoke with A.S.\n") != std::string::npos);
+    CHECK(text->find("10:12 Paired with A.S.\n") != std::string::npos);
 
     // Too long, and with a line break: cut, so a label is always one short word on the line.
     fixture.m_Preferences.set_interaction_marker("  (A very long label indeed, longer than any)\nsecond line");
@@ -213,5 +213,5 @@ TEST_CASE("export.name_levels: without a list of people nobody is named", "[view
     fixture.m_World.m_People = nullptr;
     const auto text = viewmodel::export_text(fixture.m_Document->log(), fixture.builder().build());
     REQUIRE(text.has_value());
-    CHECK(text->find("10:12 (Interaction) Spoke with someone\n") != std::string::npos);
+    CHECK(text->find("10:12 (Interaction) Paired with someone\n") != std::string::npos);
 }

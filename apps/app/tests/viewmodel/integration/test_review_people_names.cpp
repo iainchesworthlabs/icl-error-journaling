@@ -21,7 +21,7 @@ using viewmodel::TimelineModel;
 namespace
 {
 
-constexpr auto SPOKE_WITH = "00000000-0000-4000-8000-0000000000d1";
+constexpr auto PAIRED_WITH = "00000000-0000-4000-8000-0000000000d1";
 
 QString row_line(TimelineModel& timeline, int row)
 {
@@ -52,26 +52,26 @@ TEST_CASE("review.interaction_rows: a name follows the list of people, a rename 
     REQUIRE_FALSE(alex.isEmpty());
 
     auto& session = *rig.root().session();
-    const QString entry = session.recordInteractionEntry(QString::fromLatin1(SPOKE_WITH));
+    const QString entry = session.recordInteractionEntry(QString::fromLatin1(PAIRED_WITH));
     REQUIRE_FALSE(entry.isEmpty());
     rig.settle();
     REQUIRE(session.setInteractionPeople(entry, QStringList{alex}));
     rig.settle();
     REQUIRE(timeline.rowCount() == 1);
-    CHECK(row_line(timeline, 0).endsWith(QStringLiteral("(Interaction) Spoke with Alex Sample")));
+    CHECK(row_line(timeline, 0).endsWith(QStringLiteral("(Interaction) Paired with Alex Sample")));
 
     changed.clear();
     REQUIRE(admin.renamePerson(alex, QStringLiteral("Alex Sampler")).isEmpty());
     rig.wait_until([&changed] { return changed.count() >= 1; });
     rig.settle();
     rig.wait_until([&timeline] { return row_line(timeline, 0).endsWith(QStringLiteral("Alex Sampler")); });
-    CHECK(row_line(timeline, 0).endsWith(QStringLiteral("Spoke with Alex Sampler")));
+    CHECK(row_line(timeline, 0).endsWith(QStringLiteral("Paired with Alex Sampler")));
 
     changed.clear();
     REQUIRE(admin.forgetPerson(alex).isEmpty());
     rig.wait_until([&changed] { return changed.count() >= 1; });
     rig.settle();
     rig.wait_until([&timeline] { return row_line(timeline, 0).endsWith(QStringLiteral("someone")); });
-    CHECK(row_line(timeline, 0).endsWith(QStringLiteral("Spoke with someone")));
+    CHECK(row_line(timeline, 0).endsWith(QStringLiteral("Paired with someone")));
     CHECK(row_line(timeline, 0).contains(QStringLiteral("Sampler")) == false);
 }

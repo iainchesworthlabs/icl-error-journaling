@@ -14,7 +14,7 @@ import ErrorJournalingApp
 //                     dev or whatever the setup lists, and opens the Number suffix sheet. It is saved with
 //                     the number, as "UNIT-27-prod"; chosen before a valid number is typed, it waits for the number
 //   location          the configured locations as a list of choices, and Other with a text field
-//   software version  the robot's, with a fixed "v" before the numbers (a typed v is accepted and not doubled), checked the same way. A first fill, and a typo, are a Correct (HDR-07); a version that
+//   software version  the main one, with a fixed "v" before the numbers (a typed v is accepted and not doubled), checked the same way. A first fill, and a typo, are a Correct (HDR-07); a version that
 //                     changed during the day is a Change, which the Software version sheet records. The design draws no row
 //                     for it, so the sheet opens from the check mark of the version field (its `accessory`), which is a
 //                     button, named "The version changed during the day", while the field shows the version in force
@@ -22,7 +22,7 @@ import ErrorJournalingApp
 //                     full hash by the model. It is saved with the version, as "1.4.2 (a1b2c3d)", so it follows the version
 //                     in every way; typed before a valid version, it waits for it. An empty commit is listed on the Log card
 //                     as still to fill, and nothing here or there stops anything
-//   other versions    the versions besides the robot's (HDR-10) are one row, whose sheet adds, edits and removes them
+//   other versions    the versions besides the main one (HDR-10) are one row, whose sheet adds, edits and removes them
 //
 // Nothing here blocks logging (HDR-06): "Start logging" only closes the screen, and an empty or refused field is left as
 // it was. The screen holds what is typed, and the model holds what is saved; a value the model refuses is never sent.
@@ -512,7 +512,7 @@ SheetHost {
                     id: versionField
 
                     objectName: "headerVersion"
-                    label: qsTr("Robot software version")
+                    label: qsTr("Software version")
                     prefixText: "v"
                     text: root.versionDraft
                     valueFont: Theme.font.fieldValueLarge.font
@@ -552,12 +552,12 @@ SheetHost {
                     onHasFocusChanged: root.fieldFocusChanged(commitField, hasFocus)
                 }
 
-                // The versions besides the robot's (HDR-10) are one row, so that the screen does not grow with each of them; the
+                // The versions besides the main one (HDR-10) are one row, so that the screen does not grow with each of them; the
                 // sheet it opens adds, edits and removes them. The footer sums up all the versions once there is a second.
                 GroupedList {
                     objectName: "headerOtherVersionsGroup"
                     width: parent.width
-                    footer: root.session.extraVersionsText.length > 0 ? root.session.versionsSummary : qsTr("Add the phone app that controls the robot, or other software.")
+                    footer: root.session.extraVersionsText.length > 0 ? root.session.versionsSummary : qsTr("Add a companion phone app, or other software.")
 
                     ListRow {
                         objectName: "headerOtherVersions"

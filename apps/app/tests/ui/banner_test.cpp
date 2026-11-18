@@ -26,11 +26,11 @@ enum Tone
     TONE_ERROR = 2
 };
 
-const QString WRITE_FAILED_TITLE = QStringLiteral("Mute Delay wasn't saved");
-const QString WRITE_FAILED_MESSAGE = QStringLiteral("Nothing was added to the log. Tap Mute Delay again to log it.");
+const QString WRITE_FAILED_TITLE = QStringLiteral("Stopped Responding wasn't saved");
+const QString WRITE_FAILED_MESSAGE = QStringLiteral("Nothing was added to the log. Tap Stopped Responding again to log it.");
 const QString RECOVERY_TITLE = QStringLiteral("Your log was repaired");
 const QString RECOVERY_MESSAGE = QStringLiteral(
-    "The app closed unexpectedly. It recovered 1 entry from its journal: 10:20 T| Mute Delay. Nothing was lost.");
+    "The app closed unexpectedly. It recovered 1 entry from its journal: 10:20 T| Stopped Responding. Nothing was lost.");
 
 QQuickItem* load_banner(UiRig& rig, int tone, const QString& title = WRITE_FAILED_TITLE,
                         const QString& message = WRITE_FAILED_MESSAGE, const QString& action = QString())

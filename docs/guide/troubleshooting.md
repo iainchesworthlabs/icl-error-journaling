@@ -5,7 +5,7 @@ say what the app said, word for word.
 
 ## "… wasn't saved"
 
-![A red message at the top of the Log screen: Mute Delay wasn't saved. Nothing was added to the log. Tap Mute Delay again to log it.](img/write-failed.png){ width="270" }
+![A red message at the top of the Log screen: Stopped Responding wasn't saved. Nothing was added to the log. Tap Stopped Responding again to log it.](img/write-failed.png){ width="270" }
 
 **What it means:** the app could not write that entry, so it did not add it. The app never shows an entry as logged before
 it is saved.

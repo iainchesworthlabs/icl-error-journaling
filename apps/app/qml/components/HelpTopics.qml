@@ -53,7 +53,7 @@ QtObject {
         {
             "id": "templates",
             "title": qsTr("Note templates"),
-            "paragraphs": [qsTr("A template is a note you log often. Its chip is above the note field on the Log screen."), qsTr("<b>Name</b> is what the chip says. <b>Question to ask</b> is what you are asked when you tap it, for example “Which song?”."), qsTr("<b>Line in the log</b> is what gets written. Tap <b>Insert answer</b> to put the answer where you want it, for example “Played [answer]”."), qsTr("The <b>Example</b> at the bottom shows the line as it will appear.")],
+            "paragraphs": [qsTr("A template is a note you log often. Its chip is above the note field on the Log screen."), qsTr("<b>Name</b> is what the chip says. <b>Question to ask</b> is what you are asked when you tap it, for example “Which task?”."), qsTr("<b>Line in the log</b> is what gets written. Tap <b>Insert answer</b> to put the answer where you want it, for example “Began task [answer]”."), qsTr("The <b>Example</b> at the bottom shows the line as it will appear.")],
             "page": "guide/setup/",
             "anchor": "note-templates"
         },
@@ -81,14 +81,14 @@ QtObject {
         {
             "id": "interactionTypes",
             "title": qsTr("Observation types"),
-            "paragraphs": [qsTr("<b>Observation types</b> are the tiles of the optional Observations board: what you did around the unit. Tap <b>Add an observation type</b> to make one."), qsTr("<b>Line in the log</b> is what gets written. Tap <b>Insert person</b> to put <b>[person]</b> where the people go, for example “Spoke with [person]”. A type with <b>[person]</b> asks who after you log it. A type without it never asks."), qsTr("Tap <b>Insert answer</b> to put <b>[answer]</b> in the line, and you are asked for an answer after you log it. With no line, the log shows the name. The line is the template: “Spoke with [person]” writes “Spoke with Alex Sample” when you pick that person."), qsTr("The first 11 types fill the board in the order shown. The rest are under <b>Other…</b>. A type you retire stays on the entries already logged.")],
+            "paragraphs": [qsTr("<b>Observation types</b> are the tiles of the optional Observations board: what you did around the unit. Tap <b>Add an observation type</b> to make one."), qsTr("<b>Line in the log</b> is what gets written. Tap <b>Insert person</b> to put <b>[person]</b> where the people go, for example “Paired with [person]”. A type with <b>[person]</b> asks who after you log it. A type without it never asks."), qsTr("Tap <b>Insert answer</b> to put <b>[answer]</b> in the line, and you are asked for an answer after you log it. With no line, the log shows the name. The line is the template: “Paired with [person]” writes “Paired with Alex Sample” when you pick that person."), qsTr("The first 11 types fill the board in the order shown. The rest are under <b>Other…</b>. A type you retire stays on the entries already logged.")],
             "page": "guide/setup/",
             "anchor": "the-second-board-observations-optional"
         },
         {
             "id": "people",
             "title": qsTr("People"),
-            "paragraphs": [qsTr("<b>People</b> are the names an observation such as “Spoke with [person]” can use. They are optional: a tile with no <b>[person]</b> in its line never asks who."), qsTr("Type a name under <b>New person</b> and tap <b>Add person</b>. Choose a location if the person belongs to one, and <b>Everyone</b> in the picker ticks the people of the location in force."), qsTr("Tap a name to rename it (past entries follow), to change its location, to <b>Retire</b> it (it leaves the picker and stays on past entries), or to <b>Forget</b> it. Forget removes the name from this device for good, and the entries show “someone”."), qsTr("Names stay on this device. A log you share shows them as initials, in full or as “someone”, as you choose under <b>Names in shared logs</b>.")],
+            "paragraphs": [qsTr("<b>People</b> are the names an observation such as “Paired with [person]” can use. They are optional: a tile with no <b>[person]</b> in its line never asks who."), qsTr("Type a name under <b>New person</b> and tap <b>Add person</b>. Choose a location if the person belongs to one, and <b>Everyone</b> in the picker ticks the people of the location in force."), qsTr("Tap a name to rename it (past entries follow), to change its location, to <b>Retire</b> it (it leaves the picker and stays on past entries), or to <b>Forget</b> it. Forget removes the name from this device for good, and the entries show “someone”."), qsTr("Names stay on this device. A log you share shows them as initials, in full or as “someone”, as you choose under <b>Names in shared logs</b>.")],
             "page": "guide/setup/",
             "anchor": "people"
         }

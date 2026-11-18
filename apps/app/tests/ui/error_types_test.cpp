@@ -43,7 +43,7 @@ TEST_CASE("editor.error_types: the types are listed in board order, one line eac
     REQUIRE(listed.size() == 11);
     CHECK(listed.front() == QStringLiteral("Wrong Response"));
     CHECK(listed.at(1) == QStringLiteral("Sequence Out of Order"));
-    CHECK(listed.back() == QStringLiteral("Navigation Failure"));
+    CHECK(listed.back() == QStringLiteral("Unexpected Stop"));
 
     QQuickItem* first = row_with(world, TYPES, QStringLiteral("Wrong Response"));
     REQUIRE(first != nullptr);
@@ -95,12 +95,12 @@ TEST_CASE("editor.error_types: adding a type asks for a name, refuses a duplicat
     CHECK_FALSE(in_sheet(world, QStringLiteral("navTrailing"))->isEnabled());
 
     // A name that another type has, in other capitals, is refused too, and the list is unchanged.
-    enter_text(world, QStringLiteral("nameField"), QStringLiteral("mute delay"));
+    enter_text(world, QStringLiteral("nameField"), QStringLiteral("stopped responding"));
     CHECK(field_error(world, QStringLiteral("nameField")).isEmpty());
     CHECK(in_sheet(world, QStringLiteral("navTrailing"))->isEnabled());
     tap_in_sheet(world, QStringLiteral("navTrailing"));
     REQUIRE(sheet_is_open(world));
-    CHECK(field_error(world, QStringLiteral("nameField")).contains(QStringLiteral("Mute Delay"), Qt::CaseInsensitive));
+    CHECK(field_error(world, QStringLiteral("nameField")).contains(QStringLiteral("Stopped Responding"), Qt::CaseInsensitive));
     CHECK(names(world).size() == 11);
 
     // A good name is saved, and the sheet closes.
@@ -126,7 +126,7 @@ TEST_CASE("editor.error_types: a new type fills the first empty tile, and a bann
     // The sheet says, before the save, where the type goes.
     CHECK(in_sheet(world, QStringLiteral("colourGroup"))->property("footer").toString() ==
           QStringLiteral("It goes on the board at position 5."));
-    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Audio Drop Out"));
+    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Lost Connection"));
     tap_in_sheet(world, QStringLiteral("navTrailing"));
     world.settle();
     world.m_Ui.layout();
@@ -135,9 +135,9 @@ TEST_CASE("editor.error_types: a new type fills the first empty tile, and a bann
     QQuickItem* banner = item(world, QStringLiteral("addedBanner"));
     CHECK(banner->isVisible());
     CHECK(banner->property("title").toString() == QStringLiteral("Added to the board at position 5"));
-    CHECK(banner->property("message").toString() == QStringLiteral("Audio Drop Out is on the first empty tile."));
+    CHECK(banner->property("message").toString() == QStringLiteral("Lost Connection is on the first empty tile."));
     // It is listed with the board's types, at its place.
-    CHECK(names(world).back() == QStringLiteral("Audio Drop Out"));
+    CHECK(names(world).back() == QStringLiteral("Lost Connection"));
     CHECK_FALSE(item(world, QStringLiteral("otherGroup"))->isVisible());
 }
 
@@ -188,8 +188,8 @@ TEST_CASE("editor.error_types: a row opens its name for renaming, and Cancel cha
     world.load("ErrorTypes");
     world.m_Ui.layout();
 
-    open_row(world, QStringLiteral("Mute Delay"));
-    CHECK(field_text(world, QStringLiteral("nameField")) == QStringLiteral("Mute Delay"));
+    open_row(world, QStringLiteral("Stopped Responding"));
+    CHECK(field_text(world, QStringLiteral("nameField")) == QStringLiteral("Stopped Responding"));
     CHECK(in_sheet(world, QStringLiteral("retireRow"))->isVisible());
     CHECK(in_sheet(world, QStringLiteral("editSwatch"))->isVisible());
 
@@ -197,17 +197,17 @@ TEST_CASE("editor.error_types: a row opens its name for renaming, and Cancel cha
     enter_text(world, QStringLiteral("nameField"), QStringLiteral("Mute Lag"));
     tap_in_sheet(world, QStringLiteral("navLeading"));
     CHECK_FALSE(sheet_is_open(world));
-    CHECK(row_with(world, TYPES, QStringLiteral("Mute Delay")) != nullptr);
+    CHECK(row_with(world, TYPES, QStringLiteral("Stopped Responding")) != nullptr);
     CHECK(world.m_Rig.store().saves().empty());
 
     // Save renames it, and it keeps its tile and its colour.
-    open_row(world, QStringLiteral("Mute Delay"));
+    open_row(world, QStringLiteral("Stopped Responding"));
     enter_text(world, QStringLiteral("nameField"), QStringLiteral("Mute Lag"));
     tap_in_sheet(world, QStringLiteral("navTrailing"));
     CHECK_FALSE(sheet_is_open(world));
     QQuickItem* renamed = row_with(world, TYPES, QStringLiteral("Mute Lag"));
     REQUIRE(renamed != nullptr);
-    CHECK(row_with(world, TYPES, QStringLiteral("Mute Delay")) == nullptr);
+    CHECK(row_with(world, TYPES, QStringLiteral("Stopped Responding")) == nullptr);
     CHECK(renamed->property("accessibleName").toString() == QStringLiteral("Mute Lag, board tile 8"));
     CHECK(renamed->property("swatchSlot").toInt() == 8);
 }
@@ -218,12 +218,12 @@ TEST_CASE("editor.error_types: retiring a type removes it from the list and the 
     world.load("ErrorTypes");
     world.m_Ui.layout();
 
-    open_row(world, QStringLiteral("Mute Delay"));
+    open_row(world, QStringLiteral("Stopped Responding"));
     tap_in_sheet(world, QStringLiteral("retireRow"));
     CHECK_FALSE(sheet_is_open(world));
     const QStringList listed = names(world);
     CHECK(listed.size() == 10);
-    CHECK_FALSE(listed.contains(QStringLiteral("Mute Delay")));
+    CHECK_FALSE(listed.contains(QStringLiteral("Stopped Responding")));
 
     // The model keeps it, retired, so past entries still name it.
     const auto& types = world.model().configuration().m_ErrorTypes;
@@ -265,7 +265,7 @@ TEST_CASE("editor.error_types: the arrows move a type along the board and its co
     CHECK(names(world).front() == QStringLiteral("Wrong Response"));
 
     // The last type cannot move later.
-    QQuickItem* last = row_with(world, TYPES, QStringLiteral("Navigation Failure"));
+    QQuickItem* last = row_with(world, TYPES, QStringLiteral("Unexpected Stop"));
     CHECK_FALSE(child(last, QStringLiteral("editorMoveLater"))->isEnabled());
 }
 
@@ -294,7 +294,7 @@ TEST_CASE("editor.error_types: a refused move and a failed save are shown in a b
     world.m_Rig.store().fail_next_save(make_error(StorageErrorKind::DISK_FULL, "no room"));
     const QStringList before = names(world);
     world.m_Ui.tap(
-        find_item(row_with(world, TYPES, QStringLiteral("Wrong Track Played")), QStringLiteral("editorMoveLater")));
+        find_item(row_with(world, TYPES, QStringLiteral("Incorrect Action")), QStringLiteral("editorMoveLater")));
     world.settle();
     CHECK(banner->isVisible());
     CHECK(names(world) == before);

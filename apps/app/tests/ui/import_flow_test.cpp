@@ -183,7 +183,7 @@ TEST_CASE("import.errors: the core's messages are shown in file order and nothin
     SECTION("duplicate ids and names")
     {
         std::string text = replace_first(sample_text(), "0000000000a2", "0000000000a1");
-        text = replace_first(text, "Wrong Track Played", "Wrong Response");
+        text = replace_first(text, "Incorrect Action", "Wrong Response");
         world.m_Rig.store().add_file("/files/bad.json", text);
         begin(world, flow, QStringLiteral("/files/bad.json"), QStringLiteral("bad.json"));
 
@@ -274,7 +274,7 @@ TEST_CASE("import.sample: the sample file imports and the board, the picker and 
     const int label = board.roleNames().key("label");
     CHECK(board.data(board.index(0), label).toString() == QStringLiteral("Wrong Response"));
     CHECK(board.data(board.index(1), label).toString() == QStringLiteral("Sequence Out of Order"));
-    CHECK(board.data(board.index(10), label).toString() == QStringLiteral("Navigation Failure"));
+    CHECK(board.data(board.index(10), label).toString() == QStringLiteral("Unexpected Stop"));
 
     viewmodel::ErrorPickerModel picker(world.model(), open_log, world.model());
     CHECK(picker.rowCount() >= 11);

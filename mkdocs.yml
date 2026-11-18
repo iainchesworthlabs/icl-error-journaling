@@ -1,5 +1,5 @@
 site_name: Field Test
-site_description: An app for logging robot session errors through the day and sharing the log
+site_description: An app for logging errors during software and hardware testing sessions through the day and sharing the log
 repo_url: https://github.com/iainchesworthlabs/icl-error-journaling
 # The one place that holds the site's address. Pages write {{ site_url }}; tools/ci/check_site_address.py holds the files
 # that cannot read this line (the store URL files) to it. A custom domain is a change here (docs/ci.md, "The site address").

@@ -50,13 +50,13 @@ template <typename Id>
     return entry;
 }
 
-/// An interaction entry of the type "Spoke with" (type id 1 of the interaction types), with the people it names by id.
+/// An interaction entry of the type "Paired with" (type id 1 of the interaction types), with the people it names by id.
 /// The label is a snapshot, as an error entry's is; there is no name anywhere in it.
 [[nodiscard]] inline Entry sample_interaction_entry(std::uint64_t number, std::int64_t minute,
                                                     std::vector<PersonId> people = {},
                                                     std::optional<std::string> value = std::nullopt,
                                                     std::optional<std::string> note = std::nullopt,
-                                                    std::string label = "Spoke with")
+                                                    std::string label = "Paired with")
 {
     Entry entry;
     entry.m_Id = sample_id<EntryId>(number);

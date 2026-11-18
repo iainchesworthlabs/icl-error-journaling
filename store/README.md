@@ -16,7 +16,7 @@ Everything here is a draft until the owner approves it. The facts the owner conf
 
 Rules:
 
-- Use only the stand-ins from `docs/` (Sam Example, UNIT, North Site, Wrong Response, "the robot"). The listing is public.
+- Use only the stand-ins from `docs/` (Sam Example, UNIT, North Site, Wrong Response, "the device"). The listing is public.
 - Keep within the stores' limits. `tools/ci/check_store_text.py` enforces them.
 - Text files hold the value only: no comments and no licence header, because the upload sends the whole file.
   `REUSE.toml` covers their licence.

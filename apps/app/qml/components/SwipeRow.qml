@@ -6,7 +6,7 @@ import ErrorJournalingApp
 // words). Put the row's content in it as children; they are placed inside the row's margins.
 //
 //     SwipeRow {
-//         accessibleName: qsTr("10:20 Mute Delay")
+//         accessibleName: qsTr("10:20 Stopped Responding")
 //         onActivated: openEdit(entryId)
 //         onCopyRequested: timeline.copyLine(entryId)
 //         onDeleteRequested: timeline.deleteEntry(entryId)
@@ -15,7 +15,7 @@ import ErrorJournalingApp
 //
 // Accessibility. The row is one button, `activated`, and a screen opens the Edit sheet from it, which also offers Copy and
 // Delete. Qt offers QML no custom VoiceOver actions, so the two actions are also two buttons
-// in the accessibility tree, named after the row ("Copy, 10:20 Mute Delay"), that a screen reader reaches without a
+// in the accessibility tree, named after the row ("Copy, 10:20 Stopped Responding"), that a screen reader reaches without a
 // swipe. They sit under the row and are activated where they are; the swipe is the shortcut for a finger.
 //
 // Layout: the content sits 13 pt from the top and the bottom (Theme.font.rowText, 15 pt with a 1.35 line height, is the

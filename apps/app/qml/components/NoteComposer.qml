@@ -20,7 +20,7 @@ import ErrorJournalingApp
 // `chips` is a model with the roles `templateId` and `name` (`settings.templates`). A chip emits `chipChosen(templateId)`.
 // With `skeleton` the card draws its shapes only, in neutral colours and with no text, for the launch screen (Stage 5).
 //
-// `chipIcons` maps a templateId to an Icon kind for its chip ({"t1": "music"}); a chip without one has no icon. Look
+// `chipIcons` maps a templateId to an Icon kind for its chip ({"t1": "list"}); a chip without one has no icon. Look
 // (Main): 12 pt padding, 8 pt between chips, 10 pt between the chips and the field, the card shadow.
 Item {
     id: root

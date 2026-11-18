@@ -80,7 +80,7 @@ class LogSession : public QObject, public OpenLogSource
     Q_PROPERTY(QVariantList extraVersions READ extra_versions NOTIFY headerChanged)
     // "Influencer v4.5.0 · Gateway v2.0.1", or empty when there are none.
     Q_PROPERTY(QString extraVersionsText READ extra_versions_text NOTIFY headerChanged)
-    // The robot version first, then the others: "Robot v1.2.3 · Influencer v4.5.0". Empty when there is no version at all.
+    // The main version first, then the others: "Software v1.2.3 · Influencer v4.5.0". Empty when there is no version at all.
     Q_PROPERTY(QString versionsSummary READ versions_summary NOTIFY headerChanged)
     Q_PROPERTY(QString dateText READ date_text NOTIFY headerChanged) // "Sat 7 Nov"
     // HDR-06 banner: keys of empty fields. The keys are those of `header_field_key`, and `software_commit` while the
@@ -299,8 +299,8 @@ signals:
     void unsharedChanged();
     /// A tap on an error type could not be saved: the commit failed or too many writes were waiting. Emitted just after
     /// the `writeFailed("recordError", ...)` of the same failure, which is unchanged, so a screen that wants the name
-    /// of the type listens to this one. `title` is "Mute Delay wasn't saved" and `message` is "Nothing was added to the
-    /// log. Tap Mute Delay again to log it.", with the typographic apostrophe, both through `tr`.
+    /// of the type listens to this one. `title` is "Stopped Responding wasn't saved" and `message` is "Nothing was added to the
+    /// log. Tap Stopped Responding again to log it.", with the typographic apostrophe, both through `tr`.
     void recordFailed(const QString& errorTypeId, const QString& errorTypeName, const QString& title,
                       const QString& message);
     void newLogStarted(); // Stage 4 opens Today's details

@@ -218,6 +218,6 @@ TEST_CASE("settings.interaction_types: the example line uses a plain label when 
     rig.load_sample();
     CHECK(rig.m_Settings.previewInteractionLine("", "") == "Observation");
     CHECK(rig.m_Settings.previewInteractionLine("   ", "") == "Observation");
-    CHECK(rig.m_Settings.previewInteractionLine("Greeted", "Greeted [person] and [answer]")
-              .startsWith("Greeted Alex Sample"));
+    CHECK(rig.m_Settings.previewInteractionLine("Start task", "Start task [person] and [answer]")
+              .startsWith("Start task Alex Sample"));
 }

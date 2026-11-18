@@ -2,13 +2,13 @@
 template: marketing.html
 title: Field Test
 title_tag: "Field Test: a session error log for iPhone and iPad"
-description: "Log robot session errors as they happen and share the day's log as plain text. No account, no network, no tracking. For iPhone and iPad."
+description: "Log software and hardware test errors as they happen and share the day's log as plain text. No account, no network, no tracking. For iPhone and iPad."
 ---
 <section class="icl-hero icl-hero--app"><div class="icl-wrap"><div class="icl-hero__grid">
 <div>
 <img class="icl-hero__icon" src="assets/img/icon-256.png" width="80" height="80" alt="">
-<h1>Log robot errors during a session</h1>
-<p class="icl-lead">Field Test is an error log for people who run sessions with a robot. Each common error has its own tile. Double-tap a tile to log the error with the time. At the end of the day, share the log as plain text.</p>
+<h1>Log errors during a test session</h1>
+<p class="icl-lead">Field Test is an error log for people who run software or hardware test sessions. Each common error has its own tile. Double-tap a tile to log the error with the time. At the end of the day, share the log as plain text.</p>
 <div class="icl-actions" id="get">
 <!-- OWNER DECISION: the App Store badge and link go here when the app is live (Apple's artwork, unmodified, and the App Store ID). Until then this is plain text. -->
 <span class="ft-get">Coming to the App Store</span>
@@ -79,7 +79,7 @@ description: "Log robot session errors as they happen and share the day's log as
 </div>
 <div>
 <h2>Who it is for</h2>
-<p>Facilitators and testers who run robot sessions and need a list of what went wrong, and when.</p>
+<p>Testers who run software or hardware test sessions and need a list of what went wrong, and when.</p>
 <p>Field Test does not do project tracking, team dashboards or cloud sync. It keeps one person's log on one device and shares it as text.</p>
 </div>
 </div></section>

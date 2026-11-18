@@ -496,13 +496,13 @@ TEST_CASE("Retiring an error type removes it from the list and the board but kee
     REQUIRE(board_changed.count() == 1);
     QAbstractItemModel& board = *rig.m_Settings.board_layout();
     CHECK(board.data(board.index(2, 0), role_named(board, "isEmpty")).toBool());
-    CHECK(text_at(board, 3, role_named(board, "label")) == "Track Not Found");
+    CHECK(text_at(board, 3, role_named(board, "label")) == "Audio Dropout");
     // The file still has it, retired, so past entries still name it.
     const auto read_back = import_configuration(*rig.store().saved());
     REQUIRE(read_back.has_value());
     REQUIRE(read_back->m_ErrorTypes.size() == 11);
     CHECK(read_back->m_ErrorTypes[2].m_Retired);
-    CHECK(read_back->m_ErrorTypes[2].m_Name == "Wrong Track Played");
+    CHECK(read_back->m_ErrorTypes[2].m_Name == "Incorrect Action");
 
     CHECK_FALSE(rig.m_Settings.retireErrorType(third).isEmpty());
     CHECK_FALSE(rig.m_Settings.renameErrorType(third, "Something Else").isEmpty());
@@ -554,7 +554,7 @@ TEST_CASE("The board layout is 12 tiles: eleven positions and Other", "[viewmode
     CHECK(text_at(board, 0, role_named(board, "typeId")) == "00000000-0000-4000-8000-0000000000a1");
     CHECK(number_at(board, 0, role_named(board, "colourSlot")) == 1);
     CHECK(number_at(board, 0, role_named(board, "position")) == 1);
-    CHECK(text_at(board, 10, role_named(board, "label")) == "Navigation Failure");
+    CHECK(text_at(board, 10, role_named(board, "label")) == "Unexpected Stop");
     CHECK(number_at(board, 10, role_named(board, "colourSlot")) == 11);
     CHECK(text_at(board, 0, role_named(board, "accessibleName")) == "Wrong Response");
     for (int row = 0; row < 11; ++row)
@@ -603,7 +603,7 @@ TEST_CASE("A drag moves the tile; the tiles between shift; colours stay with the
     rig.commit();
 
     CHECK(labels_in(board).mid(0, 4) ==
-          QStringList{"Sequence Out of Order", "Wrong Track Played", "Wrong Response", "Track Not Found"});
+          QStringList{"Sequence Out of Order", "Incorrect Action", "Wrong Response", "Audio Dropout"});
     REQUIRE(changed.count() == 1);
     CHECK(changed.at(0).at(0).value<QModelIndex>().row() == 0);
     CHECK(changed.at(0).at(1).value<QModelIndex>().row() == 2);
@@ -617,7 +617,7 @@ TEST_CASE("A drag moves the tile; the tiles between shift; colours stay with the
     // And back.
     CHECK(rig.m_Settings.moveBoardTile(3, 1).isEmpty());
     rig.commit();
-    CHECK(labels_in(board).mid(0, 3) == QStringList{"Wrong Response", "Sequence Out of Order", "Wrong Track Played"});
+    CHECK(labels_in(board).mid(0, 3) == QStringList{"Wrong Response", "Sequence Out of Order", "Incorrect Action"});
     CHECK(import_configuration(*rig.store().saved()).has_value());
 }
 
@@ -658,7 +658,7 @@ TEST_CASE("Assigning a type that is on the board elsewhere swaps the two tiles",
     CHECK(rig.m_Settings.assignBoardTile(1, fifth).isEmpty());
     rig.commit();
 
-    CHECK(text_at(board, 0, role_named(board, "label")) == "Track Skipped");
+    CHECK(text_at(board, 0, role_named(board, "label")) == "Step Skipped");
     CHECK(text_at(board, 4, role_named(board, "label")) == "Wrong Response");
     CHECK(text_at(board, 1, role_named(board, "label")) == "Sequence Out of Order");
     REQUIRE(changed.count() == 1);
@@ -775,16 +775,16 @@ TEST_CASE("A note template is added with its name, prompt and pattern", "[viewmo
     rig.load_sample();
     QSignalSpy inserted(rig.m_Settings.templates(), &QAbstractItemModel::rowsInserted);
 
-    CHECK(rig.m_Settings.addTemplate("Requested song", "Which song?", "Song {value} requested twice").isEmpty());
+    CHECK(rig.m_Settings.addTemplate("Requested task", "Which task?", "Task {value} requested twice").isEmpty());
     CHECK(rig.m_Settings.templates()->rowCount() == 2);
     rig.commit();
 
     const QAbstractItemModel& templates = *rig.m_Settings.templates();
     REQUIRE(templates.rowCount() == 3);
     CHECK(inserted.count() == 1);
-    CHECK(text_at(templates, 2, role_named(templates, "name")) == "Requested song");
-    CHECK(text_at(templates, 2, role_named(templates, "valuePrompt")) == "Which song?");
-    CHECK(text_at(templates, 2, role_named(templates, "outputPattern")) == "Song {value} requested twice");
+    CHECK(text_at(templates, 2, role_named(templates, "name")) == "Requested task");
+    CHECK(text_at(templates, 2, role_named(templates, "valuePrompt")) == "Which task?");
+    CHECK(text_at(templates, 2, role_named(templates, "outputPattern")) == "Task {value} requested twice");
     CHECK(text_at(templates, 2, role_named(templates, "templateId")).size() == 36);
     CHECK(rig.m_Settings.configuration().m_Templates.back().m_SortOrder == 3);
     CHECK(import_configuration(*rig.store().saved()).has_value());
@@ -796,14 +796,14 @@ TEST_CASE("A pattern needs {value}; {name} and stray braces are refused with a m
     SettingsRig rig;
     rig.load_sample();
 
-    CHECK(rig.m_Settings.validatePattern("Played {value}").isEmpty());
+    CHECK(rig.m_Settings.validatePattern("Began task {value}").isEmpty());
     CHECK(rig.m_Settings.validatePattern("{value} and {value}").isEmpty());
     CHECK(rig.m_Settings.validatePattern("Braces {{ and }} with {value}").isEmpty());
     CHECK(rig.m_Settings.validatePattern(QString("{value}") + QString(493, 'x')).isEmpty());
 
     // The messages use the editor's words: "line", "Insert answer", "[answer]", and no curly brackets the person never
     // typed.
-    for (const QString& pattern : {QString("Played song"), QString("")})
+    for (const QString& pattern : {QString("Began task"), QString("")})
     {
         const QString message = rig.m_Settings.validatePattern(pattern);
         CHECK(message.contains("Insert answer"));
@@ -811,9 +811,9 @@ TEST_CASE("A pattern needs {value}; {name} and stray braces are refused with a m
         CHECK_FALSE(message.contains("{"));
         CHECK_FALSE(message.contains("pattern"));
     }
-    CHECK(rig.m_Settings.validatePattern("Played {name}").contains("{name}"));
-    CHECK(rig.m_Settings.validatePattern("Played {name}").contains("Insert answer"));
-    CHECK(rig.m_Settings.validatePattern("Played {value} {name}").contains("{name}"));
+    CHECK(rig.m_Settings.validatePattern("Began task {name}").contains("{name}"));
+    CHECK(rig.m_Settings.validatePattern("Began task {name}").contains("Insert answer"));
+    CHECK(rig.m_Settings.validatePattern("Began task {value} {name}").contains("{name}"));
     for (const QString& pattern : {QString("Played {value"), QString("Played } {value}")})
     {
         const QString message = rig.m_Settings.validatePattern(pattern);
@@ -832,7 +832,7 @@ TEST_CASE("The line field shows [answer] for {value}, and the stored pattern sta
     rig.load_sample();
     const SettingsModel& settings = rig.m_Settings;
 
-    CHECK(settings.patternToField("Played {value}") == "Played [answer]");
+    CHECK(settings.patternToField("Began task {value}") == "Began task [answer]");
     CHECK(settings.patternToField("{value} and {value}") == "[answer] and [answer]");
     CHECK(settings.patternToField("No slot") == "No slot");
     CHECK(settings.patternToField("") == "");
@@ -840,19 +840,19 @@ TEST_CASE("The line field shows [answer] for {value}, and the stored pattern sta
     CHECK(settings.patternToField("Braces {{value}} and {value}") == "Braces {{value}} and [answer]");
     CHECK(settings.patternToField("{{{value}}}") == "{{[answer]}}");
 
-    CHECK(settings.patternFromField("Played [answer]") == "Played {value}");
+    CHECK(settings.patternFromField("Began task [answer]") == "Began task {value}");
     CHECK(settings.patternFromField("[answer] and [answer]") == "{value} and {value}");
     // A slot the person typed by hand is left alone, and so is a half-typed token.
-    CHECK(settings.patternFromField("Played {value}") == "Played {value}");
+    CHECK(settings.patternFromField("Began task {value}") == "Began task {value}");
     CHECK(settings.patternFromField("Played [answe") == "Played [answe");
 
     // What the field shows and what is stored round-trip, and what is stored is accepted by the renderer.
-    for (const QString& pattern : {QString("Played {value}"), QString("{{value}} is {value}"), QString("{{{value}}}")})
+    for (const QString& pattern : {QString("Began task {value}"), QString("{{value}} is {value}"), QString("{{{value}}}")})
     {
         CHECK(settings.patternFromField(settings.patternToField(pattern)) == pattern);
         CHECK(settings.validatePattern(settings.patternFromField(settings.patternToField(pattern))).isEmpty());
     }
-    CHECK(settings.validatePattern(settings.patternFromField("Played [answer]")).isEmpty());
+    CHECK(settings.validatePattern(settings.patternFromField("Began task [answer]")).isEmpty());
     CHECK_FALSE(settings.validatePattern(settings.patternFromField("Played")).isEmpty());
 }
 
@@ -863,21 +863,21 @@ TEST_CASE("A new template starts with a question and a line made from its name",
     rig.load_sample();
     const SettingsModel& settings = rig.m_Settings;
 
-    CHECK(settings.defaultTemplateQuestion("Played song") == "Played song?");
-    CHECK(settings.defaultTemplateLine("Played song") == "Played song: [answer]");
-    CHECK(settings.defaultTemplateQuestion("  Visitor  ") == "Visitor?");
-    CHECK(settings.defaultTemplateLine("  Visitor  ") == "Visitor: [answer]");
+    CHECK(settings.defaultTemplateQuestion("Began task") == "Began task?");
+    CHECK(settings.defaultTemplateLine("Began task") == "Began task: [answer]");
+    CHECK(settings.defaultTemplateQuestion("  Observer  ") == "Observer?");
+    CHECK(settings.defaultTemplateLine("  Observer  ") == "Observer: [answer]");
     CHECK(settings.defaultTemplateQuestion("   ").isEmpty());
     CHECK(settings.defaultTemplateLine("").isEmpty());
 
     // The line is a valid pattern, even for a name with braces in it, and the preview shows the name and the answer.
-    for (const QString& name : {QString("Played song"), QString("Odd {name} and } here")})
+    for (const QString& name : {QString("Began task"), QString("Odd {name} and } here")})
     {
         const QString stored = settings.patternFromField(settings.defaultTemplateLine(name));
         CHECK(settings.validatePattern(stored).isEmpty());
     }
-    CHECK(settings.previewTemplateLine(settings.patternFromField(settings.defaultTemplateLine("Played song")), "",
-                                       37800) == "10:30 Played song: Morning Medley");
+    CHECK(settings.previewTemplateLine(settings.patternFromField(settings.defaultTemplateLine("Began task")), "",
+                                       37800) == "10:30 Began task: 1");
 }
 
 TEST_CASE("A template with a bad name, prompt or pattern is refused and nothing is saved",
@@ -886,13 +886,13 @@ TEST_CASE("A template with a bad name, prompt or pattern is refused and nothing 
     SettingsRig rig;
     rig.load_sample();
 
-    CHECK_FALSE(rig.m_Settings.addTemplate("", "Which song?", "Played {value}").isEmpty());
-    CHECK_FALSE(rig.m_Settings.addTemplate("Name", "", "Played {value}").isEmpty());
-    CHECK_FALSE(rig.m_Settings.addTemplate("Name", "Which song?", "Played").isEmpty());
-    CHECK_FALSE(rig.m_Settings.addTemplate("Name", "Which song?", "Played {name}").isEmpty());
-    CHECK_FALSE(rig.m_Settings.addTemplate("played SONG", "Which song?", "Played {value}").isEmpty());
-    CHECK_FALSE(rig.m_Settings.addTemplate(QString(201, 'x'), "Which song?", "Played {value}").isEmpty());
-    CHECK_FALSE(rig.m_Settings.addTemplate("Name", QString(201, 'x'), "Played {value}").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addTemplate("", "Which task?", "Began task {value}").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addTemplate("Name", "", "Began task {value}").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addTemplate("Name", "Which task?", "Played").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addTemplate("Name", "Which task?", "Began task {name}").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addTemplate("began TASK", "Which task?", "Began task {value}").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addTemplate(QString(201, 'x'), "Which task?", "Began task {value}").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addTemplate("Name", QString(201, 'x'), "Began task {value}").isEmpty());
     CHECK(rig.m_Gateway.pending() == 0);
 }
 
@@ -903,23 +903,23 @@ TEST_CASE("A template is renamed and edited; a name in use is refused", "[viewmo
     const QString played = id_of(rig.m_Settings.configuration().m_Templates[0]);
     const QAbstractItemModel& templates = *rig.m_Settings.templates();
 
-    CHECK_FALSE(rig.m_Settings.renameTemplate(played, "visitor interaction").isEmpty());
+    CHECK_FALSE(rig.m_Settings.renameTemplate(played, "entered ROOM").isEmpty());
     CHECK_FALSE(rig.m_Settings.renameTemplate("nonsense", "Whatever").isEmpty());
-    CHECK_FALSE(rig.m_Settings.updateTemplate(played, "Played song", "Which song?", "No placeholder").isEmpty());
+    CHECK_FALSE(rig.m_Settings.updateTemplate(played, "Began task", "Which task?", "No placeholder").isEmpty());
     CHECK(rig.m_Gateway.pending() == 0);
 
-    CHECK(rig.m_Settings.renameTemplate(played, "Song played").isEmpty());
+    CHECK(rig.m_Settings.renameTemplate(played, "Task started").isEmpty());
     rig.commit();
-    CHECK(text_at(templates, 0, role_named(templates, "name")) == "Song played");
+    CHECK(text_at(templates, 0, role_named(templates, "name")) == "Task started");
 
-    CHECK(rig.m_Settings.updateTemplate(played, "Song played", "Which track?", "Track {value} played").isEmpty());
+    CHECK(rig.m_Settings.updateTemplate(played, "Task started", "Which track?", "Track {value} played").isEmpty());
     rig.commit();
     CHECK(text_at(templates, 0, role_named(templates, "valuePrompt")) == "Which track?");
     CHECK(text_at(templates, 0, role_named(templates, "outputPattern")) == "Track {value} played");
     CHECK(rig.store().saves().size() == 2);
 
     // No change, no save.
-    CHECK(rig.m_Settings.updateTemplate(played, "Song played", "Which track?", "Track {value} played").isEmpty());
+    CHECK(rig.m_Settings.updateTemplate(played, "Task started", "Which track?", "Track {value} played").isEmpty());
     CHECK(rig.m_Gateway.pending() == 0);
 }
 

@@ -32,10 +32,10 @@ TEST_CASE("settings.interaction_types: the types are listed with their line, and
     const QStringList listed = names(world);
     REQUIRE(listed.size() >= 2);
     CHECK(names(world) == listed);
-    CHECK(listed.front() == QStringLiteral("Spoke with"));
-    QQuickItem* first = row_with(world, TYPES, QStringLiteral("Spoke with"));
+    CHECK(listed.front() == QStringLiteral("Paired with"));
+    QQuickItem* first = row_with(world, TYPES, QStringLiteral("Paired with"));
     REQUIRE(first != nullptr);
-    CHECK(first->property("detail").toString() == QStringLiteral("Spoke with [person]"));
+    CHECK(first->property("detail").toString() == QStringLiteral("Paired with [person]"));
     CHECK(item(world, QStringLiteral("addRow"))->isVisible());
 }
 
@@ -48,7 +48,7 @@ TEST_CASE("settings.interaction_types: the miniature board shows the tiles, and 
 
     QQuickItem* first = find_item(world.m_Ui.root(), QStringLiteral("miniTile0"));
     REQUIRE(first != nullptr);
-    CHECK(child(first, QStringLiteral("miniLabel"))->property("text").toString() == QStringLiteral("Spoke with"));
+    CHECK(child(first, QStringLiteral("miniLabel"))->property("text").toString() == QStringLiteral("Paired with"));
     // The sample has six types, on the tiles 1 to 6, so the seventh is empty.
     QQuickItem* empty = find_item(world.m_Ui.root(), QStringLiteral("miniTile6"));
     REQUIRE(empty != nullptr);
@@ -64,7 +64,7 @@ TEST_CASE("settings.interaction_types: the miniature board shows the tiles, and 
     REQUIRE(bar->isVisible());
     CHECK(bar->property("title").toString() == QStringLiteral("Add observation type"));
 
-    QQuickItem* helped = row_with(world, QStringLiteral("tilePickerType"), QStringLiteral("Helped"));
+    QQuickItem* helped = row_with(world, QStringLiteral("tilePickerType"), QStringLiteral("End task"));
     REQUIRE(helped != nullptr);
     world.m_Ui.tap(helped);
     world.settle();
@@ -72,7 +72,7 @@ TEST_CASE("settings.interaction_types: the miniature board shows the tiles, and 
     world.m_Ui.layout();
     CHECK_FALSE(find_item(world.m_Ui.root(), QStringLiteral("tilePickerBar"))->isVisible());
     QQuickItem* now = find_item(world.m_Ui.root(), QStringLiteral("miniTile6"));
-    CHECK(child(now, QStringLiteral("miniLabel"))->property("text").toString() == QStringLiteral("Helped"));
+    CHECK(child(now, QStringLiteral("miniLabel"))->property("text").toString() == QStringLiteral("End task"));
     // It left tile 6 for tile 7.
     CHECK(find_item(world.m_Ui.root(), QStringLiteral("miniTile5"))->property("isEmpty").toBool());
 }

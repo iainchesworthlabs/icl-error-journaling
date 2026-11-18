@@ -5,5 +5,5 @@ Location: North Site
 Software Version: v1.4.2
 
 12:00:00 AM T| Wrong Response
-09:07:03 AM T| Mute Delay
-01:15:59 PM T| Speech Delay
+09:07:03 AM T| Stopped Responding
+01:15:59 PM T| Timed Out

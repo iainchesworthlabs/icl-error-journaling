@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The versions of Today's details besides the robot's (HDR-10) and the "v" of the version field (HDR-04): the fixed v in
+// The versions of Today's details besides the main one (HDR-10) and the "v" of the version field (HDR-04): the fixed v in
 // front of the field, the Other versions row and the sheet it opens (add, edit, remove, refusals, Done and Cancel). The
 // models are the real ones of Stage 3 over the in-memory store.
 #include "header_support.hpp"
@@ -96,7 +96,7 @@ TEST_CASE("versions.prefix: the version field shows a fixed v and takes the numb
     QQuickItem* field = need(rig, QStringLiteral("headerVersion"));
 
     CHECK(field->property("prefixText").toString() == QStringLiteral("v"));
-    CHECK(field->property("label").toString() == QStringLiteral("Robot software version"));
+    CHECK(field->property("label").toString() == QStringLiteral("Software version"));
     CHECK(shown(rig, field) == QStringLiteral("1.4.2"));
 
     retype(rig, field, QStringLiteral("1.4.3"));
@@ -171,7 +171,7 @@ TEST_CASE("versions.sheet: a refused row says why, Done waits, and Cancel change
 
     rig.tap(need(rig, QStringLiteral("extraVersionAdd"), sheet));
     rig.settle();
-    retype(rig, nth(sheet, "extraVersionLabel", 0), QStringLiteral("Robot"));
+    retype(rig, nth(sheet, "extraVersionLabel", 0), QStringLiteral("Software"));
     retype(rig, nth(sheet, "extraVersionNumber", 0), QStringLiteral("4.5.0"));
     CHECK(sheet->property("refused").toBool());
     CHECK(nth(sheet, "extraVersionLabel", 0)->property("invalid").toBool());

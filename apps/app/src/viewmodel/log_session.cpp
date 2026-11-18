@@ -377,7 +377,7 @@ QString LogSession::versions_summary() const
     std::string out;
     if (header.m_SoftwareVersion)
     {
-        out = std::string(ROBOT_LABEL) + " " + header.m_SoftwareVersion->display();
+        out = std::string(SOFTWARE_LABEL) + " " + header.m_SoftwareVersion->display();
     }
     if (const std::string extras = summarize_extra_versions(header.m_ExtraVersions); !extras.empty())
     {
@@ -981,8 +981,8 @@ QString LogSession::header_message(const HeaderError& error) const
             return tr("A name has at most 20 characters.");
         case ExtraVersionsError::LABEL_CHARACTERS:
             return tr("A name uses letters, numbers, spaces and dashes only.");
-        case ExtraVersionsError::LABEL_IS_ROBOT:
-            return tr("Robot is the software version above. Use another name.");
+        case ExtraVersionsError::LABEL_IS_SOFTWARE:
+            return tr("Software is the name of the main version above. Use another name.");
         case ExtraVersionsError::DUPLICATE_LABEL:
             return tr("Another version already has that name.");
         case ExtraVersionsError::INVALID_VERSION:

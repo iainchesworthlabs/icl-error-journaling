@@ -402,9 +402,9 @@ TEST_CASE("review.rows: markup in a row's words is shown as the words it is", "[
     QString styled;
     QMetaObject::invokeMethod(review, "styledLine", Q_RETURN_ARG(QString, styled),
                               Q_ARG(QString, QStringLiteral("(Free Text)")),
-                              Q_ARG(QString, QStringLiteral("Played <b>Medley</b> & more")));
+                              Q_ARG(QString, QStringLiteral("Began <b>task</b> & more")));
     CHECK(QTextDocumentFragment::fromHtml(styled).toPlainText() ==
-          QStringLiteral("(Free Text) Played <b>Medley</b> & more"));
+          QStringLiteral("(Free Text) Began <b>task</b> & more"));
 }
 
 TEST_CASE("review.voiceover: a row is one button reading the whole line and opening Edit", "[ui][review]")

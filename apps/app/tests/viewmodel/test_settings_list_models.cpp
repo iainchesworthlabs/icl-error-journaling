@@ -221,8 +221,8 @@ TEST_CASE("The template list orders by sort order", "[viewmodel][settings][model
     model.refresh(configuration);
 
     REQUIRE(model.rowCount() == 2);
-    CHECK(model.data(model.index(0), TemplateListModel::NAME).toString() == "Visitor interaction");
-    CHECK(model.data(model.index(1), TemplateListModel::OUTPUT_PATTERN).toString() == "Played {value}");
+    CHECK(model.data(model.index(0), TemplateListModel::NAME).toString() == "Entered room");
+    CHECK(model.data(model.index(1), TemplateListModel::OUTPUT_PATTERN).toString() == "Began task {value}");
 }
 
 TEST_CASE("The board layout puts a type on the tile of its position and never retired ones",
@@ -236,7 +236,7 @@ TEST_CASE("The board layout puts a type on the tile of its position and never re
 
     model.refresh(configuration);
 
-    CHECK(model.data(model.index(0), BoardLayoutModel::LABEL).toString() == "Navigation Failure");
+    CHECK(model.data(model.index(0), BoardLayoutModel::LABEL).toString() == "Unexpected Stop");
     CHECK(model.data(model.index(0), BoardLayoutModel::COLOUR_SLOT).toInt() == 11);
     CHECK(model.data(model.index(10), BoardLayoutModel::COLOUR_SLOT).toInt() == 1);
     CHECK(model.data(model.index(4), BoardLayoutModel::IS_EMPTY).toBool());

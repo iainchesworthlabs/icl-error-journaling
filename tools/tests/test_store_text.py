@@ -27,7 +27,7 @@ GOOD = {
     "appstore/en-AU/subtitle.txt": "A short subtitle",
     "appstore/en-AU/promotional_text.txt": "Promotional text.",
     "appstore/en-AU/description.txt": "First paragraph.\n\nSecond paragraph.",
-    "appstore/en-AU/keywords.txt": "tester,error log,robot",
+    "appstore/en-AU/keywords.txt": "tester,error log,hardware",
     "appstore/en-AU/release_notes.txt": "First release.",
     "appstore/en-AU/support_url.txt": URL,
     "appstore/en-AU/privacy_url.txt": URL.replace("support", "privacy"),
@@ -119,16 +119,16 @@ class StoreTextTest(unittest.TestCase):
         self.assert_problem("must be one line")
 
     def test_keyword_space_after_comma(self) -> None:
-        self.write("appstore/en-AU/keywords.txt", "tester, robot\n")
+        self.write("appstore/en-AU/keywords.txt", "tester, hardware\n")
         self.assert_problem("space next to a comma")
 
     def test_keyword_empty(self) -> None:
-        self.write("appstore/en-AU/keywords.txt", "tester,,robot\n")
+        self.write("appstore/en-AU/keywords.txt", "tester,,hardware\n")
         self.assert_problem("empty keyword")
 
     def test_keyword_repeated(self) -> None:
-        self.write("appstore/en-AU/keywords.txt", "robot,Robot\n")
-        self.assert_problem("repeated keyword(s): robot")
+        self.write("appstore/en-AU/keywords.txt", "hardware,Hardware\n")
+        self.assert_problem("repeated keyword(s): hardware")
 
     def test_keyword_too_short(self) -> None:
         self.write("appstore/en-AU/keywords.txt", "tester,qa\n")

@@ -10,4 +10,4 @@ Software Version: v1.4.2
 10:15 (Free Text) trailing spaces
 10:20 (Free Text) leading spaces and CRLF
 10:25 (Free Text)
-10:30 (Free Text) Played Two Lines
+10:30 (Free Text) Began task Two Lines

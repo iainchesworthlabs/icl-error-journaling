@@ -44,8 +44,8 @@ public:
     Templates()
     {
         m_Model.setItemRoleNames({{Qt::UserRole + 1, "templateId"}, {Qt::UserRole + 2, "name"}});
-        add(QStringLiteral("played-song"), QStringLiteral("Played song"));
-        add(QStringLiteral("visitor"), QStringLiteral("Visitor interaction"));
+        add(QStringLiteral("began-task"), QStringLiteral("Began task"));
+        add(QStringLiteral("observer"), QStringLiteral("Entered room 1"));
     }
 
     void add(const QString& id, const QString& name)
@@ -163,19 +163,19 @@ TEST_CASE("composer.draft_binding: a draft set from outside replaces the text wi
     Fixture f;
     QSignalSpy edited(f.composer, SIGNAL(textEdited(QString)));
 
-    f.host->setProperty("draft", QStringLiteral("Played Evening Song"));
-    CHECK(f.text() == QStringLiteral("Played Evening Song"));
-    CHECK(f.cursor() == 19);
+    f.host->setProperty("draft", QStringLiteral("Began task 2"));
+    CHECK(f.text() == QStringLiteral("Began task 2"));
+    CHECK(f.cursor() == 12);
     CHECK(edited.count() == 0);
 
-    f.host->setProperty("draft", QStringLiteral("Played Evening Song again"));
-    CHECK(f.text() == QStringLiteral("Played Evening Song again"));
+    f.host->setProperty("draft", QStringLiteral("Began task 2 again"));
+    CHECK(f.text() == QStringLiteral("Began task 2 again"));
     CHECK(f.cursor() == f.text().length());
     CHECK(edited.count() == 0);
 
     // The same text again is not a change: the cursor stays.
     f.field->setProperty("cursorPosition", 4);
-    f.host->setProperty("draft", QStringLiteral("Played Evening Song again"));
+    f.host->setProperty("draft", QStringLiteral("Began task 2 again"));
     CHECK(f.cursor() == 4);
 }
 
@@ -184,10 +184,10 @@ TEST_CASE("composer.add: the Add button emits submit once with the text, and Ret
     Fixture f;
     QSignalSpy submitted(f.composer, SIGNAL(submit(QString)));
 
-    f.host->setProperty("draft", QStringLiteral("Mute Delay at the gate"));
+    f.host->setProperty("draft", QStringLiteral("Stopped Responding at the gate"));
     f.rig.tap(f.add);
     REQUIRE(submitted.count() == 1);
-    CHECK(submitted.at(0).at(0).toString() == QStringLiteral("Mute Delay at the gate"));
+    CHECK(submitted.at(0).at(0).toString() == QStringLiteral("Stopped Responding at the gate"));
 
     f.field->forceActiveFocus();
     f.rig.key(Qt::Key_Return);
@@ -226,7 +226,7 @@ TEST_CASE("composer.chips: a chip emits chipChosen with its template id, and a l
           "[ui][composer]")
 {
     Fixture f;
-    f.templates.add(QStringLiteral("long"), QStringLiteral("A visitor asked about the Wrong Response at North Site"));
+    f.templates.add(QStringLiteral("long"), QStringLiteral("An observer asked about the Wrong Response at North Site"));
     f.rig.layout();
     QSignalSpy chosen(f.composer, SIGNAL(chipChosen(QString)));
 
@@ -239,9 +239,9 @@ TEST_CASE("composer.chips: a chip emits chipChosen with its template id, and a l
         }
     }
     REQUIRE(chips.size() == 3);
-    CHECK(chips[0].m_Name == QStringLiteral("Played song"));
-    CHECK(chips[1].m_Name == QStringLiteral("Visitor interaction"));
-    CHECK(chips[2].m_Name == QStringLiteral("A visitor asked about the Wrong Response at North Site"));
+    CHECK(chips[0].m_Name == QStringLiteral("Began task"));
+    CHECK(chips[1].m_Name == QStringLiteral("Entered room 1"));
+    CHECK(chips[2].m_Name == QStringLiteral("An observer asked about the Wrong Response at North Site"));
     for (const Node& chip : chips)
     {
         CHECK(chip.m_Role == QAccessible::Button);
@@ -256,8 +256,8 @@ TEST_CASE("composer.chips: a chip emits chipChosen with its template id, and a l
     f.rig.tap(chips[1].m_Item);
     f.rig.tap(chips[0].m_Item);
     REQUIRE(chosen.count() == 2);
-    CHECK(chosen.at(0).at(0).toString() == QStringLiteral("visitor"));
-    CHECK(chosen.at(1).at(0).toString() == QStringLiteral("played-song"));
+    CHECK(chosen.at(0).at(0).toString() == QStringLiteral("observer"));
+    CHECK(chosen.at(1).at(0).toString() == QStringLiteral("began-task"));
 
     f.rig.set_text_scale(3.1);
     expect_clean(check_text_scale(f.rig));
@@ -328,12 +328,12 @@ TEST_CASE("composer.dictation: the field takes text committed by the input metho
 
     f.field->forceActiveFocus();
     QInputMethodEvent event;
-    event.setCommitString(QStringLiteral("Mute Delay near the stage"));
+    event.setCommitString(QStringLiteral("Stopped Responding near the stage"));
     QCoreApplication::sendEvent(f.field, &event);
-    CHECK(f.text() == QStringLiteral("Mute Delay near the stage"));
+    CHECK(f.text() == QStringLiteral("Stopped Responding near the stage"));
     REQUIRE(edited.count() >= 1);
-    CHECK(edited.last().at(0).toString() == QStringLiteral("Mute Delay near the stage"));
-    CHECK(f.host->property("draft").toString() == QStringLiteral("Mute Delay near the stage"));
+    CHECK(edited.last().at(0).toString() == QStringLiteral("Stopped Responding near the stage"));
+    CHECK(f.host->property("draft").toString() == QStringLiteral("Stopped Responding near the stage"));
 }
 
 TEST_CASE("composer.multiline: Return keeps a line break in the field and the draft, and the Add button submits it whole",
@@ -344,10 +344,10 @@ TEST_CASE("composer.multiline: Return keeps a line break in the field and the dr
     QSignalSpy submitted(f.composer, SIGNAL(submit(QString)));
 
     f.field->forceActiveFocus();
-    f.rig.type(QStringLiteral("Mute Delay"));
+    f.rig.type(QStringLiteral("Stopped Responding"));
     f.rig.key(Qt::Key_Return);
     f.rig.type(QStringLiteral("near the stage"));
-    const QString expected = QStringLiteral("Mute Delay\nnear the stage");
+    const QString expected = QStringLiteral("Stopped Responding\nnear the stage");
     CHECK(f.text() == expected);
     CHECK(f.host->property("draft").toString() == expected);
     CHECK(edited.last().at(0).toString() == expected);
@@ -512,16 +512,16 @@ TEST_CASE("composer.dictation_text: each guess replaces the one before it, a new
     QMetaObject::invokeMethod(f.composer, "dictationSegment");
     QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("mute")));
     CHECK(f.text() == QStringLiteral("North Site: mute"));
-    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("mute delay near")));
-    CHECK(f.text() == QStringLiteral("North Site: mute delay near"));
-    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("mute delay near the stage")));
-    CHECK(f.text() == QStringLiteral("North Site: mute delay near the stage"));
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("stopped responding near")));
+    CHECK(f.text() == QStringLiteral("North Site: stopped responding near"));
+    QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("stopped responding near the stage")));
+    CHECK(f.text() == QStringLiteral("North Site: stopped responding near the stage"));
     CHECK(f.cursor() == f.text().length());
 
     // The recogniser paused and a new stretch begins: it is added, not substituted.
     QMetaObject::invokeMethod(f.composer, "dictationSegment");
     QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QStringLiteral("then it recovered")));
-    CHECK(f.text() == QStringLiteral("North Site: mute delay near the stage then it recovered"));
+    CHECK(f.text() == QStringLiteral("North Site: stopped responding near the stage then it recovered"));
 
     // Every change was reported as typed, so the draft has it and it survives the app being closed (NOTE-03).
     CHECK(f.host->property("draft").toString() == f.text());
@@ -529,7 +529,7 @@ TEST_CASE("composer.dictation_text: each guess replaces the one before it, a new
 
     // Empty text, as a recogniser sends before it has heard anything, changes nothing.
     QMetaObject::invokeMethod(f.composer, "dictationText", Q_ARG(QString, QString()));
-    CHECK(f.text() == QStringLiteral("North Site: mute delay near the stage then it recovered"));
+    CHECK(f.text() == QStringLiteral("North Site: stopped responding near the stage then it recovered"));
 }
 
 TEST_CASE("composer.dictation_text: in an empty box, or after a line break, there is no space in front",
@@ -599,7 +599,7 @@ TEST_CASE("composer.skeleton: shapes only, with the same geometry as the card", 
     Fixture f;
     // Two short chips, which share a row whatever the font, as the two skeleton chips do.
     f.templates.model()->clear();
-    f.templates.add(QStringLiteral("a"), QStringLiteral("Song"));
+    f.templates.add(QStringLiteral("a"), QStringLiteral("Task"));
     f.templates.add(QStringLiteral("b"), QStringLiteral("Visit"));
     f.rig.layout();
     const QRectF card = f.rig.geometry(f.composer);

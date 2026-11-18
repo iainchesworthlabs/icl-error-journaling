@@ -91,13 +91,13 @@ QQuickItem* load_logged_tile(UiRig& rig, QQuickItem*& tile)
                 width: 118
                 height: 104
                 typeId: "mute-delay"
-                label: "Mute Delay"
+                label: "Stopped Responding"
                 colourSlot: 8
                 count: 2
                 hasCount: true
                 isOther: false
                 isEmpty: false
-                accessibleName: "Mute Delay, 2 today"
+                accessibleName: "Stopped Responding, 2 today"
                 onPressed: wrapper.log = wrapper.log.concat(["pressed"])
                 onTapped: wrapper.log = wrapper.log.concat(["tapped"])
                 onHeld: wrapper.log = wrapper.log.concat(["held"])
@@ -153,7 +153,7 @@ TEST_CASE("tile.double_tap: one tap asks for nothing, the second touch inside th
 {
     UiRig rig;
     rig.steady_time();
-    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8, 2));
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8, 2));
     QSignalSpy pressed(tile, SIGNAL(pressed()));
     QSignalSpy tapped(tile, SIGNAL(tapped()));
     QSignalSpy single(tile, SIGNAL(singleTapped()));
@@ -210,7 +210,7 @@ TEST_CASE(
 {
     UiRig rig;
     rig.steady_time();
-    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8));
     QSignalSpy pressed(tile, SIGNAL(pressed()));
     QSignalSpy single(tile, SIGNAL(singleTapped()));
     const int window = theme_group(rig, "motion")->property("doubleTapMs").toInt();
@@ -240,7 +240,7 @@ TEST_CASE("tile.triple_tap: the third tap logs nothing more and the fourth start
 {
     UiRig rig;
     rig.steady_time();
-    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8));
     QSignalSpy pressed(tile, SIGNAL(pressed()));
     QSignalSpy single(tile, SIGNAL(singleTapped()));
 
@@ -264,7 +264,7 @@ TEST_CASE("tile.hold: a hold asks at 500 ms, once, and then holds; before that i
 {
     UiRig rig;
     rig.steady_time();
-    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8));
     QQuickItem* face = rig.find(QStringLiteral("tileFace"));
     REQUIRE(face != nullptr);
     QSignalSpy pressed(tile, SIGNAL(pressed()));
@@ -309,7 +309,7 @@ TEST_CASE("tile.hold: a tap and then a hold asks at the second touch and the hol
 {
     UiRig rig;
     rig.steady_time();
-    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8));
     QSignalSpy pressed(tile, SIGNAL(pressed()));
     QSignalSpy held(tile, SIGNAL(held()));
 
@@ -370,7 +370,7 @@ TEST_CASE("tile.press_scale: 0.96 within 120 ms of the touch that asks, back on 
 {
     UiRig rig;
     rig.steady_time();
-    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8));
     QQuickItem* face = rig.find(QStringLiteral("tileFace"));
     REQUIRE(face != nullptr);
     auto* pressIn = object_named(tile, QStringLiteral("tilePressIn"));
@@ -422,7 +422,7 @@ TEST_CASE("tile.press_scale: Reduce Motion keeps the press scale, because it is 
     UiRig rig;
     rig.steady_time();
     rig.set_reduce_motion(true);
-    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8));
     QQuickItem* face = rig.find(QStringLiteral("tileFace"));
     REQUIRE(face != nullptr);
     rig.tap(tile);
@@ -435,7 +435,7 @@ TEST_CASE("tile.press_scale: Reduce Motion keeps the press scale, because it is 
 TEST_CASE("tile.badge: shown only with a count, 99 and above reads 99+, the full count is in the name", "[ui][tile]")
 {
     UiRig rig;
-    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8, 0));
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8, 0));
     QQuickItem* badge = rig.find(QStringLiteral("tileBadge"));
     QQuickItem* text = rig.find(QStringLiteral("tileBadgeText"));
     REQUIRE(badge != nullptr);
@@ -450,17 +450,17 @@ TEST_CASE("tile.badge: shown only with a count, 99 and above reads 99+, the full
         rig.layout();
     };
 
-    set_count(3, QStringLiteral("Mute Delay, 3 today"));
+    set_count(3, QStringLiteral("Stopped Responding, 3 today"));
     CHECK(badge->isVisible());
     CHECK(text->property("text").toString() == QStringLiteral("3"));
     CHECK(badge->height() == 24);
     CHECK(badge->width() >= 24);
 
-    set_count(98, QStringLiteral("Mute Delay, 98 today"));
+    set_count(98, QStringLiteral("Stopped Responding, 98 today"));
     CHECK(text->property("text").toString() == QStringLiteral("98"));
-    set_count(99, QStringLiteral("Mute Delay, 99 today"));
+    set_count(99, QStringLiteral("Stopped Responding, 99 today"));
     CHECK(text->property("text").toString() == QStringLiteral("99+"));
-    set_count(250, QStringLiteral("Mute Delay, 250 today"));
+    set_count(250, QStringLiteral("Stopped Responding, 250 today"));
     CHECK(text->property("text").toString() == QStringLiteral("99+"));
 
     const std::vector<Node> nodes = rig.accessible_tree();
@@ -469,7 +469,7 @@ TEST_CASE("tile.badge: shown only with a count, 99 and above reads 99+, the full
     CHECK(named != nodes.end());
 
     // The count goes again when there is none (an undone entry).
-    set_count(0, QStringLiteral("Mute Delay"));
+    set_count(0, QStringLiteral("Stopped Responding"));
     CHECK_FALSE(badge->isVisible());
 }
 
@@ -479,7 +479,7 @@ TEST_CASE("tile.badge: the count badge reaches 3 to 1 on every tile colour in bo
     for (const bool dark : {false, true})
     {
         rig.set_dark(dark);
-        QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8, 5));
+        QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8, 5));
         QQuickItem* badge = rig.find(QStringLiteral("tileBadge"));
         REQUIRE(badge != nullptr);
         // The badge uses the badge colours of the theme, whatever the tile.
@@ -578,7 +578,7 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
         rig.set_text_scale(scale);
         for (const QString& word : words)
         {
-            for (const QString& text : {word, QStringLiteral("Visitor ") + word})
+            for (const QString& text : {word, QStringLiteral("Test ") + word})
             {
                 QQuickItem* tile = rig.load(QStringLiteral("Tile"), tile_properties(text, 2));
                 REQUIRE(tile != nullptr);
@@ -644,14 +644,14 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
 
 TEST_CASE("tile.label_whole_words: the twelve tiles of the Interactions board keep each word whole", "[ui][tile]")
 {
-    // The four default interaction types ("Spoke with", "Played song", "Visitor interaction", "Gave item"), the longest
+    // The four default interaction types ("Paired with", "Began task", "Entered room 1", "Assigned"), the longest
     // words of the Errors board, and the tile that Other is, as the board draws them: a BoardGrid that names its tiles
     // interactionTile0 to interactionTile11, 96 pt high, in a phone and in a Regular window.
-    const QStringList labels{QStringLiteral("Spoke with"),     QStringLiteral("Played song"),
-                             QStringLiteral("Visitor interaction"), QStringLiteral("Gave item"),
-                             QStringLiteral("Disconnection"),  QStringLiteral("Navigation Failure"),
+    const QStringList labels{QStringLiteral("Paired with"),     QStringLiteral("Began task"),
+                             QStringLiteral("Entered room 1"), QStringLiteral("Assigned"),
+                             QStringLiteral("Disconnection"),  QStringLiteral("Unexpected Stop"),
                              QStringLiteral("Sequence Out of Order"), QStringLiteral("Interaction"),
-                             QStringLiteral("Visitor Disconnection"), QStringLiteral("Navigation"),
+                             QStringLiteral("Test Disconnection"), QStringLiteral("Navigation"),
                              QStringLiteral("Sequence"),       QStringLiteral("Other")};
     QString rows;
     for (const QString& label : labels)
@@ -834,7 +834,7 @@ TEST_CASE("tile.other: the other tile draws a count too, and a type tile has no 
     CHECK(require_item(rig, QStringLiteral("tileBadge"))->isVisible());
     CHECK(require_item(rig, QStringLiteral("tileBadgeText"))->property("text").toString() == QStringLiteral("4"));
 
-    load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8));
+    load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8));
     CHECK_FALSE(require_item(rig, QStringLiteral("tileOtherBorder"))->isVisible());
     CHECK(require_item(rig, QStringLiteral("tileBackground"))->isVisible());
     CHECK_FALSE(require_item(rig, QStringLiteral("tileOtherIcon"))->isVisible());
@@ -848,7 +848,7 @@ TEST_CASE("tile.colour: each slot is the Theme colour of the slot, in light and 
         rig.set_dark(dark);
         for (int slot = 1; slot <= 11; ++slot)
         {
-            QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), slot));
+            QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), slot));
             QQuickItem* background = rig.find(QStringLiteral("tileBackground"));
             REQUIRE(background != nullptr);
             INFO((dark ? "dark" : "light") << " slot " << slot);
@@ -863,7 +863,7 @@ TEST_CASE("tile.colour: each slot is the Theme colour of the slot, in light and 
 TEST_CASE("tile.skeleton: shapes only, in a neutral colour, with no text, badge, role or touch", "[ui][tile]")
 {
     UiRig rig;
-    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8, 7));
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8, 7));
     tile->setProperty("skeleton", true);
     rig.layout();
     CHECK_FALSE(require_item(rig, QStringLiteral("tileLabel"))->isVisible());
@@ -916,7 +916,7 @@ TEST_CASE("tile.voiceover: one activation sends the pressed and tapped pair, wit
     const std::vector<Node> nodes = rig.accessible_tree();
     const auto self = std::ranges::find_if(nodes, [tile](const Node& node) { return node.m_Item == tile; });
     REQUIRE(self != nodes.end());
-    CHECK(self->m_Name == QStringLiteral("Mute Delay, 2 today"));
+    CHECK(self->m_Name == QStringLiteral("Stopped Responding, 2 today"));
 }
 
 TEST_CASE("tile.a11y: names, 88 pt target and the text scales, in light and dark", "[ui][tile][a11y]")
@@ -953,7 +953,7 @@ TEST_CASE("perf.press_path: from the touch of the second tap to the pressed sign
     constexpr int WARM_UP = 20;
 
     UiRig rig;
-    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Mute Delay"), 8, 2));
+    QQuickItem* tile = load_tile(rig, tile_properties(QStringLiteral("Stopped Responding"), 8, 2));
     auto* pressIn = object_named(tile, QStringLiteral("tilePressIn"));
     REQUIRE(pressIn != nullptr);
     QSignalSpy handled(tile, SIGNAL(pressed()));

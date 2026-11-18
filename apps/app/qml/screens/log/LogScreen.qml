@@ -26,7 +26,7 @@ import ErrorJournalingApp
 // The hold records the entry (the tile sends `pressed` at the hold when no double-tap has already; a double-tap that goes on
 // into a hold has recorded at its second touch, and the hold adds to that entry, so the entry is recorded once) and then:
 //   - a draft is typed: `session.attachDraft` puts it on the entry's line and clears the composer, and the undo toast takes the
-//     entry and the note away together and gives the draft back ("Mute Delay logged at 10:30 with note");
+//     entry and the note away together and gives the draft back ("Stopped Responding logged at 10:30 with note");
 //   - the composer is empty: the Edit entry sheet opens on the new entry with the cursor in the note; Save attaches what is
 //     typed and Cancel leaves the entry as it was.
 // A hold waits for `entryRecorded` and then does the same, which is always the case when the hold itself recorded the entry. A
@@ -206,7 +206,7 @@ Item {
     property bool recoveryDismissed: false
     // The template whose value the sheet is asking for, or null.
     property var activeTemplate: null
-    // The icon of each template's chip, by templateId: "music" and "speech" as the setup file names them, and the speech
+    // The icon of each template's chip, by templateId: "list" and "speech" as the setup file names them, and the speech
     // bubble for a template that names none or one the app does not draw (the model gives "note").
     property var chipIcons: ({})
 
@@ -349,7 +349,7 @@ Item {
         for (let i = 0; i < templateRows.count; ++i) {
             const row = templateRows.objectAt(i) as TemplateRow;
             if (row !== null)
-                icons[row.templateId] = row.icon === "music" ? "music" : "speech";
+                icons[row.templateId] = row.icon === "list" ? "list" : "speech";
         }
         chipIcons = icons;
     }
@@ -1041,7 +1041,7 @@ Item {
         parent: root.sheetLayer
         templateName: root.activeTemplate ? root.activeTemplate.name : ""
         valuePrompt: root.activeTemplate ? root.activeTemplate.valuePrompt : ""
-        // The line as the editor shows it ("Played [answer]"); the stored pattern's {value} is not for people.
+        // The line as the editor shows it ("Began task [answer]"); the stored pattern's {value} is not for people.
         outputPattern: root.activeTemplate ? root.settings.patternToField(root.activeTemplate.outputPattern) : ""
         previewText: root.activeTemplate ? root.settings.previewTemplateLine(root.activeTemplate.outputPattern, templateSheet.value) : ""
         onAddRequested: value => root.addTemplated(value)
@@ -1072,7 +1072,7 @@ Item {
         }
     }
 
-    // The answer of an interaction that has a {value} slot ("Played [answer]"): the question sheet of the note templates.
+    // The answer of an interaction that has a {value} slot ("Began task [answer]"): the question sheet of the note templates.
     Loader {
         id: answerSheetLoader
 

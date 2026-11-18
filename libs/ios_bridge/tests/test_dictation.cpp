@@ -162,10 +162,10 @@ TEST_CASE("dictation.words: each guess replaces the one before it, and a second 
     CHECK(rec.m_Segments == 1);
 
     rig.m_Fake->say("mute");
-    rig.m_Fake->say("mute delay near");
+    rig.m_Fake->say("stopped responding near");
     REQUIRE(rec.m_Words.size() == 2);
     CHECK(rec.m_Words.at(0) == QStringLiteral("mute"));
-    CHECK(rec.m_Words.at(1) == QStringLiteral("mute delay near"));
+    CHECK(rec.m_Words.at(1) == QStringLiteral("stopped responding near"));
 
     rig.m_Bridge->startDictation(); // while listening: nothing
     CHECK(rig.m_Fake->m_Starts == 1);
@@ -174,10 +174,10 @@ TEST_CASE("dictation.words: each guess replaces the one before it, and a second 
     CHECK(rig.m_Fake->m_Stops == 1);
     // The recogniser sends its last words after it is told to stop, and then ends the run.
     CHECK(rig.m_Bridge->dictating());
-    rig.m_Fake->say("mute delay near the stage");
+    rig.m_Fake->say("stopped responding near the stage");
     rig.m_Fake->end(bridge::DictationEnd::FINISHED);
     REQUIRE(rec.m_Words.size() == 3);
-    CHECK(rec.m_Words.at(2) == QStringLiteral("mute delay near the stage"));
+    CHECK(rec.m_Words.at(2) == QStringLiteral("stopped responding near the stage"));
     CHECK_FALSE(rig.m_Bridge->dictating());
     REQUIRE(rec.m_Ended.size() == 1);
     CHECK(rec.m_Ended.at(0) == QStringLiteral("finished"));
@@ -188,7 +188,7 @@ TEST_CASE("dictation.cancel: ends at once, and words or an end that arrive after
     DesktopRig rig;
     Recorder rec(*rig.m_Bridge);
     rig.m_Bridge->startDictation();
-    rig.m_Fake->say("mute delay");
+    rig.m_Fake->say("stopped responding");
     REQUIRE(rec.m_Words.size() == 1);
 
     rig.m_Bridge->cancelDictation();
@@ -198,7 +198,7 @@ TEST_CASE("dictation.cancel: ends at once, and words or an end that arrive after
     CHECK(rec.m_Ended.at(0) == QStringLiteral("finished"));
 
     // The recogniser's last words and its end come after the cancel: nobody hears them.
-    rig.m_Fake->say("mute delay near the stage");
+    rig.m_Fake->say("stopped responding near the stage");
     rig.m_Fake->end(bridge::DictationEnd::FINISHED);
     pump(50);
     CHECK(rec.m_Words.size() == 1);

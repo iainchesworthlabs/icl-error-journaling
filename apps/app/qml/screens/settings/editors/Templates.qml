@@ -4,8 +4,8 @@ import QtQuick
 import ErrorJournalingApp
 
 // The note templates of Settings (docs/design/screens/Templates.dc.html, PRF-06): "Add a template" and the templates
-// that are chips on the Log screen, each with the question it asks and the line it logs ("Asks: Which song? · Logs:
-// Played [answer]"). A row opens the TemplateEdit page, which slides in over the list. A template is never removed in
+// that are chips on the Log screen, each with the question it asks and the line it logs ("Asks: Which task? · Logs:
+// Began task [answer]"). A row opens the TemplateEdit page, which slides in over the list. A template is never removed in
 // v1, because a note holds its template's id.
 //
 // Required: `settings`, the SettingsModel. `closeRequested` is "Settings" at the top left.

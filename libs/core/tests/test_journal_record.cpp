@@ -39,7 +39,7 @@ std::vector<JournalRecord> every_op()
     HeaderValues by_id = sample_header();
     by_id.m_Location = LocationValue{sample_id<LocationId>(5), "North Site"};
 
-    Entry edited = sample_error(2, 31, "Wrong Response", "robot stopped; note with \"quotes\" and \\ and \n");
+    Entry edited = sample_error(2, 31, "Wrong Response", "device stopped; note with \"quotes\" and \\ and \n");
     edited.m_EditedUtc = sample_time(45);
     edited.m_Deleted = true;
 
@@ -276,7 +276,7 @@ TEST_CASE("A multi-line note of the longest legal size keeps every line break an
     std::string text;
     while (text.size() < 10'000)
     {
-        text += "Mute Delay near the stage\r\n\n";
+        text += "Stopped Responding near the stage\r\n\n";
     }
     text.resize(10'000);
     const auto line = encode_record(sample_record(2, AddEntryBody{sample_note(1, 1, text)}));
