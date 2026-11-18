@@ -25,7 +25,8 @@ Item {
     signal clicked
 
     implicitWidth: {
-        const wanted = Math.ceil(label.implicitWidthUnwrapped) + root.iconRoom + 2 * Theme.space.sectionGap;
+        // 1 pt over the measured width: a name that the text layout finds a hair wider than the metrics say would wrap.
+        const wanted = Math.ceil(label.implicitWidthUnwrapped) + 1 + root.iconRoom + 2 * Theme.space.sectionGap;
         return maxWidth > 0 ? Math.min(wanted, maxWidth) : wanted;
     }
     implicitHeight: Math.max(Theme.size.chipHeight, label.implicitHeight + Theme.space.tileGap * 2)
