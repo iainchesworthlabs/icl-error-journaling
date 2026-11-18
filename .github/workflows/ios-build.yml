@@ -58,7 +58,7 @@ jobs:
       matrix:
         include:
           - {name: device, preset: ios-release}
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 90
     permissions:
       contents: read
@@ -103,6 +103,16 @@ jobs:
         run: |
           echo "QT_ROOT_DIR=$RUNNER_TEMP/Qt/$QT_VERSION/ios" >> "$GITHUB_ENV"
           echo "QT_HOST_PATH=$RUNNER_TEMP/Qt/$QT_VERSION/macos" >> "$GITHUB_ENV"
+
+      # The build must be made with the iOS 27 SDK (Xcode 27). The runner label is what chooses it, so a runner that falls back
+      # to an older image fails here instead of uploading a build made with the old SDK.
+      - name: Check the iOS SDK
+        shell: bash
+        run: |
+          xcodebuild -version
+          sdk="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iphoneos SDK $sdk"
+          case "$sdk" in 27.*) ;; *) echo "::error::The iOS SDK is $sdk, not 27"; exit 1 ;; esac
 
       - name: Show the toolchain
         shell: bash
