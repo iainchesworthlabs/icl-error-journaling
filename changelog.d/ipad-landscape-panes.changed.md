@@ -1,0 +1,1 @@
+**On an iPad in landscape, the board and the log now sit side by side on every iPad.** The two-pane layout began at 1100 points wide, which left out the 10.2-inch iPad (1080 wide in landscape) and the iPads that are 1024 wide; it now begins at 1024. Portrait and Split View keep the single column. The phone is unchanged. Not yet run on a device.
