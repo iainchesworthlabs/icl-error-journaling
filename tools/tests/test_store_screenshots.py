@@ -65,6 +65,7 @@ class StoreScreenshotsTest(unittest.TestCase):
     def test_store_sizes_are_the_stores_sizes(self) -> None:
         sizes = {item["id"]: tuple(item["size"]) for item in self.plan["sets"]}
         self.assertEqual(sizes["appstore-iphone-6.9"], (1320, 2868))
+        self.assertEqual(sizes["appstore-iphone-6.3"], (1206, 2622))
         self.assertEqual(sizes["appstore-ipad-13-portrait"], (2064, 2752))
         self.assertEqual(sizes["appstore-ipad-13-landscape"], (2752, 2064))
         self.assertEqual(sizes["play-phone"], (1080, 1920))

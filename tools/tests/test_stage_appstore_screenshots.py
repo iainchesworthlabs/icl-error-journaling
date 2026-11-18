@@ -35,7 +35,8 @@ class StageAppStoreScreenshotsTest(unittest.TestCase):
             self.assertEqual(ipad, sorted(ipad))
             self.assertTrue(ipad[0].startswith("ipad-1-portrait"))
             self.assertEqual(names[0], "iphone-01-a.png")
-            self.assertEqual(len(names), 6)
+            self.assertEqual(len(names), 8)
+            self.assertIn("iphone-63-01-a.png", names)
             self.assertEqual((root / "out" / "en-AU" / "ipad-2-landscape-02-b.png").read_bytes(), b"appstore-ipad-13-landscape")
 
     def test_target_is_emptied_first(self) -> None:

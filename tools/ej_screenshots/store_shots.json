@@ -26,6 +26,20 @@
       ]
     },
     {
+      "id": "appstore-iphone-6.3",
+      "store": "appstore",
+      "limit": "appstore",
+      "size": [1206, 2622],
+      "shots": [
+        {"file": "01-log-board", "state": "Main", "mode": "light", "class": "phone"},
+        {"file": "02-log-board-dark", "state": "Main", "mode": "dark", "class": "phone"},
+        {"file": "03-note-template", "state": "TemplateValue", "mode": "light", "class": "phone"},
+        {"file": "04-review", "state": "Review", "mode": "light", "class": "phone"},
+        {"file": "05-history", "state": "History", "mode": "light", "class": "phone"},
+        {"file": "06-board-setup", "state": "BoardSettings", "mode": "light", "class": "phone"}
+      ]
+    },
+    {
       "id": "appstore-ipad-13-portrait",
       "store": "appstore",
       "limit": "appstore",

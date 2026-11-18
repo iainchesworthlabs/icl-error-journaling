@@ -7,7 +7,7 @@
 SOURCE is the `store/appstore` folder of the screenshots artifact (one folder per set, made by
 tools/ej_screenshots/store_screenshots.py). TARGET is the language folder deliver reads, store/appstore/screenshots/en-AU.
 deliver picks the display size from the pixel size of each file and orders the files of one size by name, so the files are
-copied flat with a prefix that keeps the order: the iPhone set, then the iPad portrait set, then the iPad landscape set.
+copied flat with a prefix that keeps the order: the iPhone 6.9" set, the iPhone 6.3" set, then the iPad portrait set, then the iPad landscape set.
 The target is emptied first. Nothing is uploaded here.
 """
 
@@ -20,6 +20,7 @@ from pathlib import Path
 # Folder of the set in the artifact, and the prefix that orders its files in the target.
 SETS = (
     ("appstore-iphone-6.9", "iphone"),
+    ("appstore-iphone-6.3", "iphone-63"),
     ("appstore-ipad-13-portrait", "ipad-1-portrait"),
     ("appstore-ipad-13-landscape", "ipad-2-landscape"),
 )
