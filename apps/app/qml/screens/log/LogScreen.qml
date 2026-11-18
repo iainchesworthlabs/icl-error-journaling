@@ -564,7 +564,7 @@ Item {
             // The note is what the box holds now: dictation ends first and its late words are dropped, and with the note
             // recorded the box gives up focus (the keyboard goes down off the board) and has been cleared by the session.
             onSubmit: text => {
-                if (root.dictation !== null)
+                if (composer.dictationAvailable)
                     root.dictation.cancelDictation();
                 if (root.session.addNote(text))
                     composer.releaseFocus();

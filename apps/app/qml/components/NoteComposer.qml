@@ -110,7 +110,10 @@ Item {
     // After a note was recorded: the box gives up focus, so that it folds back and the keyboard goes down.
     function releaseFocus(): void {
         field.focus = false;
+        // The linter types Qt.inputMethod as a plain QObject.
+        // qmllint disable missing-property
         Qt.inputMethod.hide();
+        // qmllint enable missing-property
     }
 
     function focusField(): void {
