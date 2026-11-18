@@ -18,7 +18,8 @@ Item {
     required property string title
     property string description: ""
     property bool selected: false
-    property string accessibleName: title
+    // The title and then the line of explanation, so that the name holds every word the card shows.
+    property string accessibleName: description.length > 0 ? qsTr("%1. %2").arg(title).arg(description) : title
     property color surface: Theme.colour.surfaceRaised
 
     readonly property bool pressed: tap.pressed
@@ -34,7 +35,6 @@ Item {
 
     Accessible.role: Accessible.RadioButton
     Accessible.name: root.accessibleName
-    Accessible.description: root.description
     Accessible.checkable: true
     Accessible.checked: root.selected
     Accessible.focusable: true

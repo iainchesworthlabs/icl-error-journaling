@@ -35,6 +35,7 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 | integration | `apps/app/tests/viewmodel/integration/test_people_model.cpp` | `PeopleModel` on the real store: a name is added once and saved before `personAdded`, a match by case or spacing is refused, the list survives a restart, last used first (`picker.write_order`) |
 | integration | `apps/app/tests/viewmodel/integration/test_people_admin_model.cpp` | `PeopleAdminModel` (the People screen) on the real store: add, rename, move to a location and to none, retire and bring back with the picker following, Forget removes the name from both lists and the store, a retired name can be taken again (`settings.people_model*`) |
 | ui | `apps/app/tests/ui/interaction_board_test.cpp` | The Interactions board and the person picker through QML: `board.log_first` (double-tap logs before the picker opens; Skip keeps the entry), `picker.search_and_add`, `picker.group` (several people, Done (n), the limit of 20, Everyone), `board.hold_note`, `board.voiceover` |
+| ui | `apps/app/tests/ui/log_screen_test.cpp` | What Voice Control does (`docs/accessibility-labels.md`): `voicecontrol.tap_tile` (each tile of the Errors board is found by its label, as "Tap <label>" finds it, and one press logs one entry of its type; Other opens the list and logs nothing), `voicecontrol.tap_undo`, `voicecontrol.tap_observation` (the Observations board) and `voicecontrol.unique_labels` (no two buttons of the board answer to one label) |
 
 ## Tests of the QML
 
@@ -85,6 +86,7 @@ breaks it (`stubs/UiStubBad*.qml`).
 | Function (test name) | What it finds |
 |---|---|
 | `check_names` (`a11y.names`) | An interactive item that is shown and has no `Accessible.role` or `Accessible.name`, or that a screen reader does not reach, and two controls under one parent with the same name and value |
+| `check_label_in_name` (`a11y.label_in_name`) | A control that is shown and that a screen reader reaches, whose `Accessible.name` lacks a word that the control shows (WCAG 2.5.3, label in name, which is what Voice Control's "Tap <label>" needs). Case, spaces and anything that is not a letter or digit are ignored. Not counted: text in a nested control, text with no letter, a text field's placeholder, and the texts of a container role (group, list, pane, dialog). `UiStubBadLabel` breaks it and `UiStubLabels` follows it |
 | `check_targets` (`a11y.targets`) | A target under 44 pt (or what the caller says, 88 for a tile), counting the `margin` of its pointer handlers |
 | `check_reading_order` (`a11y.reading_order`) | An item read before one that is above it, or before one to its left in the same row |
 | `check_text_scale` (`a11y.text_scale`) | A `Text` that is cut off (`truncated` with `elide: Text.ElideNone`, which is 3 in Qt and the default), taller or (without wrapping) wider than its box, or that leaves the window; `check_everything` runs it at 1.0, 1.3 and 3.1 |

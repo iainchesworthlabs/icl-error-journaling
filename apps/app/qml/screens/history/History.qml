@@ -406,7 +406,7 @@ Item {
                     readonly property bool lastInSection: ListView.nextSection !== line.section
                     readonly property bool isOpened: line.logId === root.openedLogId
                     readonly property string statusText: line.shared ? qsTr("Shared %1").arg(line.sharedAtText) : line.changedSinceShare ? qsTr("Changed since sharing") : qsTr("Not shared")
-                    readonly property string rowName: qsTr("%1, %2, %3, %4").arg(line.dateText).arg(root.placeTitle(line.unitText, line.locationText)).arg(line.entriesText).arg(line.statusText)
+                    readonly property string rowName: qsTr("%1, %2, %3, %4").arg(line.dateText).arg(root.placeTitle(line.unitText, line.locationText)).arg(line.detailText).arg(line.statusText)
 
                     objectName: "historyRow"
                     width: ListView.view.width

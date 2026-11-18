@@ -13,7 +13,9 @@
 // longpress.draft_undo, longpress.draft_tap, longpress.draft_slow_commit, longpress.draft_failed and
 // longpress.note_action; and the double-tap that logs
 // (4.17a): doubletap.logs, doubletap.window, doubletap.triple, doubletap.slide_off, doubletap.hint, doubletap.hold,
-// doubletap.hold_then_tap and doubletap.voiceover.
+// doubletap.hold_then_tap and doubletap.voiceover; and what Voice Control does, which says a label and is answered by the
+// control that has it in its name: voicecontrol.tap_tile, voicecontrol.tap_undo, voicecontrol.tap_observation and
+// voicecontrol.unique_labels.
 //
 // The project and Stage 3 headers come before the Qt Quick ones, because the core headers define a name that the
 // Windows headers behind Qt Quick define as a macro. clang-format would sort board_test_support.hpp first, so it is
@@ -3137,3 +3139,127 @@ TEST_CASE("fold.state_kept: a fold or unfold with the person picker open keeps t
         CHECK(sheet.right() <= size.width() + 0.5);
     }
 }
+
+// ---- Voice Control (the accessibility audit of the App Store labels) ----
+//
+// Voice Control's "Tap <label>" finds the control that has the label in its accessible name and sends it the same action that
+// VoiceOver's double-tap sends. These cases find the control the way a person would ask for it, by the words on the screen,
+// and not by the row of the tile, and then press it.
+
+namespace
+{
+
+/// The one button that says `said` when it is asked for by what is on the screen: its name is the words, or the words and
+/// then ", " and more ("Stopped Responding, 2 today"). Null when none answers or more than one does.
+QQuickItem* spoken_target(UiRig& rig, const QString& said)
+{
+    QQuickItem* found = nullptr;
+    int answers = 0;
+    for (const Node& node : rig.accessible_tree())
+    {
+        if (!node.m_Visible || !node.m_InAccessibleTree || node.m_Role != QAccessible::Button)
+        {
+            continue;
+        }
+        if (node.m_Name.compare(said, Qt::CaseInsensitive) == 0 ||
+            node.m_Name.startsWith(said + QStringLiteral(", "), Qt::CaseInsensitive))
+        {
+            found = node.m_Item;
+            ++answers;
+        }
+    }
+    return answers == 1 ? found : nullptr;
+}
+
+}  // namespace
+
+TEST_CASE("voicecontrol.tap_tile: saying the label of a tile logs one entry of that type, and Other opens the list",
+          "[ui][log][voicecontrol]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    Screen screen(sim);
+
+    for (int row = 0; row < OTHER_ROW; ++row)
+    {
+        const QString said = screen.tile(row)->property("label").toString();
+        INFO("saying \"Tap " << said.toStdString() << "\"");
+        QQuickItem* target = spoken_target(screen.rig, said);
+        REQUIRE(target == screen.tile(row));
+
+        const std::size_t before = sim.entries().size();
+        REQUIRE(accessible_press(target));
+        sim.gateway.run_all();
+        screen.rig.settle();
+        screen.rig.advance(WINDOW_RUN_OUT);
+        CHECK(sim.entries().size() == before + 1);
+        CHECK(screen.badge_text(row) == QStringLiteral("1"));
+        CHECK_FALSE(screen.hint_shown());
+        // With a count the name is "Label, 1 today", and the label still finds it.
+        CHECK(spoken_target(screen.rig, said) == screen.tile(row));
+    }
+    CHECK(sim.entries().size() == static_cast<std::size_t>(OTHER_ROW));
+
+    // A second "Tap" on one tile is a second entry.
+    const QString again = screen.tile(WRONG_RESPONSE_ROW)->property("label").toString();
+    REQUIRE(accessible_press(spoken_target(screen.rig, again)));
+    sim.gateway.run_all();
+    screen.rig.settle();
+    CHECK(sim.entries().size() == static_cast<std::size_t>(OTHER_ROW) + 1);
+
+    // Other is a navigation: it logs nothing. It is asked for as "Other", without the ellipsis it is drawn with.
+    const std::size_t logged = sim.entries().size();
+    REQUIRE(accessible_press(spoken_target(screen.rig, QStringLiteral("Other"))));
+    screen.rig.settle();
+    CHECK(sim.entries().size() == logged);
+}
+
+TEST_CASE("voicecontrol.tap_undo: saying Undo while the toast shows removes the entry", "[ui][log][voicecontrol]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    Screen screen(sim);
+    REQUIRE(accessible_press(spoken_target(screen.rig, screen.tile(STOPPED_RESPONDING_ROW)->property("label").toString())));
+    sim.gateway.run_all();
+    screen.rig.settle();
+    REQUIRE(sim.entries().size() == 1);
+    REQUIRE(screen.toast_shown());
+
+    QQuickItem* undo = spoken_target(screen.rig, QStringLiteral("Undo"));
+    REQUIRE(undo != nullptr);
+    REQUIRE(accessible_press(undo));
+    sim.gateway.run_all();
+    screen.rig.settle();
+    CHECK(sim.entries().empty());
+    CHECK_FALSE(screen.toast_shown());
+}
+
+TEST_CASE("voicecontrol.tap_observation: saying the label of a tile of the Observations board logs one observation",
+          "[ui][log][voicecontrol][interaction]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    InteractionScreen screen(sim);
+    const QString said = screen.itile(OBSERVER_ROW)->property("label").toString();
+    QQuickItem* target = spoken_target(screen.rig, said);
+    REQUIRE(target == screen.itile(OBSERVER_ROW));
+    REQUIRE(accessible_press(target));
+    sim.gateway.run_all();
+    screen.rig.settle();
+    CHECK(sim.entries().size() == 1);
+    CHECK(first_interaction(sim).has_value());
+}
+
+TEST_CASE("voicecontrol.unique_labels: no two buttons of the board answer to one label", "[ui][log][voicecontrol]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    Screen screen(sim);
+    for (int row = 0; row < ROWS; ++row)
+    {
+        const QString said = row == OTHER_ROW ? QStringLiteral("Other") : screen.tile(row)->property("label").toString();
+        INFO("saying \"Tap " << said.toStdString() << "\"");
+        CHECK(spoken_target(screen.rig, said) != nullptr);
+    }
+}
+

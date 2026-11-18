@@ -310,7 +310,8 @@ Item {
                     opacity: enabled ? 1 : 0.4
                     activeFocusOnTab: true
                     Accessible.role: Accessible.Button
-                    Accessible.name: qsTr("Copy whole log")
+                    Accessible.name: qsTr("Copy log")
+                    Accessible.description: qsTr("Copies the whole log")
                     Accessible.focusable: true
                     Accessible.onPressAction: root.copyAll()
 
