@@ -1452,6 +1452,46 @@ TEST_CASE("Following the open log: a new log takes the place of the old one with
     }
 }
 
+TEST_CASE("A pinned document that nothing else holds is let go only after the model has left it",
+          "[viewmodel][timeline]")
+{
+    // `bind` pins its document, and the pin can be the last owner (a screen binds the log it has just made). Letting it
+    // go before `switch_document` took the model off it would call `remove_observer` on a freed document, which
+    // AddressSanitizer reports as a heap-use-after-free; nothing else here fails without the sanitizer.
+    FakeOpenLogSource source; // first: it outlives the model, which unregisters from it
+    Rig rig;
+    // The past log first: the store holds one open log at a time.
+    auto past = rig.make_archived(2, sample_header(), {error_at(2, 9, 0, "Past")});
+    const auto open_log = rig.make(1, sample_header(), {error_at(1, 11, 10, "Day one")});
+    source.set(open_log.get());
+    const Unbinder unbinder{rig.model()};
+
+    SECTION("unbind")
+    {
+        rig.model().bind(std::move(past)); // the pin is now the only owner
+        REQUIRE(rig.model().rowCount() == 1);
+        rig.model().unbind();
+        CHECK(rig.model().document() == nullptr);
+        CHECK(rig.model().rowCount() == 0);
+    }
+
+    SECTION("bind of another document")
+    {
+        rig.model().bind(std::move(past)); // the pin is now the only owner
+        rig.model().bind(open_log);
+        CHECK(rig.model().document() == open_log.get());
+        CHECK(full_lines(rig.model()) == std::vector<QString>{"11:10 T| Day one"});
+    }
+
+    SECTION("follow")
+    {
+        rig.model().bind(std::move(past)); // the pin is now the only owner
+        rig.model().follow(source);
+        CHECK(rig.model().document() == open_log.get());
+        CHECK(full_lines(rig.model()) == std::vector<QString>{"11:10 T| Day one"});
+    }
+}
+
 TEST_CASE("The model stops listening when it is destroyed", "[viewmodel][timeline]")
 {
     FakeOpenLogSource source;

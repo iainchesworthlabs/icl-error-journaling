@@ -252,17 +252,20 @@ void TimelineModel::switch_document(LogDocument* document)
     update_summary();
 }
 
+// In the three below the document that was pinned is let go only after `switch_document` has taken this model off it:
+// the pin can be that document's last owner, and `switch_document` calls `remove_observer` on it.
+
 void TimelineModel::bind(std::shared_ptr<LogDocument> document)
 {
     stop_following();
-    m_Pinned = std::move(document);
+    const std::shared_ptr<LogDocument> previous = std::exchange(m_Pinned, std::move(document));
     switch_document(m_Pinned.get());
 }
 
 void TimelineModel::follow(OpenLogSource& source)
 {
     stop_following();
-    m_Pinned.reset();
+    const std::shared_ptr<LogDocument> previous = std::move(m_Pinned);
     m_Source = &source;
     m_Source->add_observer(static_cast<OpenLogObserver&>(*this));
     switch_document(source.open_log());
@@ -271,7 +274,7 @@ void TimelineModel::follow(OpenLogSource& source)
 void TimelineModel::unbind()
 {
     stop_following();
-    m_Pinned.reset();
+    const std::shared_ptr<LogDocument> previous = std::move(m_Pinned);
     switch_document(nullptr);
 }
 
