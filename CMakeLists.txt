@@ -8,7 +8,7 @@ include(IclVcpkgRoot)
 icl_resolve_vcpkg("${CMAKE_CURRENT_SOURCE_DIR}" ERROR_JOURNALING)
 
 project(error_journaling
-    VERSION 0.1.0
+    VERSION 1.0.0
     DESCRIPTION "An iPhone app for logging errors during software and hardware testing sessions through the day and sharing the log"
     HOMEPAGE_URL "https://github.com/iainchesworthlabs/icl-error-journaling"
     LANGUAGES CXX)

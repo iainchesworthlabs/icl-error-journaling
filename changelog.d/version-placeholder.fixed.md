@@ -1,1 +1,0 @@
-**The version fields show just the example number.** After the fixed “v”, the Software version field read “vFor example 1.4.2”; it now reads “v1.4.2”, and the Other versions field “v4.5.0”. Not yet run on a device.

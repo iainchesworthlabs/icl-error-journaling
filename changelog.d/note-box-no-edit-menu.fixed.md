@@ -1,1 +1,0 @@
-**Tapping the note box no longer pops up the Undo / Paste menu.** The box now just takes the cursor and the keyboard. Press-and-hold selection handles in the note box are off with it. Not yet run on a device.

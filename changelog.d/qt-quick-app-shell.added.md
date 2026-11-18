@@ -1,1 +1,0 @@
-**Empty Qt Quick application.** The application is now a Qt Quick window with a placeholder for the board, portrait only on iPhone, with the `ej_core`, `ej_storage` and `ej_ios_bridge` libraries behind it.

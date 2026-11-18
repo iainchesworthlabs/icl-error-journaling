@@ -42,7 +42,7 @@ jobs:
       checks: read
     steps:
       - name: Say how the night went
-        uses: iainchesworthlabs/icl-common-infra/actions/nightly-report@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
+        uses: iainchesworthlabs/icl-common-infra/actions/nightly-report@54f3b7ecd95fa07034f6f50a057c537ee98cd30d # v0.1.28
         with:
           needs-json: ${{ toJSON(needs) }}
           gating-jobs: kill

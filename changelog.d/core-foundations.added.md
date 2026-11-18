@@ -1,1 +1,0 @@
-**Core library foundations.** `ej_core` gains `Uuid`, typed ids, the `std::expected` conventions and a byte-for-byte golden test helper, ready for the Stage 1 domain model. Nothing changes for the person using the app yet.

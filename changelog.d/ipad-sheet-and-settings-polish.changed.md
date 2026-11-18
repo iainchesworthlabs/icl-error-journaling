@@ -1,1 +1,0 @@
-**On an iPad, Edit entry is as tall as its content, and the miniature board in Settings is in a card.** Edit entry was a tall card with empty space under the fields; it now fits what it shows. The board at the top of Settings sits in a card like the other groups. The phone is unchanged. Not yet run on a device.

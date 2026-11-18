@@ -21,7 +21,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@ad95a5a5201bb6dd3126ae3ffd21499e92028689 # v0.1.27
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@54f3b7ecd95fa07034f6f50a057c537ee98cd30d # v0.1.28
     with:
       site-artifact: docs-site
 
@@ -30,7 +30,7 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@ad95a5a5201bb6dd3126ae3ffd21499e92028689 # v0.1.27
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@54f3b7ecd95fa07034f6f50a057c537ee98cd30d # v0.1.28
     with:
       site-artifact: docs-site
 
@@ -45,7 +45,7 @@ jobs:
       contents: read
       id-token: write
       pull-requests: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ad95a5a5201bb6dd3126ae3ffd21499e92028689 # v0.1.27
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@54f3b7ecd95fa07034f6f50a057c537ee98cd30d # v0.1.28
     with:
       prefix: field-test
       production-ref: refs/heads/develop
@@ -85,7 +85,7 @@ jobs:
       contents: read
       id-token: write
       pull-requests: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ad95a5a5201bb6dd3126ae3ffd21499e92028689 # v0.1.27
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@54f3b7ecd95fa07034f6f50a057c537ee98cd30d # v0.1.28
     with:
       prefix: field-test
       preview: true
@@ -106,7 +106,7 @@ jobs:
       contents: read
       id-token: write
       pull-requests: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ad95a5a5201bb6dd3126ae3ffd21499e92028689 # v0.1.27
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@54f3b7ecd95fa07034f6f50a057c537ee98cd30d # v0.1.28
     with:
       mode: remove-preview
       prefix: field-test

@@ -1,1 +1,0 @@
-**The Interactions types screen now has a miniature board.** Tap a tile to change its type, tap an empty tile to add one, or hold and drag a tile to move it, as on the error board. The guide and help now say that a type's line is its template. Not yet run on a device.

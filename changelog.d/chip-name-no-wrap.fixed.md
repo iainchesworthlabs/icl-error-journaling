@@ -1,1 +1,0 @@
-**A template chip no longer wraps its name onto two lines when the name only just fits.** "Began task" could break after "Began", which made the chip, and the note box above the board, taller than they should be.
