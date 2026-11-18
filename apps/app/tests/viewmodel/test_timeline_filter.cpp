@@ -320,7 +320,10 @@ TEST_CASE("filter.log: showing another log, or the same one again, clears the fi
     f.filter().set_text("song");
     REQUIRE(f.filter().active());
 
-    f.model().bind(f.make_extra(2, {sample_error(1, 0, "Wrong Response")}));
+    // The test holds the document, as History does for a past log: the timeline's own pin is then not the last owner when
+    // `unbind` lets it go.
+    const auto other = f.make_extra(2, {sample_error(1, 0, "Wrong Response")});
+    f.model().bind(other);
     CHECK_FALSE(f.filter().active());
     CHECK(f.filter().text().isEmpty());
     CHECK(f.filter().kinds().isEmpty());
