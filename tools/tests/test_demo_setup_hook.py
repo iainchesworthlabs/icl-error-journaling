@@ -51,7 +51,7 @@ class DemoSetupHookTest(unittest.TestCase):
         notes = ROOT / "store" / "appstore" / "review_information" / "notes.txt"
         if not notes.is_file():
             self.skipTest("store/ is not on this branch yet")
-        self.assertIn("/icl-error-journaling/demo/demo-setup.ejconfig", notes.read_text(encoding="utf-8"))
+        self.assertIn("/field-test/demo/demo-setup.ejconfig", notes.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

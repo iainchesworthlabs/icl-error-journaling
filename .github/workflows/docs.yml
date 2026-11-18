@@ -38,6 +38,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      pull-requests: write
     uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
     with:
       prefix: field-test
