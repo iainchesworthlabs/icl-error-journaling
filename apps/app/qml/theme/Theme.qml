@@ -251,6 +251,9 @@ QtObject {
     component LayoutRules: QtObject {
         readonly property real regularMinWidth: 600
         readonly property real wideMinWidth: 1100
+        // A window wider than it is tall (an iPad in landscape) is Wide from here, so that the 10.2 inch iPad (1080 by 810)
+        // and the 1024 by 768 iPads get two panes. A portrait window of that width (a 13 inch iPad, 1032 by 1376) does not.
+        readonly property real wideMinWidthLandscape: 1024
         readonly property real wideMinHeight: 640
         readonly property real screenMargin: 24
         readonly property real tileGap: 12
