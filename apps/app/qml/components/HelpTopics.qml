@@ -2,7 +2,7 @@
 pragma Singleton
 import QtQuick
 
-// The in-app help (Stage 10, package 10.6; docs/plan/stage-10.md, "In-app help"): the topics that the help buttons, the
+// The in-app help: the topics that the help buttons, the
 // Quick help list in Settings and the HelpSheet show, and the addresses of the online guide that go with them.
 //
 // The help is text in the app and works without a connection. A topic is a short heading and two to five paragraphs, and
@@ -17,10 +17,10 @@ QtObject {
 
     // Where the documentation site is. It is the one address in the app: change `site_url` in `mkdocs.yml` and this line
     // together (docs/ci.md, "The site address"); a check fails until they agree. Nothing else in the app names the host.
-    readonly property string siteUrl: "https://iainchesworthlabs.github.io/icl-error-journaling/"
+    readonly property string siteUrl: "https://iainchesworthlabs.com/field-test/"
 
     // The pages the Help group of Settings opens, as paths under the site.
-    readonly property string guidePath: ""
+    readonly property string guidePath: "guide/"
     readonly property string supportPath: "support/"
     readonly property string privacyPath: "privacy/"
     // The page that explains every message of a refused setup file, for the row of the import errors screen.
@@ -74,9 +74,23 @@ QtObject {
         {
             "id": "review",
             "title": qsTr("Review and sharing"),
-            "paragraphs": [qsTr("<b>Review</b> is today’s log, in the same words that you share."), qsTr("Tap an entry to edit it. Swipe an entry left for <b>Copy</b> and <b>Delete</b>."), qsTr("<b>Share log</b> opens the share sheet with the log as plain text. Only Share log marks the log as shared. <b>Copy log</b> does not."), qsTr("A past log is in History, where you can share it again.")],
+            "paragraphs": [qsTr("<b>Review</b> is today’s log, in the words that you share."), qsTr("Tap an entry to edit it. Swipe an entry left for <b>Copy</b> and <b>Delete</b>."), qsTr("<b>Share log</b> opens the share sheet with the log as plain text. Only Share log marks the log as shared. <b>Copy log</b> does not."), qsTr("A past log is in History, where you can share it again."), qsTr("An observation is a line of its own, with no <b>T|</b>. A person’s name leaves the phone as initials unless you choose the full name or <b>someone</b> in Settings. Review always shows the full name.")],
             "page": "guide/sharing/",
             "anchor": "review"
+        },
+        {
+            "id": "interactionTypes",
+            "title": qsTr("Observation types"),
+            "paragraphs": [qsTr("<b>Observation types</b> are the tiles of the optional Observations board: what you did around the unit. Tap <b>Add an observation type</b> to make one."), qsTr("<b>Line in the log</b> is what gets written. Tap <b>Insert person</b> to put <b>[person]</b> where the people go, for example “Spoke with [person]”. A type with <b>[person]</b> asks who after you log it. A type without it never asks."), qsTr("Tap <b>Insert answer</b> to put <b>[answer]</b> in the line, and you are asked for an answer after you log it. With no line, the log shows the name. The line is the template: “Spoke with [person]” writes “Spoke with Alex Sample” when you pick that person."), qsTr("The first 11 types fill the board in the order shown. The rest are under <b>Other…</b>. A type you retire stays on the entries already logged.")],
+            "page": "guide/setup/",
+            "anchor": "the-second-board-observations-optional"
+        },
+        {
+            "id": "people",
+            "title": qsTr("People"),
+            "paragraphs": [qsTr("<b>People</b> are the names an observation such as “Spoke with [person]” can use. They are optional: a tile with no <b>[person]</b> in its line never asks who."), qsTr("Type a name under <b>New person</b> and tap <b>Add person</b>. Choose a location if the person belongs to one, and <b>Everyone</b> in the picker ticks the people of the location in force."), qsTr("Tap a name to rename it (past entries follow), to change its location, to <b>Retire</b> it (it leaves the picker and stays on past entries), or to <b>Forget</b> it. Forget removes the name from this device for good, and the entries show “someone”."), qsTr("Names stay on this device. A log you share shows them as initials, in full or as “someone”, as you choose under <b>Names in shared logs</b>.")],
+            "page": "guide/setup/",
+            "anchor": "people"
         }
     ]
 

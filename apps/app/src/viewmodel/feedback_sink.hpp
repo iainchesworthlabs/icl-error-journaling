@@ -7,7 +7,7 @@
 namespace ej::viewmodel
 {
 
-/// Everything the facilitator feels that is not drawn by a model: the haptics. The calls fall into two groups, and the
+/// Everything the tester feels that is not drawn by a model: the haptics. The calls fall into two groups, and the
 /// group says when a call may be made (Stage 3, "Threading and the order of feedback"; Stage 3 decision 2).
 ///
 /// Touch acknowledgement, before any commit. The impact haptic answers the finger, not the store: it fires on

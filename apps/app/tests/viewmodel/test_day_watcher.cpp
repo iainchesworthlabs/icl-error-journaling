@@ -657,7 +657,7 @@ TEST_CASE("An edit made while the prompt is up brings the offer to share back", 
 
 TEST_CASE("The prompt comes on the next day the app is used, whatever the gap", "[viewmodel][day]")
 {
-    // The facilitator works on Mondays and Fridays: the open log is Monday's (the sample log is dated Saturday the 7th,
+    // The tester works on Mondays and Fridays: the open log is Monday's (the sample log is dated Saturday the 7th,
     // so Tuesday the 10th stands for the next time it is used, three days on).
     SECTION("never shared")
     {
@@ -744,7 +744,7 @@ TEST_CASE("Sharing first turns unshared off while the prompt is still up", "[vie
     CHECK(rig.watcher->open_log_entry_count() == 2);
 }
 
-TEST_CASE("A share the facilitator cancelled leaves the log unshared", "[viewmodel][day]")
+TEST_CASE("A share the tester cancelled leaves the log unshared", "[viewmodel][day]")
 {
     WatcherRig rig;
     rig.tap_at(melbourne(7, 10, 5));
@@ -761,7 +761,7 @@ TEST_CASE("A share the facilitator cancelled leaves the log unshared", "[viewmod
     CHECK(changed.count() == 0);
     CHECK_FALSE(rig.stored(rig.log_id).m_Meta.m_LastSharedUtc.has_value());
 
-    // And a second try, which the facilitator completes.
+    // And a second try, which the tester completes.
     rig.platform.answer_with(FakePlatform::share_outcome::SHARED);
     REQUIRE(rig.watcher->shareFirst());
     rig.gateway.run_all();
@@ -879,7 +879,7 @@ TEST_CASE("Sharing first and then starting the new log, as on the morning after"
     REQUIRE(open->has_value());
     CHECK((*open)->m_Meta.m_Id == rig.document().id());
     CHECK(rig.document().id() != rig.log_id);
-    CHECK(rig.session->facilitator() == QStringLiteral("Sam Example"));
+    CHECK(rig.session->tester() == QStringLiteral("Sam Example"));
     CHECK(rig.session->date_text() == QStringLiteral("Sun 8 Nov"));
     CHECK(rig.session->live_entry_count() == 0);
 }

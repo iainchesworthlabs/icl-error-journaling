@@ -2,6 +2,8 @@
 #include "viewmodel/export_context_builder.hpp"
 
 #include "error_journaling/configuration.hpp"
+#include "viewmodel/export_preferences.hpp"
+#include "viewmodel/person_names.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -23,6 +25,7 @@ struct Index
     std::unordered_map<ErrorTypeId, std::string_view> m_ErrorTypes;
     std::unordered_map<LocationId, std::string_view> m_Locations;
     std::unordered_map<NoteTemplateId, const NoteTemplate*> m_Templates;
+    std::unordered_map<InteractionTypeId, const InteractionType*> m_InteractionTypes;
 };
 
 std::shared_ptr<const Index> make_index(const Configuration& configuration)
@@ -39,6 +42,10 @@ std::shared_ptr<const Index> make_index(const Configuration& configuration)
     for (const NoteTemplate& note_template : configuration.m_Templates)
     {
         index->m_Templates.emplace(note_template.m_Id, &note_template);
+    }
+    for (const InteractionType& type : configuration.m_InteractionTypes)
+    {
+        index->m_InteractionTypes.emplace(type.m_Id, &type);
     }
     return index;
 }
@@ -99,11 +106,39 @@ ExportContext ExportContextBuilder::build() const
         const auto it = index->m_Locations.find(id);
         return it == index->m_Locations.end() ? std::string_view{} : it->second;
     };
+    context.m_InteractionTypeName = [index](InteractionTypeId id) -> std::string_view
+    {
+        const auto it = index->m_InteractionTypes.find(id);
+        return it == index->m_InteractionTypes.end() ? std::string_view{} : std::string_view(it->second->m_Name);
+    };
+    context.m_InteractionPattern = [index](InteractionTypeId id) -> std::optional<std::string>
+    {
+        const auto it = index->m_InteractionTypes.find(id);
+        return it == index->m_InteractionTypes.end() ? std::nullopt : it->second->m_LinePattern;
+    };
+    if (m_People != nullptr)
+    {
+        const PersonNames* const people = m_People;
+        context.m_PersonName = [people](const PersonId& id) { return people->name_of(id); };
+    }
+    if (m_Preferences != nullptr)
+    {
+        context.m_InteractionMarker = m_Preferences->marker();
+    }
+    // The screens show the full name; `build_for_sharing` lowers it.
+    context.m_NameLevel = NameLevel::FULL;
     context.m_Template = [index](NoteTemplateId id) -> const NoteTemplate*
     {
         const auto it = index->m_Templates.find(id);
         return it == index->m_Templates.end() ? nullptr : it->second;
     };
+    return context;
+}
+
+ExportContext ExportContextBuilder::build_for_sharing() const
+{
+    ExportContext context = build();
+    context.m_NameLevel = m_Preferences != nullptr ? m_Preferences->name_level() : NameLevel::INITIALS;
     return context;
 }
 

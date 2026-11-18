@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!-- The Android manifest (docs/plan/stage-9.md). Qt's build fills the %%INSERT_...%% markers from apps/app/packaging/
+<!-- The Android manifest. Qt's build fills the %%INSERT_...%% markers from apps/app/packaging/
      android.cmake. tools/ci/check_android_package.py reads the merged manifest out of the built package and refuses any
      permission (NFR-09: no network), a different SDK range, or a change to the activity below. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -21,9 +21,14 @@
          copy the files directory (the store) and nothing else: res/xml/ej_data_extraction_rules.xml from Android 12,
          ej_backup_rules.xml before. The application is not direct-boot aware (no android:directBootAware), so it never
          runs, or meets its store, before the person has unlocked the phone once. -->
+    <!-- The launcher icon is the adaptive icon of res/mipmap-anydpi-v26/, with a themed layer for Android 13 and later;
+         tools/store/make_android_icon.py makes it from the drawing of the iOS icon. Android 12 and later also show it,
+         centred, on the system splash screen. The minimum SDK is 28, so every device takes the adaptive icon. -->
     <application
         android:name="org.qtproject.qt.android.bindings.QtApplication"
         android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="-- %%INSERT_APP_NAME%% --"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/ej_data_extraction_rules"
@@ -45,7 +50,7 @@
 
             <!-- "Open with" from Files, Mail and Slack, and "Share to": a setup file (.ejconfig). It has no registered type;
                  document providers report it as octet-stream or JSON. Only these types, never */*, so the application is not
-                 offered for every file. The content is checked by the importer, not the type (docs/plan/stage-9.md). -->
+                 offered for every file. The content is checked by the importer, not the type. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

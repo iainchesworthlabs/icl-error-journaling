@@ -1,8 +1,8 @@
 # Store listings
 
 The text of the App Store and Google Play listings, kept here so that it can be reviewed and edited in pull requests.
-The plan for using it is in [`docs/plan/stage-11.md`](../docs/plan/stage-11.md). Everything here is a draft until the
-owner approves Stage 11.
+Everything here is a draft until the owner approves it. The facts the owner confirms before release are in
+[`appstore/README.md`](appstore/README.md).
 
 | Path | What | Read by |
 |---|---|---|
@@ -17,10 +17,10 @@ owner approves Stage 11.
 Rules:
 
 - Use only the stand-ins from `docs/` (Sam Example, UNIT, North Site, Wrong Response, "the robot"). The listing is public.
-- Keep within the limits in the plan's tables. Task 11.1 adds a check that enforces them.
+- Keep within the stores' limits. `tools/ci/check_store_text.py` enforces them.
 - Text files hold the value only: no comments and no licence header, because the upload sends the whole file.
   `REUSE.toml` covers their licence.
 - Contact names, telephone numbers and email addresses for App Review are not kept here. The owner types them into the
   consoles.
-- Screenshots and graphics are made by the tools (tasks 11.4 and 11.5) and are not committed.
-- The three URLs wait for Stage 10 to confirm the paths.
+- Screenshots and graphics are made by the tools and are not committed.
+- The three URLs are checked against `site_url` in `mkdocs.yml` by `tools/ci/check_site_address.py`.

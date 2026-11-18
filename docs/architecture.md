@@ -7,7 +7,7 @@ libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespac
                              timestamp.hpp, time_zone_provider.hpp (Qt implementation in src/qt_time_zone_provider.cpp,
                              the only file that includes QTimeZone), time_format.hpp, day_prompt.hpp,
                              configuration.hpp (the configuration file: schema, import, export)
-                             The optional interactions board (docs/plan/feedback-interactions-board.md): interaction.hpp
+                             The optional interactions board: interaction.hpp
                              (`InteractionType`, the line patterns with {person} and {value}, the 20-person pick rule),
                              person.hpp (`Person`, the name rules, the name levels full, initials and hidden, and the
                              text of a {person} slot); `InteractionEntry` is in entry.hpp and its `"v":2` journal record
@@ -40,7 +40,7 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              backup copy and a marker; the product's steps take version 1 to 4: `day_log.changed_since_share`,
                              `day_log.extra_versions`, and the interaction entries with the `person` cache, which rebuilds
                              `entry` so that its kind may be `interaction`), people_journal.hpp (the records of
-                             `people.jsonl`: add, rename, retire, touch and forget a person, their CRC and the state they
+                             `people.jsonl`: add, rename, retire, touch, move (`set_person_location`) and forget a person, their CRC and the state they
                              fold to) and people_store.hpp (`PeopleStore`: the list of people, a journal of its own with
                              its own sequence numbers and lock, and `PeopleCache`, which the SQLite repository implements for
                              its `person` table), storage_location.hpp (the folders of one store)
@@ -121,7 +121,7 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
   qml/                the module ErrorJournalingApp (the URI differs from the executable name). Every .qml under it is
                       found by a glob (qml/qml_files.cmake). theme/ holds the token singleton `Theme`, `SafeFrame` and the `Keyboard` singleton;
-                      components/, screens/ and shell/ are Stage 4 (docs/plan/stage-4.md). Main.qml is the window and
+                      components/, screens/ and shell/ are Stage 4. Main.qml is the window and
                       shell/AppShell.qml is everything in it; platform/<ios|desktop>/ holds what differs by platform
   src/                main.cpp (builds the root and hands the models to QML), app_root.* (`ej_app_root`: the composition root,
                       the product's environment and the opening of the store), qt_clipboard.* (the QtGui clipboard)
@@ -196,7 +196,7 @@ main.cpp                                   Rig (tests)
   AppRoot(Environment, AppPlatform, StartedStorage)
 ```
 
-**Interactions and people in the store** (Stage 14, `docs/plan/stage-14.md` sections 3.2 to 3.5). An interaction is an entry kind
+**Observations and people in the store**. An interaction is an entry kind
 in the same `entry` table and the same log journal as an error or a note: tables `interaction_entry` and
 `interaction_entry_person` (the people of an entry by id and position, never a name), and the record is written at journal
 version 2 (`journal_version_for`; every other record stays at 1). The list of people is a second, small store: `people.jsonl`
@@ -239,7 +239,7 @@ initial properties of the engine. The engine is declared after the root and the 
 
 ## QML
 
-All QML is in the one module `ErrorJournalingApp`, in three folders (docs/plan/stage-4.md): `qml/theme/` (`Theme`, a
+All QML is in the one module `ErrorJournalingApp`, in three folders: `qml/theme/` (`Theme`, a
 `pragma Singleton` with every colour, size, radius, spacing, type role and motion value of `docs/design/tokens.json`, and
 `SafeFrame`, the only reader of the safe-area insets, and `Keyboard`, the only reader of the on-screen keyboard), `qml/components/` (one file for each component, which knows no view
 model) and `qml/screens/<screen>/` (the only layer that knows the view models). A file in one folder uses a type from
@@ -280,7 +280,7 @@ Android file) does only what the system must do (call the API, translate the res
 portable C++ against the interface and tested with a fake.
 `icl_platform_sources(target)` adds the directory that matches the target system (`ej_storage` has `linux`, `macos`,
 `windows`, `ios` and `android`); `ej_ios_bridge` uses `src/platform/<ICL_PLATFORM>/` when that directory exists and
-`desktop/` otherwise, so Android builds on the desktop stubs until Stage 9 adds `android/` (docs/plan/stage-9.md). On
+`desktop/` otherwise, so Android builds on the desktop stubs until Stage 9 adds `android/`. On
 Android a small Java layer in `apps/app/packaging/android/src/` receives what Android delivers to Java and forwards it
 to C++. Source files
 contain no `#if` on the platform or compiler; the preprocessor check fails the pull request if

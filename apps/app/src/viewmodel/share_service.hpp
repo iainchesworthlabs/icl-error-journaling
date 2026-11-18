@@ -22,7 +22,7 @@ namespace ej::viewmodel
 {
 
 /// Sends the text of a log to the platform's share sheet and records that the log was shared (REV-05; DAY-01 share
-/// first; DAY-04 re-share). docs/plan/stage-3.md, "ShareService".
+/// first; DAY-04 re-share). the Stage 3 plan, "ShareService".
 ///
 /// The text is `export_text` of the document's mirror with a context from `ExportContextBuilder`, the same function
 /// Copy uses, so Share and Copy cannot differ. The mirror holds committed changes only, so an edit that is still
@@ -36,7 +36,7 @@ namespace ej::viewmodel
 ///
 /// One share at a time. While one is under way (from the call until the sheet has ended) `sharing` is true and a
 /// second `shareOpenLog` or `shareLog` returns `false` and does nothing: it emits no signal, and the share under way
-/// is not touched. It is not queued; the facilitator taps again once the first has ended.
+/// is not touched. It is not queued; the tester taps again once the first has ended.
 ///
 /// Sharing fires no haptic: the only platform dependency is the bridge's `Share` (Stage 5, 5.1).
 ///

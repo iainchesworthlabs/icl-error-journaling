@@ -15,7 +15,7 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Change to what the iOS build reads, or a manual run | iOS compile check for a device (`ios-build.yml`, not required). A pull request runs it only for Apple paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
 | Change to what the Android build reads, or a manual run | Android build (`android-build.yml`, not required): the unsigned APK and bundle of `android-release`, checked by `tools/ci/check_android_package.py`. A pull request runs it for the Android paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
 | Push to `develop`, a manual run, or a pull request with the label `android-emulator` | Android emulator smoke test (`android-emulator.yml`, not required, below): the x86_64 build starts on an API 36 emulator and survives Home and a return |
-| Change to the documentation site (`docs/`, `mkdocs.yml`, `tools/docs/`, `config/sample-config.json`) | The site build (`docs.yml`). The push to `main` publishes it. The hook `tools/docs/demo_setup_hook.py` adds `demo/demo-setup.ejconfig`, a copy of the sample setup, for App Review (Stage 11, 11.3) |
+| Change to the documentation site (`docs/`, `mkdocs.yml`, `tools/docs/`, `config/sample-config.json`) | The site build (`docs.yml`). A push to `develop` that changes one of those paths publishes it; a push that changes only app code does not. The hook `tools/docs/demo_setup_hook.py` adds `demo/demo-setup.ejconfig`, a copy of the sample setup, for App Review (Stage 11, 11.3) |
 | Nightly | CodeQL; the kill harness at 1,000 random kills (`kill-nightly.yml`); the weekly CI metrics (`ci-metrics.yml`, Mondays 06:00 UTC) |
 | Hourly | The Actions cache prune (`cache-prune.yml`, below) |
 | Every 15 minutes | Cancel the runs of merge-queue entries that are gone (`cancel-orphan-queue-runs.yml`, below) |
@@ -61,7 +61,7 @@ iOS compile, `gh workflow run ios-build.yml --ref <branch>`; label the pull requ
 
 ## The kill harness tiers
 
-The Stage 2 kill harness (`libs/storage/tests/kill`, `docs/testing.md`) runs at four sizes (`docs/plan/stage-2.md`, section 4.4).
+The Stage 2 kill harness (`libs/storage/tests/kill`, `docs/testing.md`) runs at four sizes.
 Every run uses one master seed, printed first, so any failure is repeated with it.
 
 | Tier | Where | Random kills | Also |
@@ -94,7 +94,7 @@ What to look at after a run:
   of shards, not the number of iterations.
 
 Run the exit gate with `gh workflow run kill-gate.yml -f seed=0x... [-f iterations=10000] [-f shards=10] [-f systems=both]`. The
-workflow runs from the default branch; its result and seed are recorded in `docs/plan/stage-2.md`, section 8.
+workflow runs from the default branch; its result and seed are recorded in the pull request that ran it.
 
 ## Where the time goes, and the limits
 
@@ -113,6 +113,11 @@ in this repository's runner groups. When a dozen sessions push, the 20 slots are
 A code-change queue entry therefore holds about 170 of the 20 x 60 = 1,200 runner-minutes an hour, nearly 15 percent of
 the pool, and every pull request push adds about a quarter of that again. A pull request run used to repeat the coverage job that the
 queue entry runs on the merged tree; coverage now runs on a pull request only with the `deep` label.
+
+**Coverage and negative hits.** GCC's `gcov` sometimes writes a negative hit count for a line that tests ran in more than one
+thread (GCC bug 68080), and gcovr stops with `NegativeHitsError` on the first one. The Coverage job passes
+`--gcov-ignore-parse-errors negative_hits.warn_once_per_file`, so such a line is reported once and counted as it is, and the
+floors still decide the result.
 
 **Job limits.** Healthy Linux build legs ran up to 30 minutes (release 30.0, ASan/UBSan 28.6, TSan 28.7 on a cold
 cache), so the old limit of 30 cancelled good jobs. The Linux legs now have 60 minutes. Coverage (45, slowest 27), the
@@ -197,7 +202,7 @@ feed would not change the budget, which is dominated by ccache and Qt.
 
 ## QML checks
 
-`tools/ci/check_qml_*.py` keep the QML honest (`docs/plan/stage-4.md`, package 4.1). They read the text of `apps/app/qml/`
+`tools/ci/check_qml_*.py` keep the QML honest. They read the text of `apps/app/qml/`
 and are CTest tests with the label `unit`, so they run in the unit phase of every build; a QML file that fails one fails
 the pull request. `python tools/ci/precheck.py` runs these (all but `qml.format` and `qml.lint`) after the shared checks.
 
@@ -309,7 +314,7 @@ that file, so `tools/tests/test_play_graphics.py` checks the sizes, the colours 
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_store_text.py` on `store/` (Stage 11, task 11.1). The upload sends each
 text file whole, so the check fails when a file is not UTF-8 with LF line ends and one final newline, has a blank first
-or last line or trailing spaces, is over its store's limit (the tables in `docs/plan/stage-11.md`; the App Store keywords
+or last line or trailing spaces, is over its store's limit (the App Store keywords
 in bytes, the rest in characters), or is missing when the store requires it. It also fails when a keyword is empty,
 repeated, 2 characters or fewer, next to a space, or a word of the app's name; when a URL file is not https under the documentation site; when a
 category is not an App Store identifier; when the Play title differs from the App Store name; and when there are more than
@@ -318,8 +323,20 @@ tracked file. The unit tests are in `tools/tests/test_store_text.py`.
 
 ## The site address
 
-The guide, support and privacy pages are one MkDocs site, published by `docs.yml` to GitHub Pages from a build artifact
-(Pages source: GitHub Actions) on a push to `main`. Its address is written in one place: `site_url` in `mkdocs.yml`.
+The guide, support and privacy pages are one MkDocs site, published by `docs.yml` to a private S3 bucket behind CloudFront, at `https://iainchesworthlabs.com/field-test/`, on a
+push to `develop` that changes the site's inputs (`docs/**`, `mkdocs.yml`, `requirements/docs.txt`, `tools/docs/**`,
+`config/sample-config.json` or `docs.yml`), so the site publishes independently of app releases. A push of app code alone
+does not deploy it, a change of both does both, and a run from the Actions tab (`workflow_dispatch`, from `develop`)
+republishes it. The site is not deployed from `main`: that branch only fast-forwards to what `develop` already published,
+and the production role trusts a push to `develop` only. If the role's trust does not allow that, the deploy job fails
+and `Explain a failed deploy` names the cause (the owner runs the site stack's deploy). `docs.yml` builds the site once (`site-artifact: docs-site`) and calls `docs-deploy-aws.yml` of
+`icl-common-infra` (prefix `field-test`), which assumes an IAM role by OIDC (no stored keys), syncs the
+prefix and invalidates it. The role, bucket and distribution come from the repository **secrets** `DOCS_ROLE_ARN`,
+`DOCS_BUCKET` and `DOCS_DISTRIBUTION_ID`, which the owner sets (secrets, so the public logs show `***`); none of those values is written in the repository. A pull
+request from this repository gets a preview at `https://iainchesworthlabs.com/_preview/field-test/pr-<n>/` (role
+`DOCS_PREVIEW_ROLE_ARN`, limited to `_preview/field-test/*`), removed when the pull request closes. A pull request from a
+fork or from Dependabot builds the site and deploys nothing. Its address is written in one place: `site_url` in
+`mkdocs.yml`.
 
 - Pages of `docs/` that need the address write `{{ site_url }}` (it includes the trailing slash) and
   `tools/docs/site_address_hook.py` fills it in at build time. A page never writes the host out.
@@ -329,12 +346,12 @@ The guide, support and privacy pages are one MkDocs site, published by `docs.yml
   app's own constant joins the list with the in-app help (Stage 10, 10.6).
 - `.github/repo-settings.json` has a `homepage` with the address. It is the owner's file and is not read by a check.
 
-**Moving to a custom domain.** Nothing in the repository is tied to the `github.io` address except the lines above, so
-the move is: (1) the owner adds the domain in the repository's Pages settings and the DNS record (a `CNAME` for a
-subdomain), which is not a file in the repository, because Pages deployed from a workflow ignores a `CNAME` file; (2) one
-pull request changes `site_url` and the files the check names, and it fails until they all agree; (3) the owner updates
-the `homepage` in the repository settings. Do this before the store submission: a store URL that changes later needs a
-new submission.
+**Moving the site.** Nothing in the repository is tied to the host except the lines above, so a move is: (1) the owner
+prepares the new address (DNS, the bucket and the deploy role, which are not files in this repository); (2) one pull
+request changes `site_url`, the files the check names and the `prefix` of the deploy jobs, and it fails until they all
+agree; (3) the owner updates the `homepage` in the repository settings and uploads the store URLs again. The site moved
+from `github.io` to `iainchesworthlabs.com/field-test/` before any store submission, so no old address has to stay alive.
+Do a move before a store submission: a store URL that changes later needs a new submission.
 
 ## iOS property list check
 

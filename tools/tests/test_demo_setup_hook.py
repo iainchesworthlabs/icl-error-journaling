@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Tests for tools/docs/demo_setup_hook.py (label: unit). T11-4 of docs/plan/stage-11.md.
+"""Tests for tools/docs/demo_setup_hook.py (label: unit). T11-4 of the Stage 11 plan.
 
 Run with: python3 -m unittest discover -s tools/tests -v
 That the sample itself imports cleanly is tested by the core and bridge tests, which read the same file (EJ_SAMPLE_CONFIG).
@@ -51,7 +51,7 @@ class DemoSetupHookTest(unittest.TestCase):
         notes = ROOT / "store" / "appstore" / "review_information" / "notes.txt"
         if not notes.is_file():
             self.skipTest("store/ is not on this branch yet")
-        self.assertIn("/icl-error-journaling/demo/demo-setup.ejconfig", notes.read_text(encoding="utf-8"))
+        self.assertIn("/field-test/demo/demo-setup.ejconfig", notes.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

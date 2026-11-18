@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // VersionTimeSheet, the time of a version change on a second sheet over the Software version sheet
-// (docs/design/screens/ TimeTumbler.dc.html, decision 11 of docs/plan/stage-4.md): version.time_sheet and the
+//: version.time_sheet and the
 // cross-cutting checks. The sheet is declared by Today's details after the version sheet, so the tests load that screen
 // and open the version sheet. The models are the real ones of Stage 3 over the in-memory store.
 #include "header_support.hpp"

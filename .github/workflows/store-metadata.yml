@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Uploads the store listing in store/ to App Store Connect or to the Play Console (docs/plan/stage-11.md, task 11.7).
+# Uploads the store listing in store/ to App Store Connect or to the Play Console.
 #
 # Started by hand only, from develop or from a release tag. It uploads text, graphics and screenshots, never a build:
 # builds come only from release.yml. It never submits for review and never releases or starts a rollout; the owner does
@@ -77,7 +77,7 @@ jobs:
         run: python3 tools/ci/check_store_text.py
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
+        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
         with:
           bundler-cache: false
 

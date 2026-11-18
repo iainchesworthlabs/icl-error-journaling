@@ -13,8 +13,7 @@ Open an issue on the project's page:
 [github.com/iainchesworthlabs/icl-error-journaling/issues](https://github.com/iainchesworthlabs/icl-error-journaling/issues).
 You need a free GitHub account to do that.
 
-<!-- Owner to confirm (Stage 10, decision 4): an email address for people without a GitHub account. When it is chosen
-     it is added here, and nowhere else: the privacy page points to this page for contact. -->
+Support is through GitHub issues only. There is no email address.
 
 ## What to tell us
 

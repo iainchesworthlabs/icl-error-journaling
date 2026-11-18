@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SetupFile (docs/plan/stage-4.md, 4.13): the name of a setup file and the files an import accepts, which the shell
+// SetupFile: the name of a setup file and the files an import accepts, which the shell
 // hands to the file dialog and the Stage 5 document picker.
 #include "rig/ui_rig.hpp"
 

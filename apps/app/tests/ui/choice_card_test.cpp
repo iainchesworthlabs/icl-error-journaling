@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// ChoiceCard (docs/plan/stage-4.md, 4.6): choice_card.select.
+// ChoiceCard: choice_card.select.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"

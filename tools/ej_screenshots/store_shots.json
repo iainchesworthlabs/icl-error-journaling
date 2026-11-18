@@ -1,5 +1,5 @@
 {
-  "_comment": "The store screenshots (docs/plan/stage-11.md, 11.4). A shot names a state of screens.json, a mode, and the file name it gets. A set names the store, the exact pixel size, the capture class its pictures come from (phone: 402 x 874 points; ipad-portrait: 820 x 1180; ipad-landscape: 1180 x 820) and its shots. store_screenshots.py checks the sizes, the counts and the names, and tests/test_store_screenshots.py checks that every state and mode exists in screens.json.",
+  "_comment": "The store screenshots. A shot names a state of screens.json, a mode, and the file name it gets. A set names the store, the exact pixel size, the capture class its pictures come from (phone: 402 x 874 points; ipad-portrait: 820 x 1180; ipad-landscape: 1180 x 820) and its shots. store_screenshots.py checks the sizes, the counts and the names, and tests/test_store_screenshots.py checks that every state and mode exists in screens.json.",
   "scale": {
     "phone": 3,
     "ipad-portrait": 2,

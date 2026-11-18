@@ -6,7 +6,7 @@
 
 Writes docs/design/screens/Interactions.<frame>[.dark].dc.html for the iPad in portrait and landscape and for the foldable
 frames of Stage 13, and InteractionsPicker.<frame>[.dark].dc.html (the person picker over the board) for the frames where the
-sheet is placed differently. The pages follow docs/plan/stage-14.md, 4.2, and reuse the building blocks of
+sheet is placed differently. The pages follow the Stage 14 plan, 4.2, and reuse the building blocks of
 tools/visual/ipad_mockups.py and tools/visual/fold_mockups.py; every colour is read from docs/design/tokens.json (the second
 hue family `interactionPalette` and `colour.interactionAccent`). The pages are static HTML. With --check it writes nothing and
 fails when a file differs from what it would write.

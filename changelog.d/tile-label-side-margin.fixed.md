@@ -1,0 +1,1 @@
+**A tile label can use a little more of the tile’s width for a long word.** When a word does not fit on a line even at the smallest label size, the label now takes up to 4 pt from each side margin before the word is allowed to break. Not yet run on a device: on an iPhone, check the tile “Disconnection” at the default text size.

@@ -164,12 +164,16 @@ Item {
         objectName: "logPaneTitle"
         x: Theme.space.rowPadding
         width: parent.width - 2 * x
-        height: Theme.size.rowHeightForm
+        // At a large text size the title is taller than the row, so the row grows with it.
+        height: Math.max(Theme.size.rowHeightForm, title.implicitHeight + 2 * Theme.space.tileGap)
 
         Text {
             id: title
 
             anchors.verticalCenter: parent.verticalCenter
+            // The title keeps the room before Copy all, and gives up its end ("...") when that is all it has.
+            width: Math.min(implicitWidth, parent.width - copyButton.width)
+            elide: Text.ElideRight
             color: Theme.colour.reviewText
             font: Theme.font.sheetTitle.font
             text: qsTr("Today’s log")
@@ -180,6 +184,8 @@ Item {
         Text {
             objectName: "logPaneCount"
             anchors.verticalCenter: parent.verticalCenter
+            // The count is the first to go when the title and the count do not both fit (a large text size): Review has it.
+            visible: title.width + Theme.space.sectionGap + width <= parent.width - copyButton.width - Theme.space.tileGap
             x: parent.width - copyButton.width - Theme.space.tileGap - width
             color: Theme.colour.reviewTextSecondary
             font: Theme.font.bodySmall.font

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Banner (docs/plan/stage-4.md, 4.4): banner.tones (contrast for each tone in both schemes), its signals, its
+// Banner: banner.tones (contrast for each tone in both schemes), its signals, its
 // accessibility and the cross-cutting checks.
 #include "container_support.hpp"
 #include "rig/color_math.hpp"

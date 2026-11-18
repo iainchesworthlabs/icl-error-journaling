@@ -230,7 +230,7 @@ constexpr const char* SCHEMA[] = {
     "CREATE TABLE day_log ("
     " id TEXT PRIMARY KEY NOT NULL,"
     " local_date TEXT NOT NULL,"
-    " facilitator TEXT NOT NULL,"
+    " facilitator TEXT NOT NULL," // legacy name: column stays "facilitator"
     " unit_number TEXT,"
     " location_id TEXT,"
     " location_text TEXT,"
@@ -580,7 +580,7 @@ Result<HeaderValues, StorageError> read_header(const QSqlQuery& query, int first
         return Failure(corrupt("a stored log date is not valid"));
     }
     header.m_LocalDate = *date;
-    header.m_Facilitator = to_std(query.value(first + 1).toString());
+    header.m_Tester = to_std(query.value(first + 1).toString());
     if (const auto unit = optional_text(query.value(first + 2)))
     {
         auto parsed = UnitNumber::parse_stored(*unit);
@@ -643,7 +643,7 @@ Result<void, StorageError> read_extra_versions(const QSqlQuery& query, int colum
 QVariantList header_values(const HeaderValues& header)
 {
     QVariantList values;
-    values << to_qt(format_iso_date(header.m_LocalDate).value_or(std::string())) << to_qt(header.m_Facilitator);
+    values << to_qt(format_iso_date(header.m_LocalDate).value_or(std::string())) << to_qt(header.m_Tester);
     values << (header.m_UnitNumber ? QVariant(to_qt(header.m_UnitNumber->stored())) : null_text());
     values << (header.m_Location && header.m_Location->m_Id ? QVariant(to_qt(header.m_Location->m_Id->format()))
                                                             : null_text());

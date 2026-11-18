@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Templates (docs/plan/stage-4.md, 4.13): editor.templates (the list, adding and opening a template), editor.voiceover
+// Templates: editor.templates (the list, adding and opening a template), editor.voiceover
 // and the cross-cutting checks.
 #include "editors_support.hpp"
 

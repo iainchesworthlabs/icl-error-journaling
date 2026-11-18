@@ -190,7 +190,7 @@ Sheet {
                             label: qsTr("Version")
                             prefixText: "v"
                             text: card.row.version
-                            placeholderText: qsTr("For example 4.5.0")
+                            placeholderText: qsTr("4.5.0")
                             hint: qsTr("Numbers only, like 4.5.0. The v is added for you.")
                             inputMethodHints: Qt.ImhFormattedNumbersOnly
                             errorText: card.problemField === "version" ? card.problem : ""

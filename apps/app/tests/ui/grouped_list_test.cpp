@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// GroupedList (docs/plan/stage-4.md, 4.6): the 14 pt group of rows under its heading.
+// GroupedList: the 14 pt group of rows under its heading.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"

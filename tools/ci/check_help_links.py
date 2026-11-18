@@ -4,7 +4,7 @@
 
     python3 tools/ci/check_help_links.py [--root .]
 
-Stage 10, package 10.6 (docs/plan/stage-10.md, "Keeping the docs in step"). It reads the help topics of the app
+Stage 10, package 10.6. It reads the help topics of the app
 (apps/app/qml/components/HelpTopics.qml) and the pages of the guide (docs/), and needs no build:
 
 - the site address of the app is `site_url` in mkdocs.yml, to the character, so a move to another host changes both;
@@ -79,6 +79,8 @@ def page_file(root: Path, page: str) -> Path:
     trimmed = page.strip("/")
     if not trimmed:
         return root / DOCS / "index.md"
+    if (root / DOCS / trimmed / "index.md").is_file():
+        return root / DOCS / trimmed / "index.md"  # a folder's index page is the address of the folder
     return root / DOCS / f"{trimmed}.md"
 
 

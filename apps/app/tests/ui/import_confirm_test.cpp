@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// ImportConfirm (docs/plan/stage-4.md, 4.13): import.flow (the summary shows the counts; Replace and Cancel are
+// ImportConfirm: import.flow (the summary shows the counts; Replace and Cancel are
 // signals), import.voiceover and the cross-cutting checks.
 #include "editors_support.hpp"
 

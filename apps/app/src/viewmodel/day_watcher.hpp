@@ -14,7 +14,7 @@
 namespace ej::viewmodel
 {
 
-/// The new-day prompt (DAY-01; docs/plan/stage-3.md, "DayWatcher"). When the app opens, or returns to the foreground,
+/// The new-day prompt. When the app opens, or returns to the foreground,
 /// on a later calendar day than the open log's, it offers to start a new log, naming the new date, and says whether the
 /// open log has been shared.
 ///
@@ -40,7 +40,7 @@ namespace ej::viewmodel
 /// empty log has nothing to share, so it is never called unshared. `changedSinceShare` is `unshared` for a log that was
 /// shared earlier, so the text can say "changed after it was last shared" and not "hasn't been shared".
 ///
-/// The prompt is offered on the first check on a later date than the open log's, whatever the gap: a facilitator who
+/// The prompt is offered on the first check on a later date than the open log's, whatever the gap: a tester who
 /// works on Mondays and Fridays is asked on Friday about Monday's log.
 ///
 /// GUI thread only. No I/O of its own: a new log is `LogSession::startNewLog` and sharing is

@@ -2,7 +2,6 @@
 // BoardState (Stage 14, I-5): the second board is off on a fresh install and an upgrade, the last board is remembered,
 // and turning the board off while on it goes back to Errors.
 #include "viewmodel/board_state.hpp"
-#include "viewmodel/interaction_board_model.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -102,10 +101,4 @@ TEST_CASE("shell.default_off: a damaged file is a v1 install", "[unit][shell]")
     const auto state = fixture.open();
     CHECK_FALSE(state->interactions_enabled());
     CHECK(state->last_board() == QStringLiteral("errors"));
-}
-
-TEST_CASE("shell.empty_board: the stand-in board has no types", "[unit][shell]")
-{
-    const viewmodel::InteractionBoardModel model;
-    CHECK(model.board_empty());
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// NoteComposer (docs/plan/stage-4.md, 4.6): composer.draft_binding, composer.add, composer.chips, composer.undo_text
+// NoteComposer: composer.draft_binding, composer.add, composer.chips, composer.undo_text
 // and composer.dictation.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"
@@ -125,6 +125,13 @@ QStringList texts(QSignalSpy& spy)
 }
 
 } // namespace
+
+TEST_CASE("composer.edit_menu: the field asks for no text handles, so a tap does not open the iOS edit menu", "[ui][composer]")
+{
+    Fixture fixture;
+    const int hints = fixture.field->property("inputMethodHints").toInt();
+    CHECK((hints & static_cast<int>(Qt::ImhNoTextHandles)) != 0);
+}
 
 TEST_CASE("composer.draft_binding: typing reports each change, and the draft that comes back changes nothing",
           "[ui][composer]")
@@ -398,6 +405,42 @@ TEST_CASE("composer.mic: no microphone where the phone cannot recognise speech o
     {
         CHECK_FALSE((node.m_Visible && node.m_ObjectName == QStringLiteral("micButton")));
     }
+}
+
+TEST_CASE("composer.mic: no scroll mark beside the microphone while the note fits the box, with focus or not",
+          "[ui][composer][dictation]")
+{
+    Fixture f;
+    f.composer->setProperty("dictationAvailable", true);
+    f.rig.layout();
+    QQuickItem* mark = f.rig.find(QStringLiteral("overflowMark"));
+    REQUIRE(mark != nullptr);
+    CHECK_FALSE(mark->isVisible());
+
+    // Focus comes back after the permission prompts, and the app becomes active again.
+    f.field->forceActiveFocus();
+    f.rig.layout();
+    CHECK_FALSE(mark->isVisible());
+    f.host->setProperty("draft", QStringLiteral("A short note"));
+    f.rig.layout();
+    CHECK_FALSE(mark->isVisible());
+
+    // Dictation puts the note on two lines: the box opens to hold both, nothing scrolls, and no mark is drawn at its edge.
+    f.host->setProperty("draft", QString());
+    f.rig.layout();
+    type_lines(f, {"one", "two"});
+    f.rig.layout();
+    CHECK_FALSE(mark->isVisible());
+    f.add->forceActiveFocus();
+    f.rig.layout();
+    CHECK_FALSE(mark->isVisible());
+    f.field->forceActiveFocus();
+
+    // A note taller than the box still shows it.
+    f.rig.key(Qt::Key_Return);
+    type_lines(f, {"three", "four", "five", "six", "seven", "eight"});
+    f.rig.layout();
+    CHECK(mark->isVisible());
 }
 
 TEST_CASE("composer.mic: the microphone is on the first line at the trailing edge, 44 pt, named, and a tap toggles",

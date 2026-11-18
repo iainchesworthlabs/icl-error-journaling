@@ -1,5 +1,5 @@
 {
-  "_comment": "The screens that ej_screenshots renders (docs/plan/stage-7.md, 7.1). Each state names the scene of apps/app/tests/ui/visual_capture_test.cpp that builds it; 'files' names the screen files under apps/app/qml/screens/ that it shows, and every screen file there (other than private/ and launch/) must be named once. screenshots.render checks both. A mode is rendered for every state.",
+  "_comment": "The screens that ej_screenshots renders. Each state names the scene of apps/app/tests/ui/visual_capture_test.cpp that builds it; 'files' names the screen files under apps/app/qml/screens/ that it shows, and every screen file there (other than private/ and launch/) must be named once. screenshots.render checks both. A mode is rendered for every state.",
   "modes": [
     {
       "name": "light",
@@ -18,7 +18,10 @@
     }
   ],
   "not_screens": {
-    "setup/SetupFile.qml": "The setup file's name and file types for the chooser; it draws nothing."
+    "setup/SetupFile.qml": "The setup file's name and file types for the chooser; it draws nothing.",
+    "settings/editors/InteractionTypes.qml": "The interaction types editor (Stage 14, I-7). Its scene waits for the mock-ups of the second board (package I-8); the cases settings.interaction_types cover it until then.",
+    "settings/editors/InteractionTypeEdit.qml": "The sheet of the interaction types editor (Stage 14, I-7). Its scene waits for package I-8; the cases settings.interaction_type_edit cover it until then.",
+    "settings/editors/People.qml": "The People screen of Settings (Stage 14, I-7), with its sheet and the Forget alert. Its scene waits for package I-8; the cases settings.people cover it until then."
   },
   "flows": [
     {
@@ -213,6 +216,12 @@
           ]
         },
         {
+          "name": "ReviewInteractions"
+        },
+        {
+          "name": "EditInteraction"
+        },
+        {
           "name": "TimeTumbler"
         },
         {
@@ -258,7 +267,7 @@
       "title": "Settings and its editors",
       "states": [
         {
-          "name": "Facilitator"
+          "name": "Tester"
         },
         {
           "name": "TimeFormat"

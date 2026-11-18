@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The app shell (docs/plan/stage-4.md, 4.15): the whole app, driven through the screens. The services are the ones
+// The app shell: the whole app, driven through the screens. The services are the ones
 // `app::AppRoot` builds for the phone, over the in-memory store and the fake clock and platform (Stage 3's `Rig`), and
 // the shell is the item that `Main.qml` holds, so what is tested here is what runs on the phone short of the window
 // itself. The bridge is a small QObject with the names of the QmlBridge; its haptics go into the same EventLog as the
@@ -211,8 +211,7 @@ struct App
                            {QStringLiteral("bridge"), object(bridge)},
                            {QStringLiteral("fileChooser"), object(*chooser)},
                            {QStringLiteral("urlOpener"), object(*url_opener)},
-                           {QStringLiteral("about"), object(about)},
-                           {QStringLiteral("aboutText"), QStringLiteral("0.1.0 · test, storage: memory")}};
+                           {QStringLiteral("about"), object(about)}};
         if (help != nullptr)
         {
             given.insert(QStringLiteral("help"), object(*help));
@@ -221,6 +220,7 @@ struct App
         {
             given.insert(QStringLiteral("boards"), object(*boards));
             given.insert(QStringLiteral("interactionBoard"), object(*interaction_board));
+            given.insert(QStringLiteral("exportPreferences"), object(*export_preferences));
         }
         return given;
     }
@@ -245,6 +245,9 @@ struct App
         QQmlComponent model_component(&ui.engine(), MODULE, "UiStubInteractionBoard");
         interaction_board.reset(model_component.create());
         REQUIRE(interaction_board != nullptr);
+        QQmlComponent export_component(&ui.engine(), MODULE, "UiStubExportPreferences");
+        export_preferences.reset(export_component.create());
+        REQUIRE(export_preferences != nullptr);
     }
 
     void load(const QVariantMap& without = {})
@@ -377,6 +380,7 @@ struct App
     std::unique_ptr<QObject> url_opener;
     std::unique_ptr<QObject> help;
     std::unique_ptr<QObject> boards;
+    std::unique_ptr<QObject> export_preferences;
     std::unique_ptr<QObject> interaction_board;
     QQuickItem* shell = nullptr;
 };
@@ -513,31 +517,31 @@ TEST_CASE("app.navigation: each tab shows its screen, a tab that is tapped again
 
     app.choose_tab(SETTINGS_TAB);
     CHECK(app.shown(QStringLiteral("settingsScreen")));
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
 
     // The Settings tab pushes the editors on its own stack, and a second tap on the tab pops them.
     app.tap(QStringLiteral("settingsErrorTypes"));
     app.play();
     CHECK(app.shown(QStringLiteral("addRow")));
-    CHECK_FALSE(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTester")));
     CHECK(app.shown(QStringLiteral("shellTabBar")));
     app.choose_tab(SETTINGS_TAB);
     CHECK_FALSE(app.shown(QStringLiteral("addRow")));
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
 
     // The editors are pages too: the list rows of Locations and the note templates open the same way, and their own
     // "back" returns to Settings.
     app.tap(QStringLiteral("settingsLocations"));
     app.play();
-    CHECK_FALSE(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTester")));
     REQUIRE(QMetaObject::invokeMethod(app.need(QStringLiteral("settingsScreen")), "popPage"));
     app.play();
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
     app.tap(QStringLiteral("settingsTemplates"));
     app.play();
-    CHECK_FALSE(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK_FALSE(app.shown(QStringLiteral("settingsTester")));
     app.choose_tab(SETTINGS_TAB);
-    CHECK(app.shown(QStringLiteral("settingsFacilitator")));
+    CHECK(app.shown(QStringLiteral("settingsTester")));
 
     // Back on Log, the screen is where it was left.
     app.choose_tab(LOG_TAB);
@@ -941,9 +945,8 @@ TEST_CASE("app.timing: five taps on the Version row of the About page show the t
     App app;
     app.choose_tab(SETTINGS_TAB);
 
-    // The foot of the Settings list is a plain caption now: the version and platform text, and no timing line.
-    QQuickItem* caption = app.need(QStringLiteral("settingsVersionCaption"));
-    CHECK(caption->property("text").toString() == QStringLiteral("0.1.0 · test, storage: memory"));
+    // The Settings list has no version line at its foot: the build facts are on the About page.
+    CHECK_FALSE(app.shown(QStringLiteral("settingsVersionCaption")));
     CHECK_FALSE(app.shown(QStringLiteral("settingsTiming")));
 
     // The About row is at the end of the list: scroll there, as the person does, and open the page.
@@ -1041,7 +1044,7 @@ namespace
 /// The safe-area insets of an iPad: the status bar and the home indicator.
 constexpr double IPAD_TOP = 24.0;
 constexpr double IPAD_BOTTOM = 20.0;
-/// The column limits of docs/plan/stage-8.md ("Layout rules"), as Theme.layout has them.
+/// The column limits of the Stage 8 plan ("Layout rules"), as Theme.layout has them.
 constexpr double LOG_COLUMN = 680.0;
 constexpr double READING_COLUMN = 720.0;
 constexpr double REGULAR_MARGIN = 24.0;
@@ -1150,6 +1153,43 @@ TEST_CASE("ipad.screens_fit: on every iPad in portrait the tabs are in their col
     }
 }
 
+TEST_CASE("ipad.settings_board_card: on an iPad the miniature board of Settings is in a card, and on the phone it is not",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    app.choose_tab(SETTINGS_TAB);
+    app.ui.layout();
+    // The phone: the board is on the page, with no padding.
+    {
+        QQuickItem* card = app.need(QStringLiteral("settingsBoardCard"));
+        CHECK_FALSE(card->property("carded").toBool());
+        const QRectF c = app.ui.geometry(card);
+        const QRectF b = app.ui.geometry(app.need(QStringLiteral("settingsBoard")));
+        CHECK(std::abs(b.left() - c.left()) <= 0.5);
+        CHECK(std::abs(b.width() - c.width()) <= 0.5);
+    }
+    for (const QSize size : {QSize(744, 1133), QSize(820, 1180), QSize(1180, 820)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.choose_tab(SETTINGS_TAB);
+        app.ui.layout();
+        QQuickItem* card = app.need(QStringLiteral("settingsBoardCard"));
+        CHECK(card->property("carded").toBool());
+        const QRectF c = app.ui.geometry(card);
+        const QRectF b = app.ui.geometry(app.need(QStringLiteral("settingsBoard")));
+        // 12 pt of padding on every side, inside the 640 pt form column, with the 12 tiles inside the card.
+        CHECK(c.width() <= 640.0 + 0.5);
+        CHECK(std::abs(b.left() - c.left() - 12.0) <= 0.5);
+        CHECK(std::abs(c.right() - b.right() - 12.0) <= 0.5);
+        CHECK(std::abs(b.top() - c.top() - 12.0) <= 0.5);
+        CHECK(std::abs(c.bottom() - b.bottom() - 12.0) <= 0.5);
+        expect_clean(check_names(app.ui));
+    }
+}
+
 TEST_CASE("ipad.compact_is_phone: a narrow Split View window has the phone's layout", "[ui][app][ipad]")
 {
     App app;
@@ -1194,6 +1234,12 @@ TEST_CASE("ipad.first_launch: in a larger window the first-launch screen is a na
     const QRectF b = app.ui.geometry(import);
     CHECK(std::abs(b.width() - 480) <= 1.0);
     CHECK(std::abs(b.center().x() - 410) <= 1.0);
+    // The second choice is the secondary button under the first, as wide, as the app has it and the mock-up draws it.
+    const QRectF second = app.ui.geometry(app.need(QStringLiteral("importCard")));
+    CHECK(std::abs(second.width() - 480) <= 1.0);
+    CHECK(std::abs(second.center().x() - 410) <= 1.0);
+    CHECK(second.top() > b.bottom());
+    CHECK(second.top() - b.bottom() <= 16.0);
     // The group is in the middle: the gap above the title is about the gap below the last choice.
     CHECK(t.top() > 200);
     CHECK(b.bottom() < 1180 - 200);
@@ -1444,6 +1490,12 @@ TEST_CASE("ipad.form_sheet_content: a sheet that is as tall as its content is a 
         QQuickItem* panel = open_panel(app, QStringLiteral("editSheet"));
         const QRectF r = app.ui.geometry(panel);
         check_form_card(app.ui, panel, size, size.height() - IPAD_BOTTOM - SHEET_MARGIN);
+        // Edit entry is as tall as its first page needs (its mock-up), not the 720 pt of a Large sheet: the card is no
+        // taller than its content, and the Delete button is inside it.
+        CHECK(r.height() < SHEET_MAX_HEIGHT - 60.0);
+        const QRectF del = app.ui.geometry(app.need(QStringLiteral("editDelete")));
+        CHECK(del.bottom() <= r.bottom());
+        CHECK(del.top() >= r.top());
         // Centred in the space between the margins.
         const double top_limit = IPAD_TOP + SHEET_MARGIN;
         const double bottom_limit = size.height() - IPAD_BOTTOM - SHEET_MARGIN;
@@ -1503,7 +1555,7 @@ const QSize IPAD_WIDE_SIZES[] = {QSize(1133, 744), QSize(1180, 820), QSize(1376,
 constexpr double PANE_GAP = 20.0;
 constexpr double BOARD_SHARE = 0.58;
 
-/// The two panes of a Wide window `window` wide, as docs/plan/stage-8.md ("Layout rules") has them.
+/// The two panes of a Wide window `window` wide, as the Stage 8 plan ("Layout rules") has them.
 struct Panes
 {
     double m_BoardX;
@@ -1716,6 +1768,65 @@ TEST_CASE("ipad.log_pane: the log pane lists the log, shows the newest entry, an
     CHECK(std::abs(anchor.m_Y - share.y()) <= 1.0);
     CHECK(std::abs(anchor.m_Width - share.width()) <= 1.0);
     CHECK(std::abs(anchor.m_Height - share.height()) <= 1.0);
+}
+
+TEST_CASE("ipad.log_pane_title: the title and the count never overlap, and the title stays clear of Copy all",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    app.ui.set_window_size(QSize(1180, 820));
+    app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+    log_entries(app, 3);
+    for (const double scale : {1.0, 1.3, 2.0, 3.1})
+    {
+        CAPTURE(scale);
+        app.ui.set_text_scale(scale);
+        app.ui.layout();
+        QQuickItem* count = app.need(QStringLiteral("logPaneCount"));
+        QQuickItem* copy = app.need(QStringLiteral("logPaneCopyAll"));
+        QQuickItem* row = app.need(QStringLiteral("logPaneTitle"));
+        const QRectF c = app.ui.geometry(copy);
+        const QRectF r = app.ui.geometry(row);
+        // The title is the first Text of the row; it is the heading.
+        QQuickItem* title = nullptr;
+        for (QQuickItem* child : row->childItems())
+        {
+            if (child->property("text").toString() == QStringLiteral("Today’s log"))
+                title = child;
+        }
+        REQUIRE(title != nullptr);
+        const QRectF t = app.ui.geometry(title);
+        CHECK(t.right() <= c.left() + 8.0);
+        CHECK(t.top() >= r.top() - 0.5);
+        CHECK(t.bottom() <= r.bottom() + 0.5);
+        if (count->isVisible())
+            CHECK(app.ui.geometry(count).left() >= t.right());
+        INFO("title " << t.width() << " count " << count->width() << " row " << r.width() << " copy " << c.width());
+        if (scale <= 1.0)
+            CHECK(count->isVisible());
+    }
+}
+
+TEST_CASE("ipad.header_nav: Today's details has its title and Back in the form column of a wide window, as on the phone",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    app.ui.layout();
+    app.tap(QStringLiteral("logHeaderCard"));
+    app.play();
+    QQuickItem* nav = app.need(QStringLiteral("headerNav"));
+    CHECK(std::abs(nav->property("sideInset").toDouble() - 16.0) <= 0.01);
+    for (const QSize size : {QSize(820, 1180), QSize(1180, 820)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.ui.layout();
+        const double column = std::min(640.0, size.width() - 48.0);
+        CHECK(std::abs(nav->property("sideInset").toDouble() - (size.width() - column) / 2) <= 1.0);
+    }
 }
 
 TEST_CASE("ipad.log_pane_empty: a log with no entries says so, and has nothing to copy or share", "[ui][app][ipad]")
@@ -2263,7 +2374,7 @@ TEST_CASE("app.keyboard_review: the note of Edit entry is above the keyboard and
 }
 
 TEST_CASE(
-    "app.keyboard_settings: the facilitator page, the editors of locations and note templates, and the sheets of the "
+    "app.keyboard_settings: the tester page, the editors of locations and note templates, and the sheets of the "
     "error types and of a location end at the keyboard",
     "[ui][app]")
 {
@@ -2274,9 +2385,9 @@ TEST_CASE(
     phone(app);
     QQuickItem* settings = app.need(QStringLiteral("settingsScreen"));
 
-    SECTION("the facilitator page: the page ends at the keyboard, and a field that is clear does not scroll it")
+    SECTION("the tester page: the page ends at the keyboard, and a field that is clear does not scroll it")
     {
-        activate(app, QStringLiteral("settingsFacilitator"));
+        activate(app, QStringLiteral("settingsTester"));
         QQuickItem* field = inside(app, QStringLiteral("settingsTextField"), settings);
         // The page in view is the last one of the stack: the list under it has a Flickable of the same name.
         const auto flicks = app.ui.find_items(QStringLiteral("settingsFlickable"), settings);
@@ -2352,7 +2463,7 @@ TEST_CASE("app.keyboard_first_launch: setting up by hand ends the page at the ke
     app.play();
     QQuickItem* page = shown_page(app);
     const double top_before = app.ui.geometry(page).top();
-    for (const char* name : {"facilitatorField", "prefixField"})
+    for (const char* name : {"testerField", "prefixField"})
     {
         CAPTURE(name);
         QQuickItem* field = inside(app, QString::fromLatin1(name), page);
@@ -2496,7 +2607,7 @@ TEST_CASE("app.keyboard_tabs: changing the tab, and pushing or popping a page, p
     SECTION("a tab change while a field of Settings has the focus")
     {
         app.choose_tab(SETTINGS_TAB);
-        activate(app, QStringLiteral("settingsFacilitator"));
+        activate(app, QStringLiteral("settingsTester"));
         QQuickItem* field =
             inside(app, QStringLiteral("settingsTextField"), app.need(QStringLiteral("settingsScreen")));
         focus_field(app, field);
@@ -2872,7 +2983,9 @@ TEST_CASE("help.settings_group: the Help group lists Quick help and the three on
     activate(app, QStringLiteral("settingsPrivacy"));
     const QVariantList opened = app.url_opener->property("opened").toList();
     REQUIRE(opened.size() == 3);
-    const QString site = opened.at(0).toString();
+    const QString guide = opened.at(0).toString();
+    CHECK(guide.endsWith(QStringLiteral("/guide/")));
+    const QString site = guide.chopped(QStringLiteral("guide/").size());
     CHECK(site.startsWith(QStringLiteral("https://")));
     CHECK(site.endsWith(QLatin1Char('/')));
     CHECK(opened.at(1).toString() == site + QStringLiteral("support/"));
@@ -3004,7 +3117,7 @@ TEST_CASE("shell.five_tabs: Errors, Interactions, Review, History and Settings i
             return QString();
         };
         CHECK(label_of(QStringLiteral("tabLog")) == QStringLiteral("Errors"));
-        CHECK(label_of(QStringLiteral("tabInteractions")) == QStringLiteral("Interactions"));
+        CHECK(label_of(QStringLiteral("tabInteractions")) == QStringLiteral("Observations"));
         CHECK(label_of(QStringLiteral("tabReview")) == QStringLiteral("Review"));
     }
     SECTION("iPad compact (a narrow window): the tabs share the whole bar")
@@ -3153,6 +3266,40 @@ TEST_CASE("shell.toggle: the switch shows and hides the tab, an empty board offe
     CHECK(app.shown(QStringLiteral("interactionsEmptyBoard")));
 }
 
+TEST_CASE("settings.names: the level of a name in shared logs is a choice, shown only while the second board is on",
+          "[ui][app][settings][interactions]")
+{
+    SECTION("off: no row")
+    {
+        App app(true, false);
+        app.with_boards(false);
+        app.load();
+        app.choose_tab(SETTINGS_TAB);
+        CHECK_FALSE(app.shown(QStringLiteral("settingsNames")));
+    }
+    SECTION("on: initials to begin with, and the choice is kept")
+    {
+        App app(true, false);
+        app.with_boards(true);
+        app.load();
+        app.choose_tab(SETTINGS_TAB);
+        QQuickItem* row = reveal_in_settings(app, QStringLiteral("settingsNames"));
+        CHECK(row->property("value").toString() == QStringLiteral("Initials"));
+        app.ui.tap(row);
+        app.play();
+        CHECK(app.need(QStringLiteral("settingsNamesInitials"))->property("checked").toBool());
+        CHECK_FALSE(app.need(QStringLiteral("settingsNamesFull"))->property("checked").toBool());
+        app.tap(QStringLiteral("settingsNamesFull"));
+        app.play();
+        CHECK(app.export_preferences->property("nameExport").toString() == QStringLiteral("full"));
+        CHECK(app.need(QStringLiteral("settingsNamesFull"))->property("checked").toBool());
+        app.tap(QStringLiteral("settingsNamesHidden"));
+        app.play();
+        CHECK(app.export_preferences->property("nameExport").toString() == QStringLiteral("hidden"));
+        CHECK(app.need(QStringLiteral("settingsNamesHidden"))->property("checked").toBool());
+    }
+}
+
 TEST_CASE("shell.toggle: turning the board off in Settings leaves Settings where it is and the tab bar of four",
           "[ui][app][shell]")
 {
@@ -3222,7 +3369,7 @@ TEST_CASE("shell.board_area: the Interactions board shares the header, composer 
     CHECK(app.ui.geometry(app.need(QStringLiteral("logComposer"))) == composer_errors);
     CHECK(app.shown(QStringLiteral("logLastBar")));
     CHECK_FALSE(app.shown(QStringLiteral("logBoard")));
-    CHECK(app.need(QStringLiteral("interactionsStripTitle"))->property("text").toString() == QStringLiteral("Interactions"));
+    CHECK(app.need(QStringLiteral("interactionsStripTitle"))->property("text").toString() == QStringLiteral("Observations"));
     CHECK(app.need(QStringLiteral("addInteractionTypes"))->isVisible());
 
     const QQuickItem* screen = app.need(QStringLiteral("logScreen"));
@@ -3390,6 +3537,6 @@ TEST_CASE("fold.state_kept: a fold or unfold on the Interactions board loses no 
         CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("interactions"));
         CHECK(app.shown(QStringLiteral("interactionsStrip")));
         CHECK(app.services.root().timeline()->rowCount() == entries);
-        CHECK(app.need(QStringLiteral("interactionsStripTitle"))->property("text").toString() == QStringLiteral("Interactions"));
+        CHECK(app.need(QStringLiteral("interactionsStripTitle"))->property("text").toString() == QStringLiteral("Observations"));
     }
 }

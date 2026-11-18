@@ -9,6 +9,8 @@
 
 #include "error_journaling/export_format.hpp"
 #include "error_journaling/ids.hpp"
+#include "error_journaling/interaction.hpp"
+#include "error_journaling/person.hpp"
 #include "error_journaling/log.hpp"
 #include "error_journaling/note_template.hpp"
 #include "error_journaling/result.hpp"
@@ -34,6 +36,18 @@ struct ExportContext
     /// The order of the totals line: board order, then master-list order (PRF-10). An error type used in the log but
     /// missing here is placed after these, in order of first use.
     std::vector<ErrorTypeId> m_TotalsOrder;
+    /// The label after the time on an interaction line (preference `interaction_marker`). Empty drops it, with its
+    /// space.
+    std::string_view m_InteractionMarker = export_format::DEFAULT_INTERACTION_MARKER;
+    /// How a person's name is written (`name_export`). Text that leaves the device uses the preference; the Review
+    /// screen uses FULL. Names appear only inside an interaction's line, never as a list.
+    NameLevel m_NameLevel = NameLevel::INITIALS;
+    /// The name of an interaction type by id, for an entry without a snapshot. Empty for an unknown id.
+    std::function<std::string_view(InteractionTypeId)> m_InteractionTypeName;
+    /// The current line pattern of an interaction type, if it has one.
+    std::function<std::optional<std::string>(InteractionTypeId)> m_InteractionPattern;
+    /// The name of a person, or none for one who is forgotten or unknown (reads as "someone").
+    std::function<std::optional<std::string>(const PersonId&)> m_PersonName;
 };
 
 enum class RenderError
@@ -43,8 +57,8 @@ enum class RenderError
     UNKNOWN_TEMPLATE,
     UNKNOWN_ZONE,
     UNKNOWN_ENTRY,
-    /// An interaction entry: the lookups for people and the name level arrive with package I-4 of the interactions board.
-    UNSUPPORTED_ENTRY
+    /// An interaction entry with no name snapshot whose type the context does not know.
+    UNKNOWN_INTERACTION_TYPE
 };
 
 /// The header block from the log's initial values: five lines, no trailing newline.

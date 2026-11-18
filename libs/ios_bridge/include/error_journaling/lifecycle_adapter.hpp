@@ -17,7 +17,7 @@ namespace ej::bridge
 
 /// The only code that listens to Qt for the lifecycle: `QGuiApplication::applicationStateChanged` (when the application
 /// is a QGuiApplication) and `aboutToQuit` become LifecycleEvents for the coordinator, which is plain C++. Whether Qt
-/// delivers Inactive and Suspended as iOS sends them is assumption A2 of docs/plan/stage-5.md, read from the
+/// delivers Inactive and Suspended as iOS sends them is assumption A2 of the Stage 5 plan, read from the
 /// `lifecycle:` log lines on a device.
 class LifecycleAdapter : public QObject
 {

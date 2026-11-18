@@ -19,7 +19,7 @@
    detached GPG signatures, an SPDX SBOM and build provenance, creates the GitHub Release, and for a
    final release fast-forwards `main` to the tag.
 
-`main` only ever moves by that fast-forward. The docs site is deployed from the push to `main`.
+`main` only ever moves by that fast-forward. The docs site does not wait for a release: it is deployed from a push to `develop` that changes the documentation (`docs/ci.md`, "The site address").
 
 ## The guide's pictures
 
@@ -32,7 +32,7 @@ is out of date: look at them against the app, and read the guide page that goes 
 
 ## Store listings
 
-The App Store and Google Play listings are text in `store/` (`store/README.md`, `docs/plan/stage-11.md`). After the
+The App Store and Google Play listings are text in `store/`. After the
 release workflow has put the build in TestFlight (and, with Stage 9, the bundle in Play internal testing):
 
 1. Run **Store metadata** (`gh workflow run store-metadata.yml --ref v1.0.0 -f store=appstore -f version=1.0.0 -f

@@ -182,5 +182,5 @@ TEST_CASE("The PRD example scenario has the expected entry kinds", "[log]")
     CHECK(std::holds_alternative<ErrorEntry>(log.entries()[0].m_Body));
     CHECK(std::holds_alternative<NoteEntry>(log.entries()[2].m_Body));
     CHECK(std::holds_alternative<HeaderChangeEntry>(log.entries()[4].m_Body));
-    CHECK(log.initial_header().m_Facilitator == "Sam Example");
+    CHECK(log.initial_header().m_Tester == "Sam Example");
 }

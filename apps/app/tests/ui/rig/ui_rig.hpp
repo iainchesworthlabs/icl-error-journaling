@@ -48,7 +48,7 @@ struct Node
     QString m_Value; ///< the accessible value, such as a count or a position
 };
 
-/// The common fixture of the QML tests (docs/plan/stage-4.md, "Tests"): a window of an iPhone 17 offscreen, an engine
+/// The common fixture of the QML tests: a window of an iPhone 17 offscreen, an engine
 /// that has the module `ErrorJournalingApp`, and the means to load a component, drive it with touch and keys, advance
 /// time without waiting, and read back the item tree with its accessibility data. One `UiRig` is one engine, so the
 /// `Theme` singleton is a fresh one in each.

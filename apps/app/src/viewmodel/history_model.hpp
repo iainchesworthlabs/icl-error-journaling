@@ -37,7 +37,7 @@
 namespace ej::viewmodel
 {
 
-/// The archived logs, newest first, grouped by date, with their shared state (DAY-04, DAY-05; docs/plan/stage-3.md,
+/// The archived logs, newest first, grouped by date, with their shared state (DAY-04, DAY-05; the Stage 3 plan,
 /// "HistoryModel"). Opening one binds a second `TimelineModel`, `reviewModel`, to the log's document, so the review
 /// screen, edit, delete, copy and share work on a past log without a second implementation.
 ///

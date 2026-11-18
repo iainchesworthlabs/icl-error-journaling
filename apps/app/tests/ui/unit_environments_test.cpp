@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The unit environments editor and its rename sheet (docs/plan/stage-7.md, 7.11; PRF-11): editor.environments and
+// The unit environments editor and its rename sheet: editor.environments and
 // editor.voiceover for it.
 #include "editors_sheet_support.hpp"
 

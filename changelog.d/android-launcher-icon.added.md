@@ -1,0 +1,1 @@
+**The Android app has its own launcher icon.** It is the same "f" and "t" on a board of tiles as on iOS, as an adaptive icon: it fits a circle, a rounded square or any other shape the phone's launcher uses, and on Android 13 and later it takes the colours of the phone's theme when themed icons are turned on. There is one icon, as Android has no dark one. Not yet run on a device.

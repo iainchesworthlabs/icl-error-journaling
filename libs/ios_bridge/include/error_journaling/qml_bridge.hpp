@@ -87,6 +87,10 @@ public:
     Q_INVOKABLE void startDictation();
     /// Ends dictation (the second tap on the microphone). Does nothing when not listening.
     Q_INVOKABLE void stopDictation();
+    /// Ends dictation at once and drops what the recogniser has not yet delivered: no `dictationText` follows, and the
+    /// words of the run that was cancelled never reach a note. For a note that is being committed (`stopDictation` leaves
+    /// the run open to take the last words). `dictationEnded("finished")` is sent. Does nothing when not listening.
+    Q_INVOKABLE void cancelDictation();
     /// How long dictation waits in silence before it stops by itself.
     static constexpr std::chrono::milliseconds DICTATION_SILENCE_LIMIT{60'000};
     /// For tests: the silence limit of this bridge.

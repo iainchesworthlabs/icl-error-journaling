@@ -245,7 +245,7 @@ QtObject {
 
     readonly property MiniBoard miniBoard: MiniBoard {}
 
-    // The layout rules of the larger windows (docs/plan/stage-8.md, "Layout rules"): where the classes begin, and the sizes
+    // The layout rules of the larger windows: where the classes begin, and the sizes
     // of the Regular and Wide classes. A Compact window (every phone) uses the values above and none of these. The
     // WindowLayout singleton (theme/WindowLayout.qml) picks the class from the window's size and derives sizes from these.
     component LayoutRules: QtObject {
@@ -421,6 +421,17 @@ QtObject {
         // Qt.font() takes a whole point size only, so a fractional size is set on the font afterwards. Hinting is off, as
         // on iOS, so that a fractional size keeps its own advances on a desktop instead of those of the nearest pixel.
         function make(fontWeight: int, underline: bool): font {
+            return makeAt(fontWeight, underline, 1);
+        }
+
+        // The role's font at a share of its size, as a new font: a font read from a property is a reference to it, and
+        // setting its size changes nothing, so a smaller size is made here, as the role's own is. A whole size stays a
+        // whole pixel size (rounded down, so that the smaller font is never the larger) and a fractional one a point size.
+        function scaledFont(share: real): font {
+            return share < 1 ? makeAt(weight, false, share) : font;
+        }
+
+        function makeAt(fontWeight: int, underline: bool, share: real): font {
             const spec = {
                 "weight": fontWeight,
                 "letterSpacing": effectiveLetterSpacing,
@@ -429,7 +440,7 @@ QtObject {
             };
             const whole = Math.abs(size - Math.round(size)) < 0.001;
             if (whole)
-                spec.pixelSize = Math.round(size);
+                spec.pixelSize = share < 1 ? Math.floor(Math.round(size) * share) : Math.round(size);
             if (resolvedFamily.length > 0)
                 spec.family = resolvedFamily;
             if (tabularNumbers)
@@ -438,7 +449,7 @@ QtObject {
                 };
             const made = Qt.font(spec);
             if (!whole)
-                made.pointSize = size * 72 / dpi;
+                made.pointSize = size * share * 72 / dpi;
             return made;
         }
 
@@ -648,7 +659,7 @@ QtObject {
             textScale: set.textScale
             dpi: set.dpi
         }
-        // The right column of the header card: the date in 600, the facilitator in 400.
+        // The right column of the header card: the date in 600, the tester in 400.
         readonly property FontRole captionSmall: FontRole {
             basePt: 12
             weight: 400
@@ -733,13 +744,13 @@ QtObject {
     // reducedMotionMs; the tile press keeps its scale, because it is feedback and not decoration. The sheet, toast,
     // page and swipe values and the two curves are desktop defaults from the design and the plan, recorded in
     // tokens.json ("easing", "tuning") and held by the test motion.curves; the owner confirms them on the iPhone
-    // in 4.18. Animators, not property animations, move things per frame (docs/plan/stage-4.md, Motion).
+    // in 4.18. Animators, not property animations, move things per frame.
     component Motion: QtObject {
         required property bool reduceMotion
         readonly property real tilePressScale: 0.96
         readonly property int tilePressMs: 120
         readonly property int undoToastVisibleMs: 5000
-        // How a tile is touched to log (docs/plan/stage-4.md, 4.17a). Time, not motion, so Reduce Motion does not change them.
+        // How a tile is touched to log. Time, not motion, so Reduce Motion does not change them.
         // The longest gap between the lift of a tap and the touch of the next for the two to be a double-tap, the time a finger
         // stays on a tile for a hold, how long the "Double-tap to log" hint stays after a single tap, and the least time between
         // two hints (counted from the start of one).
@@ -821,7 +832,7 @@ QtObject {
         text("Primary button label", c.textOnPrimary, c.primary);
         text("Primary button label, pressed", c.textOnPrimary, c.primaryPressed);
         text("Header card unit and date", c.textOnHeaderCard, c.headerCard);
-        text("Header card site, version and facilitator", c.headerCardTextSecondary, c.headerCard);
+        text("Header card site, version and tester", c.headerCardTextSecondary, c.headerCard);
         text("Delete label on the screen", c.destructive, c.background);
         text("Delete label on a card", c.destructive, c.surface);
         text("Delete label on a sheet", c.destructive, c.sheetBackground);

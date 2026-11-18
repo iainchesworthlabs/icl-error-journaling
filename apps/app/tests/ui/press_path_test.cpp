@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The perf cases of the rig (docs/plan/stage-4.md, "Tests"): perf.press_path, perf.scene and perf.first_frame, shown on
+// The perf cases of the rig: perf.press_path, perf.scene and perf.first_frame, shown on
 // the stub that follows the rules. Packages 4.5 and 4.7 point the same helpers at the Tile and at the Log screen.
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"

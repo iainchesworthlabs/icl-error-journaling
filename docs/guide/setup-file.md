@@ -156,6 +156,19 @@ The file below is the sample setup that the app's tests use. All the names in it
       "retired": false,
       "board_position": 4,
       "line_pattern": "Gave {person} {value}"
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d5",
+      "name": "Greeted",
+      "retired": false,
+      "board_position": 5
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d6",
+      "name": "Helped",
+      "retired": false,
+      "board_position": 6,
+      "line_pattern": "Helped {person}"
     }
   ]
 }
@@ -194,7 +207,7 @@ The file below is the sample setup that the app's tests use. All the names in it
 | `error_types` | Required | The error types. | A list, below. It may be empty. |
 | `locations` | Required | The places you work in. | A list, below. It may be empty. |
 | `note_templates` | Required | The quick notes. | A list, below. It may be empty. |
-| `interaction_types` | Optional | The tiles of the second board, Interactions. | A list, below. It may be empty. Without this key your interaction types are left as they are. |
+| `interaction_types` | Optional | The tiles of the second board, Observations. | A list, below. It may be empty. Without this key your interaction types are left as they are. With no types at all, the Observations board is empty: the app has no interaction types of its own. |
 
 ## Preferences
 
@@ -208,7 +221,7 @@ The file below is the sample setup that the app's tests use. All the names in it
 | `time_format` | Optional | How times are shown and shared. | An object, below. Without it: 24-hour clock, no seconds. |
 | `include_totals` | Optional | Whether a shared log ends with a totals line, per error type. | `true` or `false`. Without it: `false`. |
 | `error_prefix` | Optional | The text before the error name on each error line of a shared log. | Text, up to 12 characters, on one line; may be empty. Without it: `T|`. |
-| `interactions_board_enabled` | Optional | Whether the second board, Interactions, is on. | `true` or `false`. Without it, the app leaves its own setting as it is (it is off until someone turns it on). |
+| `interactions_board_enabled` | Optional | Whether the second board, Observations, is on. | `true` or `false`. Without it, the app leaves its own setting as it is (it is off until someone turns it on). |
 
 ### Time format
 
@@ -263,7 +276,7 @@ that goes in the log, with an Insert answer button for the answer.
 
 ## Interaction types
 
-Each entry in `interaction_types` is one tile of the second board, Interactions. It works like an error type, with one
+Each entry in `interaction_types` is one tile of the second board, Observations. It works like an error type, with one
 addition: a type can have the line that goes in the log, with `{person}` where the people go and `{value}` where a typed
 answer goes. The line takes the place of a separate template. A type with no `line_pattern` shows as its name. The app
 works out from the line whether to ask for a person, for text or for nothing after a tap.

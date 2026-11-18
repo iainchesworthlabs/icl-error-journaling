@@ -83,7 +83,7 @@ struct SettingsRig
 [[nodiscard]] inline Configuration scenario_configuration()
 {
     Configuration configuration;
-    configuration.m_Facilitator = "Sam Example";
+    configuration.m_Tester = "Sam Example";
     configuration.m_UnitPrefix = "UNIT";
     const std::pair<std::uint64_t, const char*> errors[] = {
         {ERROR_WRONG_RESPONSE, "Wrong Response"},         {ERROR_MUTE_DELAY, "Mute Delay"},

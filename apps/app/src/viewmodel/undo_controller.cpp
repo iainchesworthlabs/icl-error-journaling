@@ -142,6 +142,13 @@ void UndoController::open_for_added(LogDocument& document, const Entry& entry)
         m_ErrorType = error->m_ErrorType;
         m_Repeat = count;
     }
+    else if (const auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body))
+    {
+        // Stage 14: a tap on the Interactions board. Same toast and the same undo as an error tap; no repeat count.
+        open_toast(Kind::TAP, document, entry.m_Id,
+                   from_utf8(interaction->m_TypeLabel + " logged at " + time_text(entry.m_Captured)));
+        m_ErrorType = ErrorTypeId{};
+    }
     else if (const auto* note = std::get_if<NoteEntry>(&entry.m_Body))
     {
         open_toast(Kind::NOTE, document, entry.m_Id, from_utf8("Note added at " + time_text(entry.m_Captured)));

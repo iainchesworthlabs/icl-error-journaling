@@ -5,7 +5,7 @@
     python tools/visual/fold_mockups.py [--check]
 
 The foldable pages follow the same layout rules as the iPad pages of Stage 8, widened by the rules of
-docs/plan/stage-13.md ("Layout rules"). They reuse the building blocks of tools/visual/ipad_mockups.py (the header card,
+the Stage 13 plan ("Layout rules"). They reuse the building blocks of tools/visual/ipad_mockups.py (the header card,
 the composer, the log rows, the sheets) and take every colour from docs/design/tokens.json. Change a rule here and in the
 plan page together, then run the script again. With --check it writes nothing and fails when a file differs from what it
 would write.
@@ -30,7 +30,7 @@ from ipad_mockups import ENTRIES, TYPES, icon
 ROOT = base.ROOT
 SCREENS = base.SCREENS
 
-# Layout rules (docs/plan/stage-13.md). Compact values are the phone's; Regular and Wide values are Stage 8's.
+# Layout rules. Compact values are the phone's; Regular and Wide values are Stage 8's.
 COMPACT = {
     "margin": 16,
     "gap": 12,
@@ -540,7 +540,7 @@ def settings_screen(p: Page) -> str:
             ]
         )
         + p.grouped(
-            [("Facilitator", "Sam Example", True), ("Time format", "24-hour", True)]
+            [("Tester", "Sam Example", True), ("Time format", "24-hour", True)]
         )
         + p.grouped([("Import or export setup", "", True)])
         + "</div>"

@@ -1,6 +1,6 @@
 # Field Test – design package v1
 
-The facilitator approved the eight light-mode screens (1 to 8 below) on 7 Nov 2026. They are the visual reference for Stage 4 of the implementation plan. Package 4.2 of Stage 4 added the screens that package lacked (9 to 34) and the dark palette; the owner reviewed every light and dark screen on 7 Nov 2026 and accepted them; Stage 4 builds them on the owner's approval (owner, 7 Nov 2026), and the facilitator approves them on a TestFlight build, with any change she asks for going into a later build (see [Review of the 4.2 drafts](#review-of-the-42-drafts)). All names, sites and error types shown are fictional placeholders; the real values come only from the configuration file at runtime.
+The tester approved the eight light-mode screens (1 to 8 below) on 7 Nov 2026. They are the visual reference for the app's screens. Package 4.2 of Stage 4 added the screens that package lacked (9 to 34) and the dark palette; the owner reviewed every light and dark screen on 7 Nov 2026 and accepted them; Stage 4 builds them on the owner's approval (owner, 7 Nov 2026), and the tester approves them on a TestFlight build, with any change she asks for going into a later build (see [Review of the 4.2 drafts](#review-of-the-42-drafts)). All names, sites and error types shown are fictional placeholders; the real values come only from the configuration file at runtime.
 
 ## What is here
 
@@ -8,6 +8,7 @@ The facilitator approved the eight light-mode screens (1 to 8 below) on 7 Nov 20
 | --- | --- |
 | `tokens.json` | Colours (light and dark), tile palette (light and dark), type scale, spacing, radii, sizes and motion values taken from the screens. |
 | `contrast.md` | The hand-checked contrast ratios of every dark text and non-text pair, and the hue check of the dark tiles. |
+| App icon | Not a file here: `tools/store/make_app_icon.py` draws it (see [The app icon](#the-app-icon)). |
 | `screens/Name.dc.html` | Mock-up source for each screen in light mode: plain HTML with inline styles at iPhone 17 size (402 × 874 pt). |
 | `screens/Name.dark.dc.html` | The same screen in dark mode. Every screen below has both files. |
 | `screens/Name.ipad-portrait.dc.html`, `screens/Name.ipad-landscape.dc.html` | The iPad layouts of Stage 8, with a `.dark` version of each (see [iPad screens](#ipad-screens-stage-8-drafts-november-2026)). |
@@ -19,18 +20,18 @@ The `.dc.html` files were authored for a design-canvas runtime (`support.js`, no
 
 | # | File | Screen | Key behaviour |
 | --- | --- | --- | --- |
-| 1 | `Main.dc.html` | Log (main board) | Header card (unit, site, version, date, facilitator) opens Today's details. Note composer with template chips. "Last" bar shows the latest entry and today's count, and opens Review. 3 × 4 board: 11 error tiles with count badges plus Other. A tile is logged by a double-tap (two taps within 0.3 s; the haptic and the press are on the second tap). One tap logs nothing and shows a low dark card above the toast, "Double-tap to log" (2 s, at most once every 5 s; it takes no touch; the prototype shows it after a single click). The Other tile opens on one tap. Undo toast for 5 s, "×N" on repeat double-taps. Holding a tile for half a second logs it with a note: with a note typed it is logged on the same line (toast "… with note", one Undo gives the note back), with the box empty the Edit entry sheet opens on the new entry (BRD-07; the prototype shows the first). The note box says "Type a note, then hold a tile…". Tab bar: Log, Review, History, Settings. |
+| 1 | `Main.dc.html` | Log (main board) | Header card (unit, site, version, date, tester) opens Today's details. Note composer with template chips. "Last" bar shows the latest entry and today's count, and opens Review. 3 × 4 board: 11 error tiles with count badges plus Other. A tile is logged by a double-tap (two taps within 0.3 s; the haptic and the press are on the second tap). One tap logs nothing and shows a low dark card above the toast, "Double-tap to log" (2 s, at most once every 5 s; it takes no touch; the prototype shows it after a single click). The Other tile opens on one tap. Undo toast for 5 s, "×N" on repeat double-taps. Holding a tile for half a second logs it with a note: with a note typed it is logged on the same line (toast "… with note", one Undo gives the note back), with the box empty the Edit entry sheet opens on the new entry (BRD-07; the prototype shows the first). The note box says "Type a note, then hold a tile…". Tab bar: Log, Review, History, Settings. |
 | 2 | `Other.dc.html` | Other error picker | Sheet with search, "Not on your board" types, board types with today's counts, and "Add a new error type". |
-| 3 | `Header.dc.html` | Today's details | Facilitator and date (read only), unit number with fixed prefix and numeric keypad, an optional Number suffix row (None, prod, dev) that opens a short list, location list with Other, the robot software version with a fixed "v" and inline validation, an optional Commit field under it, and an Other versions row that opens the sheet of further labelled versions (HDR-10), "Start logging". Errors can be logged before every field is filled. |
+| 3 | `Header.dc.html` | Today's details | Tester and date (read only), unit number with fixed prefix and numeric keypad, an optional Number suffix row (None, prod, dev) that opens a short list, location list with Other, the robot software version with a fixed "v" and inline validation, an optional Commit field under it, and an Other versions row that opens the sheet of further labelled versions (HDR-10), "Start logging". Errors can be logged before every field is filled. |
 | 4 | `ChangeVersion.dc.html` | Software version | Two plain choices: "It changed during the day" (adds a timed entry) or "I typed it wrong" (corrects, no entry). From and To, an optional Commit, time defaulting to now, and a preview of the exact log line. |
 | 5 | `Review.dc.html` | Today's log | Header block and timeline in export wording, black and white only. Swipe a row for Copy and Delete. Copy-all in the navigation bar, "Share log" button. |
-| 6 | `EditEntry.dc.html` | Edit entry | Sheet with Cancel and Save: error type, time, note, a preview of the shared line, and "Delete entry". The facilitator chose a separate sheet over editing in place. |
+| 6 | `EditEntry.dc.html` | Edit entry | Sheet with Cancel and Save: error type, time, note, a preview of the shared line, and "Delete entry". The tester chose a separate sheet over editing in place. |
 | 7 | `NewDay.dc.html` | New day prompt | Names the new date; warns when the open log is unshared (never shared, or changed since its last share: "has changed since it was last shared"). "Start a new log", "Share [day]'s log first", "Keep [day]'s log open". |
-| 8 | `BoardSettings.dc.html` | Settings | Miniature board: hold and drag to move, tap to swap a type. Rows for error types, note templates, locations, facilitator, time format, and import or export of the setup, and under them, in a group of its own, About Field Test (PRF-12; only this mock-up draws the row, below the others it is under the tab bar). |
+| 8 | `BoardSettings.dc.html` | Settings | Miniature board: hold and drag to move, tap to swap a type. Rows for error types, note templates, locations, tester, time format, and import or export of the setup, and under them, in a group of its own, About Field Test (PRF-12; only this mock-up draws the row, below the others it is under the tab bar). |
 
 ### Screens added by package 4.2 (drafts)
 
-Each row has a light file and a dark file (`Name.dc.html`, `Name.dark.dc.html`). Bindings to the Stage 3 objects are in the "Screens and what they bind to" table of `docs/plan/stage-4.md`.
+Each row has a light file and a dark file (`Name.dc.html`, `Name.dark.dc.html`).
 
 | # | File | Screen | PRD | What it shows |
 | --- | --- | --- | --- | --- |
@@ -53,7 +54,7 @@ Each row has a light file and a dark file (`Name.dc.html`, `Name.dark.dc.html`).
 | 25 | `TemplateEdit` | Edit a template | PRF-06, NOTE-04 | One sentence on what a template is; Name, Question to ask, Line in the log with an Insert answer button (the answer shows as `[answer]`), and an Example card with the line as the log will show it. |
 | 26 | `TemplateEditInvalid` | Template pattern refused | PRF-06 | The same page with the inline message from `validatePattern`, no example, Save disabled. |
 | 27 | `FirstLaunch` | First launch | PRF-09 | "Import a setup file" or "Set up by hand", with one line on what a setup file holds. |
-| 28 | `FirstLaunchManual` | First launch, by hand | PRF-09 | Facilitator and UNIT prefix, then Continue. |
+| 28 | `FirstLaunchManual` | First launch, by hand | PRF-09 | Tester and UNIT prefix, then Continue. |
 | 29 | `ImportExport` | Import or export | PRF-08 | The two rows, what a setup file does and does not contain, and the "Exported to Files" confirmation. |
 | 30 | `ImportConfirm` | Import confirmation | PRF-08 | The counts from `importPrepared`, the warning that the setup is replaced and past logs are not, "Replace my setup" and Cancel. |
 | 31 | `ImportErrors` | Import refused | PRF-08 | The core's messages in file order, "Nothing was changed", "Choose another file". Binds to `importFailed`. |
@@ -82,7 +83,7 @@ button "Change error type" (it was "Replace type").
 
 ### iPad screens (Stage 8 drafts, November 2026)
 
-The iPad layouts of [Stage 8](../plan/stage-8.md), for the owner's review. Each screen has four files:
+The iPad layouts of Stage 8, for the owner's review. Each screen has four files:
 `Name.ipad-portrait.dc.html`, `Name.ipad-landscape.dc.html`, and a `.dark` version of each. The design frame is an iPad
 Air 11-inch, 820 × 1180 pt in portrait. They are generated by `tools/visual/ipad_mockups.py` from `tokens.json` and the
 layout rules of the Stage 8 plan, so edit the script, not the files. `tools/visual/render_mockups.py` renders them at their
@@ -102,7 +103,7 @@ own size.
 
 ### Foldable screens (Stage 13 drafts, November 2026)
 
-The foldable layouts of [Stage 13](../plan/stage-13.md), for the owner's review. Each page has a light and a dark file.
+The foldable layouts of Stage 13, for the owner's review. Each page has a light and a dark file.
 They are generated by `tools/visual/fold_mockups.py`, which reuses the building blocks of `ipad_mockups.py`, from
 `tokens.json` and the layout rules of the Stage 13 plan. To change them, edit the script, not the files. The frames are
 design frames named by shape, not device specifications. On the half-folded pages the fold is an annotation (a band with a
@@ -126,7 +127,7 @@ dashed line, marked FOLD), and on the short cover screen the side status bar is 
 
 ### In-app help screens (Stage 10 drafts, November 2026)
 
-The in-app help of [Stage 10](../plan/stage-10.md), for the owner's review before package 10.6 writes any QML. Each page has
+The in-app help of Stage 10, for the owner's review before package 10.6 writes any QML. Each page has
 a light and a dark file at the phone's frame (402 × 874 pt). They are generated by `tools/visual/help_mockups.py` from
 `tokens.json` and the proposed wording of the help, so edit the script, not the files. The help button is one shared
 component: a question mark in a 44 pt target in the trailing slot of the navigation bar, with an accessible name that
@@ -153,7 +154,7 @@ days on which the person logged: the days are kept in `help-state.ini` beside th
 
 ### Interactions board and people (draft, November 2026)
 
-The second board of [the interactions design](../plan/stage-14.md), drawn for the owner's review. Phone only; the iPad and fold layouts are package I-8. Each has a light and a dark file. Everything shown is a placeholder (Sam Example is the facilitator, Alex Sample and the others are people the tester has saved). The tile hues of the second board are a draft second family; they are checked by the contrast test in package I-5.
+The second board of the interactions design, drawn for the owner's review. Phone only; the iPad and fold layouts are package I-8. Each has a light and a dark file. Everything shown is a placeholder (Sam Example is the tester, Alex Sample and the others are people the tester has saved). The tile hues of the second board are a draft second family; they are checked by the contrast test in package I-5.
 
 | # | File | Screen | Key behaviour |
 | --- | --- | --- | --- |
@@ -197,23 +198,34 @@ Decision 10 of the Stage 4 plan, drawn in `*.dark.dc.html` and held in `tokens.j
 
 How the dark variants of the original eight screens were made: each light colour was replaced by the dark token with the same role (screen, card, sheet card, text, secondary text, border, link, tile slot), with no layout change.
 
+## The app icon
+
+The owner drew it on paper: an "f" and a "t" (for Field Test) sharing a board of tiles, 4 × 4. It was redrawn in the style of the tiles (rounded squares with a small gap) and the colours were chosen by the owner from options built on the app's palette.
+
+- **The "f"** is six white tiles (a stem in the left column, arms on the first and third rows), so the whole icon is one board. **The "t"** is the seven filled tiles, one of them in the notch between the arms of the "f". **Three outlined squares** are the empty tiles, one in the notch below the arms.
+- **Colours:** leaf green `#4CAF6A` background, white "f", and the "t" and the outlines in `#1F303C`. White on the green is 2.8 to 1 and the "t" on the green is 5.0 to 1. The "f" was a thin outline at first, and it blurred into the background at small sizes, so it is filled: first as one solid shape, then, at the owner's choice, as tiles. The green is the owner's choice for the icon only: the tile palette above has no green, by its own rule.
+- **One icon for light and dark.** The green background works in both, so there is no separate dark icon.
+- `tools/store/make_app_icon.py` draws it as a 1024 px opaque PNG into `apps/app/packaging/ios/Assets.xcassets/AppIcon.appiconset`. Change the icon in the script and run it again; do not edit the PNG. `tools/store/make_play_graphics.py` makes the Google Play icon from it.
+- **Android** has the same icon as an adaptive icon. `tools/store/make_android_icon.py` makes it in `apps/app/packaging/android/res`: a vector foreground, the leaf green as the background colour and a one-colour layer that Android 13 and later tint for themed icons. The board is 50 dp wide on the 108 dp canvas, so no launcher shape (circle, rounded square, squircle) cuts it. Run the script again to change it; do not edit those files. `--preview` draws it in the three shapes.
+- Not yet made: the desktop tiles and window icon. Desktop is v2 (Stage 12), so they wait for its packaging; they will be made from the same drawing. The Android splash screen's colour (Stage 9, 9.7) is also not done: until then Android 12 and later show this icon on the system's default splash background.
+
 ## Review of the 4.2 drafts
 
-1. The owner opens the `.dc.html` files (see "What is here" for how) and the dark ones beside them, checks them against `docs/plan/stage-4.md` and the PRD, and asks for changes. Redrawing at this stage is cheap; rebuilding QML is not.
-2. The facilitator approves the screens and the dark palette after the owner is satisfied. The approval is recorded by changing the first paragraph of this file and the "source" line of `tokens.json`.
-3. A screen package of Stage 4 starts when the owner has approved the screens it builds (owner decision, 7 Nov 2026). The facilitator's approval comes from using them on TestFlight; what she asks for is fixed in a later build. The dark palette also gates the Stage 4 exit gate.
+1. The owner opens the `.dc.html` files (see "What is here" for how) and the dark ones beside them, checks them against the app, and asks for changes. Redrawing at this stage is cheap; rebuilding QML is not.
+2. The tester approves the screens and the dark palette after the owner is satisfied. The approval is recorded by changing the first paragraph of this file and the "source" line of `tokens.json`.
+3. A screen package of Stage 4 starts when the owner has approved the screens it builds (owner decision, 7 Nov 2026). The tester's approval comes from using them on TestFlight; what she asks for is fixed in a later build. The dark palette also gates the Stage 4 exit gate.
 4. Package 4.1 turned the contrast table into a test (`Theme.contrastPairs` and `contrast_test.cpp`, which run every pair in both schemes). A change to a dark value updates `contrast.md` in the same pull request. The test also holds the approved light palette to the same rule, and finds four pairs under it: the border of the Other tile (about 2.2 to 1 on the screen, 2.4 on a card, against 3) and the placeholder text (about 4.2 to 1 in a field, 4.4 on a card, against 4.5). They are recorded in `Theme` as exceptions at the ratio they have, so they cannot get worse, and are for the owner to decide. Under a simulated deuteranopia the light slots 4 and 7 (aqua and steel) are 0.3 apart, which is the same colour; the label carries the meaning of a tile, never the colour.
 5. Package 4.1 added to `tokens.json` what the QML needs so that it writes no literal: the colours `textOnPrimary`, `textOnHeaderCard`, `textOnDestructive` and `toastText` (white, as in `contrast.md`), the sizes `tileWidthPt` 118 and `tileMinimumPt` 88, the `scaleCap` of the four capped type roles and the range of the text scale, and starting values for the motion of a sheet, a toast, a page and a swipe, which package 4.14 recorded as desktop defaults (with the easing curves, in `motion.easing`), to be confirmed on the iPhone in 4.18; `motion.curves` holds them.
 
 ## Human factors behind the layout
 
 - **Thumb zone.** The board fills the lower part of the screen for one-handed use; the rarely changed header sits at the top.
-- **Spatial memory.** Fixed positions and a colour per error type let the facilitator find a tile without reading. Colours follow the type when the board is reordered.
+- **Spatial memory.** Fixed positions and a colour per error type let the tester find a tile without reading. Colours follow the type when the board is reordered.
 - **No interruptions on capture.** A tap never opens a dialog. Feedback is immediate from the second tap of a double-tap (haptic, press animation, "Last" bar) and the undo toast confirms what was logged and when. One tap logs nothing, which is the point: it only says "Double-tap to log".
 - **Slip detection.** A double-tap on the same tile while its toast is visible shows "×2", making a repeated entry obvious. (A single accidental tap no longer logs: the double-tap of 4.17a, `motion.doubleTapMs`.)
 - **Recognition over recall.** Template chips start common notes; Other lists every type with search.
 - **Correct later, not now.** Edits and deletes live on the review screen; destructive actions are behind a swipe or a separate button.
-- **Plain-language branching.** The version-change sheet asks what happened in the facilitator's words and previews the line it will write.
+- **Plain-language branching.** The version-change sheet asks what happened in the tester's words and previews the line it will write.
 - **Protect the end-of-day hand-off.** The new-day prompt flags an unshared log and offers to share it first.
 
 ## Decisions taken during design review

@@ -4,7 +4,7 @@
 
     python3 tools/ci/check_qml_tests.py [--root .]
 
-docs/plan/stage-4.md, "Coverage": Catch2 does not measure QML, so the rule is that each component and each screen has a
+the Stage 4 plan, "Coverage": Catch2 does not measure QML, so the rule is that each component and each screen has a
 test file. `qml/theme/Theme.qml` is tested by `apps/app/tests/ui/theme_test.cpp`, `qml/components/TabBar.qml` by
 `tab_bar_test.cpp`, `qml/screens/log/LogScreen.qml` by `log_screen_test.cpp`: the file name in snake case plus `_test.cpp`,
 in `apps/app/tests/ui/`, with at least one `TEST_CASE`. A file under a folder named `private` is a part of the file next to

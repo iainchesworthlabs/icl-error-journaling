@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// HeaderCard (docs/plan/stage-4.md, 4.6): header_card.fields and header_card.skeleton.
+// HeaderCard: header_card.fields and header_card.skeleton.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"
@@ -26,7 +26,7 @@ constexpr auto FULL = R"(
         locationText: "North Site"
         versionText: "1.4.2"
         dateText: "Sat 7 Nov"
-        facilitatorText: "Sam Example"
+        testerText: "Sam Example"
         missingFields: []
     })";
 
@@ -40,7 +40,7 @@ constexpr auto EMPTY = R"(
         locationText: ""
         versionText: ""
         dateText: "Sat 7 Nov"
-        facilitatorText: "Sam Example"
+        testerText: "Sam Example"
         missingFields: ["unit_number", "location", "software_version"]
     })";
 
@@ -255,4 +255,14 @@ TEST_CASE("header_card.cross_cutting: names, targets, order and text scale, in l
         rig.set_reduce_motion(true);
         expect_clean(check_motion_reduced(rig));
     }
+}
+
+TEST_CASE("header_card.extra_version: a carried version with no value is named in the strip by its name", "[ui][header_card]")
+{
+    UiRig rig;
+    QQuickItem* card = card_of(rig, FULL);
+    card->setProperty("missingFields", QStringList{QStringLiteral("extra_version:Influencer")});
+    rig.layout();
+    CHECK(card->property("missingText").toString() == QStringLiteral("Influencer version"));
+    CHECK(shown_texts(rig, card).contains(QStringLiteral("Not filled in yet: Influencer version")));
 }

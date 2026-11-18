@@ -30,7 +30,7 @@ namespace ej::viewmodel
 {
 
 /// The entries of one log in time order, for the "Last" bar and the review screen (REV-01 to REV-04;
-/// docs/plan/stage-3.md, "TimelineModel"). The same class serves the open log and a past log opened from History:
+/// the Stage 3 plan, "TimelineModel"). The same class serves the open log and a past log opened from History:
 /// `follow` binds it to whatever log is open, `bind` to one document.
 ///
 /// Every string it shows comes from the export renderer, with the time format of the configuration in force and the
@@ -140,6 +140,16 @@ public:
     /// `fieldKey` and `newValue` (the stored text). Empty for an entry that is not in the bound log. A deleted entry is
     /// described too.
     Q_INVOKABLE QVariantMap entryForEdit(const QString& entryId) const;
+    /// The interaction types an interaction entry can be changed to: the types that are not retired, and the entry's
+    /// own type even when it is retired or gone. Each is {typeId, name}; empty for an entry that is not an interaction.
+    Q_INVOKABLE QVariantList interactionTypesFor(const QString& entryId) const;
+
+    /// The list of people changed (loaded, a person added, renamed, retired or forgotten): the rows are made again, so
+    /// that a name is the one in the list now ("someone" once forgotten).
+    void refresh_names()
+    {
+        refresh_wording();
+    }
 
     /// The plain reason `edit` cannot be saved, or an empty string when it can. Nothing is written.
     Q_INVOKABLE QString validateEdit(const QString& entryId, const QVariantMap& edit) const;

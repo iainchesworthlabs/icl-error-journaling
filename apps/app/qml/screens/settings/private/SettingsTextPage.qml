@@ -2,7 +2,7 @@
 import QtQuick
 import ErrorJournalingApp
 
-// The page that edits one line of text of the setup (Stage 4, package 4.12; PRF-01, PRF-02): the facilitator or the unit
+// The page that edits one line of text of the setup (Stage 4, package 4.12; PRF-01, PRF-02): the tester or the unit
 // prefix, by `kind`. Save asks the model once. If the model refuses, its words stay under the field, the old value stays
 // where it was, and the page stays open; if it accepts, the page closes and the list shows the value when it has been
 // saved.
@@ -15,30 +15,30 @@ SettingsPage {
     id: root
 
     required property var settings
-    // "facilitator" or "unitPrefix".
+    // "tester" or "unitPrefix".
     required property string kind
 
-    readonly property bool isFacilitator: kind === "facilitator"
+    readonly property bool isTester: kind === "tester"
     // The value in force, which the draft starts from and is compared with.
-    readonly property string current: isFacilitator ? settings.facilitator : settings.unitPrefix
+    readonly property string current: isTester ? settings.tester : settings.unitPrefix
     property string draft: current
     // The model's refusal of the last Save, shown under the field until the person types again.
     property string refusal: ""
     // The name of the page that this one was opened from, when it is not the usual one (the unit prefix is opened from the
-    // Facilitator page and from the Settings list).
+    // Tester page and from the Settings list).
     property string backText: ""
 
     // The page was left, by Back or by a Save that the model accepted.
     signal closeRequested
 
     function save(): void {
-        const answer = isFacilitator ? settings.setFacilitator(draft) : settings.setUnitPrefix(draft);
+        const answer = isTester ? settings.setTester(draft) : settings.setUnitPrefix(draft);
         refusal = answer;
         if (answer.length === 0)
             closeRequested();
     }
 
-    title: isFacilitator ? qsTr("Facilitator") : qsTr("Unit prefix")
+    title: isTester ? qsTr("Tester") : qsTr("Unit prefix")
     leadingText: backText.length > 0 ? backText : qsTr("Settings")
     trailingText: qsTr("Save")
     trailingEnabled: draft !== current
@@ -50,9 +50,9 @@ SettingsPage {
         id: field
 
         objectName: "settingsTextField"
-        label: root.isFacilitator ? qsTr("Your name") : qsTr("Prefix")
+        label: root.isTester ? qsTr("Your name") : qsTr("Prefix")
         text: root.draft
-        hint: root.isFacilitator ? qsTr("Shown at the top of the log. A new name applies from the next log you start; the log that is open keeps the name it started with.") : qsTr("The text before the unit number in the log, for example UNIT.")
+        hint: root.isTester ? qsTr("Shown at the top of the log. A new name applies from the next log you start; the log that is open keeps the name it started with.") : qsTr("The text before the unit number in the log, for example UNIT.")
         errorText: root.refusal
         onTextEdited: text => {
             root.refusal = "";

@@ -19,20 +19,22 @@ SettingsPage {
     required property var settings
     // BoardState, for the Second board group: `interactionsEnabled`. Null leaves the group out.
     property var boards: null
-    // The foot of the list: the version and platform text, as a plain caption. Empty hides it. The build's facts, the licence and
-    // the timing line (five taps on the version) are on the About page, which the last row opens.
-    property string aboutText
+    property var exportPreferences: null
     // Whether the About row is there: the About model is given. The screen sets it from `about`.
     property bool aboutAvailable: false
 
     signal errorTypesRequested
+    signal interactionTypesRequested
+    signal peopleRequested
     signal templatesRequested
     signal locationsRequested
     signal unitEnvironmentsRequested
-    signal facilitatorRequested
+    signal testerRequested
     signal unitPrefixRequested
     signal errorPrefixRequested
     signal timeFormatRequested
+    // The Names in shared logs row was tapped.
+    signal namesRequested
     signal importExportRequested
     signal aboutRequested
     signal quickHelpRequested
@@ -80,6 +82,15 @@ SettingsPage {
     }
 
     // The row of the time format says what the format is.
+    // The words of the level of a name in text that leaves the device.
+    function nameLevelText(level: string): string {
+        if (level === "full")
+            return qsTr("Full name");
+        if (level === "hidden")
+            return qsTr("Someone");
+        return qsTr("Initials");
+    }
+
     function timeFormatText(style: string, seconds: bool): string {
         if (style === "12h")
             return seconds ? qsTr("12-hour with seconds") : qsTr("12-hour");
@@ -159,14 +170,33 @@ SettingsPage {
             height: Theme.space.tileGap
         }
 
-        MiniBoard {
-            id: board
+        // On the phone the board sits straight on the page. In a larger window it is in a card, as the iPad mock-ups draw it
+        // (BoardSettings.ipad-*): the surface colour, 16 pt corners and 12 pt of padding.
+        Rectangle {
+            id: boardCard
 
+            readonly property bool carded: !WindowLayout.compact
+            readonly property real padding: carded ? Theme.space.sectionGap : 0
+
+            objectName: "settingsBoardCard"
             width: parent.width
-            model: root.settings.boardLayout
-            onMoveRequested: (fromPosition, toPosition) => root.move(fromPosition, toPosition)
-            onReplaceRequested: position => root.replaceRequested(position, board.tileItem(position - 1).typeId)
-            onAddRequested: position => root.replaceRequested(position, "")
+            height: board.height + 2 * padding
+            radius: Theme.radius.card
+            color: carded ? Theme.colour.surface : "transparent"
+
+            MiniBoard {
+                id: board
+
+                objectName: "settingsBoard"
+
+                x: boardCard.padding
+                y: boardCard.padding
+                width: boardCard.width - 2 * boardCard.padding
+                model: root.settings.boardLayout
+                onMoveRequested: (fromPosition, toPosition) => root.move(fromPosition, toPosition)
+                onReplaceRequested: position => root.replaceRequested(position, board.tileItem(position - 1).typeId)
+                onAddRequested: position => root.replaceRequested(position, "")
+            }
         }
 
         // 10 pt under the resting board and 8 pt under the panel of a selected tile, as the two mock-ups have it.
@@ -204,10 +234,45 @@ SettingsPage {
 
             SettingsSwitchRow {
                 objectName: "settingsSecondBoardRow"
-                text: qsTr("Second board: Interactions")
+                text: qsTr("Second board: Observations")
                 description: qsTr("For what you did, as well as what went wrong")
                 checked: root.boards !== null && root.boards.interactionsEnabled
-                onToggled: wanted => root.boards.interactionsEnabled = wanted
+                onToggled: wanted => {
+                    root.boards.interactionsEnabled = wanted;
+                    // Turned on with nothing set up: go straight to the types (Stage 14, 4.1).
+                    if (wanted && root.settings.interactionTypes.rowCount() === 0)
+                        root.interactionTypesRequested();
+                }
+            }
+
+            // The setup of the second board is here, under its switch, and only while the board is on. A type with no
+            // [person] never opens the picker, so the People row is for those who want names.
+            ListRow {
+                objectName: "settingsInteractionTypes"
+                visible: root.boards !== null && root.boards.interactionsEnabled
+                text: qsTr("Observation types")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.interactionTypesRequested()
+            }
+
+            ListRow {
+                objectName: "settingsPeople"
+                visible: root.boards !== null && root.boards.interactionsEnabled
+                text: qsTr("People")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.peopleRequested()
+            }
+
+            ListRow {
+                objectName: "settingsNames"
+                visible: root.boards !== null && root.boards.interactionsEnabled && root.exportPreferences !== null
+                text: qsTr("Names in shared logs")
+                value: root.nameLevelText(root.exportPreferences !== null ? root.exportPreferences.nameExport : "")
+                minimumHeight: Theme.size.rowHeightCompact
+                showChevron: true
+                onActivated: root.namesRequested()
             }
         }
 
@@ -254,16 +319,16 @@ SettingsPage {
             }
 
             ListRow {
-                objectName: "settingsFacilitator"
-                text: qsTr("Facilitator")
-                value: root.settings.facilitator
+                objectName: "settingsTester"
+                text: qsTr("Tester")
+                value: root.settings.tester
                 minimumHeight: Theme.size.rowHeightCompact
                 showChevron: true
-                onActivated: root.facilitatorRequested()
+                onActivated: root.testerRequested()
             }
 
             // The unit prefix and the totals line are on the list and nowhere else (Stage 7, F4): they are not behind the
-            // facilitator, and no page repeats them.
+            // tester, and no page repeats them.
             ListRow {
                 objectName: "settingsUnitPrefixRow"
                 text: qsTr("Unit prefix")
@@ -373,10 +438,5 @@ SettingsPage {
                 onActivated: root.aboutRequested()
             }
         }
-    }
-
-    SettingsAbout {
-        objectName: "settingsAboutFooter"
-        aboutText: root.aboutText
     }
 }

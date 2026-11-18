@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Review (docs/plan/stage-4.md, 4.10): review.header_and_rows, review.row_wording, review.copy, review.delete_swipe,
+// Review: review.header_and_rows, review.row_wording, review.copy, review.delete_swipe,
 // review.share, review.empty, review.past_log, review.voiceover, review.long_log and the cross-cutting checks. The Edit
 // entry sheet has its own file, edit_entry_test.cpp.
 #include "review_test_support.hpp"
@@ -106,7 +106,7 @@ TEST_CASE("review.header_and_rows: the header block is headerText and each row i
 
     CHECK(text_in(s.m_Rig, QStringLiteral("reviewHeaderText")) == timeline.header_text());
     CHECK(timeline.header_text() ==
-          QStringLiteral("Facilitator: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\n"
+          QStringLiteral("Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\n"
                          "Software Version: v1.4.2"));
     CHECK(text_in(s.m_Rig, QStringLiteral("reviewSummary")) == timeline.title_text());
     CHECK(text_in(s.m_Rig, QStringLiteral("reviewTitle")) == QStringLiteral("Today’s log"));

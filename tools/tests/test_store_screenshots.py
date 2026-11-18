@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Tests for store_screenshots.py (label: unit). T11-8 of docs/plan/stage-11.md, the parts that need no build.
+"""Tests for store_screenshots.py (label: unit). T11-8 of the Stage 11 plan, the parts that need no build.
 
 Run with: python3 -m unittest discover -s tools/tests -v
 The pictures here are plain colour blocks of the capture size. The real run is the Screenshots job (docs/ci.md).

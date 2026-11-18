@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Tests for check_no_network.py (label: unit). T11-5 of docs/plan/stage-11.md.
+"""Tests for check_no_network.py (label: unit). T11-5 of the Stage 11 plan.
 
 Run with: python3 -m unittest discover -s tools/tests -v
 """
@@ -54,7 +54,7 @@ class NoNetworkCheckTest(unittest.TestCase):
 
     def test_project_pages_pass(self) -> None:
         for url in ("https://github.com/iainchesworthlabs/icl-error-journaling",
-                    "https://iainchesworthlabs.github.io/icl-error-journaling/support/",
+                    "https://iainchesworthlabs.com/field-test/support/",
                     "https://www.gnu.org/licenses/"):
             self.assertEqual(self.problems("apps/app/qml/A.qml", f'Qt.openUrlExternally("{url}")'), [], url)
 

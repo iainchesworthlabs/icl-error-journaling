@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// ListRow (docs/plan/stage-4.md, 4.6): list_row.layout, and the row states.
+// ListRow: list_row.layout, and the row states.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"
@@ -26,7 +26,7 @@ constexpr auto ROWS = R"(
         ListRow { objectName: "second"; text: "South Site"; checkable: true }
         ListRow { objectName: "third"; text: "Software version"; value: "1.4.2"; showChevron: true }
         ListRow { objectName: "fourth"; text: "Retire this error type"; destructive: true }
-        ListRow { objectName: "fixed"; text: "Facilitator"; value: "Sam Example"; tappable: false }
+        ListRow { objectName: "fixed"; text: "Tester"; value: "Sam Example"; tappable: false }
     })";
 
 /// The rule lines under the content of `row`: visible rectangles one hairline high.
@@ -133,7 +133,7 @@ TEST_CASE("list_row.activate: a tap emits activated once; a row that is not tapp
     QAccessibleInterface* label = QAccessible::queryAccessibleInterface(fixed);
     REQUIRE(label != nullptr);
     CHECK(label->role() == QAccessible::StaticText);
-    CHECK(label->text(QAccessible::Name) == QStringLiteral("Facilitator, Sam Example"));
+    CHECK(label->text(QAccessible::Name) == QStringLiteral("Tester, Sam Example"));
     for (const Node& node : rig.tree())
     {
         if (node.m_Item == fixed)

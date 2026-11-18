@@ -4,16 +4,16 @@
 
     python3 tools/ci/check_site_address.py [--root .]
 
-`site_url` in mkdocs.yml is the one place that holds the address (docs/plan/stage-10.md, "Hosting"). The pages of the
+`site_url` in mkdocs.yml is the one place that holds the address. The pages of the
 guide write `{{ site_url }}` and a hook (tools/docs/site_address_hook.py) fills it in at build time. The files that cannot
 read mkdocs.yml must hold the same address, and this check compares them:
 
 - store/appstore/en-AU/support_url.txt, privacy_url.txt and marketing_url.txt: <site>support/, <site>privacy/, <site>;
 - the demo setup file address in store/appstore/review_information/notes.txt;
-- no page of docs/ other than the plan pages writes the host out.
+- no page of docs/ other than docs/ci.md writes the host out.
 
 The app's own constant joins this list with work package 10.6. A move to a custom domain is then: change `site_url`,
-fix what this check names, and set the domain in the repository's Pages settings (an owner action).
+fix what this check names, and update the deploy jobs of docs.yml (the host and prefix are set there and in the owner's repository variables).
 """
 
 from __future__ import annotations
@@ -32,8 +32,8 @@ URL_FILES = {
     "store/appstore/en-AU/marketing_url.txt": "",
 }
 NOTES = "store/appstore/review_information/notes.txt"
-# Pages that describe the decision itself and the history of the old address may name hosts.
-PAGES_THAT_MAY_NAME_THE_HOST = ("docs/plan/", "docs/ci.md")
+# The page that describes the decision itself and the history of the old address may name hosts.
+PAGES_THAT_MAY_NAME_THE_HOST = ("docs/ci.md",)
 
 
 def check(root: Path) -> list[str]:
@@ -54,7 +54,7 @@ def check(root: Path) -> list[str]:
                 problems.append(f"{NOTES}: {url} is not under {site}")
     for page in sorted((root / "docs").rglob("*.md")):
         rel = page.relative_to(root).as_posix()
-        if rel.startswith(PAGES_THAT_MAY_NAME_THE_HOST[0]) or rel == PAGES_THAT_MAY_NAME_THE_HOST[1]:
+        if rel in PAGES_THAT_MAY_NAME_THE_HOST:
             continue
         if host in page.read_text(encoding="utf-8"):
             problems.append(f"{rel}: writes the site's host out; write {{{{ site_url }}}} so one edit moves the site")

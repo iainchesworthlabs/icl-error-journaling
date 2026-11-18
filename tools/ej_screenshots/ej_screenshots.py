@@ -5,7 +5,7 @@
     python tools/ej_screenshots/ej_screenshots.py [--out screenshots/screens] [--exe PATH] [--qt DIR] [--only Main Review ...]
                                                   [--no-fonts] [--index-only]
 
-Stage 7, package 7.1 (docs/plan/stage-7.md). The screens are the states of `tools/ej_screenshots/screens.json`, grouped by
+Stage 7, package 7.1. The screens are the states of `tools/ej_screenshots/screens.json`, grouped by
 flow; the modes are the ones that file names (light, dark, and large: text scale 3.1, the largest iOS size). The pictures
 come from the `ui` test `screenshots.render` of `ej_ui_tests` (apps/app/tests/ui/visual_capture_test.cpp), which writes
 `<State>.<mode>.png` and `screenshots.json` into `EJ_SCREENSHOT_DIR`. This script runs it with the folder set, then writes
@@ -13,6 +13,9 @@ come from the `ui` test `screenshots.render` of `ej_ui_tests` (apps/app/tests/ui
 
 The pictures are not golden files. The runner's fonts and renderer differ from the phone's; they are for reading the
 screens side by side, not for comparing pixels. CI uploads the folder as the artifact `screenshots` (docs/ci.md).
+
+Other iPad sizes: set EJ_SCREENSHOT_SIZE=WxH (for example 1133x744, an iPad mini in landscape, or 507x1180, a half Split View) and
+the iPad states are drawn in a window of that size, with the size in the file names; the phone's states are skipped.
 
 Fonts: the offscreen platform has no usable font on Windows, so the script fetches Inter (tools/visual/fetch_inter.py) into
 build/visual/fonts and passes it as EJ_CAPTURE_FONTS, as the visual capture does. --no-fonts uses the platform's font.

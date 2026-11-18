@@ -3,11 +3,11 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import ErrorJournalingApp
 
-// The Settings screen (Stage 4, package 4.12; PRF-01 to 07, 10): the miniature board on which the facilitator arranges the
+// The Settings screen (Stage 4, package 4.12; PRF-01 to 07, 10): the miniature board on which the tester arranges the
 // tiles, and the list of the rest of the setup. It is the root of the Settings tab, placed by the shell above the tab bar,
 // and it takes the one model it shows:
 //
-//   settings   the SettingsModel (properties and invokables as in docs/plan/stage-3.md; `boardLayout` is the model of the
+//   settings   the SettingsModel (properties and invokables as in the Stage 3 plan; `boardLayout` is the model of the
 //              miniature board)
 //
 // What it does itself:
@@ -16,9 +16,9 @@ import ErrorJournalingApp
 //                    `settings.assignBoardTile(position, typeId)`. Its "New error type…" opens the name sheet, whose Save
 //                    calls `settings.addErrorTypeAt(name, position)`: the type is made and put on the tile in one change.
 //                    Positions are 1 to 11 and Other is 12. The page does not scroll while a tile is being dragged.
-//   the pages        the facilitator, the time format, the import and export page and the About pages (the build, the
+//   the pages        the tester, the time format, the import and export page and the About pages (the build, the
 //                    licence, the open-source components and each licence text) are pushed on the screen's own
-//                    stack, with a Back in the title bar. The facilitator page also holds "In the shared log": the row
+//                    stack, with a Back in the title bar. The tester page also holds "In the shared log": the row
 //                    of the unit prefix, which opens a page of its own, and the totals switch. The Settings mock-up has
 //                    no row for either, so they are there and not on the list.
 //   the refusals     while a save is in flight the model refuses another change, and says so in words; a refusal, and a
@@ -42,14 +42,17 @@ Item {
     // Which boards there are (BoardState): `interactionsEnabled`, and the way to turn it on. Null leaves the Second board group
     // out, which is the app of v1.
     property var boards: null
-    // The foot of the list: the version and platform text, as a plain caption (Stage 4, 4.15).
-    property string aboutText
+    // How shared text is written (ExportPreferences): `nameExport`. Null leaves the Names row out.
+    property var exportPreferences: null
     // The About pages (PRF-12): the AboutModel, and the bridge's timing line that five taps on the Version row show. Without a
     // model there is no About row.
     property var about: null
     property string timingText
 
     signal errorTypesRequested
+    // The interaction types editor and the People screen (Stage 14, 4.5): the second board's setup.
+    signal interactionTypesRequested
+    signal peopleRequested
     signal templatesRequested
     signal locationsRequested
     signal unitEnvironmentsRequested
@@ -138,15 +141,17 @@ Item {
         SettingsList {
             settings: root.settings
             boards: root.boards
-            aboutText: root.aboutText
+            exportPreferences: root.exportPreferences
             aboutAvailable: root.about !== null
             topInset: frame.topInset
             onErrorTypesRequested: root.errorTypesRequested()
+            onInteractionTypesRequested: root.interactionTypesRequested()
+            onPeopleRequested: root.peopleRequested()
             onTemplatesRequested: root.templatesRequested()
             onLocationsRequested: root.locationsRequested()
             onUnitEnvironmentsRequested: root.unitEnvironmentsRequested()
-            onFacilitatorRequested: stack.push(textPage, {
-                "kind": "facilitator"
+            onTesterRequested: stack.push(textPage, {
+                "kind": "tester"
             })
             onUnitPrefixRequested: stack.push(textPage, {
                 "kind": "unitPrefix",
@@ -154,6 +159,7 @@ Item {
             })
             onErrorPrefixRequested: stack.push(errorPrefixPage)
             onTimeFormatRequested: stack.push(timeFormatPage)
+            onNamesRequested: stack.push(namesPage)
             onImportExportRequested: stack.push(importExportPage)
             onQuickHelpRequested: stack.push(quickHelpPage)
             onHelpTopicRequested: topic => root.helpRequested(topic)
@@ -188,6 +194,16 @@ Item {
 
         SettingsTimeFormatPage {
             settings: root.settings
+            topInset: frame.topInset
+            onCloseRequested: stack.pop()
+        }
+    }
+
+    Component {
+        id: namesPage
+
+        SettingsNamesPage {
+            exportPreferences: root.exportPreferences
             topInset: frame.topInset
             onCloseRequested: stack.pop()
         }

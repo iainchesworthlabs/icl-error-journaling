@@ -1,0 +1,1 @@
+**The people list is easier to use.** The people you used last are chips at the top of the list (**Recent**), and people saved for the place that is in force today come first in the list. Not yet run on a device.

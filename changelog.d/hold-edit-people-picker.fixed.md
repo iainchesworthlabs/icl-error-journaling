@@ -1,0 +1,1 @@
+**The People row on the Edit entry sheet of a held interaction tile now opens the person picker.** Holding an interaction tile with an empty note box opens Edit entry, but tapping its People row did nothing, so a person could only be chosen from Review. Not yet run on a device.

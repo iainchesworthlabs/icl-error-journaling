@@ -132,7 +132,7 @@ void note_change(StoredLog& log)
 
 Result<void, StorageError> validate_header(const HeaderValues& header)
 {
-    if (auto ok = check_text(header.m_Facilitator, MAX_HEADER_TEXT_CODE_POINTS, "the facilitator"); !ok)
+    if (auto ok = check_text(header.m_Tester, MAX_HEADER_TEXT_CODE_POINTS, "the tester"); !ok)
     {
         return ok;
     }

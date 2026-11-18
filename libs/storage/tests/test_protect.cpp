@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// File protection (work package 5.4 of docs/plan/stage-5.md): every file and folder the store creates is handed to the
+// File protection: every file and folder the store creates is handed to the
 // protection setter, and a setter that fails never stops the store from opening or working. The setter is a fake that
 // records its calls, so this runs on every platform; the iOS call itself is checked on a device. All data is synthetic.
 #include "platform/android_protection.hpp"

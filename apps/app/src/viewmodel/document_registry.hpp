@@ -18,7 +18,7 @@
 namespace ej::viewmodel
 {
 
-/// Hands out one `LogDocument` per log (docs/plan/stage-3.md, "LogDocument and the registry"), so that History, Review
+/// Hands out one `LogDocument` per log, so that History, Review
 /// and Share work on the same document and cannot overwrite each other's edits.
 ///
 /// The registry holds documents weakly. The open log is held strongly by whoever made it with `make_document`

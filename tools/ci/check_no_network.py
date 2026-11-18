@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Fail when the application's own code could use the network (docs/plan/stage-11.md, 11.2; PRD NFR-09).
+"""Fail when the application's own code could use the network.
 
     python3 tools/ci/check_no_network.py [--root .]
 
@@ -28,7 +28,7 @@ SOURCE_DIRS = ("apps", "libs")
 SUFFIXES = {".cpp", ".hpp", ".h", ".mm", ".m", ".qml", ".js", ".txt", ".cmake", ".plist", ".in"}
 SKIPPED_PARTS = {"tests", "test", "rig"}
 ALLOWED_URL = re.compile(
-    r"^https://(github\.com/iainchesworthlabs/|iainchesworthlabs\.github\.io/|www\.gnu\.org/licenses/)"
+    r"^https://(github\.com/iainchesworthlabs/|iainchesworthlabs\.com/field-test/|www\.gnu\.org/licenses/)"
 )
 URL = re.compile(r"\b(?:https?|ftp|wss?)://[^\s\"'<>)]+", re.IGNORECASE)
 # Property list and XML namespaces name a URL that nothing ever fetches.

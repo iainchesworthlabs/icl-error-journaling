@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The cost of the launch check (work package 2.6 of docs/plan/stage-2.md, finding F13): an integrity check that grows
-// with history could break NFR-04 (the board is up quickly). It builds the store of a facilitator who has used the app
+// The cost of the launch check: an integrity check that grows
+// with history could break NFR-04 (the board is up quickly). It builds the store of a tester who has used the app
 // for a year, about 80,000 entries in 365 logs with a journal for each, then times what happens at launch, on a warm
 // cache.
 //
@@ -31,7 +31,7 @@ constexpr std::size_t LOGS = 365;
 constexpr std::size_t ENTRIES_PER_LOG = 220;
 
 /// What the launch check may cost on the one-year store, in milliseconds, in an optimised build without
-/// instrumentation. The plan proposed 100 ms; the measurement (docs/plan/stage-2.md, section 11) is
+/// instrumentation. The plan proposed 100 ms; the measurement is
 /// that SQLite's `quick_check` alone takes 100 to 160 ms on 80,000 entries (34 MB), so the budget is set to about twice
 /// what the launch measured, which leaves room for a shared CI runner, and still fails if the launch grows with the
 /// number of days kept again. NFR-04 allows 1.5 s from cold start to a usable board.
@@ -40,7 +40,7 @@ constexpr double LAUNCH_BUDGET_MS = 400.0;
 /// The first launch after an upgrade runs the full integrity check and compares every log with its journal, which reads
 /// every journal: about 3 s on a year of logs (measured), well beyond NFR-04's 1.5 s. The figure here is a bound that
 /// catches a change for the worse, not a target. Whether that launch should compare only the open log, or do the rest
-/// after the board is up, is an open question for the owner (docs/plan/stage-2.md, section 11).
+/// after the board is up, is an open question for the owner.
 constexpr double UPGRADE_BOUND_MS = 10000.0;
 
 /// A build with sanitizers, coverage or no optimisation is several times slower, and CMake says by how much

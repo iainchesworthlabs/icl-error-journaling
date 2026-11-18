@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// TabBar (docs/plan/stage-4.md, 4.4): tab_bar.selection, tab_bar.geometry, the skeleton, contrast, Reduce Motion and
+// TabBar: tab_bar.selection, tab_bar.geometry, the skeleton, contrast, Reduce Motion and
 // the cross-cutting checks.
 #include "container_support.hpp"
 #include "rig/color_math.hpp"
@@ -469,7 +469,7 @@ TEST_CASE("tab_bar.stacking: a page built after the bar draws nothing over it on
     CHECK(red_pixels(top, image.height()) == 0);
 }
 
-// T-I5-3 (docs/plan/stage-14.md): five tabs on the narrowest window.
+// T-I5-3: five tabs on the narrowest window.
 TEST_CASE("shell.tab_label_cap: at the largest text scale the five labels do not truncate at 375 pt", "[ui][tab_bar]")
 {
     UiRig rig;
@@ -520,7 +520,7 @@ TEST_CASE("shell.tab_label_cap: at the largest text scale the five labels do not
     CHECK(font_of(const_cast<QQuickItem*>(longest)).pointSizeF() <= at_cap_pt + 0.01);
 }
 
-TEST_CASE("shell.five_tabs: four tabs keep the labels of v1 and the fifth is Interactions", "[ui][tab_bar]")
+TEST_CASE("shell.five_tabs: four tabs keep the labels of v1 and the fifth is Observations", "[ui][tab_bar]")
 {
     UiRig rig;
     QQuickItem* root = load_bar(rig);
@@ -530,10 +530,36 @@ TEST_CASE("shell.five_tabs: four tabs keep the labels of v1 and the fifth is Int
     rig.layout();
     CHECK(label_of(rig, QStringLiteral("tabLog"))->property("text").toString() == QStringLiteral("Errors"));
     CHECK(label_of(rig, QStringLiteral("tabInteractions"))->property("text").toString() ==
-          QStringLiteral("Interactions"));
+          QStringLiteral("Observations"));
     // A tap on the fifth tab selects its place in the bar (the second).
     QSignalSpy selected(root, SIGNAL(tabSelected(int)));
     rig.tap(tab_item(rig, QStringLiteral("tabInteractions")));
     REQUIRE(selected.count() == 1);
     CHECK(selected.at(0).at(0).toInt() == 1);
+}
+
+TEST_CASE("shell.observations_tab: the fifth tab is a page tab named Observations, with the eye icon, selected or not",
+          "[ui][tab_bar][a11y]")
+{
+    UiRig rig;
+    QQuickItem* root = load_bar(rig);
+    root->setProperty("interactionsEnabled", true);
+    rig.layout();
+    QQuickItem* tab = tab_item(rig, QStringLiteral("tabInteractions"));
+    REQUIRE(tab != nullptr);
+    const QAccessibleInterface* node = QAccessible::queryAccessibleInterface(tab);
+    REQUIRE(node != nullptr);
+    CHECK(node->text(QAccessible::Name) == QStringLiteral("Observations"));
+    CHECK(node->role() == QAccessible::PageTab);
+    CHECK(node->text(QAccessible::Description) == QStringLiteral("2 of 5"));
+    // The icon is the eye whether the tab is selected or not; only its colour changes.
+    for (const int index : {0, 1})
+    {
+        root->setProperty("currentIndex", index);
+        rig.layout();
+        const QQuickItem* icon = tab->findChild<QQuickItem*>(QStringLiteral("tabIcon"));
+        REQUIRE(icon != nullptr);
+        CHECK(icon->property("kind").toString() == QStringLiteral("eye"));
+        CHECK(icon->property("known").toBool());
+    }
 }

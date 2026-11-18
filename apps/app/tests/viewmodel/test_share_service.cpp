@@ -7,6 +7,8 @@
 #include "support/fake_sources.hpp"
 #include "support/test_environment.hpp"
 #include "viewmodel/export_context_builder.hpp"
+#include "viewmodel/export_preferences.hpp"
+#include "viewmodel/person_names.hpp"
 #include "viewmodel/share_service.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -202,6 +204,48 @@ TEST_CASE("The text is what the screen showed: a committed edit is in it, one st
     REQUIRE(fixture.service->shareOpenLog());
     REQUIRE(fixture.m_Platform.sheets_presented() == 2);
     CHECK(fixture.m_Platform.shared_texts()[1].find("\n14:03 T| Track Delay") != std::string::npos);
+}
+
+TEST_CASE("The text on the sheet writes a name at the chosen level, and the re-shared past log does too",
+          "[viewmodel][share][names]")
+{
+    struct One final : viewmodel::PersonNames
+    {
+        std::optional<std::string> name_of(const PersonId&) const override
+        {
+            return std::string("Alex Sample");
+        }
+    } people;
+    viewmodel::ExportPreferences preferences{QString()};
+
+    Fixture fixture;
+    fixture.m_Rig.world().m_People = &people;
+    fixture.m_Rig.world().m_ExportPreferences = &preferences;
+    Configuration configuration = sample_configuration();
+    InteractionType spoke;
+    spoke.m_Id = test_id<InteractionTypeId>(INTERACTION_SPOKE_WITH);
+    spoke.m_Name = "Spoke with";
+    spoke.m_LinePattern = "Spoke with {person}";
+    spoke.m_Asks = InteractionAsks::PERSON;
+    configuration.m_InteractionTypes = {spoke};
+    fixture.m_Configuration.set(configuration);
+    REQUIRE(fixture.document->add_entry(interaction_entry(8, on_day(14, 3), INTERACTION_SPOKE_WITH, {PERSON_ALEX}),
+                                        Origin::USER, {}));
+    fixture.m_Rig.gateway().run_all();
+    fixture.make_service();
+
+    REQUIRE(fixture.service->shareOpenLog());
+    REQUIRE(fixture.m_Platform.sheets_presented() == 1);
+    CHECK(fixture.m_Platform.shared_texts()[0].find("\n14:03 (Interaction) Spoke with A.S.") != std::string::npos);
+    CHECK(fixture.m_Platform.shared_texts()[0].find("Alex") == std::string::npos);
+    CHECK(fixture.m_Platform.shared_texts()[0].find("\n10:05 T| Wrong Response\n") != std::string::npos);
+
+    // The level is read when the sheet is made, so the same log shared again follows the setting.
+    preferences.set_name_export("full");
+    REQUIRE(fixture.service->shareOpenLog());
+    REQUIRE(fixture.m_Platform.sheets_presented() == 2);
+    CHECK(fixture.m_Platform.shared_texts()[1].find("\n14:03 (Interaction) Spoke with Alex Sample") !=
+          std::string::npos);
 }
 
 // -------------------------------------------------------------------------------------------- what counts as shared

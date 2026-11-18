@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// ImportFlow (docs/plan/stage-4.md, 4.13): import.flow (the chosen path reaches loadImport, the summary shows the
+// ImportFlow: import.flow (the chosen path reaches loadImport, the summary shows the
 // counts, Apply applies, Cancel changes nothing), import.errors (the core's messages in file order, nothing changes)
 // and import.sample (the sample file imports and the board, the picker and the lists show it).
 #include "editors_support.hpp"
@@ -264,7 +264,7 @@ TEST_CASE("import.sample: the sample file imports and the board, the picker and 
     CHECK(world.model().error_types()->rowCount() == 11);
     CHECK(world.model().locations()->rowCount() == 2);
     CHECK(world.model().templates()->rowCount() == 2);
-    CHECK(world.model().facilitator() == QStringLiteral("Sam Example"));
+    CHECK(world.model().tester() == QStringLiteral("Sam Example"));
     CHECK(world.model().unit_prefix() == QStringLiteral("UNIT"));
 
     // The board and the picker read the configuration that is now in force.

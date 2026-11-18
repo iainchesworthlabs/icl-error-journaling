@@ -2,6 +2,7 @@
 #pragma once
 
 #include "error_journaling/log_repository.hpp"
+#include "error_journaling/people_store.hpp"
 #include "viewmodel/config_store.hpp"
 #include "viewmodel/move_only_function.hpp"
 
@@ -26,6 +27,8 @@ struct StorageContext
 {
     LogRepository& m_Logs;
     ConfigStore& m_Config;
+    /// The list of people (Stage 14). Null when it could not be opened: the picker then says people are not available.
+    PeopleStore* m_People = nullptr;
 };
 
 /// The only way for the view-model layer to reach the store (standard 7.6: nothing that blocks runs on the GUI
@@ -33,7 +36,7 @@ struct StorageContext
 /// completion runs afterwards on the GUI thread and receives whatever the job produced.
 ///
 /// Services keep a mirror of what they show and change it in the completion of a successful job, so the screen never
-/// shows what the store does not have (docs/plan/stage-3.md, "Threading and the order of feedback").
+/// shows what the store does not have.
 class StorageGateway
 {
 public:

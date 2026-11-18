@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The launch screen (docs/plan/stage-5.md, 5.8). The picture that iOS shows until the first frame is the skeleton of
+// The launch screen. The picture that iOS shows until the first frame is the skeleton of
 // the Log screen, LaunchSkeleton.qml, drawn into the PNGs of the asset catalogue by tools/launch_image (its tests,
 // launch.image_current and launch.image_compare, say that the PNGs are what the skeleton draws). The cases here say
 // that the skeleton is what it claims to be and that it is where the real screen is.
@@ -133,7 +133,6 @@ Item {
     required property var appRoot
     required property var bridge
     required property var fileChooser
-    required property string aboutText
 
     SafeArea.additionalMargins.top: 59
     SafeArea.additionalMargins.bottom: 34
@@ -152,7 +151,6 @@ Item {
         appRoot: wrap.appRoot
         bridge: wrap.bridge
         fileChooser: wrap.fileChooser
-        aboutText: wrap.aboutText
     }
 }
 )";
@@ -240,8 +238,7 @@ struct Phone
                                      {QStringLiteral("share"), object(*root.share())},
                                      {QStringLiteral("appRoot"), object(root)},
                                      {QStringLiteral("bridge"), object(bridge)},
-                                     {QStringLiteral("fileChooser"), object(*chooser)},
-                                     {QStringLiteral("aboutText"), QStringLiteral("0.1.0")}};
+                                     {QStringLiteral("fileChooser"), object(*chooser)}};
         REQUIRE(ui.load_source(QByteArray(WRAPPER), properties) != nullptr);
         INFO(ui.errors().toStdString());
         ui.settle();

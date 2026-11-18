@@ -11,7 +11,7 @@ namespace ej::bridge
 {
 
 /// Catches the file the system opens in the application (AirDrop, Files "Open in", Share): Qt's iOS plugin turns
-/// `application:openURL:options:` into a `QFileOpenEvent` (assumption A1 of docs/plan/stage-5.md, checked on a device).
+/// `application:openURL:options:` into a `QFileOpenEvent`.
 /// Installed on the application before the engine loads.
 ///
 /// It keeps the paths until `ready()` is called, so a file that launched the application cold is not lost to the

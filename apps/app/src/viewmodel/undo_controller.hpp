@@ -22,7 +22,7 @@
 namespace ej::viewmodel
 {
 
-/// The undo toast (BRD-04, REV-03; docs/plan/stage-3.md, "UndoController"). One toast slot for the whole app, a window
+/// The undo toast. One toast slot for the whole app, a window
 /// of five seconds on the monotonic scheduler, and undo of the most recent action only.
 ///
 /// It watches the documents it is given through `observe`. A committed action of the user opens or refreshes the toast:

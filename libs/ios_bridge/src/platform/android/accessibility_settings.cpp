@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Android accessibility settings (docs/plan/stage-9.md, "Accessibility settings"): the text size, Remove animations and
+// Android accessibility settings: the text size, Remove animations and
 // TalkBack, read through EjAccessibility.java, and a notice when one changes. What a number means is decided in
 // src/android_system_plan.cpp, which a test covers on the desktop.
 #include "error_journaling/accessibility_settings.hpp"

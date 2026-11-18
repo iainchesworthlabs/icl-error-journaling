@@ -1,7 +1,7 @@
 # Google Play app content: drafted answers
 
 The answers for the Play Console, Policy, App content. Task 11.0 checks each question against the Console before 11.8
-enters them. See [`docs/plan/stage-11.md`](../../docs/plan/stage-11.md#play-app-content).
+enters them.
 
 ## Data safety
 
@@ -14,7 +14,9 @@ enters them. See [`docs/plan/stage-11.md`](../../docs/plan/stage-11.md#play-app-
 | Way to request data deletion | Not applicable, no data is collected. Deleting the app deletes its data |
 
 The Android build has to match these answers: no `INTERNET` permission and no `AD_ID` in the merged manifest (test T11-7,
-with Stage 9).
+with Stage 9). The one permission it asks for is `RECORD_AUDIO`, for dictation: recognition is on the device (Android 13
+and later, `createOnDeviceSpeechRecognizer`), nothing is recorded and nothing is sent, so the answers stand. The people
+list is stored on the device only and no name leaves it unless the user shares a log.
 
 ## Content rating (IARC questionnaire)
 
@@ -47,4 +49,4 @@ with Stage 9).
 | Health app | No |
 | News app | No |
 | Account creation, so account deletion | No account |
-| Privacy policy | The URL in `../appstore/en-AU/privacy_url.txt` (Stage 10) |
+| Privacy policy | The URL in `../appstore/en-AU/privacy_url.txt` |

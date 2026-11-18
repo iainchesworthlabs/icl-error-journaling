@@ -13,21 +13,20 @@ Parses apps/app/packaging/ios/Info.plist.in with the CMake placeholders stubbed 
   * a document type names the exported type (role Viewer, handler rank Owner) and one names public.json (rank Alternate);
   * LSSupportsOpeningDocumentsInPlace is false, UIFileSharingEnabled is absent or false;
   * no usage-description key (the application asks for no permission);
-  * CADisableMinimumFrameDurationOnPhone is true, so that a ProMotion phone can run the application at 120 Hz
-    (docs/plan/stage-4.md, U7 and package 4.14);
+  * CADisableMinimumFrameDurationOnPhone is true, so that a ProMotion phone can run the application at 120 Hz;
   * the launch screen: UILaunchScreen names a colour and an image that exist in the asset catalogue, each with a light and
     a dark variant, the image ignores the safe area, the PNGs are 1206 x 2622 px (402 x 874 pt at 3x) and opaque, and the
     colour is the `background` token in both modes.
 
-It also checks the privacy manifest, apps/app/packaging/ios/PrivacyInfo.xcprivacy (docs/plan/stage-11.md, task 11.2):
+It also checks the privacy manifest, apps/app/packaging/ios/PrivacyInfo.xcprivacy:
 no tracking, no tracking domains, no collected data types, and each accessed API category one of Apple's with reason
 codes of that category. packaging/ios/verify_app.sh checks the built executable's symbols against it.
 
-It also checks the orientations (docs/plan/stage-8.md, "Info.plist and packaging"): the iPhone is portrait only, the iPad
+It also checks the orientations: the iPhone is portrait only, the iPad
 has all four, there is no UIRequiresFullScreen, and multiple scenes are not turned on; and that the launch image is an
 iPhone image (an iPad shows the background colour alone).
 
-A later package adds the entitlements. docs/plan/stage-5.md, "CI changes outside the test suites".
+A later package adds the entitlements. the Stage 5 plan, "CI changes outside the test suites".
 """
 
 from __future__ import annotations
@@ -250,7 +249,7 @@ def check_image_set(catalogue: Path, name: str) -> list[str]:
     light, dark = split_appearances(entries, f"{name}.imageset", problems)
     for entry in entries:
         # The picture is the phone's Log screen; one picture cannot fit the iPad's two orientations and its window sizes, so
-        # an iPad launches on the background colour alone (docs/plan/stage-8.md, "Launch screen on iPad").
+        # an iPad launches on the background colour alone.
         if entry.get("idiom") != "iphone":
             problems.append(f"{name}.imageset has an image with the idiom '{entry.get('idiom')}', every one must be 'iphone'")
     for entry, mode in ((light, "light"), (dark, "dark")):
