@@ -81,7 +81,7 @@ TEST_CASE("The context resolves live, retired and renamed types, locations and t
     Sample sample;
     Configuration configuration = sample.configuration();
     const ErrorTypeId live = type_named(configuration, "Wrong Response");
-    const ErrorTypeId retired = type_named(configuration, "Wi-Fi Connect Failed");
+    const ErrorTypeId retired = type_named(configuration, "WiFi Connect Failed");
     const ErrorTypeId renamed = type_named(configuration, "Stopped Responding");
     for (ErrorType& type : configuration.m_ErrorTypes)
     {
@@ -100,7 +100,7 @@ TEST_CASE("The context resolves live, retired and renamed types, locations and t
     const ExportContext context = ExportContextBuilder(sample.m_Source, sample.m_Zones).build();
 
     CHECK(context.m_ErrorTypeName(live) == "Wrong Response");
-    CHECK(context.m_ErrorTypeName(retired) == "Wi-Fi Connect Failed"); // retired types still resolve (a past log uses them)
+    CHECK(context.m_ErrorTypeName(retired) == "WiFi Connect Failed"); // retired types still resolve (a past log uses them)
     CHECK(context.m_ErrorTypeName(renamed) == "Mute Lag");    // the lookup gives the current name
     CHECK(context.m_LocationName(location_named(configuration, "North Site")) == "North Site");
     CHECK(context.m_LocationName(location_named(configuration, "South Site")) == "South Site"); // retired

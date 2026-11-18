@@ -68,7 +68,7 @@ The file below is the sample setup that the app's tests use. All the names in it
     },
     {
       "id": "00000000-0000-4000-8000-0000000000a7",
-      "name": "Wi-Fi Connect Failed",
+      "name": "WiFi Connect Failed",
       "retired": false,
       "board_position": 7
     },

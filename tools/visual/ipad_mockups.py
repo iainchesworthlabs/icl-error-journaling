@@ -51,7 +51,7 @@ TYPES = [
     ("Audio Dropout", 0),
     ("Step Skipped", 0),
     ("Lost Connection", 0),
-    ("Wi-Fi Connect Failed", 0),
+    ("WiFi Connect Failed", 0),
     ("Stopped Responding", 1),
     ("Timed Out", 1),
     ("Slow Response", 0),
