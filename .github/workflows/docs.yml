@@ -2,6 +2,7 @@ name: Docs
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, closed]
     branches: [develop]
     paths: ["docs/**", "mkdocs.yml", "requirements/docs.txt", ".github/workflows/docs.yml", "tools/docs/**", "config/sample-config.json"]
   push:
@@ -12,25 +13,74 @@ permissions: {}
 jobs:
   build:
     name: Build site
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
+    with:
+      site-artifact: docs-site
 
   publish:
-    name: Build site for Pages
+    name: Build site for the domain
     if: github.event_name == 'push'
     permissions:
       contents: read
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
     with:
-      upload: true
+      site-artifact: docs-site
 
+  # Production: https://iainchesworthlabs.com/field-test/. The role, bucket and distribution come from the
+  # repository variables DOCS_ROLE_ARN, DOCS_BUCKET and DOCS_DISTRIBUTION_ID (set by the owner; not secrets).
   deploy:
     name: Deploy site
     needs: publish
     if: github.event_name == 'push'
     permissions:
-      pages: write
+      contents: read
       id-token: write
-    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy.yml@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
+    with:
+      prefix: field-test
+      role-arn: ${{ vars.DOCS_ROLE_ARN }}
+      bucket: ${{ vars.DOCS_BUCKET }}
+      distribution-id: ${{ vars.DOCS_DISTRIBUTION_ID }}
+
+  # Preview of a pull request from this repository, at https://iainchesworthlabs.com/_preview/field-test/pr-<n>/.
+  preview:
+    name: Deploy preview
+    needs: build
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
+    with:
+      prefix: field-test
+      preview: true
+      pr-number: ${{ github.event.pull_request.number }}
+      role-arn: ${{ vars.DOCS_PREVIEW_ROLE_ARN }}
+      bucket: ${{ vars.DOCS_BUCKET }}
+      distribution-id: ${{ vars.DOCS_DISTRIBUTION_ID }}
+
+  remove-preview:
+    name: Remove preview
+    if: >-
+      github.event_name == 'pull_request' && github.event.action == 'closed'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@ef108c9ad4af9bae345385f4341b3ae9583f2b02 # v0.1.26
+    with:
+      mode: remove-preview
+      prefix: field-test
+      pr-number: ${{ github.event.pull_request.number }}
+      role-arn: ${{ vars.DOCS_PREVIEW_ROLE_ARN }}
+      bucket: ${{ vars.DOCS_BUCKET }}
+      distribution-id: ${{ vars.DOCS_DISTRIBUTION_ID }}

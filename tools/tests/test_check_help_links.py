@@ -76,7 +76,7 @@ class HelpLinksCheck(unittest.TestCase):
         self.assertTrue(any("privacyPath" in p for p in self.problems()))
 
     def test_the_site_address_must_match_mkdocs(self) -> None:
-        self.edit("mkdocs.yml", "site_url: https://iainchesworthlabs.github.io/", "site_url: https://docs.example.org/")
+        self.edit("mkdocs.yml", "site_url: https://iainchesworthlabs.com/", "site_url: https://docs.example.org/")
         self.assertTrue(any("siteUrl" in p and "docs.example.org" in p for p in self.problems()))
 
     def test_a_topic_that_a_screen_asks_for_must_exist(self) -> None:

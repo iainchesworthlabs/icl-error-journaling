@@ -14,7 +14,7 @@ Option 1, by hand:
 6. Share the log: the share sheet opens with the plain-text log.
 
 Option 2, with the demo setup file:
-1. In Safari on the review device, open https://iainchesworthlabs.github.io/icl-error-journaling/demo/demo-setup.ejconfig
+1. In Safari on the review device, open https://iainchesworthlabs.com/field-test/demo/demo-setup.ejconfig
 2. Open the file in Field Test, then choose "Use this setup". The board fills with 11 error types, a location (North Site) and note templates.
 3. Continue from step 3 above.
 The same file is attached to this submission.

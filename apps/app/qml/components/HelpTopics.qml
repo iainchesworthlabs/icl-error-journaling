@@ -17,7 +17,7 @@ QtObject {
 
     // Where the documentation site is. It is the one address in the app: change `site_url` in `mkdocs.yml` and this line
     // together (docs/ci.md, "The site address"); a check fails until they agree. Nothing else in the app names the host.
-    readonly property string siteUrl: "https://iainchesworthlabs.github.io/icl-error-journaling/"
+    readonly property string siteUrl: "https://iainchesworthlabs.com/field-test/"
 
     // The pages the Help group of Settings opens, as paths under the site.
     readonly property string guidePath: ""

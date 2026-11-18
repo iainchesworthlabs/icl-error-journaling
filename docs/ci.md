@@ -323,8 +323,15 @@ tracked file. The unit tests are in `tools/tests/test_store_text.py`.
 
 ## The site address
 
-The guide, support and privacy pages are one MkDocs site, published by `docs.yml` to GitHub Pages from a build artifact
-(Pages source: GitHub Actions) on a push to `main`. Its address is written in one place: `site_url` in `mkdocs.yml`.
+The guide, support and privacy pages are one MkDocs site, published by `docs.yml` to a private S3 bucket behind CloudFront, at `https://iainchesworthlabs.com/field-test/`, on a
+push to `main`. `docs.yml` builds the site once (`site-artifact: docs-site`) and calls `docs-deploy-aws.yml` of
+`icl-common-infra` (prefix `field-test`), which assumes an IAM role by OIDC (no stored keys, no secrets), syncs the
+prefix and invalidates it. The role, bucket and distribution come from the repository variables `DOCS_ROLE_ARN`,
+`DOCS_BUCKET` and `DOCS_DISTRIBUTION_ID`, which the owner sets; none of those values is written in the repository. A pull
+request from this repository gets a preview at `https://iainchesworthlabs.com/_preview/field-test/pr-<n>/` (role
+`DOCS_PREVIEW_ROLE_ARN`, limited to `_preview/field-test/*`), removed when the pull request closes. A pull request from a
+fork or from Dependabot builds the site and deploys nothing. Its address is written in one place: `site_url` in
+`mkdocs.yml`.
 
 - Pages of `docs/` that need the address write `{{ site_url }}` (it includes the trailing slash) and
   `tools/docs/site_address_hook.py` fills it in at build time. A page never writes the host out.
@@ -334,12 +341,12 @@ The guide, support and privacy pages are one MkDocs site, published by `docs.yml
   app's own constant joins the list with the in-app help (Stage 10, 10.6).
 - `.github/repo-settings.json` has a `homepage` with the address. It is the owner's file and is not read by a check.
 
-**Moving to a custom domain.** Nothing in the repository is tied to the `github.io` address except the lines above, so
-the move is: (1) the owner adds the domain in the repository's Pages settings and the DNS record (a `CNAME` for a
-subdomain), which is not a file in the repository, because Pages deployed from a workflow ignores a `CNAME` file; (2) one
-pull request changes `site_url` and the files the check names, and it fails until they all agree; (3) the owner updates
-the `homepage` in the repository settings. Do this before the store submission: a store URL that changes later needs a
-new submission.
+**Moving the site.** Nothing in the repository is tied to the host except the lines above, so a move is: (1) the owner
+prepares the new address (DNS, the bucket and the deploy role, which are not files in this repository); (2) one pull
+request changes `site_url`, the files the check names and the `prefix` of the deploy jobs, and it fails until they all
+agree; (3) the owner updates the `homepage` in the repository settings and uploads the store URLs again. The site moved
+from `github.io` to `iainchesworthlabs.com/field-test/` before any store submission, so no old address has to stay alive.
+Do a move before a store submission: a store URL that changes later needs a new submission.
 
 ## iOS property list check
 

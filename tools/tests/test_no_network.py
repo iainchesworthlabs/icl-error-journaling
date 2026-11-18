@@ -54,7 +54,7 @@ class NoNetworkCheckTest(unittest.TestCase):
 
     def test_project_pages_pass(self) -> None:
         for url in ("https://github.com/iainchesworthlabs/icl-error-journaling",
-                    "https://iainchesworthlabs.github.io/icl-error-journaling/support/",
+                    "https://iainchesworthlabs.com/field-test/support/",
                     "https://www.gnu.org/licenses/"):
             self.assertEqual(self.problems("apps/app/qml/A.qml", f'Qt.openUrlExternally("{url}")'), [], url)
 
