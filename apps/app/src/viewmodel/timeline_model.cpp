@@ -208,10 +208,12 @@ TimelineModel::TimelineModel(const Environment& environment, ConfigurationSource
     : QAbstractListModel(parent), m_Environment(environment), m_Configuration(configuration), m_Clipboard(clipboard)
 {
     m_Configuration.add_observer(static_cast<ConfigurationObserver&>(*this));
+    m_Filtered.setSourceModel(this);
 }
 
 TimelineModel::~TimelineModel()
 {
+    m_Filtered.setSourceModel(nullptr);
     if (m_Document != nullptr)
     {
         m_Document->remove_observer(static_cast<LogObserver&>(*this));
@@ -236,6 +238,8 @@ void TimelineModel::stop_following()
 
 void TimelineModel::switch_document(LogDocument* document)
 {
+    // What was looked for in one log is not looked for in the next.
+    m_Filtered.clear();
     beginResetModel();
     if (m_Document != nullptr)
     {

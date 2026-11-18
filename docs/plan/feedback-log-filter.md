@@ -39,9 +39,10 @@ Sam Example and Alex Sample, as everywhere in the repository (NFR-10).
    rows as now, through `entryId`. If an edit makes an entry stop matching, it leaves the shown list when Save
    completes. An entry added from the Log tab while a filter is set is shown when it matches.
 5. **Where it sits.** One row under the header card, one line high when idle: a **Filter** button that shows how many
-   rows are shown ("Filter · 4 of 27" when on). Tapping it opens the chips and the field in place (a sheet on a phone;
-   in place on iPad and the wide layout). The timeline does not move down by more than that one row, so one-handed
-   reading is not worse for the person who never filters.
+   rows are shown ("Filter · 4 of 27" when on). Tapping it opens the chips and the field in place, under the header
+   block, on every device, so the rows can be seen changing as words are typed. (Implementation note: the first draft of
+   this page said a sheet on a phone; in place was built because a sheet would hide the rows being filtered.) The timeline
+   does not move down by more than that one row for the person who never filters.
 6. **States.** With a filter on and no match: "No entries match" with a **Clear filter** button. With nothing logged yet
    the filter control is hidden. A change of the shown count is announced to a screen reader ("4 of 27 entries").
 
@@ -89,7 +90,7 @@ Design first, as for the other screens: the owner approves the mock-ups before t
 | `integration` | An entry added or edited while filtered appears or leaves the shown rows correctly; a new log and a restart clear the filter. |
 | `ui` | Idle row, open state, empty state and Clear filter; chip selected state; the Observations chip is absent with the board off and no Observations; past log shows the same control. |
 | `ui` | Largest text size: chips wrap, no clipping; the announce of "n of m entries" fires once per change. |
-| `perf` | A 5,000-entry log: typing in the field updates the rows within a frame budget (no per-key work above the row count). |
+| `unit` | A 5,000-entry log: five keystrokes of a word finish well inside a loose bound (it is a guard against work per key above the row count, not a budget; the viewmodel tests have no `perf` directory). |
 
 Not run on a device: everything here is verified in CI and on the desktop build; the owner tries it on a phone and an
 iPad before 1.0.0.

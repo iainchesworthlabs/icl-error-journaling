@@ -76,6 +76,16 @@ Item {
     property alias overrideLeft: frame.overrideLeft
     property alias overrideRight: frame.overrideRight
 
+    // The second board is on (the shell says so): the Observations chip of the filter is then shown even before the log has one.
+    property bool observationsOn: false
+    // The filter over the rows (TimelineFilterModel): which kinds and which words. It only chooses the rows shown; the title, Copy
+    // all, Share and every count here are the whole log's.
+    readonly property var filter: timeline.filtered
+    // The kinds and the field are open under the header block. A filter that is on stays on when this is closed.
+    property bool filterOpen: false
+    readonly property bool filterNoMatch: !empty && filter.active && filter.shownCount === 0
+    readonly property string filterCountText: qsTr("%1 of %2").arg(filter.shownCount).arg(filter.totalCount)
+
     readonly property bool empty: timeline.entryCount === 0
     readonly property bool shareShown: share.available
     readonly property bool hasShared: sharedDateText.length > 0 && sharedTimeText.length > 0
@@ -126,8 +136,9 @@ Item {
             confirmCopied(qsTr("Copied the whole log"));
     }
 
+    // `row` is a row of the list, which may be the filtered one: Copy line takes the row of the whole log.
     function copyRow(row: int): void {
-        if (timeline.copyLine(row))
+        if (timeline.copyLine(filter.sourceRow(row)))
             confirmCopied(qsTr("Copied the line"));
     }
 
@@ -156,6 +167,93 @@ Item {
         objectName: "copiedTimer"
         interval: Theme.motion.undoToastVisibleMs / 2
         onTriggered: root.copiedText = ""
+    }
+
+    function toggleFilter(): void {
+        filterOpen = !filterOpen;
+    }
+
+    // A button of the filter, black and white like the list: a pill with a hairline border, or, for a toggle that is on, filled
+    // with the text colour so that it reads without colour (NFR-07). It is 32 pt high and 44 pt to touch.
+    component FilterAction: Item {
+        id: action
+
+        property string label
+        // The widest the button may be; 0 = as wide as its words need.
+        property real maxWidth: 0
+        // A button that stays on or off, and whether it is on.
+        property bool toggle: false
+        property bool checked: false
+
+        signal activated
+
+        implicitWidth: {
+            const wanted = Math.ceil(metrics.advanceWidth) + 1 + 2 * Theme.space.sectionGap;
+            return maxWidth > 0 ? Math.min(wanted, maxWidth) : wanted;
+        }
+        implicitHeight: Theme.size.minTouchTarget
+        width: implicitWidth
+        height: implicitHeight
+        activeFocusOnTab: visible
+        Accessible.role: Accessible.Button
+        Accessible.name: action.label
+        Accessible.focusable: true
+        Accessible.checkable: action.toggle
+        Accessible.checked: action.checked
+        Accessible.onPressAction: action.activated()
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: parent.width
+            height: Theme.size.chipHeight
+            radius: height / 2
+            color: action.checked ? Theme.colour.reviewText : Theme.colour.reviewSurface
+            border.width: action.activeFocus ? Theme.border.otherWidth : Theme.border.hairline
+            border.color: action.checked || action.activeFocus ? Theme.colour.reviewText : Theme.colour.reviewTextSecondary
+            Accessible.ignored: true
+        }
+
+        Text {
+            anchors.centerIn: parent
+            width: parent.width - 2 * Theme.space.sectionGap
+            horizontalAlignment: Text.AlignHCenter
+            color: action.checked ? Theme.colour.reviewBackground : Theme.colour.reviewText
+            font: Theme.font.chip.font
+            text: action.label
+            elide: Text.ElideRight
+            Accessible.ignored: true
+        }
+
+        TextMetrics {
+            id: metrics
+
+            font: Theme.font.chip.font
+            text: action.label
+        }
+
+        TapHandler {
+            onTapped: action.activated()
+        }
+        Keys.onReturnPressed: action.activated()
+        Keys.onSpacePressed: action.activated()
+    }
+
+    // What the filter now shows is said to a screen reader once the typing pauses (the time of a double-tap), so that each key does not
+    // interrupt it.
+    Timer {
+        id: filterAnnounce
+
+        objectName: "reviewFilterAnnounce"
+        interval: Theme.motion.doubleTapMs
+        onTriggered: Accessible.announce(root.filter.active ? qsTr("%1 entries").arg(root.filterCountText) : qsTr("Showing every entry"))
+    }
+
+    Connections {
+        target: root.filter
+
+        function onFilterChanged(): void {
+            filterAnnounce.restart();
+        }
     }
 
     // The sheet of an edit failing later than its Save: the model says so here.
@@ -256,7 +354,7 @@ Item {
 
                         Text {
                             // The name wraps rather than push Copy-all out of the window at the largest text sizes.
-                            width: Math.min(implicitWidth, bar.width - Theme.size.badge - 2 * Theme.size.minTouchTarget)
+                            width: Math.min(implicitWidth, bar.width - Theme.size.badge - 3 * Theme.size.minTouchTarget)
                             color: Theme.colour.primaryText
                             font: Theme.font.navAction.font
                             text: root.backText
@@ -274,7 +372,7 @@ Item {
                     objectName: "reviewSummary"
                     visible: !root.pastLog
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - copyButton.width - (reviewHelp.visible ? reviewHelp.width : 0) - Theme.space.sectionGap
+                    width: parent.width - copyButton.width - filterToggle.width - (reviewHelp.visible ? reviewHelp.width : 0) - Theme.space.sectionGap
                     color: Theme.colour.reviewTextSecondary
                     font: Theme.font.bodySmall.font
                     text: root.timeline.titleText
@@ -289,10 +387,56 @@ Item {
 
                     objectName: "reviewHelp"
                     visible: !root.pastLog
-                    x: copyButton.x - width
+                    x: filterToggle.x - width
                     anchors.verticalCenter: parent.verticalCenter
                     accessibleName: qsTr("Help with review and sharing")
                     onTriggered: root.helpRequested("review")
+                }
+
+                // Opens the filter under the header block. It takes no height of its own from the list: a log with no filter looks
+                // as it did.
+                Item {
+                    id: filterToggle
+
+                    objectName: "reviewFilterButton"
+                    visible: !root.empty
+                    x: copyButton.x - width
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Theme.size.minTouchTarget
+                    height: Theme.size.minTouchTarget
+                    activeFocusOnTab: visible
+                    Accessible.role: Accessible.Button
+                    Accessible.name: qsTr("Filter")
+                    Accessible.description: root.filterOpen ? qsTr("Closes the filter") : qsTr("Opens the filter")
+                    Accessible.focusable: true
+                    Accessible.checkable: true
+                    Accessible.checked: root.filterOpen
+                    Accessible.ignored: !visible
+                    Accessible.onPressAction: root.toggleFilter()
+
+                    TapHandler {
+                        enabled: filterToggle.visible
+                        onTapped: root.toggleFilter()
+                    }
+
+                    // On while the filter is open or something is filtered.
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: Theme.size.badge * 5 / 4
+                        height: width
+                        radius: width / 2
+                        color: root.filterOpen || root.filter.active ? Theme.colour.primaryTint : "transparent"
+                        Accessible.ignored: true
+                    }
+
+                    Icon {
+                        anchors.centerIn: parent
+                        kind: "search"
+                        size: Theme.size.badge * 11 / 12
+                        colour: Theme.colour.primaryText
+                    }
+                    Keys.onReturnPressed: root.toggleFilter()
+                    Keys.onSpacePressed: root.toggleFilter()
                 }
 
                 Item {
@@ -373,7 +517,7 @@ Item {
                 cacheBuffer: 0
                 boundsBehavior: Flickable.StopAtBounds
                 bottomMargin: Theme.space.sectionGap
-                model: root.timeline
+                model: root.filter
 
                 header: Column {
                     width: list.width
@@ -463,15 +607,248 @@ Item {
                                 root.headerRequested();
                         }
                     }
+
+                    // The filter: what is on, and the kinds and the words to change it. It is here only while a filter is on or the
+                    // Filter button of the bar has opened it, so a log with no filter has no extra row. Nothing in it changes the
+                    // log or what is shared. Black and white like the rest of the list.
+                    Column {
+                        id: filterBlock
+
+                        objectName: "reviewFilter"
+                        visible: !root.empty && (root.filterOpen || root.filter.active)
+                        width: parent.width
+                        spacing: Theme.space.tileGap
+
+                        Item {
+                            width: parent.width
+                            height: Theme.size.minTouchTarget
+                            visible: root.filter.active
+
+                            Text {
+                                id: filterLabel
+
+                                objectName: "reviewFilterLabel"
+                                width: parent.width - clearFilter.width - Theme.space.tileGap
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: Theme.colour.reviewText
+                                font: Theme.font.bodySmall.selectedFont
+                                text: qsTr("Filter · %1").arg(root.filterCountText)
+                                elide: Text.ElideRight
+                                Accessible.role: Accessible.StaticText
+                                Accessible.name: qsTr("Filter on, %1 entries shown").arg(root.filterCountText)
+                            }
+
+                            FilterAction {
+                                id: clearFilter
+
+                                objectName: "reviewFilterClear"
+                                x: parent.width - width
+                                label: qsTr("Clear filter")
+                                onActivated: root.filter.clear()
+                            }
+                        }
+
+                        Flow {
+                            id: filterKinds
+
+                            objectName: "reviewFilterKinds"
+                            visible: root.filterOpen
+                            width: parent.width
+                            spacing: Theme.space.tileGap
+
+                            Repeater {
+                                model: [
+                                    {
+                                        kind: "error",
+                                        name: qsTr("Errors")
+                                    },
+                                    {
+                                        kind: "note",
+                                        name: qsTr("Notes")
+                                    },
+                                    {
+                                        kind: "interaction",
+                                        name: qsTr("Observations")
+                                    },
+                                    {
+                                        kind: "header_change",
+                                        name: qsTr("Changes")
+                                    }
+                                ]
+
+                                FilterAction {
+                                    id: kindChip
+
+                                    required property var modelData
+
+                                    objectName: "reviewFilterKind_" + modelData.kind
+                                    // The Observations chip is for a log that has some, or a phone with the second board on.
+                                    visible: modelData.kind !== "interaction" || root.observationsOn || root.filter.hasObservations
+                                    label: modelData.name
+                                    maxWidth: filterKinds.width
+                                    toggle: true
+                                    // `kinds` notifies, so the chip follows the model.
+                                    checked: root.filter.kinds.indexOf(modelData.kind) >= 0
+                                    onActivated: root.filter.toggleKind(modelData.kind)
+                                }
+                            }
+                        }
+
+                        Item {
+                            id: filterField
+
+                            objectName: "reviewFilterField"
+                            visible: root.filterOpen
+                            width: parent.width
+                            height: Theme.size.minTouchTarget
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: Theme.radius.groupedList
+                                color: Theme.colour.reviewSurface
+                                border.width: Theme.border.hairline
+                                border.color: Theme.colour.reviewTextSecondary
+                                Accessible.ignored: true
+                            }
+
+                            Icon {
+                                id: fieldIcon
+
+                                x: Theme.space.sectionGap
+                                anchors.verticalCenter: parent.verticalCenter
+                                kind: "search"
+                                size: Theme.size.badge * 3 / 4
+                                colour: Theme.colour.reviewTextSecondary
+                            }
+
+                            TextInput {
+                                id: fieldInput
+
+                                objectName: "reviewFilterInput"
+                                x: fieldIcon.x + fieldIcon.width + Theme.space.tileGap
+                                width: parent.width - x - (fieldClear.visible ? fieldClear.width : Theme.space.sectionGap)
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: Theme.colour.reviewText
+                                font: Theme.font.body.font
+                                clip: true
+                                selectByMouse: true
+                                text: root.filter.text
+                                onTextEdited: root.filter.text = text
+                                Keys.onReturnPressed: fieldInput.focus = false
+                                Accessible.role: Accessible.EditableText
+                                Accessible.name: qsTr("Filter by words")
+                                Accessible.focusable: true
+
+                                Text {
+                                    objectName: "reviewFilterPlaceholder"
+                                    visible: fieldInput.text.length === 0
+                                    width: parent.width
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: Theme.colour.reviewTextSecondary
+                                    font: Theme.font.body.font
+                                    text: qsTr("Words in the entries")
+                                    elide: Text.ElideRight
+                                    Accessible.ignored: true
+                                }
+                            }
+
+                            Item {
+                                id: fieldClear
+
+                                objectName: "reviewFilterFieldClear"
+                                visible: fieldInput.text.length > 0
+                                x: parent.width - width
+                                width: Theme.size.minTouchTarget
+                                height: parent.height
+                                Accessible.role: Accessible.Button
+                                Accessible.name: qsTr("Clear words")
+                                Accessible.focusable: true
+                                Accessible.ignored: !visible
+                                Accessible.onPressAction: root.filter.text = ""
+
+                                TapHandler {
+                                    enabled: fieldClear.visible
+                                    onTapped: root.filter.text = ""
+                                }
+
+                                Icon {
+                                    anchors.centerIn: parent
+                                    kind: "close"
+                                    size: Theme.size.badge * 2 / 3
+                                    colour: Theme.colour.reviewTextSecondary
+                                }
+                            }
+                        }
+
+                        Text {
+                            objectName: "reviewFilterNote"
+                            visible: root.filter.active
+                            width: parent.width
+                            color: Theme.colour.reviewTextSecondary
+                            font: Theme.font.footnote.font
+                            text: qsTr("Share and Copy log still use the whole log.")
+                            wrapMode: Text.WordWrap
+                            Accessible.role: Accessible.StaticText
+                            Accessible.name: text
+                        }
+                    }
                 }
 
                 // The empty log says so, in the place of the rows; a log with entries says how to use them.
                 footer: Item {
-                    readonly property bool hintShown: !root.empty && !root.pastLog
+                    readonly property bool hintShown: !root.empty && !root.pastLog && !root.filterNoMatch
 
                     width: list.width
-                    height: root.empty ? emptyCard.height : hintShown ? hint.implicitHeight : 0
-                    visible: root.empty || hintShown
+                    height: root.empty ? emptyCard.height : root.filterNoMatch ? noMatchCard.height : hintShown ? hint.implicitHeight : 0
+                    visible: root.empty || root.filterNoMatch || hintShown
+
+                    Rectangle {
+                        id: noMatchCard
+
+                        visible: root.filterNoMatch
+
+                        objectName: "reviewNoMatch"
+                        width: parent.width
+                        height: noMatchColumn.height + 2 * Theme.space.sectionGap
+                        radius: Theme.radius.groupedList
+                        color: Theme.colour.reviewSurface
+                        border.width: root.outlined ? Theme.border.hairline : 0
+                        border.color: Theme.colour.reviewDivider
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: qsTr("No entries match. Try other words, or clear the filter.")
+
+                        Column {
+                            id: noMatchColumn
+
+                            x: Theme.space.rowPadding
+                            y: Theme.space.sectionGap
+                            width: parent.width - 2 * Theme.space.rowPadding
+
+                            Text {
+                                width: parent.width
+                                color: Theme.colour.reviewText
+                                font: Theme.font.sheetTitle.font
+                                text: qsTr("No entries match")
+                                wrapMode: Text.WordWrap
+                                Accessible.ignored: true
+                            }
+
+                            Text {
+                                width: parent.width
+                                color: Theme.colour.reviewTextSecondary
+                                font: Theme.font.bodySmall.font
+                                text: qsTr("Try other words, or clear the filter.")
+                                wrapMode: Text.WordWrap
+                                Accessible.ignored: true
+                            }
+
+                            FilterAction {
+                                objectName: "reviewNoMatchClear"
+                                label: qsTr("Clear filter")
+                                onActivated: root.filter.clear()
+                            }
+                        }
+                    }
 
                     Text {
                         id: hint

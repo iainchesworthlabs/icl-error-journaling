@@ -12,6 +12,22 @@ name here and is shared at the level you choose (see below). It shows the header
 - **Copy or delete an entry:** swipe it left for **Copy** and **Delete**.
 - **Copy log** at the top copies the whole log.
 
+### Filter the entries
+
+Under the header, **Filter** narrows the entries you see. It does not change the log.
+
+- **Kinds:** tap **Errors**, **Notes**, **Observations** or **Changes** to see only those entries. Tap more than one to
+  see either. Tap one again to turn it off. **Observations** is there when you use the second board or the log has one.
+- **Words:** type in the field. Every word has to be in the entry. It ignores capital letters, accents and extra spaces,
+  so `cafe` finds `Café`. The time of an entry is not searched.
+- **Both** together show only the entries that match both. **Clear** shows every entry again, and the Filter row says how
+  many are shown, for example `Filter · 4 of 27`.
+
+Filtering only changes what Review shows. **Copy log**, **Share log** and **Share log again** always use the whole log,
+and the entry count at the top is the whole log's. Tap, swipe, **Copy** and **Delete** work on the entries you see. The
+filter is not saved: it clears when you leave the log, start a new one or close the app. A past log in
+[History](history.md) has the same filter.
+
 ### Observations in Review
 
 If you use the second board, an observation shows on its own line in the same words as the export, for example
