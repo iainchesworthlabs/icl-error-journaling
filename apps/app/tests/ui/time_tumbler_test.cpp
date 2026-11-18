@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// TimeTumbler (docs/plan/stage-4.md, 4.6, decision 11): time_tumbler.values, and the error text, the accessibility and
+// TimeTumbler: time_tumbler.values, and the error text, the accessibility and
 // the touch of the columns.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"

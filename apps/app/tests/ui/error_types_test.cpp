@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// ErrorTypes and its sheet ErrorTypeEdit (docs/plan/stage-4.md, 4.13): editor.error_types, editor.voiceover and the
+// ErrorTypes and its sheet ErrorTypeEdit: editor.error_types, editor.voiceover and the
 // cross-cutting checks.
 #include "editors_sheet_support.hpp"
 

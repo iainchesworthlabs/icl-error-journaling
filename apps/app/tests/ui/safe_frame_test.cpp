@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SafeFrame (docs/plan/stage-4.md, "Safe area"): safe_frame.insets and safe_frame.override.
+// SafeFrame: safe_frame.insets and safe_frame.override.
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"
 

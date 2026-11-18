@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// NewDay (docs/plan/stage-4.md, 4.11): newday.visibility, newday.text, newday.unshared, newday.actions,
+// NewDay: newday.visibility, newday.text, newday.unshared, newday.actions,
 // newday.share_first_flow and the cross-cutting checks.
 #include "history_test_support.hpp"
 // The other headers of the tests come after the project's, as the support header says.

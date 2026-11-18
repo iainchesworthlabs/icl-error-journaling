@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The rig itself (docs/plan/stage-4.md, "Tests": rig.*) and the cross-cutting checks, each against a stub that follows
+// The rig itself and the cross-cutting checks, each against a stub that follows
 // the rule and a stub that breaks it, because a check that cannot fail proves nothing.
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"

@@ -4,7 +4,7 @@
 
     python tools/docs/guide_screenshots.py [--src screenshots/screens] [--render] [--exe PATH] [--qt DIR]
 
-Stage 10, packages 10.3 and 10.7 (docs/plan/stage-10.md). The pictures are listed in `docs/guide/screenshots.json`: each
+Stage 10, packages 10.3 and 10.7. The pictures are listed in `docs/guide/screenshots.json`: each
 names a state of `tools/ej_screenshots/screens.json` and a mode. This script takes `<State>.<mode>.png` from the folder
 `ej_screenshots` writes (--src), scales it to the list's width, reduces it to 128 colours, strips every chunk but the
 pixels and writes `docs/guide/img/<file>.png`. With --render it runs `tools/ej_screenshots/ej_screenshots.py` first, for

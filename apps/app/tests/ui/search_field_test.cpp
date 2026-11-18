@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SearchField (docs/plan/stage-4.md, 4.6): search_field.filter, and the placeholder contrast that 4.1 measured.
+// SearchField: search_field.filter, and the placeholder contrast that 4.1 measured.
 #include "input_components_support.hpp"
 #include "rig/color_math.hpp"
 #include "rig/ui_checks.hpp"

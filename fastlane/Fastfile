@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# The store metadata upload (docs/plan/stage-11.md, task 11.7), run only by .github/workflows/store-metadata.yml.
+# The store metadata upload (the Stage 11 plan, task 11.7), run only by .github/workflows/store-metadata.yml.
 #
 # It uploads the listing text in store/ (and the graphics and screenshots the tools made) to App Store Connect and to the
 # Play Console. It never uploads a build: builds come only from release.yml. It never submits for review, and never

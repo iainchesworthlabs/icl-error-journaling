@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The launch screen (docs/plan/stage-5.md, 5.8). The picture that iOS shows until the first frame is the skeleton of
+// The launch screen. The picture that iOS shows until the first frame is the skeleton of
 // the Log screen, LaunchSkeleton.qml, drawn into the PNGs of the asset catalogue by tools/launch_image (its tests,
 // launch.image_current and launch.image_compare, say that the PNGs are what the skeleton draws). The cases here say
 // that the skeleton is what it claims to be and that it is where the real screen is.

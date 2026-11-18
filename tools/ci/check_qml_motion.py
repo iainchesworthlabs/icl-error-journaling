@@ -4,7 +4,7 @@
 
     python3 tools/ci/check_qml_motion.py [--root .]
 
-docs/plan/stage-4.md, "Motion" and package 4.14 (the CI test `motion.animators`): a `NumberAnimation`, `PropertyAnimation`,
+the Stage 4 plan, "Motion" and package 4.14 (the CI test `motion.animators`): a `NumberAnimation`, `PropertyAnimation`,
 `SmoothedAnimation` or `SpringAnimation` on `x`, `y`, `scale` or `opacity`, and a `Behavior` on one of them, runs on the
 GUI thread and drops frames while a commit holds it. `XAnimator`, `YAnimator`, `ScaleAnimator` and `OpacityAnimator` run on
 the render thread and hold the display rate (U7). This finds

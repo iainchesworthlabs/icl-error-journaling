@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// NoteComposer (docs/plan/stage-4.md, 4.6): composer.draft_binding, composer.add, composer.chips, composer.undo_text
+// NoteComposer: composer.draft_binding, composer.add, composer.chips, composer.undo_text
 // and composer.dictation.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"

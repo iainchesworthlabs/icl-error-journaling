@@ -205,7 +205,7 @@ jobs:
           {"name": "macos-xcode27-release", "runner": ["xcode-27"], "preset": "macos-release", "qt": true, "tests": true, "experimental": true, "timeout_minutes": 30}
         ]
 
-  # The kill harness (docs/plan/stage-2.md, section 4.4): 100 random kills, the crash points, and the random kills of
+  # The kill harness: 100 random kills, the crash points, and the random kills of
   # recovery, a migration and the typed draft, on the legs that find memory and threading errors on the recovery path and on
   # macOS. A pull request runs the smaller set that the unit and integration phase of the builds above include (25).
   kill-queue:
@@ -279,7 +279,7 @@ jobs:
         continue-on-error: true
         uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@7298129e789aab3e34c523aace5c699dc24e0001 # v0.1.25
 
-  # Every screen in light, dark and large text (tools/ej_screenshots, docs/plan/stage-7.md 7.1), uploaded for the owner to
+  # Every screen in light, dark and large text, uploaded for the owner to
   # read. The pictures are not compared: the build legs run the same case as the ui test screenshots.render, which is the
   # check. This job only keeps the pictures, so it is not in CI Status and cannot fail the run.
   screenshots:

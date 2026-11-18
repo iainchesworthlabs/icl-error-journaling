@@ -8,7 +8,7 @@
 namespace ej::platform
 {
 
-/// Which data protection class Android gives a file by where it is (docs/plan/stage-9.md, "File protection and storage
+/// Which data protection class Android gives a file by where it is (the Stage 9 plan, "File protection and storage
 /// location"). Android encrypts the app's internal storage per file; by default it is credential-encrypted storage, which
 /// can be read only after the person has unlocked the phone once since it started. That is the guarantee of iOS's
 /// NSFileProtectionCompleteUntilFirstUserAuthentication, and it needs no call: it applies to every file under

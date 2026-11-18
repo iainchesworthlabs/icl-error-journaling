@@ -7,7 +7,7 @@ namespace ej::bridge
 {
 
 /// How small the system may make the application's window. iPadOS lets a Stage Manager window be made smaller than any
-/// phone; the application's layout is tested down to a minimum (docs/plan/stage-8.md, "Multitasking"), and Qt does not
+/// phone; the application's layout is tested down to a minimum, and Qt does not
 /// pass a window's minimum size on to iOS, so the platform is told here. Every call is made on the main thread.
 class WindowLimits
 {

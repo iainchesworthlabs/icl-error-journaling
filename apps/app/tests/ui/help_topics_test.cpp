@@ -107,7 +107,7 @@ TEST_CASE("help.topics: addresses are the site, then the page, then the heading,
     CHECK(probe->property("noneFound").toBool());
     CHECK(probe->property("foundTitle").toString() == QStringLiteral("Review and sharing"));
 
-    CHECK(probe->property("guide").toString() == site);
+    CHECK(probe->property("guide").toString() == site + QStringLiteral("guide/"));
     CHECK(probe->property("support").toString() == site + QStringLiteral("support/"));
     CHECK(probe->property("privacy").toString() == site + QStringLiteral("privacy/"));
     CHECK(probe->property("fix").toString() == site + QStringLiteral("guide/setup-file/#when-the-app-refuses-a-file"));

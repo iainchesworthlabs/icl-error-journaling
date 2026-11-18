@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Guard tests for the store metadata upload (label: unit). T11-10 of docs/plan/stage-11.md.
+"""Guard tests for the store metadata upload (label: unit). T11-10 of the Stage 11 plan.
 
 Run with: python3 -m unittest discover -s tools/tests -v
 

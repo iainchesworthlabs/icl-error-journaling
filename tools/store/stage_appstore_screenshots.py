@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Put the App Store screenshots where `fastlane deliver` reads them (docs/plan/stage-11.md, tasks 11.4 and 11.7).
+"""Put the App Store screenshots where `fastlane deliver` reads them.
 
     python3 tools/store/stage_appstore_screenshots.py SOURCE TARGET
 

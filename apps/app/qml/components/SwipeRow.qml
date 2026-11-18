@@ -14,7 +14,7 @@ import ErrorJournalingApp
 //     }
 //
 // Accessibility. The row is one button, `activated`, and a screen opens the Edit sheet from it, which also offers Copy and
-// Delete. Qt offers QML no custom VoiceOver actions (docs/plan/stage-4.md, U4), so the two actions are also two buttons
+// Delete. Qt offers QML no custom VoiceOver actions, so the two actions are also two buttons
 // in the accessibility tree, named after the row ("Copy, 10:20 Mute Delay"), that a screen reader reaches without a
 // swipe. They sit under the row and are activated where they are; the swipe is the shortcut for a finger.
 //

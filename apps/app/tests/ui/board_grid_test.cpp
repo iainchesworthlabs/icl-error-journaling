@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// BoardGrid (docs/plan/stage-4.md, 4.5): grid.geometry and grid.model_updates, against the real BoardModel over an open
+// BoardGrid: grid.geometry and grid.model_updates, against the real BoardModel over an open
 // log with the sample configuration, so the roles the grid binds to are the ones the model has. The signals of the
 // tiles through the grid, the skeleton, the accessibility checks and the scene size are here too.
 //

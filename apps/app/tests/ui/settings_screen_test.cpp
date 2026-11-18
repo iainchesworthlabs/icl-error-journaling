@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SettingsScreen (docs/plan/stage-4.md, 4.12): settings.rows, settings.tester, settings.prefix,
+// SettingsScreen: settings.rows, settings.tester, settings.prefix,
 // settings.time_format, settings.totals, settings.board_layout, settings.board_limit, settings.export,
 // settings.import_row, settings.loading, settings.voiceover, settings.about (PRF-12) and the cross-cutting checks,
 // against the real SettingsModel and BoardModel over the fakes of Stage 3 and the sample configuration.

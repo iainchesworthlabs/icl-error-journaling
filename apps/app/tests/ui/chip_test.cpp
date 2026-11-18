@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Chip (docs/plan/stage-4.md, 4.6): the template chip. The chip tests of `composer.chips` are in composer_test too.
+// Chip: the template chip. The chip tests of `composer.chips` are in composer_test too.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"

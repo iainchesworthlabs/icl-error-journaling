@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Android timing marks (docs/plan/stage-9.md, "Timing marks"). Intervals and instants go to the system trace, where
+// Android timing marks. Intervals and instants go to the system trace, where
 // Perfetto and Android Studio's profiler show them (ATrace); a line goes to logcat under the tag "ej", readable from any
 // build. Timings only: no content, no network, no analytics (NFR-09). The decisions (the names, the start time from
 // /proc/self/stat) are in src/android_system_plan.cpp, which a test covers on the desktop.

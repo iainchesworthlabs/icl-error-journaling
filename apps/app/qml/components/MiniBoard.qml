@@ -21,7 +21,7 @@ import ErrorJournalingApp
 // Hold a tile and drag it to move it. The held tile lifts and follows the finger, and on release the board asks for the
 // move: nothing moves until the model says so, and when it does not (a refusal) the held tile is back in its place. That is
 // a shortcut for sighted users. Tap a tile and a panel under the board names it and has Move earlier, Move later and
-// Change error type, which do the same without a gesture and are the VoiceOver path (docs/plan/stage-4.md, "No gesture is
+// Change error type, which do the same without a gesture and are the VoiceOver path (the Stage 4 plan, "No gesture is
 // the only way in"). The selected tile has an outline, a lift and a tick, so it is not shown by colour alone, and the
 // selection follows the tile when the model moves it. Other is fixed: it is shown and named, and neither selected nor
 // moved. An empty position is drawn as a button, a plus and "Add error type" in the colours of a secondary button

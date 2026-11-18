@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# The facts of the About page that the build knows (docs/prd.md PRF-12; docs/licensing.md).
+# The facts of the About page that the build knows.
 #
 #   ej_add_about_data(<app target>)
 #       Adds two targets that the application depends on, and the tests that keep them honest.

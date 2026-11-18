@@ -44,7 +44,7 @@ struct DocumentError
     std::string m_Message;               // plain English for the screen to show inline; never holds entry text
 };
 
-/// The owner of one log in the view-model layer (docs/plan/stage-3.md, "LogDocument and the registry"). It holds the
+/// The owner of one log in the view-model layer. It holds the
 /// mirror of the log (a `StoredLog` by value) that the models read on the GUI thread, and it is the only code that
 /// changes that mirror or writes that log. The open log and a past log opened for review behave the same, so History,
 /// Review and Share work on one document per log and cannot overwrite each other's edits.

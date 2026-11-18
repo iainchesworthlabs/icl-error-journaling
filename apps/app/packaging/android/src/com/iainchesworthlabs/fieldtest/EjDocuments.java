@@ -15,7 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Setup files from other apps (docs/plan/stage-9.md, "File picker and open-with"): the document picker (Settings > Import,
+ * Setup files from other apps (the Stage 9 plan, "File picker and open-with"): the document picker (Settings > Import,
  * the first-launch offer) and "Open with" or "Share to" from Slack, Mail and Files. Android hands over a content:// stream;
  * this class copies it into a private file and tells C++, which treats it like any other setup file: the importer checks
  * the content (never the name or the type), and deletes the copy on every outcome. Everything that decides something is

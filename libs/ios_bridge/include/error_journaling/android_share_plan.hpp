@@ -9,7 +9,7 @@ namespace ej::bridge
 {
 
 /// The decisions around an Android share, in portable C++ so that the JNI code (platform/android/share.cpp) only passes
-/// them on and a test needs no phone (docs/plan/stage-9.md, "Share").
+/// them on and a test needs no phone.
 
 /// Text above this many bytes (UTF-8) is shared as a `.txt` file instead of in `EXTRA_TEXT`: the text travels in a Binder
 /// transaction, which Android limits to about 1 MB for the whole process.

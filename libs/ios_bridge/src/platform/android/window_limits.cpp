@@ -2,7 +2,7 @@
 // Android window limits. Android has no call that sets a window's minimum size at run time: the system reads it from the
 // manifest (the <layout> element's minWidth and minHeight, which multi-window and free-form windows honour), and a phone
 // has no resizable window. So this does nothing, like the desktop one, and the minimum for Android is decided with the
-// window work (docs/plan/stage-9.md, package 9.7), where a manifest value can be tested on a tablet and a foldable.
+// window work, where a manifest value can be tested on a tablet and a foldable.
 #include "error_journaling/window_limits.hpp"
 
 namespace ej::bridge

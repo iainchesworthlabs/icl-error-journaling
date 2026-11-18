@@ -2,7 +2,7 @@
 import QtQuick
 import ErrorJournalingApp
 
-// The time of a version change (design `TimeTumbler.dc.html`, decision 11 of docs/plan/stage-4.md): a second, shorter sheet
+// The time of a version change: a second, shorter sheet
 // over the Software version sheet, with Cancel, "Time" and Done, the hours and minutes (and seconds, and AM or PM, when the
 // time format has them), a "Now" chip and the time as the log will show it. It is declared in the same SheetHost, after the
 // version sheet, so it stacks over it with a scrim of its own.

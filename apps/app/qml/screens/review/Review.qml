@@ -25,7 +25,7 @@ Item {
     id: root
 
     // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
-    // reading column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    // reading column of a larger window.
     readonly property real side: WindowLayout.sideMargin(width, Theme.layout.readingColumn)
 
     required property var timeline

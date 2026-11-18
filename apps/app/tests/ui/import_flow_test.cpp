@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// ImportFlow (docs/plan/stage-4.md, 4.13): import.flow (the chosen path reaches loadImport, the summary shows the
+// ImportFlow: import.flow (the chosen path reaches loadImport, the summary shows the
 // counts, Apply applies, Cancel changes nothing), import.errors (the core's messages in file order, nothing changes)
 // and import.sample (the sample file imports and the board, the picker and the lists show it).
 #include "editors_support.hpp"

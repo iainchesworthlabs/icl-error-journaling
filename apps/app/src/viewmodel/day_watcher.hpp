@@ -14,7 +14,7 @@
 namespace ej::viewmodel
 {
 
-/// The new-day prompt (DAY-01; docs/plan/stage-3.md, "DayWatcher"). When the app opens, or returns to the foreground,
+/// The new-day prompt. When the app opens, or returns to the foreground,
 /// on a later calendar day than the open log's, it offers to start a new log, naming the new date, and says whether the
 /// open log has been shared.
 ///

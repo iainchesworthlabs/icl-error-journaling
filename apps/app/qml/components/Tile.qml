@@ -4,7 +4,7 @@ import QtQuick
 import QtQuick.Shapes
 import ErrorJournalingApp
 
-// One tile of the capture board (Stage 4, package 4.5; docs/plan/stage-4.md, "Tile"). It shows what a row of BoardModel
+// One tile of the capture board. It shows what a row of BoardModel
 // holds and tells the screen about the finger; it counts nothing and records nothing.
 //
 // The roles of a BoardModel row arrive as required properties, so a Repeater over the model fills them by name.
@@ -65,7 +65,7 @@ Item {
     property bool interactions: false
     // Under the empty-board card of the Log screen: drawn, but out of the screen reader's way (the card is read instead).
     property bool covered: false
-    // How long the finger has to stay down for held() (BRD-07, docs/plan/stage-4.md, 4.17), and the longest gap between the lift of
+    // How long the finger has to stay down for held(), and the longest gap between the lift of
     // a tap and the touch of the next for a double-tap (4.17a). Both are Theme.motion values and both are timed on the animation
     // clock, like the press scale, so that a test moves them with the rig's `advance`.
     property int holdMs: Theme.motion.holdMs

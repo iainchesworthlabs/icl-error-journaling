@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// LastEntryBar (docs/plan/stage-4.md, 4.5): last_bar.line, the empty state, the tap that opens Review, the skeleton and
+// LastEntryBar: last_bar.line, the empty state, the tap that opens Review, the skeleton and
 // the accessibility checks.
 #include "board_test_support.hpp"
 #include "rig/ui_checks.hpp"

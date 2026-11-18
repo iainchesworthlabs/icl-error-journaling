@@ -15,7 +15,7 @@ The reader (libs/core/src/configuration.cpp) is the truth. The page must:
 - carry, as its example, exactly config/sample-config.json.
 
 Tables are introduced by `<!-- fields: <object> -->`, limit rows carry `<!-- limit:NAME -->` and message rows carry
-`<!-- code:NAME -->` or `<!-- problem:NAME -->`. The page and the checks are described in docs/plan/stage-10.md.
+`<!-- code:NAME -->` or `<!-- problem:NAME -->`. The page and the checks are described in the Stage 10 plan.
 """
 
 from __future__ import annotations

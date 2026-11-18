@@ -299,7 +299,7 @@ class LaunchScreenCheckTest(unittest.TestCase):
 
 
 class PrivacyManifestCheckTest(unittest.TestCase):
-    """The privacy manifest (docs/plan/stage-11.md, 11.2, T11-6)."""
+    """The privacy manifest."""
 
     GOOD = {
         "NSPrivacyTracking": False,

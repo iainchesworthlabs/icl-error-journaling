@@ -1,6 +1,6 @@
 name: Kill harness
 
-# Reusable. Runs the Stage 2 kill harness (docs/plan/stage-2.md, section 4; docs/testing.md; docs/ci.md, "The kill harness
+# Reusable. Runs the Stage 2 kill harness (the Stage 2 plan, section 4; docs/testing.md; docs/ci.md, "The kill harness
 # tiers") on a list of legs, with the random-kill iterations of each leg split over shards. Each shard builds the harness
 # and runs `ej_kill_driver` with its range of iterations (EJ_KILL_FIRST and EJ_KILL_LAST) under one master seed, so that
 # together the shards run iterations 0 to N - 1 once, and a failure is repeated with that seed and its iteration number.

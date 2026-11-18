@@ -13,7 +13,7 @@
 namespace ej::viewmodel
 {
 
-/// Builds the renderer's `ExportContext` from the configuration in force (docs/plan/stage-3.md, "One source of
+/// Builds the renderer's `ExportContext` from the configuration in force (the Stage 3 plan, "One source of
 /// wording"). A timeline row, the "Last" bar, the edit sheet's preview, Copy and Share all render with a context made
 /// here, so the review screen reads exactly like the export (REV-01).
 ///

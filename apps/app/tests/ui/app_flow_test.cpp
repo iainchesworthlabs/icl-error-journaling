@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The app shell (docs/plan/stage-4.md, 4.15): the whole app, driven through the screens. The services are the ones
+// The app shell: the whole app, driven through the screens. The services are the ones
 // `app::AppRoot` builds for the phone, over the in-memory store and the fake clock and platform (Stage 3's `Rig`), and
 // the shell is the item that `Main.qml` holds, so what is tested here is what runs on the phone short of the window
 // itself. The bridge is a small QObject with the names of the QmlBridge; its haptics go into the same EventLog as the
@@ -1044,7 +1044,7 @@ namespace
 /// The safe-area insets of an iPad: the status bar and the home indicator.
 constexpr double IPAD_TOP = 24.0;
 constexpr double IPAD_BOTTOM = 20.0;
-/// The column limits of docs/plan/stage-8.md ("Layout rules"), as Theme.layout has them.
+/// The column limits of the Stage 8 plan ("Layout rules"), as Theme.layout has them.
 constexpr double LOG_COLUMN = 680.0;
 constexpr double READING_COLUMN = 720.0;
 constexpr double REGULAR_MARGIN = 24.0;
@@ -1555,7 +1555,7 @@ const QSize IPAD_WIDE_SIZES[] = {QSize(1133, 744), QSize(1180, 820), QSize(1376,
 constexpr double PANE_GAP = 20.0;
 constexpr double BOARD_SHARE = 0.58;
 
-/// The two panes of a Wide window `window` wide, as docs/plan/stage-8.md ("Layout rules") has them.
+/// The two panes of a Wide window `window` wide, as the Stage 8 plan ("Layout rules") has them.
 struct Panes
 {
     double m_BoardX;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
-// What the in-app help remembers (Stage 10, package 10.6; docs/plan/stage-10.md, "The first-run tip"): whether the
+// What the in-app help remembers: whether the
 // first-run tip of the Log screen has been closed, and on which days it was shown.
 //
 // The tip is on screen until it is closed or it has been shown on three days, whichever comes first. It is never shown

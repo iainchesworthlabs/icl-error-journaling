@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The exit-gate test of Stage 3, in memory: a full day through the services, headless (docs/plan/stage-3.md). The same
+// The exit-gate test of Stage 3, in memory: a full day through the services, headless. The same
 // day against the real store is in integration/test_full_day.cpp.
 #include "support/full_day.hpp"
 #include "support/rig.hpp"

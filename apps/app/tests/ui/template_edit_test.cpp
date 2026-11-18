@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// TemplateEdit (docs/plan/stage-4.md, 4.13): editor.templates (name, question, line, the live message, the example,
+// TemplateEdit: editor.templates (name, question, line, the live message, the example,
 // Insert answer, the defaults of a new template, Save), editor.voiceover and the cross-cutting checks. The page uses
 // plain words: Name, Question to ask, Line in the log, and [answer] for the stored {value}.
 #include "editors_support.hpp"

@@ -39,7 +39,7 @@ struct LogChange
 };
 
 /// Told, on the GUI thread, after a log's mirror has changed, and only after a commit: a failed write notifies nobody.
-/// This is a plain C++ interface, not a Qt signal, because only C++ code listens (docs/plan/stage-3.md, "Scope and
+/// This is a plain C++ interface, not a Qt signal, because only C++ code listens (the Stage 3 plan, "Scope and
 /// conventions").
 class LogObserver
 {

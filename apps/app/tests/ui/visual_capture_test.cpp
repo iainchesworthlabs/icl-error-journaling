@@ -1328,7 +1328,7 @@ std::vector<Scene> phone_scenes()
     };
 }
 
-// ---- the states with no mock-up, for ej_screenshots (docs/plan/stage-7.md, 7.1) ----
+// ---- the states with no mock-up, for ej_screenshots ----
 
 void scene_tap_hint(Phone& phone)
 {
@@ -1414,7 +1414,7 @@ std::vector<Scene> extra_scenes()
     };
 }
 
-/// The iPad mock-ups of Stage 8 (docs/plan/stage-8.md): nine of the phone's screens, each in portrait and landscape,
+/// The iPad mock-ups of Stage 8: nine of the phone's screens, each in portrait and landscape,
 /// brought to the same state as on the phone.
 const QStringList IPAD_SCREENS{
     QStringLiteral("Main"),          QStringLiteral("Review"),  QStringLiteral("Header"),
@@ -1519,7 +1519,7 @@ TEST_CASE("capture.mockups: render each state that has a mock-up, in light and d
     write_manifest(dir, scene.m_Name, true, scene.m_Note);
 }
 
-// ---- ej_screenshots (docs/plan/stage-7.md, 7.1) ----
+// ---- ej_screenshots ----
 
 namespace
 {

@@ -2,7 +2,7 @@
 pragma Singleton
 import QtQuick
 
-// The in-app help (Stage 10, package 10.6; docs/plan/stage-10.md, "In-app help"): the topics that the help buttons, the
+// The in-app help: the topics that the help buttons, the
 // Quick help list in Settings and the HelpSheet show, and the addresses of the online guide that go with them.
 //
 // The help is text in the app and works without a connection. A topic is a short heading and two to five paragraphs, and
@@ -20,7 +20,7 @@ QtObject {
     readonly property string siteUrl: "https://iainchesworthlabs.com/field-test/"
 
     // The pages the Help group of Settings opens, as paths under the site.
-    readonly property string guidePath: ""
+    readonly property string guidePath: "guide/"
     readonly property string supportPath: "support/"
     readonly property string privacyPath: "privacy/"
     // The page that explains every message of a refused setup file, for the row of the import errors screen.

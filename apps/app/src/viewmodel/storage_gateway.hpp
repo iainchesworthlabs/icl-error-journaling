@@ -36,7 +36,7 @@ struct StorageContext
 /// completion runs afterwards on the GUI thread and receives whatever the job produced.
 ///
 /// Services keep a mirror of what they show and change it in the completion of a successful job, so the screen never
-/// shows what the store does not have (docs/plan/stage-3.md, "Threading and the order of feedback").
+/// shows what the store does not have.
 class StorageGateway
 {
 public:

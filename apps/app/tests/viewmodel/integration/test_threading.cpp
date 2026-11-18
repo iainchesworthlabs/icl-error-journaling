@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The threading tests of docs/plan/stage-3.md ("Threading tests"), against the application as `main.cpp` builds it: the
+// The threading tests of the Stage 3 plan ("Threading tests"), against the application as `main.cpp` builds it: the
 // real store on its own thread, behind the composition root. The gateway on its own (order, drain, shutdown) is in
 // test_threaded_storage_gateway.cpp. These also run under ThreadSanitizer in CI.
 #include "support/rig.hpp"

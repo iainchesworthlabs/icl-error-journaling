@@ -65,7 +65,7 @@ struct HeaderChangeEntry
     std::string m_NewValue;
 };
 
-/// What the tester did on the optional second board (docs/plan/feedback-interactions-board.md, 3.1). Like an error
+/// What the tester did on the optional second board. Like an error
 /// entry it holds the type's id and a snapshot of its name. It holds people by id only, never a name.
 struct InteractionEntry
 {

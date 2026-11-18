@@ -7,7 +7,7 @@ import ErrorJournalingApp
 // tiles, and the list of the rest of the setup. It is the root of the Settings tab, placed by the shell above the tab bar,
 // and it takes the one model it shows:
 //
-//   settings   the SettingsModel (properties and invokables as in docs/plan/stage-3.md; `boardLayout` is the model of the
+//   settings   the SettingsModel (properties and invokables as in the Stage 3 plan; `boardLayout` is the model of the
 //              miniature board)
 //
 // What it does itself:

@@ -17,7 +17,7 @@ It checks, in order:
    platform services: the whole of start-up (the native libraries, the SQLite store, the bridge) has worked;
 4. Home gives `lifecycle: inactive`, and starting it again gives `lifecycle: active` in the same process;
 5. nothing in that process's log is a crash, a missing native library or a missing Java method;
-6. the package has the backup flag (docs/plan/stage-9.md, decision 5).
+6. the package has the backup flag.
 
 Every decision is in `Smoke`, which is given a function that runs adb, so tools/tests/test_android_smoke.py runs it
 without a device. Only main() runs adb.

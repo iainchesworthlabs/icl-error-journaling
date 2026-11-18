@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!-- The application's privacy manifest (docs/plan/stage-11.md, task 11.2). The application tracks no one, collects no data
+<!-- The application's privacy manifest (the Stage 11 plan, task 11.2). The application tracks no one, collects no data
      and has no network access, so the first three keys are false or empty. Qt is linked statically on iOS, so the
      manifests Qt ships with its frameworks never reach the bundle: the required-reason APIs that Qt calls are declared
      here, as the application's own, with the application's reasons.

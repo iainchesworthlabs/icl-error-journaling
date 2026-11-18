@@ -12,7 +12,7 @@
 namespace ej::test
 {
 
-/// The wall clock and the monotonic scheduler of a test, driven by hand (docs/plan/stage-3.md, "Time, ids and the
+/// The wall clock and the monotonic scheduler of a test, driven by hand (the Stage 3 plan, "Time, ids and the
 /// clock"). Nothing sleeps.
 ///
 /// `advance` moves both clocks by the same amount and fires the timers that fall due, in order of their due time (ties

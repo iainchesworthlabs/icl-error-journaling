@@ -23,10 +23,9 @@ This file applies to any automated contributor. Read it before changing the repo
   Do not open it unless the owner asks. The real configuration file is never committed; only
   `config/sample-config.json` is.
 
-## Stage gates
+## Gates
 
-- Work follows the stages of `docs/implementation-plan.md`. Before code for a stage, its task breakdown and test list go in
-  `docs/plan/stage-N.md` and the owner reviews it.
+- Agree the scope of a larger piece of work with the owner before writing code for it.
 - No UI work starts until the Stage 2 exit gate (no lost acknowledged entries, all corruption cases recover) has passed.
   Losing an entry from the open log is a P1 defect.
 
@@ -54,7 +53,7 @@ This file applies to any automated contributor. Read it before changing the repo
 | You change | Also update |
 |---|---|
 | A user-visible behaviour | A fragment in `changelog.d/`, and the page of the user guide under `docs/guide/` that describes it |
-| What the app stores, sends or keeps in a backup | `docs/privacy.md` (and the store privacy answers in `docs/plan/stage-11.md`) |
+| What the app stores, sends or keeps in a backup | `docs/privacy.md` |
 | A public header in `libs/*/include` | The tests, and `docs/architecture.md` when the layout changes |
 | A dependency in `vcpkg.json` | Nothing else; Dependabot and the baseline check cover the fork |
 | The documentation site's address | `site_url` in `mkdocs.yml` only, then what `tools/ci/check_site_address.py` names (`docs/ci.md`, "The site address") |

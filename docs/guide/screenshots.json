@@ -1,5 +1,5 @@
 {
-  "_comment": "The pictures of the user guide (docs/plan/stage-10.md, 10.3 and 10.7). Each names a state of tools/ej_screenshots/screens.json and a mode; tools/docs/guide_screenshots.py renders or copies them, scales them to 'width' pixels and writes docs/guide/img/<file>.png. The sample data only, never a real setup. A page shows one with ![alt text](img/<file>.png), and tools/ci/check_guide_screenshots.py holds pages, this list, the files and screens.json to each other.",
+  "_comment": "The pictures of the user guide. Each names a state of tools/ej_screenshots/screens.json and a mode; tools/docs/guide_screenshots.py renders or copies them, scales them to 'width' pixels and writes docs/guide/img/<file>.png. The sample data only, never a real setup. A page shows one with ![alt text](img/<file>.png), and tools/ci/check_guide_screenshots.py holds pages, this list, the files and screens.json to each other.",
   "width": 402,
   "images": [
     {"file": "first-launch", "state": "FirstLaunch", "mode": "light"},

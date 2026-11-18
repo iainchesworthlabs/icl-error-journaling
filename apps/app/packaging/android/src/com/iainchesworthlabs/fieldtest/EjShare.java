@@ -19,7 +19,7 @@ import androidx.core.content.FileProvider;
 import java.io.File;
 
 /**
- * The share sheet: ACTION_SEND through the system chooser (docs/plan/stage-9.md, "Share"). Everything that decides
+ * The share sheet: ACTION_SEND through the system chooser (the Stage 9 plan, "Share"). Everything that decides
  * something is in C++ (android_share_plan.cpp); this class makes the intent, starts the chooser and reports how it ended
  * as one of three codes: 0 a component was chosen, 1 the chooser was dismissed, 2 an error.
  *
