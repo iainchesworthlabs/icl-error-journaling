@@ -4,7 +4,7 @@
 
     python3 tools/ci/check_qml_platform.py [--root .]
 
-The QML counterpart of the rule against `#if` on a platform (AGENTS.md, docs/plan/stage-4.md "No platform tests in QML"):
+The QML counterpart of the rule against `#if` on a platform:
 what differs between the phone and a desktop (a share sheet, a document picker, a haptic) arrives as a property or a signal
 of the bridge, so a screen never branches on `Qt.platform`. The theme is checked too.
 """

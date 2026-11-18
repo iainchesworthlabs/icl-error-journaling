@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# `system`: the kill harness (section 4 of docs/plan/stage-2.md). ej_kill_worker is the child the driver starts and kills;
+# `system`: the kill harness. ej_kill_worker is the child the driver starts and kills;
 # ej_kill_driver is the Catch2 test. CTest runs the driver with the PR-gate counts (25 random kills); the merge queue, the
 # nightly run and the exit gate run the same driver with more (docs/ci.md).
 find_package(Qt6 6.8 REQUIRED COMPONENTS Sql)

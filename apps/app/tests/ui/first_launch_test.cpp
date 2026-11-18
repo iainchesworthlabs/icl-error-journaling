@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// FirstLaunch (docs/plan/stage-4.md, 4.13): setup.first_launch (shown while `configured` is false; import a setup file
+// FirstLaunch: setup.first_launch (shown while `configured` is false; import a setup file
 // or set up by hand and then continue), the load problem banner, setup.voiceover and the cross-cutting checks.
 #include "editors_support.hpp"
 

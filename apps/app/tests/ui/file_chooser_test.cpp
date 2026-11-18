@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The desktop file chooser (docs/plan/stage-4.md, 4.15, decision 17): what a dialog gives back, a URL, becomes the
+// The desktop file chooser: what a dialog gives back, a URL, becomes the
 // local path that the import and export take and the name that the confirmation shows. No dialog is opened: it would
 // wait for a person.
 #include "rig/ui_rig.hpp"

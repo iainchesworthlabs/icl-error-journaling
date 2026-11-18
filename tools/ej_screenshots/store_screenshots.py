@@ -4,7 +4,7 @@
 
     python tools/ej_screenshots/store_screenshots.py [--out screenshots] [--exe PATH] [--qt DIR] [--raw DIR] [--check]
 
-Stage 11, task 11.4 (docs/plan/stage-11.md). The shots are listed in `tools/ej_screenshots/store_shots.json`: each names a
+Stage 11, task 11.4. The shots are listed in `tools/ej_screenshots/store_shots.json`: each names a
 state of `screens.json` and a mode. The script renders those states with ej_screenshots (the phone at a scale of 3, the iPad
 at 2), then puts each picture on a canvas of the set's size:
 

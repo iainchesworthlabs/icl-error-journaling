@@ -1,7 +1,7 @@
 # Google Play app content: drafted answers
 
 The answers for the Play Console, Policy, App content. Task 11.0 checks each question against the Console before 11.8
-enters them. See [`docs/plan/stage-11.md`](../../docs/plan/stage-11.md#play-app-content).
+enters them.
 
 ## Data safety
 
@@ -49,4 +49,4 @@ list is stored on the device only and no name leaves it unless the user shares a
 | Health app | No |
 | News app | No |
 | Account creation, so account deletion | No account |
-| Privacy policy | The URL in `../appstore/en-AU/privacy_url.txt` (Stage 10) |
+| Privacy policy | The URL in `../appstore/en-AU/privacy_url.txt` |

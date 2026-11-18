@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// ListRow (docs/plan/stage-4.md, 4.6): list_row.layout, and the row states.
+// ListRow: list_row.layout, and the row states.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"

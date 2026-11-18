@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Tests for check_store_text.py (label: unit). T11-1 and T11-3 of docs/plan/stage-11.md.
+"""Tests for check_store_text.py (label: unit). T11-1 and T11-3 of the Stage 11 plan.
 
 Run with: python3 -m unittest discover -s tools/tests -v
 Only fictional names are used.

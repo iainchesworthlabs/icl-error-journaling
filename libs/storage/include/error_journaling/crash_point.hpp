@@ -11,7 +11,7 @@
 namespace ej
 {
 
-/// The places in the write path where the kill harness ends the process (K1 to K9 in docs/plan/stage-2.md, section 7),
+/// The places in the write path where the kill harness ends the process,
 /// and where a test can make a step fail. The names are the `--crash-at` values of `ej_kill_worker`.
 enum class CrashPoint
 {

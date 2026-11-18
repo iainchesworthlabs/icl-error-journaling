@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// EditEntry (docs/plan/stage-4.md, 4.10): edit.fields, edit.preview, edit.save_cancel, edit.delete, edit.time_order,
+// EditEntry: edit.fields, edit.preview, edit.save_cancel, edit.delete, edit.time_order,
 // edit.dst, edit.header_change_entry, edit.validation, edit.layout, edit.time_sheet and the cross-cutting checks. The
 // sheet is part of the Review screen and is opened the way the screen opens it, from a row; the time is chosen on the
 // second, shorter sheet (EditTimeSheet) that the screen declares after it.

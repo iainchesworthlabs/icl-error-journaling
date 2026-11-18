@@ -18,7 +18,7 @@
 #     the wrong libraries; and the bundle holds no dynamic library or framework, so
 #     what the notices call statically linked is;
 #   * it carries no Tracy profiler, and it reports the network code Qt links (Qt QML
-#     brings Qt Network) without refusing it (docs/plan/stage-11.md, 11.2);
+#     brings Qt Network) without refusing it;
 #   * PrivacyInfo.xcprivacy is at the top of the bundle, declares no tracking and no
 #     collected data, and declares each required-reason API category the executable
 #     calls (found from its imports and its Objective-C names);
@@ -100,7 +100,7 @@ done
 [ "$(key CADisableMinimumFrameDurationOnPhone)" = "true" ] || fail "CADisableMinimumFrameDurationOnPhone is '$(key CADisableMinimumFrameDurationOnPhone)', expected true: a ProMotion phone would run the application at 60 Hz"
 [ "$(key UIFileSharingEnabled)" != "true" ] || fail "UIFileSharingEnabled is true: the Documents folder would be listed in Files"
 [ -n "$(key UILaunchScreen)" ] || fail "Info.plist has no UILaunchScreen (iOS would run the program in a legacy window)"
-# Orientations (docs/plan/stage-8.md): the phone is portrait only, the iPad has all four and is not full screen only, and the
+# Orientations: the phone is portrait only, the iPad has all four and is not full screen only, and the
 # application has one window.
 [ "$(key UISupportedInterfaceOrientations:0)" = "UIInterfaceOrientationPortrait" ] && [ -z "$(key UISupportedInterfaceOrientations:1)" ] || fail "UISupportedInterfaceOrientations is not portrait only"
 ipad_orientations=""
@@ -166,7 +166,7 @@ shipped_libraries="$(find "$app" \( -name '*.dylib' -o -name '*.framework' -o -n
 [ -z "$shipped_libraries" ] || fail "the bundle holds a dynamic library, but the licence notices say everything is linked statically: $shipped_libraries"
 echo "    no dynamic library or framework in the bundle: every third-party library is linked statically"
 
-# Network code and the profiler (docs/plan/stage-11.md, 11.2, T11-5). Qt QML links Qt Network (the kit is built with
+# Network code and the profiler. Qt QML links Qt Network (the kit is built with
 # qml_network, so QML could load a remote URL), and Qt Network links CFNetwork and Network. So the executable carries
 # network code that the application never calls: tools/ci/check_no_network.py keeps the application's own code free of
 # network use and of remote URLs. Here the network code is reported, not refused, so that a change in what is linked shows

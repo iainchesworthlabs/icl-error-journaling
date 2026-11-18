@@ -75,7 +75,7 @@ marks go to Points of Interest, for anyone with a Mac and Console or Instruments
 identity is only needed to run from Xcode.
 
 `ej_dataset --out <directory>` writes a year of fictional data (about 80,000 entries) through the real repository. There is
-no way yet to put it on a phone without a Mac; see `docs/plan/stage-5.md`, "Timing marks".
+no way yet to put it on a phone without a Mac.
 
 `ej_launch_image` draws the launch image of the iPhone app: the skeleton of the Log screen
 (`apps/app/qml/screens/launch/LaunchSkeleton.qml`) at 402 x 874 pt and 3x, in light and dark, into
@@ -111,7 +111,7 @@ directory). Both are under `build/android-release/apps/app/android-build/build/o
 of the project version. Check a package with
 `python3 tools/ci/check_android_package.py --sdk "$ANDROID_SDK_ROOT" --ndk "$ANDROID_NDK_ROOT" <apk or aab>`.
 Until Stage 9's packages 9.2 to 9.6 add `libs/ios_bridge/src/platform/android/`, the Android build uses the desktop stubs
-of the bridge: no share sheet, haptics or document picker (docs/plan/stage-9.md).
+of the bridge: no share sheet, haptics or document picker.
 
 ### The About page: commit, date and licences
 

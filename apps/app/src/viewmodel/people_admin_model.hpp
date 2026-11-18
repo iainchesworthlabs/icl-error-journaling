@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
-// The People screen of Settings (Stage 14, package I-7; docs/plan/stage-14.md, 4.5): every person who was not
+// The People screen of Settings: every person who was not
 // forgotten, retired people included, with add, rename, retire (and bring back) and Forget. It is a GUI-side mirror of
 // the people store
 // (`PeopleStore`, on the storage thread), like `PeopleModel` for the picker, and it is changed only after a job has

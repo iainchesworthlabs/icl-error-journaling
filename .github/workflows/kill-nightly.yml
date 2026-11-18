@@ -1,6 +1,6 @@
 name: Kill harness (nightly)
 
-# The nightly tier of the Stage 2 kill harness (docs/plan/stage-2.md, section 4.4): 1,000 random kills in 4 shards of 250 on
+# The nightly tier of the Stage 2 kill harness: 1,000 random kills in 4 shards of 250 on
 # Linux (release) and macOS, with a fresh seed each night, and the crash points, 200 random kills of recovery, 200 of a
 # migration and the typed-draft kills in every leg. The seed is printed in the run's summary and kept as the artifact
 # `kill-nightly-seed`. A red night opens, or adds to, the standing `nightly` issue.

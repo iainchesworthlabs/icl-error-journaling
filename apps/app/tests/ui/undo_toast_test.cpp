@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// UndoToast (docs/plan/stage-4.md, 4.5): toast.text_and_bar, toast.undo, toast.repeat and toast.lifecycle, with plain
+// UndoToast: toast.text_and_bar, toast.undo, toast.repeat and toast.lifecycle, with plain
 // property values for what UndoController offers, and the accessibility and motion checks.
 #include "board_test_support.hpp"
 #include "rig/ui_checks.hpp"

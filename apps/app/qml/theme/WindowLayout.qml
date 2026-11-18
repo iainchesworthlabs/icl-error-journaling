@@ -3,7 +3,7 @@ pragma Singleton
 import QtQuick
 
 // WindowLayout: the layout class of the window and the sizes that follow from it (Stage 8, package 8.1;
-// docs/plan/stage-8.md, "Layout approach"). The class is chosen from the window's size in points and nothing else: not
+// the Stage 8 plan, "Layout approach"). The class is chosen from the window's size in points and nothing else: not
 // the platform, not the device and not the orientation. So a narrow Split View window on an iPad gets the phone's
 // layout, the desktop window of Stage 12 gets the iPad's when it is wide, and a test picks a class by giving the window
 // a size.

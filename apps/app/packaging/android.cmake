@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# What makes the application an Android program (docs/plan/stage-9.md, "Builds and toolchain"). Included by
+# What makes the application an Android program. Included by
 # apps/app/CMakeLists.txt when ANDROID is set, which the toolchain file of Qt's Android kit does (the android-release and
 # android-emulator presets).
 #

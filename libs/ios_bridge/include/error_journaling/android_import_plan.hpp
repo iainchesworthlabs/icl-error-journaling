@@ -12,7 +12,7 @@ namespace ej::bridge
 {
 
 /// The decisions around opening a setup file on Android, in portable C++ so that a test covers them on the desktop and
-/// the Java (EjDocuments.java) only moves bytes (docs/plan/stage-9.md, "File picker and open-with").
+/// the Java (EjDocuments.java) only moves bytes.
 
 /// Android hands the application a content:// stream, not a file. It is copied into a private directory of the
 /// temporary space, and the importer (ConfigImporter) takes it from there as a local file and deletes it on every

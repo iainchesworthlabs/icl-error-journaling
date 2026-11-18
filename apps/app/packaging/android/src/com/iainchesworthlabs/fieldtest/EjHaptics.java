@@ -5,7 +5,7 @@ import android.app.Activity;
 import android.view.View;
 
 /**
- * Haptic feedback (docs/plan/stage-9.md, "Haptics"). The constant is chosen in C++ (android_haptics_plan.cpp); this
+ * Haptic feedback (the Stage 9 plan, "Haptics"). The constant is chosen in C++ (android_haptics_plan.cpp); this
  * posts the call to the Android UI thread, which View.performHapticFeedback needs, and returns at once. It needs no
  * permission, and it follows the system's "Touch feedback" setting.
  */

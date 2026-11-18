@@ -2,8 +2,6 @@
   "docs": [
     "docs/*.md",
     "docs/*.asc",
-    "docs/plan/**",
-    "docs/media/**",
     "docs/design/*.md",
     "docs/design/screens/**",
     "*.md",

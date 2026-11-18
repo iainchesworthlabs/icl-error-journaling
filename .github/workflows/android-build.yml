@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# The Android build (docs/plan/stage-9.md, "CI jobs"; docs/ci.md, "Android build"). Builds the android-release preset
+# The Android build. Builds the android-release preset
 # into an unsigned APK and bundle with Qt's Android kit, the NDK the kit was built with and JDK 21, then looks inside them
 # (tools/ci/check_android_package.py): the manifest asks for no permission, the SDK range is 28 to 36, and every 64-bit
 # native library is aligned for 16 KB pages. The bundle has arm64-v8a and armeabi-v7a (Stage 9, decision 3). Nothing runs on a device or an emulator here (that is package 9.8).

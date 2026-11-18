@@ -12,7 +12,7 @@ namespace ej::bridge
 
 /// The decisions behind the Android timing marks and accessibility settings, in portable C++ so that a test covers them on
 /// the desktop and the Android code (platform/android/perf_marks.cpp, accessibility_settings.cpp) only reads the system
-/// (docs/plan/stage-9.md, "Timing marks" and "Accessibility settings").
+///.
 
 /// The name of a mark in the system trace (Perfetto) and the log. Each is a distinct, non-empty literal.
 [[nodiscard]] const char* android_mark_name(Mark mark) noexcept;

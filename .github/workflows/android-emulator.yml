@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# The Android emulator smoke test (docs/plan/stage-9.md, "CI jobs", package 9.8; docs/ci.md, "Android emulator smoke test").
+# The Android emulator smoke test.
 # Builds the android-emulator preset (x86_64) into an APK, starts an API 36 emulator on a runner with KVM, installs the APK
 # and runs tools/ci/android_smoke.py: the application starts, reaches its first lifecycle line, survives Home and a return,
 # logs no fault, and Package Manager offers it for the setup file's types only. Not a required check: the owner's decision 8

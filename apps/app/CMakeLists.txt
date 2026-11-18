@@ -6,7 +6,7 @@
 find_package(Qt6 6.9 REQUIRED COMPONENTS Core Quick Sql)
 qt_standard_project_setup(REQUIRES 6.9)
 
-# The view-model layer (Stage 3, docs/plan/stage-3.md): the thin QObject layer between the core and storage on one side
+# The view-model layer: the thin QObject layer between the core and storage on one side
 # and QML on the other. A static library, so that ej_app links it and the tests can too (an executable cannot be linked).
 # It links no Qt Quick and no QtGui, so its tests run without a display. The sources are found by a glob, as in
 # libs/ios_bridge, so that a work package adds its files without editing this file: a new file in src/viewmodel is
@@ -70,7 +70,7 @@ else()
         NOTICE_EXCLUDE catch2)
 endif()
 
-# The About page's build-time facts (docs/prd.md PRF-12): the commit and date, and the licences of what the program links,
+# The About page's build-time facts: the commit and date, and the licences of what the program links,
 # generated from the real link line. After the iOS block, which defines the build number.
 include(EjAbout)
 ej_add_about_data(ej_app)
@@ -86,7 +86,7 @@ if(ERROR_JOURNALING_BUILD_TESTS)
             "TSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tools/sanitizers/tsan.supp")
     endif()
 
-    # The tests of the QML (Stage 4, docs/plan/stage-4.md), in tests/ui.
+    # The tests of the QML, in tests/ui.
     add_subdirectory(tests/ui)
 
     # Starts the real application without a display, waits for the first frame and exits.

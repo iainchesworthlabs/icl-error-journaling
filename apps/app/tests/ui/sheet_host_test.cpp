@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SheetHost (docs/plan/stage-4.md, 4.4): the layer that holds the screen and the sheets, and keeps the screen out of
+// SheetHost: the layer that holds the screen and the sheets, and keeps the screen out of
 // reach while a sheet is open.
 #include "container_support.hpp"
 #include "rig/ui_checks.hpp"

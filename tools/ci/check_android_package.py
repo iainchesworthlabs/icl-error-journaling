@@ -17,7 +17,7 @@ For an APK and a bundle it checks that every 64-bit native library (arm64-v8a, x
 (`llvm-readelf`: each LOAD
 segment aligned to at least 16 KB, and the end of GNU_RELRO on a 16 KB boundary unless nothing writable follows it in its
 segment), and for an APK that the libraries are 16 KB aligned in the zip (`zipalign -c -P 16 4`). Google Play requires
-both for targets of API 35 and up (docs/plan/stage-9.md, "Builds and toolchain"). It also checks that every library a
+both for targets of API 35 and up. It also checks that every library a
 packaged library links (its NEEDED entries) is in the package or provided by Android at API 28 (the NDK's sysroot),
 so that a package that would stop at launch with "dlopen failed" fails here instead.
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// ej_kill_worker: the child process of the kill harness (section 4.1 of docs/plan/stage-2.md). It opens a store
+// ej_kill_worker: the child process of the kill harness. It opens a store
 // directory with the production code and either runs the workload until it is killed or finishes (mode `workload`), or
 // runs recovery over a damaged store (mode `recover`). The driver reads its standard output, kills it, and checks what
 // the store holds.

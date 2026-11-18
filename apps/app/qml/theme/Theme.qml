@@ -245,7 +245,7 @@ QtObject {
 
     readonly property MiniBoard miniBoard: MiniBoard {}
 
-    // The layout rules of the larger windows (docs/plan/stage-8.md, "Layout rules"): where the classes begin, and the sizes
+    // The layout rules of the larger windows: where the classes begin, and the sizes
     // of the Regular and Wide classes. A Compact window (every phone) uses the values above and none of these. The
     // WindowLayout singleton (theme/WindowLayout.qml) picks the class from the window's size and derives sizes from these.
     component LayoutRules: QtObject {
@@ -744,13 +744,13 @@ QtObject {
     // reducedMotionMs; the tile press keeps its scale, because it is feedback and not decoration. The sheet, toast,
     // page and swipe values and the two curves are desktop defaults from the design and the plan, recorded in
     // tokens.json ("easing", "tuning") and held by the test motion.curves; the owner confirms them on the iPhone
-    // in 4.18. Animators, not property animations, move things per frame (docs/plan/stage-4.md, Motion).
+    // in 4.18. Animators, not property animations, move things per frame.
     component Motion: QtObject {
         required property bool reduceMotion
         readonly property real tilePressScale: 0.96
         readonly property int tilePressMs: 120
         readonly property int undoToastVisibleMs: 5000
-        // How a tile is touched to log (docs/plan/stage-4.md, 4.17a). Time, not motion, so Reduce Motion does not change them.
+        // How a tile is touched to log. Time, not motion, so Reduce Motion does not change them.
         // The longest gap between the lift of a tap and the touch of the next for the two to be a double-tap, the time a finger
         // stays on a tile for a hold, how long the "Double-tap to log" hint stays after a single tap, and the least time between
         // two hints (counted from the start of one).

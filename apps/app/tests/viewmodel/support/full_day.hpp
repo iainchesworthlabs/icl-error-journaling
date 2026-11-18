@@ -6,7 +6,7 @@
 namespace ej::test
 {
 
-/// The exit-gate test of Stage 3: a full day, headless (docs/plan/stage-3.md, "The exit-gate test: a full day,
+/// The exit-gate test of Stage 3: a full day, headless (the Stage 3 plan, "The exit-gate test: a full day,
 /// headless"). It drives the day through the public interfaces of the services only, the invokables and properties QML
 /// would use: header, taps, notes, a version change, review edits, share, the new day and History, and compares the
 /// text three times with `libs/core/tests/golden/prd-example.txt`.

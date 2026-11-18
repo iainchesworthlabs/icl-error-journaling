@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The note draft (work package 2.6, section 2.8 of docs/plan/stage-2.md), on the in-memory repository and a timer the
+// The note draft, on the in-memory repository and a timer the
 // test advances by hand: nothing here sleeps.
 #include "error_journaling/draft_store.hpp"
 #include "fake_draft_timer.hpp"

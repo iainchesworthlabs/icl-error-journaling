@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The contract of LogRepository. Every case runs against every fixture in `Fixtures`, so the in-memory repository
-// cannot drift from the real one (docs/plan/stage-2.md, section 2.2).
+// cannot drift from the real one.
 //
 // Include this file after defining, in the including file, the type list `Fixtures` and fixtures with
 //     LogRepository& repo();  ScriptedClock& clock();

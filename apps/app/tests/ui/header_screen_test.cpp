@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// HeaderScreen, Today's details (docs/plan/stage-4.md, 4.9): details.fields, details.unit_keypad, details.location,
+// HeaderScreen, Today's details: details.fields, details.unit_keypad, details.location,
 // details.version_validation, details.correct_first_fill, details.new_log_row, details.keyboard and the cross-cutting
 // checks. The models are the real ones of Stage 3 over the in-memory store.
 #include "header_support.hpp"

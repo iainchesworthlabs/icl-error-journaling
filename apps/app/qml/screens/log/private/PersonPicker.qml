@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import ErrorJournalingApp
 
-// The person picker (Stage 14, package I-6; docs/plan/stage-14.md, 4.4): the sheet that opens after an interaction that
+// The person picker: the sheet that opens after an interaction that
 // has a [person] slot has been logged. The entry is in the log already (log first, ask second), so nothing here can lose
 // it: Skip leaves it as it was, and Done (n) puts the ticked people on it in one edit.
 //

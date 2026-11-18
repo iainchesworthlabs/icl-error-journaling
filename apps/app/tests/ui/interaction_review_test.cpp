@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Interaction entries in Review and in the Edit entry sheet (docs/plan/stage-14.md, 4.6): review.interaction_rows
+// Interaction entries in Review and in the Edit entry sheet: review.interaction_rows
 // (T-I9-1) and edit.interaction (T-I9-2). The rows read as the export does, at full names, and swipe, copy, delete and
 // undo work as for an error; the sheet changes the type, the people, the answer, the time and the note, with Save and
 // Cancel explicit, and gives the people to an entry that was logged without.

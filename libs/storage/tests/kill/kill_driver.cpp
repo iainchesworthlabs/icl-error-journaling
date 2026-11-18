@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// ej_kill_driver: the parent of the kill harness (section 4 of docs/plan/stage-2.md). It starts ej_kill_worker on a
+// ej_kill_driver: the parent of the kill harness. It starts ej_kill_worker on a
 // fresh store, reads which operations the worker acknowledged, ends the worker with a kill, opens the store through the
 // production `Recovery`, and checks that nothing acknowledged is lost and that what is there is whole.
 //

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PageStack (docs/plan/stage-4.md, 4.4): page_stack.push_pop, Reduce Motion and the cross-cutting checks.
+// PageStack: page_stack.push_pop, Reduce Motion and the cross-cutting checks.
 #include "container_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"

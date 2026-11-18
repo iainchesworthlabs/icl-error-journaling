@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # The log's storage (Stage 2): the in-memory and SQLite repositories and the journal files. Recovery and migrations follow in
-# later work packages of docs/plan/stage-2.md.
+# later work packages of the Stage 2 plan.
 
 # Qt SQL for the SQLite repository. The public headers name no Qt SQL type, so the library's users link QtCore only.
 find_package(Qt6 6.8 REQUIRED COMPONENTS Sql)

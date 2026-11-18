@@ -30,7 +30,7 @@ namespace ej::viewmodel
 {
 
 /// The entries of one log in time order, for the "Last" bar and the review screen (REV-01 to REV-04;
-/// docs/plan/stage-3.md, "TimelineModel"). The same class serves the open log and a past log opened from History:
+/// the Stage 3 plan, "TimelineModel"). The same class serves the open log and a past log opened from History:
 /// `follow` binds it to whatever log is open, `bind` to one document.
 ///
 /// Every string it shows comes from the export renderer, with the time format of the configuration in force and the

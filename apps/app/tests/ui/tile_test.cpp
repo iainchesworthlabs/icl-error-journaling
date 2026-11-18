@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Tile (docs/plan/stage-4.md, "Tile (4.5)" and 4.17a): tile.double_tap, tile.double_tap_window, tile.triple_tap,
+// Tile (the Stage 4 plan, "Tile (4.5)" and 4.17a): tile.double_tap, tile.double_tap_window, tile.triple_tap,
 // tile.hold, tile.slide_off, tile.press_scale, tile.badge, tile.label, tile.empty, tile.other, tile.colour, the
 // VoiceOver activation of decision 7, and perf.press_path for the Tile, counted from the touch of the second tap.
 #include "board_test_support.hpp"

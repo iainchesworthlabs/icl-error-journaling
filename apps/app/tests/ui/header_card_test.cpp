@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// HeaderCard (docs/plan/stage-4.md, 4.6): header_card.fields and header_card.skeleton.
+// HeaderCard: header_card.fields and header_card.skeleton.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"

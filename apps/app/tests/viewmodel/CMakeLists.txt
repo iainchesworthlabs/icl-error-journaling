@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# The tests of ej_viewmodel (docs/plan/stage-3.md). Like the sources, they are found by a glob, so that a work package adds
+# The tests of ej_viewmodel. Like the sources, they are found by a glob, so that a work package adds
 # its tests without editing this file:
 #
 #   tests/viewmodel/test_*.cpp          `unit`: the in-memory repository, the fakes and ManualStorageGateway; no thread

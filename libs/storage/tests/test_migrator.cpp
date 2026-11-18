@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Schema migrations (work package 2.7, section 2.9 of docs/plan/stage-2.md): M1, M2, M4, M5, M6 and M7, and the states
+// Schema migrations: M1, M2, M4, M5, M6 and M7, and the states
 // a killed migration can leave behind (M3 and K8 run as real kills in the kill harness). The steps are test-only
 // (migration_steps.hpp): the test steps start from the schema version the product writes now, and
 // the product's own step is tried on a version 1 database in test_schema_upgrade.cpp.

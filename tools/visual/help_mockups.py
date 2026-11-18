@@ -4,7 +4,7 @@
 
     python tools/visual/help_mockups.py [--check]
 
-Stage 10, package 10.5 (docs/plan/stage-10.md, "In-app help"). The seven screens are drawn for the owner's review before
+Stage 10, package 10.5. The seven screens are drawn for the owner's review before
 10.6 writes any QML:
 
     HelpSheet           a help sheet (the board layout topic) with "Read more in the guide"

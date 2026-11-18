@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# The tests of the QML (docs/plan/stage-4.md, decision 1): Catch2 cases that load the QML offscreen and drive it from C++.
+# The tests of the QML: Catch2 cases that load the QML offscreen and drive it from C++.
 #
 #   tests/ui/*_test.cpp      one file for each component and screen, named after it (`tile_test.cpp` for Tile), and the
 #                            cases of the rig and of the theme; label `ui`, or `perf` for a case tagged [perf]

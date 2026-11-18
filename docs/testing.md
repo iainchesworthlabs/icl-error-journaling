@@ -38,7 +38,7 @@ flaky tests stay visible. A phase that matches no tests fails, unless the phase 
 
 ## Tests of the QML
 
-The QML is tested with Catch2 and not with Qt Quick Test (`docs/plan/stage-4.md`, decision 1): a case loads a component
+The QML is tested with Catch2 and not with Qt Quick Test: a case loads a component
 or a screen in an offscreen window (`QT_QPA_PLATFORM=offscreen`, the software renderer, as `app.smoke`), injects its
 required properties, drives it with synthesised touch and key events and asserts on the item tree. The program is
 `ej_ui_tests` (`apps/app/tests/ui/`); every `*_test.cpp` in that directory is found by a glob, and a package adds its
@@ -95,7 +95,7 @@ breaks it (`stubs/UiStubBad*.qml`).
 | `snapshot_geometry`, `moved_items` (`perf.first_frame`) | A rectangle that moved between two states, for the Log screen in `LOADING` and after the labels arrive |
 
 `motion.curves` (in `theme_test.cpp`, label `ui`) holds the durations and the easing curves of `Theme.motion` and of `docs/design/tokens.json` to the
-values recorded in `docs/plan/stage-4.md` ("Recorded motion values") and in the test, so that a number changes in all of them or the test fails.
+values in the test, so that a number changes in all of them or the test fails.
 `motion.animators` (`tools/ci/check_qml_motion.py`, label `unit`) fails a `NumberAnimation`, `PropertyAnimation`, `SmoothedAnimation`,
 `SpringAnimation` or `Behavior` on `x`, `y`, `scale` or `opacity` anywhere in `apps/app/qml/`; the Animator types are the only ones allowed.
 
@@ -163,8 +163,7 @@ the window and the loaded item as a rotation does. `UiRig::set_safe_area_sides` 
 
 All screenshot output goes under `screenshots/`, which git ignores: `screenshots/screens/` for the pictures of every screen (this section) and `screenshots/pairs/` for the mock-up and app pairs of the visual capture (above). The scripts default to those folders; CI uploads `screenshots/screens/` as the `screenshots` artifact.
 
-`tools/ej_screenshots/ej_screenshots.py` renders every screen in light, dark and large text (Stage 7, 7.1;
-`docs/plan/stage-7.md`). The screens are the states of `tools/ej_screenshots/screens.json`, grouped by flow: the scenes of
+`tools/ej_screenshots/ej_screenshots.py` renders every screen in light, dark and large text (Stage 7, 7.1). The screens are the states of `tools/ej_screenshots/screens.json`, grouped by flow: the scenes of
 the visual capture (the mock-up states, phone and iPad) and the states the design package did not draw (`extra_scenes()` in
 `visual_capture_test.cpp`: the tap hint, the hold sheet, the Other search, the environment and version-time sheets, and
 the Tester and Time format pages). The modes are in the same file: `light`, `dark`, and `large` (light at a text
@@ -180,8 +179,7 @@ writes `index.html`. The pictures are not golden files and are not compared; CI 
 
 ### Store screenshots
 
-`tools/ej_screenshots/store_screenshots.py` makes the App Store and Google Play screenshots (Stage 11, 11.4,
-`docs/plan/stage-11.md`). `tools/ej_screenshots/store_shots.json` is the fixed shot list: the sets (iPhone 6.9", iPad 13" in
+`tools/ej_screenshots/store_screenshots.py` makes the App Store and Google Play screenshots (Stage 11, 11.4). `tools/ej_screenshots/store_shots.json` is the fixed shot list: the sets (iPhone 6.9", iPad 13" in
 portrait and in landscape, Play phone, Play large screen in portrait and in landscape), their exact pixel sizes, and for each
 shot the state of `screens.json`, the mode and the file name. The script renders those states (the phone at a scale of 3,
 the iPad at 2), draws a neutral status bar (9:41, signal, battery) in the safe-area band, fits the picture to the canvas with
@@ -352,7 +350,7 @@ hours), and times, on a warm cache, `quick_check`, `integrity_check`, a connecti
 tail, the launch (`Recovery::run` with its default options) and the first launch after an upgrade (`Recovery::run` with the full
 check). It prints the figures on one line starting `ej-perf`, and fails when the launch is over its budget. A build with
 sanitizers, coverage or no optimisation gets a factor (`EJ_PERF_BUDGET_FACTOR`, set by CMake) so the same test runs in every
-leg. The figures and the budget are in `docs/plan/stage-2.md`, section 11.
+leg. 
 
 ## Migration tests
 

@@ -40,7 +40,7 @@ struct StartupResult
     RecoveryReport m_Recovery;
 };
 
-/// Owns the open log (docs/plan/stage-3.md, "LogSession"). A QObject facade over a `LogDocument`, which does the work,
+/// Owns the open log. A QObject facade over a `LogDocument`, which does the work,
 /// so that a past log opened from History is edited by the same code. QML sees the header in force now, the note
 /// draft, the number of writes waiting, and the invokables that record an error, add a note, correct or change the
 /// header and start a new log.

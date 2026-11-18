@@ -4,7 +4,7 @@
 
     python3 tools/ci/check_guide_screenshots.py [--root .]
 
-Stage 10, package 10.7 (docs/plan/stage-10.md). Needs no build and no Pillow. It holds these to each other:
+Stage 10, package 10.7. Needs no build and no Pillow. It holds these to each other:
 
 - docs/guide/screenshots.json: every picture names a state and a mode that tools/ej_screenshots/screens.json renders, has a
   file name of lower-case letters, digits and dashes, and is listed once;

@@ -1,5 +1,5 @@
 {
-  "_comment": "The screens that ej_screenshots renders (docs/plan/stage-7.md, 7.1). Each state names the scene of apps/app/tests/ui/visual_capture_test.cpp that builds it; 'files' names the screen files under apps/app/qml/screens/ that it shows, and every screen file there (other than private/ and launch/) must be named once. screenshots.render checks both. A mode is rendered for every state.",
+  "_comment": "The screens that ej_screenshots renders. Each state names the scene of apps/app/tests/ui/visual_capture_test.cpp that builds it; 'files' names the screen files under apps/app/qml/screens/ that it shows, and every screen file there (other than private/ and launch/) must be named once. screenshots.render checks both. A mode is rendered for every state.",
   "modes": [
     {
       "name": "light",

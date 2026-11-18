@@ -7,7 +7,9 @@ Everything stays on your device. Nothing is sent anywhere unless you share the l
 
 ## Install
 
-Install Field Test from your device's store. It runs on iPhone and iPad, and on Android phones and tablets.
+Install Field Test from the App Store. It runs on iPhone and iPad.
+
+<!-- When Android ships, say: Install Field Test from your device's store. It runs on iPhone and iPad, and on Android phones and tablets. -->
 
 ## The first time you open it
 

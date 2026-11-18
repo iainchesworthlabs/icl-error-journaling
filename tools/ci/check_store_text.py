@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Check the store listing text in store/ against the stores' limits (docs/plan/stage-11.md, task 11.1).
+"""Check the store listing text in store/ against the stores' limits.
 
     python3 tools/ci/check_store_text.py [--root .]
 

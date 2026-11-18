@@ -16,7 +16,7 @@
 #include <vector>
 
 /// Fakes of the interfaces a service reads its neighbours through, so that a service is tested without the class that
-/// implements the interface in the product (docs/plan/stage-3.md, "Work order": each package reads its neighbours
+/// implements the interface in the product (the Stage 3 plan, "Work order": each package reads its neighbours
 /// through the interfaces and fakes of 3.1, not through each other's classes).
 namespace ej::test
 {

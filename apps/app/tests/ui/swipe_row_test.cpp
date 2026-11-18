@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SwipeRow (docs/plan/stage-4.md, 4.6): swipe_row.reveal and swipe_row.accessible.
+// SwipeRow: swipe_row.reveal and swipe_row.accessible.
 #include "input_components_support.hpp"
 #include "rig/ui_checks.hpp"
 #include "rig/ui_rig.hpp"

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Make the Google Play listing graphics (docs/plan/stage-11.md, task 11.5).
+"""Make the Google Play listing graphics.
 
     python3 tools/store/make_play_graphics.py [--out store/play/en-AU/images]
 

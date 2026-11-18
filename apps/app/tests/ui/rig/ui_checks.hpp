@@ -13,7 +13,7 @@ namespace ej::ui
 /// What a cross-cutting check found: one line for each fault, naming the item. Empty means the check passed.
 using Violations = std::vector<QString>;
 
-/// The cross-cutting tests of docs/plan/stage-4.md, "Tests", as functions over a loaded `UiRig`. Each component and
+/// The cross-cutting tests of the Stage 4 plan, "Tests", as functions over a loaded `UiRig`. Each component and
 /// each screen test calls them on the item it loaded, in the states it can be in:
 ///
 ///     UiRig rig;

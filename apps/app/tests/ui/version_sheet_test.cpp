@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// VersionSheet, the Software version sheet (docs/plan/stage-4.md, 4.9): version.choices, version.change,
+// VersionSheet, the Software version sheet: version.choices, version.change,
 // version.correct, version.preview, version.validation, version.time_default and the cross-cutting checks. The models
 // are the real ones of Stage 3 over the in-memory store.
 #include "header_support.hpp"

@@ -1,8 +1,7 @@
 # App Store age rating: drafted answers
 
 The answers for App Store Connect, App Information, Age Rating. They follow Apple's 2025 questionnaire, as remembered.
-Task 11.0 checks each question against App Store Connect before 11.8 enters them. See
-[`docs/plan/stage-11.md`](../../docs/plan/stage-11.md#age-rating).
+The owner checks each question against App Store Connect before entering them.
 
 ## Features and capabilities
 

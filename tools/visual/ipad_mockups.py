@@ -6,7 +6,7 @@
 
 The phone mock-ups are written by hand. The iPad ones are many (each screen in two orientations and two schemes) and
 share one set of layout rules, so they are generated from this file, with every colour taken from docs/design/tokens.json
-and every size from the layout rules of docs/plan/stage-8.md ("Layout rules"). Change a rule here and in the plan page
+and every size from the layout rules of the Stage 8 plan ("Layout rules"). Change a rule here and in the plan page
 together, then run the script again. With --check it writes nothing and fails when a file differs from what it would write
 (so a hand edit of a generated file is caught).
 

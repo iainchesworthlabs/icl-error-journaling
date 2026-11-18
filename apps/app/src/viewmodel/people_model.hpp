@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
-// The list of people for the picker (Stage 14, package I-6; docs/plan/stage-14.md, 3.4 and 4.4). A GUI-side mirror of
+// The list of people for the picker. A GUI-side mirror of
 // the people store (`PeopleStore`, which lives on the storage thread), listing the people who are not retired, last
 // used first and then by name. The mirror is read once at start and changed only after a job has committed, so the
 // screen never shows a name the store does not have.
