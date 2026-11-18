@@ -290,11 +290,13 @@ class Page:
             f"{mark}{label}</button>"
         )
 
-    def secondary_button(self, label: str) -> str:
+    def secondary_button(self, label: str, glyph: str | None = None) -> str:
         c = self.c
+        mark = icon(glyph, c["primaryText"], 20) if glyph else ""
         return (
             f'<button style="height: 54px; width: 100%; border-radius: 14px; border: 1px solid {c["border"]}; background: {c["primaryTint"]}; '
-            f'color: {c["primaryText"]}; font-family: inherit; font-size: 17px; font-weight: 600">{label}</button>'
+            f'color: {c["primaryText"]}; font-family: inherit; font-size: 17px; font-weight: 600; display: flex; align-items: center; '
+            f'justify-content: center; gap: 8px">{mark}{label}</button>'
         )
 
     def section_label(self, text: str) -> str:
@@ -692,27 +694,21 @@ def history_screen(p: Page) -> str:
 def first_launch_screen(p: Page) -> str:
     c = p.c
     x, width = p.column(480)
-
-    def choice(glyph: str, title: str) -> str:
-        return (
-            f'<div style="display: flex; align-items: center; gap: 14px; padding: 16px; background: {c["surface"]}; border-radius: 16px; '
-            f'border: 1px solid {c["border"]}">{icon(glyph, c["primaryText"], 26)}'
-            f'<div style="flex-grow: 1; font-size: 17px; font-weight: 600">{title}</div>{icon("chevron", c["textSecondary"], 16)}</div>'
-        )
-
-    top = (p.frame.height - 470) // 2
+    # As the app has it since the phone's redesign (#112, Stage 7 F19): Set up by hand is the main button, and Import a setup
+    # file is the secondary button under it. The intro and the choices are one group, centred in the window.
     body = (
-        f'<div style="position: absolute; left: {x}px; width: {width}px; top: {top}px; display: flex; flex-direction: column; gap: 16px">'
+        f'<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center">'
+        f'<div style="width: {width}px; display: flex; flex-direction: column; gap: 10px">'
         f'<div style="width: 72px; height: 72px; border-radius: 18px; background: {c["headerCard"]}; display: flex; align-items: center; '
         f'justify-content: center; margin: 0 auto">{icon("log", c["textOnHeaderCard"], 40)}</div>'
-        f'<h1 style="margin: 0; text-align: center; font-size: 30px; font-weight: 700; letter-spacing: -0.4px">Field Test</h1>'
-        f'<p style="margin: 0; text-align: center; font-size: 16px; line-height: 1.45; color: {c["textBody"]}">Log what goes wrong during a session, '
-        f"as it happens, and share the log at the end of the day.</p>"
+        f'<h1 style="margin: 4px 0 0; text-align: center; font-size: 30px; font-weight: 700; letter-spacing: -0.4px">Field Test</h1>'
+        f'<p style="margin: 0 12px 14px; text-align: center; font-size: 16px; line-height: 1.45; color: {c["textSecondary"]}">Log what goes wrong '
+        f"during a session, as it happens, and share the log at the end of the day.</p>"
         f'{p.section_label("How do you want to start?")}'
-        f'{choice("pencil", "Set up by hand")}'
-        f'{choice("file", "Import a setup file")}'
-        f'<p style="margin: 0; font-size: 13px; line-height: 1.4; color: {c["textSecondary"]}">A setup file holds your error types, locations and '
-        f"note templates. You can import one later in Settings.</p></div>"
+        f'{p.primary_button("Set up by hand")}'
+        f'{p.secondary_button("Import a setup file", "file")}'
+        f'<p style="margin: 4px 8px 0; text-align: center; font-size: 13px; line-height: 1.4; color: {c["textSecondary"]}">A setup file holds your '
+        f"error types, locations and note templates. You can import one later in Settings.</p></div></div>"
     )
     return p.document("First launch", body)
 

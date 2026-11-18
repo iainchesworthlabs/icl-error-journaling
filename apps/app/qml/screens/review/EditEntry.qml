@@ -116,6 +116,10 @@ Sheet {
     objectName: "editSheet"
     accessibleName: qsTr("Edit entry")
     dismissible: false
+    // A form sheet (a window that is not Compact) is as tall as the first page needs, as the iPad mock-ups draw it; the
+    // phone's bottom sheet is Large, and so is the page of types, which is a list.
+    detent: WindowLayout.compact || !showingMain ? Sheet.Large : Sheet.Content
+    contentImplicitHeight: nav.height + column.height + Theme.space.sectionGap + deleteButton.height
     // The time sheet has a scrim of its own, over this sheet and what is under it: this one lets go of its own, so that the
     // screen is dimmed once, as the design draws it.
     scrimColour: root.timeOpen || root.pickerOpen ? "transparent" : Theme.colour.sheetScrim

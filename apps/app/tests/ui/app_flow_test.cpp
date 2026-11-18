@@ -1153,6 +1153,43 @@ TEST_CASE("ipad.screens_fit: on every iPad in portrait the tabs are in their col
     }
 }
 
+TEST_CASE("ipad.settings_board_card: on an iPad the miniature board of Settings is in a card, and on the phone it is not",
+          "[ui][app][ipad]")
+{
+    App app;
+    app.fill_header();
+    app.choose_tab(SETTINGS_TAB);
+    app.ui.layout();
+    // The phone: the board is on the page, with no padding.
+    {
+        QQuickItem* card = app.need(QStringLiteral("settingsBoardCard"));
+        CHECK_FALSE(card->property("carded").toBool());
+        const QRectF c = app.ui.geometry(card);
+        const QRectF b = app.ui.geometry(app.need(QStringLiteral("settingsBoard")));
+        CHECK(std::abs(b.left() - c.left()) <= 0.5);
+        CHECK(std::abs(b.width() - c.width()) <= 0.5);
+    }
+    for (const QSize size : {QSize(744, 1133), QSize(820, 1180), QSize(1180, 820)})
+    {
+        CAPTURE(size.width(), size.height());
+        app.ui.set_window_size(size);
+        app.ui.set_safe_area(IPAD_TOP, IPAD_BOTTOM);
+        app.choose_tab(SETTINGS_TAB);
+        app.ui.layout();
+        QQuickItem* card = app.need(QStringLiteral("settingsBoardCard"));
+        CHECK(card->property("carded").toBool());
+        const QRectF c = app.ui.geometry(card);
+        const QRectF b = app.ui.geometry(app.need(QStringLiteral("settingsBoard")));
+        // 12 pt of padding on every side, inside the 640 pt form column, with the 12 tiles inside the card.
+        CHECK(c.width() <= 640.0 + 0.5);
+        CHECK(std::abs(b.left() - c.left() - 12.0) <= 0.5);
+        CHECK(std::abs(c.right() - b.right() - 12.0) <= 0.5);
+        CHECK(std::abs(b.top() - c.top() - 12.0) <= 0.5);
+        CHECK(std::abs(c.bottom() - b.bottom() - 12.0) <= 0.5);
+        expect_clean(check_names(app.ui));
+    }
+}
+
 TEST_CASE("ipad.compact_is_phone: a narrow Split View window has the phone's layout", "[ui][app][ipad]")
 {
     App app;
@@ -1197,6 +1234,12 @@ TEST_CASE("ipad.first_launch: in a larger window the first-launch screen is a na
     const QRectF b = app.ui.geometry(import);
     CHECK(std::abs(b.width() - 480) <= 1.0);
     CHECK(std::abs(b.center().x() - 410) <= 1.0);
+    // The second choice is the secondary button under the first, as wide, as the app has it and the mock-up draws it.
+    const QRectF second = app.ui.geometry(app.need(QStringLiteral("importCard")));
+    CHECK(std::abs(second.width() - 480) <= 1.0);
+    CHECK(std::abs(second.center().x() - 410) <= 1.0);
+    CHECK(second.top() > b.bottom());
+    CHECK(second.top() - b.bottom() <= 16.0);
     // The group is in the middle: the gap above the title is about the gap below the last choice.
     CHECK(t.top() > 200);
     CHECK(b.bottom() < 1180 - 200);
@@ -1447,6 +1490,12 @@ TEST_CASE("ipad.form_sheet_content: a sheet that is as tall as its content is a 
         QQuickItem* panel = open_panel(app, QStringLiteral("editSheet"));
         const QRectF r = app.ui.geometry(panel);
         check_form_card(app.ui, panel, size, size.height() - IPAD_BOTTOM - SHEET_MARGIN);
+        // Edit entry is as tall as its first page needs (its mock-up), not the 720 pt of a Large sheet: the card is no
+        // taller than its content, and the Delete button is inside it.
+        CHECK(r.height() < SHEET_MAX_HEIGHT - 60.0);
+        const QRectF del = app.ui.geometry(app.need(QStringLiteral("editDelete")));
+        CHECK(del.bottom() <= r.bottom());
+        CHECK(del.top() >= r.top());
         // Centred in the space between the margins.
         const double top_limit = IPAD_TOP + SHEET_MARGIN;
         const double bottom_limit = size.height() - IPAD_BOTTOM - SHEET_MARGIN;
