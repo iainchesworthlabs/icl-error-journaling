@@ -99,7 +99,7 @@ workflow runs from the default branch; its result and seed are recorded in the p
 ## Where the time goes, and the limits
 
 Measured on 10 November 2026 over the last 40 merge-queue and 40 pull request runs of `ci.yml`.
-The repository is public and its jobs run on GitHub-hosted runners (`ubuntu-26.04`, `ubuntu-24.04`, `macos-26`);
+The repository is public and its jobs run on GitHub-hosted runners (`ubuntu-26.04`, `ubuntu-24.04`, `macos-26`, and `xcode-27` for the iOS builds, which must use the iOS 27 SDK);
 the organisation is on the Free plan, which allows 20 jobs at once (5 on macOS). The self-hosted `tf-gh-*` pool is not
 in this repository's runner groups. When a dozen sessions push, the 20 slots are full and even the 10-second jobs wait
 10 to 50 minutes for one, so the queue's wall time is mostly waiting.

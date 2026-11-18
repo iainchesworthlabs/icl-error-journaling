@@ -94,7 +94,7 @@ jobs:
     name: Package (iOS)
     needs: version
     if: ${{ !cancelled() && (needs.version.result == 'success' || needs.version.result == 'skipped') && vars.SIGN_IOS_UPLOAD == 'true' }}
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 120
     permissions:
       contents: read
@@ -156,6 +156,16 @@ jobs:
 
       # Signed for the application alone (apps/app/packaging/ios.cmake says why). CMake makes no Xcode scheme unless asked,
       # and `xcodebuild archive` takes only a scheme.
+      # The build must be made with the iOS 27 SDK (Xcode 27). The runner label is what chooses it, so a runner that falls back
+      # to an older image fails here instead of uploading a build made with the old SDK.
+      - name: Check the iOS SDK
+        shell: bash
+        run: |
+          xcodebuild -version
+          sdk="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iphoneos SDK $sdk"
+          case "$sdk" in 27.*) ;; *) echo "::error::The iOS SDK is $sdk, not 27"; exit 1 ;; esac
+
       - name: Configure (signed)
         shell: bash
         env:
