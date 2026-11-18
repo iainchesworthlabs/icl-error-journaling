@@ -35,7 +35,7 @@ description: "What Field Test does: double-tap logging, notes, the day's log, pl
 <p>The log has a header with the tester, date, unit, location and software version. If the software changes during the day, that change is logged with its time, so the entries before it keep the old version.</p>
 <p><a href="../guide/todays-details/">Guide: Today's details</a></p>
 </div>
-<figure class="icl-device"><img src="../guide/img/todays-details.png" width="402" height="874" loading="lazy" alt="Today's details: tester, date, unit number, number suffix, location and robot software version, with a Start logging button."></figure>
+<figure class="icl-device"><img src="../guide/img/todays-details.png" width="402" height="874" loading="lazy" alt="Today's details: tester, date, unit number, number suffix, location and software version, with a Start logging button."></figure>
 </div>
 
 <div class="ft-row ft-row--flip">
