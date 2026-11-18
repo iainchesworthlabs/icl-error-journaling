@@ -16,7 +16,7 @@ description: "Log software and hardware test errors as they happen and share the
 </div>
 <p class="icl-hero__meta">iPhone and iPad &middot; 6.99 USD, once &middot; No account &middot; Works offline &middot; Data Not Collected</p>
 </div>
-<figure class="icl-device"><img src="guide/img/log-board.png" width="402" height="874" alt="The Log screen: a purple card for UNIT-27 at North Site, a row of note chips, and a board of coloured tiles including Wrong Response, with a message that says Stopped Responding logged at 10:20."></figure>
+<figure class="icl-device"><img src="guide/img/log-board.png" width="402" height="874" alt="The Log screen: a purple card for UNIT-27 at North Site, two chips (Began task, Entered room), a note box, and a board of coloured tiles including Wrong Response, with a message that says Stopped Responding logged at 10:20."></figure>
 </div></div></section>
 
 <section class="icl-section icl-section--tint" id="how"><div class="icl-wrap">
