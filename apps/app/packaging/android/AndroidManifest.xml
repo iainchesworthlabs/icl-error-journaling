@@ -38,7 +38,7 @@
              does there is Stage 9 decision 2 (package 9.7). -->
         <activity
             android:name="com.iainchesworthlabs.fieldtest.EjActivity"
-            android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
+            android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|fontWeightAdjustment|keyboard|keyboardHidden|navigation|mcc|mnc|density"
             android:label="-- %%INSERT_APP_NAME%% --"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"

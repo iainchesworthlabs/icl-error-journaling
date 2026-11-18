@@ -77,6 +77,8 @@ class FakeBridge : public QObject
     Q_OBJECT
     Q_PROPERTY(double textScale READ text_scale WRITE set_text_scale NOTIFY textScaleChanged)
     Q_PROPERTY(bool reduceMotion READ reduce_motion WRITE set_reduce_motion NOTIFY reduceMotionChanged)
+    Q_PROPERTY(bool increaseContrast READ increase_contrast WRITE set_increase_contrast NOTIFY increaseContrastChanged)
+    Q_PROPERTY(bool boldText READ bold_text WRITE set_bold_text NOTIFY boldTextChanged)
     Q_PROPERTY(QString timingSummary READ timing_summary NOTIFY timingChanged)
 
 public:
@@ -99,6 +101,25 @@ public:
     {
         m_ReduceMotion = reduce;
         emit reduceMotionChanged();
+    }
+
+    [[nodiscard]] bool increase_contrast() const
+    {
+        return m_IncreaseContrast;
+    }
+    void set_increase_contrast(bool on)
+    {
+        m_IncreaseContrast = on;
+        emit increaseContrastChanged();
+    }
+    [[nodiscard]] bool bold_text() const
+    {
+        return m_BoldText;
+    }
+    void set_bold_text(bool on)
+    {
+        m_BoldText = on;
+        emit boldTextChanged();
     }
 
     [[nodiscard]] QString timing_summary() const
@@ -133,12 +154,16 @@ public:
 signals:
     void textScaleChanged();
     void reduceMotionChanged();
+    void increaseContrastChanged();
+    void boldTextChanged();
     void timingChanged();
 
 private:
     FakePlatform& m_Platform;
     double m_TextScale = 1.0;
     bool m_ReduceMotion = false;
+    bool m_IncreaseContrast = false;
+    bool m_BoldText = false;
 };
 
 QVariant role_of(const QAbstractItemModel& model, int row, const char* role)
@@ -880,25 +905,43 @@ TEST_CASE("app.messages: a failed write is one banner, except on the Log screen,
           QStringLiteral("The log could not be saved."));
 }
 
-TEST_CASE("app.theme: Dynamic Type and Reduce Motion reach the theme from the bridge", "[ui][app]")
+TEST_CASE("app.theme: Dynamic Type, Reduce Motion, Increase Contrast and Bold Text reach the theme from the bridge",
+          "[ui][app]")
 {
     App app;
     QObject* theme = app.ui.theme();
     REQUIRE(theme != nullptr);
     CHECK(theme->property("textScale").toDouble() == 1.0);
     CHECK_FALSE(theme->property("reduceMotion").toBool());
+    CHECK_FALSE(theme->property("increaseContrast").toBool());
+    CHECK_FALSE(theme->property("boldText").toBool());
 
     app.bridge.set_text_scale(1.3);
     app.bridge.set_reduce_motion(true);
+    app.bridge.set_increase_contrast(true);
+    app.bridge.set_bold_text(true);
     app.ui.advance(16ms);
     CHECK(theme->property("textScale").toDouble() == 1.3);
     CHECK(theme->property("reduceMotion").toBool());
+    CHECK(theme->property("increaseContrast").toBool());
+    CHECK(theme->property("boldText").toBool());
+
+    // The colours and the weights follow at run time, with no restart.
+    const QColor strong =
+        app.ui.theme()->property("colour").value<QObject*>()->property("textSecondary").value<QColor>();
+    CHECK(strong != QColor(QStringLiteral("#5A6B78")));
 
     app.bridge.set_text_scale(1.0);
     app.bridge.set_reduce_motion(false);
+    app.bridge.set_increase_contrast(false);
+    app.bridge.set_bold_text(false);
     app.ui.advance(16ms);
     CHECK(theme->property("textScale").toDouble() == 1.0);
     CHECK_FALSE(theme->property("reduceMotion").toBool());
+    CHECK_FALSE(theme->property("increaseContrast").toBool());
+    CHECK_FALSE(theme->property("boldText").toBool());
+    CHECK(theme->property("colour").value<QObject*>()->property("textSecondary").value<QColor>() ==
+          QColor(QStringLiteral("#5A6B78")));
 }
 
 TEST_CASE("app.window_layout: the shell tells WindowLayout its size, so the class follows the window", "[ui][app]")
@@ -1033,6 +1076,46 @@ TEST_CASE("app.accessibility: the tree of each tab is named and in order in ligh
             }
         }
         app.choose_tab(LOG_TAB);
+    }
+}
+
+TEST_CASE(
+    "app.bold_text: no text is cut off with Bold Text and Increase Contrast on, at the default and the largest size",
+    "[ui][app][a11y]")
+{
+    App app;
+    app.fill_header();
+    REQUIRE(app.services.tap(role_of(*app.services.root().board(), 0, "typeId").toString()));
+    app.ui.settle();
+    app.services.advance(6s);
+    app.ui.advance(300ms);
+
+    const auto minimum = [](const Node& node)
+    { return node.m_ObjectName.startsWith(QStringLiteral("tile")) ? 88.0 : 44.0; };
+    for (const bool dark : {false, true})
+    {
+        CAPTURE(dark);
+        app.ui.set_dark(dark);
+        app.ui.set_bold_text(true);
+        app.ui.set_increase_contrast(true);
+        for (const double scale : {1.0, 3.1})
+        {
+            CAPTURE(scale);
+            app.ui.set_text_scale(scale);
+            for (const int tab : {LOG_TAB, REVIEW_TAB, HISTORY_TAB, SETTINGS_TAB})
+            {
+                CAPTURE(tab);
+                app.choose_tab(tab);
+                app.ui.layout();
+                expect_clean(check_names(app.ui));
+                expect_clean(check_targets(app.ui, minimum));
+                expect_clean(check_text_scale(app.ui));
+            }
+        }
+        app.ui.set_text_scale(1.0);
+        app.choose_tab(LOG_TAB);
+        app.ui.set_bold_text(false);
+        app.ui.set_increase_contrast(false);
     }
 }
 

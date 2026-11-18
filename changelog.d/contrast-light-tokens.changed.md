@@ -1,0 +1,1 @@
+**The light colours of the Other tile border and of the placeholder text are a little darker.** The dashed border of the Other tile, the outline of a switch and of a choice card and the hint text in a field now reach the contrast the design asks for (3 to 1 and 4.5 to 1); they looked a little faint. Not yet seen on a device.

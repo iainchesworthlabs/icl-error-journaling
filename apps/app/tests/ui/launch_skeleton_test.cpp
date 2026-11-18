@@ -79,6 +79,8 @@ class FakeBridge : public QObject
     Q_OBJECT
     Q_PROPERTY(double textScale READ text_scale WRITE set_text_scale NOTIFY textScaleChanged)
     Q_PROPERTY(bool reduceMotion READ reduce_motion CONSTANT)
+    Q_PROPERTY(bool increaseContrast READ increase_contrast CONSTANT)
+    Q_PROPERTY(bool boldText READ bold_text CONSTANT)
     Q_PROPERTY(QString timingSummary READ timing_summary CONSTANT)
 
 public:
@@ -92,6 +94,14 @@ public:
         emit textScaleChanged();
     }
     [[nodiscard]] bool reduce_motion() const
+    {
+        return false;
+    }
+    [[nodiscard]] bool increase_contrast() const
+    {
+        return false;
+    }
+    [[nodiscard]] bool bold_text() const
     {
         return false;
     }

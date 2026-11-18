@@ -60,7 +60,7 @@ TEST_CASE("icon.size: the square follows `size`, the stroke scales with it, and 
     CHECK_THAT(thin->width(), WithinAbs(14, 1e-9));
     CHECK_THAT(thin->height(), WithinAbs(14, 1e-9));
     CHECK_THAT(thin->property("strokeWidth").toDouble(), WithinAbs(2, 1e-9));
-    CHECK(thin->property("colour").value<QColor>() == QColor(QStringLiteral("#9AA8B4")));
+    CHECK(thin->property("colour").value<QColor>() == QColor(QStringLiteral("#7C8B98")));
 
     QQuickItem* check = require_item(rig, QStringLiteral("check"));
     CHECK_THAT(check->width(), WithinAbs(24, 1e-9));

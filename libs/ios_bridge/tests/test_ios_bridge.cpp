@@ -393,6 +393,23 @@ TEST_CASE("accessibility.android_motion: only an animator scale of zero is Reduc
     CHECK_FALSE(bridge::android_reduce_motion(10.0));
 }
 
+TEST_CASE("android.increase_contrast: only High contrast text set to 1 is on", "[unit][accessibility]")
+{
+    CHECK(bridge::android_increase_contrast(1));
+    CHECK_FALSE(bridge::android_increase_contrast(0)); // off, or a device without the hidden key
+    CHECK_FALSE(bridge::android_increase_contrast(-1));
+    CHECK_FALSE(bridge::android_increase_contrast(2));
+}
+
+TEST_CASE("android.bold_text: Bold text is any weight adjustment above 0", "[unit][accessibility]")
+{
+    CHECK(bridge::android_bold_text(300)); // what the system setting writes
+    CHECK(bridge::android_bold_text(1));
+    CHECK(bridge::android_bold_text(500));
+    CHECK_FALSE(bridge::android_bold_text(0)); // off, and every release before Android 12
+    CHECK_FALSE(bridge::android_bold_text(-300));
+}
+
 TEST_CASE("haptics.android_constants: IMPACT is VIRTUAL_KEY, SUCCESS is CONFIRM from API 30", "[unit][haptics]")
 {
     using bridge::HapticKind;
@@ -1098,6 +1115,8 @@ TEST_CASE("accessibility.stub: the desktop stub is the default size with nothing
     CHECK(state.m_TextScale == 1.0);
     CHECK_FALSE(state.m_ReduceMotion);
     CHECK_FALSE(state.m_VoiceOverRunning);
+    CHECK_FALSE(state.m_IncreaseContrast);
+    CHECK_FALSE(state.m_BoldText);
     settings->set_change_handler([] {});
     settings->set_change_handler({});
     CHECK(settings->read() == state);
@@ -1109,15 +1128,19 @@ TEST_CASE("accessibility.wrapper: QML sees the settings at start and the stub's 
     bridge::QmlBridge stub(bridge::make_platform_services());
     CHECK(stub.text_scale() == 1.0);
     CHECK_FALSE(stub.reduce_motion());
+    CHECK_FALSE(stub.increase_contrast());
+    CHECK_FALSE(stub.bold_text());
 
     Fakes fakes;
     auto services = fake_services(fakes);
-    fakes.m_Accessibility->m_State = {1.65, true, true};
+    fakes.m_Accessibility->m_State = {1.65, true, true, true, true};
     bridge::QmlBridge qml(std::move(services));
     // The fake was given its state after the services were made but before the bridge read them.
     CHECK(qml.text_scale() == Catch::Approx(1.65));
     CHECK(qml.reduce_motion());
     CHECK(qml.voice_over_running());
+    CHECK(qml.increase_contrast());
+    CHECK(qml.bold_text());
 }
 
 TEST_CASE("accessibility.wrapper: one signal for each setting that changed, none for the same value",
@@ -1129,12 +1152,16 @@ TEST_CASE("accessibility.wrapper: one signal for each setting that changed, none
     int scale = 0;
     int motion = 0;
     int voice = 0;
+    int contrast = 0;
+    int bold = 0;
+    QObject::connect(&qml, &bridge::QmlBridge::increaseContrastChanged, &qml, [&] { ++contrast; });
+    QObject::connect(&qml, &bridge::QmlBridge::boldTextChanged, &qml, [&] { ++bold; });
     QObject::connect(&qml, &bridge::QmlBridge::textScaleChanged, &qml, [&] { ++scale; });
     QObject::connect(&qml, &bridge::QmlBridge::reduceMotionChanged, &qml, [&] { ++motion; });
     QObject::connect(&qml, &bridge::QmlBridge::voiceOverRunningChanged, &qml, [&] { ++voice; });
 
     fakes.m_Accessibility->notify(); // nothing changed
-    CHECK(scale + motion + voice == 0);
+    CHECK(scale + motion + voice + contrast + bold == 0);
 
     fakes.m_Accessibility->m_State.m_TextScale = 2.35;
     fakes.m_Accessibility->notify();
@@ -1157,6 +1184,33 @@ TEST_CASE("accessibility.wrapper: one signal for each setting that changed, none
     fakes.m_Accessibility->notify();
     CHECK(motion == 2);
     CHECK_FALSE(qml.reduce_motion());
+
+    // Increase Contrast and Bold Text each signal alone, once, and not again for the same value.
+    fakes.m_Accessibility->m_State.m_IncreaseContrast = true;
+    fakes.m_Accessibility->notify();
+    CHECK(contrast == 1);
+    CHECK(bold == 0);
+    CHECK(motion == 2);
+    CHECK(qml.increase_contrast());
+    CHECK_FALSE(qml.bold_text());
+    fakes.m_Accessibility->notify();
+    CHECK(contrast == 1);
+
+    fakes.m_Accessibility->m_State.m_BoldText = true;
+    fakes.m_Accessibility->notify();
+    CHECK(contrast == 1);
+    CHECK(bold == 1);
+    CHECK(qml.bold_text());
+
+    fakes.m_Accessibility->m_State.m_IncreaseContrast = false;
+    fakes.m_Accessibility->m_State.m_BoldText = false;
+    fakes.m_Accessibility->notify();
+    CHECK(contrast == 2);
+    CHECK(bold == 2);
+    CHECK_FALSE(qml.increase_contrast());
+    CHECK_FALSE(qml.bold_text());
+    CHECK(scale == 1); // none of them moved the text size
+    CHECK(voice == 1);
 }
 
 TEST_CASE("accessibility.wrapper: a notice after the bridge is gone is ignored", "[unit][accessibility]")

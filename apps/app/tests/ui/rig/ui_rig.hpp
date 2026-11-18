@@ -88,6 +88,10 @@ public:
     void set_dark(bool dark);
     void set_text_scale(double scale);
     void set_reduce_motion(bool reduce);
+    /// Increase Contrast: the stronger colours of tokens.json.
+    void set_increase_contrast(bool on);
+    /// Bold Text: every font role one weight step up.
+    void set_bold_text(bool on);
 
     /// Makes every `SafeFrame` that has no override of its own see a safe area, as the phone under the full-screen
     /// window has: the top and bottom insets in points (iPhone 17: 62 and 34). Offscreen there is none.

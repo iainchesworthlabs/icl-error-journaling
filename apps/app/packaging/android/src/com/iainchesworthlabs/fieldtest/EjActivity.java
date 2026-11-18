@@ -44,7 +44,7 @@ public class EjActivity extends QtActivity
         }
     }
 
-    // The manifest lists fontScale among the configuration changes the activity handles itself, so a change of the text
+    // The manifest lists fontScale and fontWeightAdjustment (Bold text) among the configuration changes the activity handles itself, so a change of the text
     // size arrives here and the activity is not recreated.
     @Override
     public void onConfigurationChanged(Configuration newConfig)

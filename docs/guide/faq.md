@@ -63,6 +63,15 @@ Yes: **Settings**, **Error prefix**. Change it only if the tool that reads your 
 **Where can I get a sample setup to try?**
 There is a sample setup file on the [home page](../index.md), with made-up names.
 
+## Reading the screen
+
+**Can I make the text easier to read?**
+Yes. The app follows the display settings of the phone. On an iPhone, open **Settings > Accessibility > Display & Text Size**
+and turn on **Bold Text** or **Increase Contrast**; **Larger Text** and the dark appearance work too. With **Increase
+Contrast** the grey text, the lines and the borders turn darker (or lighter, in the dark appearance) so they stand out. With
+**Bold Text** every word in the app is a step heavier. The app changes at once, with no restart. On an Android phone the
+matching settings are **High contrast text** and **Bold text** (Android 12 and later), under **Settings > Accessibility**.
+
 ## Your data
 
 **Where are my logs?**

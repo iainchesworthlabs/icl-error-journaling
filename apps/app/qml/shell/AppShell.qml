@@ -33,7 +33,8 @@ import ErrorJournalingApp
 //     messages    `AppRoot.writeFailed` is one Banner at the top of the window, except on the Log screen, which shows
 //                 the failures of its own models in its own banner. The Undo toast is the Log screen's; Review's is here,
 //                 because the Review screen has none.
-//     theme       `Theme.textScale` and `Theme.reduceMotion` follow the bridge (Dynamic Type, Reduce Motion), and
+//     theme       `Theme.textScale`, `Theme.reduceMotion`, `Theme.increaseContrast` and `Theme.boldText` follow the bridge
+//                 (Dynamic Type, Reduce Motion, Increase Contrast, Bold Text), and
 //                 `WindowLayout.windowWidth` and `WindowLayout.windowHeight` follow the shell's own size (Stage 8).
 //
 // Given as `required property`, the nine services of AppRoot by their names, AppRoot itself and the bridge (decision 3), so
@@ -266,7 +267,8 @@ Item {
             Accessible.announce(qsTr("Not saved. %1").arg(failureMessage));
     }
 
-    // Dynamic Type and Reduce Motion: the theme follows the system through the bridge (Stage 4, 4.3).
+    // Dynamic Type, Reduce Motion, Increase Contrast and Bold Text: the theme follows the system through the bridge
+    // (Stage 4, 4.3; the last two from the accessibility work that reversed Stage 4 decision 14).
     Binding {
         target: Theme
         property: "textScale"
@@ -277,6 +279,18 @@ Item {
         target: Theme
         property: "reduceMotion"
         value: root.bridge.reduceMotion
+    }
+
+    Binding {
+        target: Theme
+        property: "increaseContrast"
+        value: root.bridge.increaseContrast
+    }
+
+    Binding {
+        target: Theme
+        property: "boldText"
+        value: root.bridge.boldText
     }
 
     // The layout class follows the shell's size (Stage 8, 8.1): the window on the phone, the window or the Split View or

@@ -18,6 +18,11 @@ struct AccessibilityState
     bool m_ReduceMotion = false;
     /// VoiceOver is running. For tests and diagnostics; the interface does not branch on it.
     bool m_VoiceOverRunning = false;
+    /// Increase Contrast is on (iOS "Increase Contrast", Android "High contrast text"): the interface takes its
+    /// stronger colours, 7 to 1 for text and 4.5 to 1 for borders.
+    bool m_IncreaseContrast = false;
+    /// Bold Text is on (iOS "Bold Text", Android "Bold text"): every font weight is raised one step.
+    bool m_BoldText = false;
 
     friend bool operator==(const AccessibilityState&, const AccessibilityState&) = default;
 };
@@ -44,12 +49,12 @@ public:
     /// The settings now.
     [[nodiscard]] virtual AccessibilityState read() const = 0;
 
-    /// `changed` is called after any of the three settings may have changed (it can be called when none did; the caller
+    /// `changed` is called after any of the settings may have changed (it can be called when none did; the caller
     /// compares). Replaces an earlier handler; an empty one removes it. Nothing is called after the object is gone.
     virtual void set_change_handler(std::function<void()> changed) = 0;
 };
 
-/// ios/accessibility_settings.mm or desktop/accessibility_settings.cpp (1.0, false, false, and never changes).
+/// ios/accessibility_settings.mm or desktop/accessibility_settings.cpp (1.0, everything off, and never changes).
 [[nodiscard]] std::unique_ptr<AccessibilitySettings> make_accessibility_settings();
 
 } // namespace ej::bridge

@@ -20,7 +20,9 @@
 #include <QObject>
 #include <QScreen>
 #include <QSet>
+#include <algorithm>
 #include <cmath>
+#include <map>
 
 using namespace ej::ui;
 using Catch::Matchers::WithinAbs;
@@ -155,7 +157,7 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
         }
         // The singleton has no colour the contract lacks, except the three derived from the Other tile and tile text.
         const QSet<QString> derived{QStringLiteral("otherTileFill"), QStringLiteral("otherTileBorder"),
-                                    QStringLiteral("tileText"), QStringLiteral("dark")};
+                                    QStringLiteral("tileText"), QStringLiteral("dark"), QStringLiteral("increased")};
         QSet<QString> extra = own_properties(palette);
         for (const QString& key : colours.value(QStringLiteral("light")).toObject().keys())
         {
@@ -167,6 +169,45 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
         // Light and dark list the same colours.
         CHECK(colours.value(QStringLiteral("light")).toObject().keys() ==
               colours.value(QStringLiteral("dark")).toObject().keys());
+    }
+
+    SECTION("Increase Contrast: the stronger colours of colourIncreasedContrast, key for key")
+    {
+        const QJsonObject increased = json.value(QStringLiteral("colourIncreasedContrast")).toObject();
+        const QJsonObject colours = json.value(QStringLiteral("colour")).toObject();
+        QObject* palette = child(theme, "colour");
+        rig.set_increase_contrast(true);
+        for (const bool dark : {false, true})
+        {
+            rig.set_dark(dark);
+            const QString scheme = dark ? QStringLiteral("dark") : QStringLiteral("light");
+            const QJsonObject changed = increased.value(scheme).toObject();
+            const QJsonObject base = colours.value(scheme).toObject();
+            REQUIRE_FALSE(changed.isEmpty());
+            // Every key of the contract has a value now: the stronger one where it is listed, its own where it is not.
+            for (auto it = base.begin(); it != base.end(); ++it)
+            {
+                INFO((dark ? "dark " : "light ") << it.key().toStdString());
+                const QString expected =
+                    changed.contains(it.key()) ? changed.value(it.key()).toString() : it.value().toString();
+                CHECK(colour_of(palette, it.key()) == QColor(expected));
+            }
+            // Only keys that exist can be strengthened.
+            for (const QString& key : changed.keys())
+            {
+                INFO(key.toStdString());
+                CHECK(base.contains(key));
+            }
+        }
+        rig.set_increase_contrast(false);
+        // Off, the stronger values are gone again.
+        for (const bool dark : {false, true})
+        {
+            rig.set_dark(dark);
+            const QJsonObject base = colours.value(dark ? QStringLiteral("dark") : QStringLiteral("light")).toObject();
+            CHECK(colour_of(palette, QStringLiteral("textSecondary")) ==
+                  QColor(base.value(QStringLiteral("textSecondary")).toString()));
+        }
     }
 
     SECTION("the tile palette, 11 slots and Other")
@@ -192,6 +233,12 @@ TEST_CASE("theme.matches_tokens: every value of tokens.json is in the singleton,
             CHECK(colour_of(colours, QStringLiteral("otherTileBorder")) ==
                   QColor(other.value(dark ? QStringLiteral("darkBorder") : QStringLiteral("border")).toString()));
             CHECK(tile_colour(theme, 0) == colour_of(colours, QStringLiteral("otherTileFill")));
+            // With Increase Contrast on, the border is the stronger one of the same slot.
+            rig.set_increase_contrast(true);
+            CHECK(colour_of(colours, QStringLiteral("otherTileBorder")) ==
+                  QColor(other.value(dark ? QStringLiteral("darkIncreasedBorder") : QStringLiteral("increasedBorder"))
+                             .toString()));
+            rig.set_increase_contrast(false);
             CHECK_THAT(number(child(theme, "border"), QStringLiteral("otherWidth")),
                        WithinAbs(other.value(QStringLiteral("borderWidthPt")).toDouble(), 1e-9));
         }
@@ -407,6 +454,7 @@ TEST_CASE("theme.dark_resolves: switching the scheme changes the colours, and sw
     const QSet<QString> names = [&]
     {
         QSet<QString> all = own_properties(colours);
+        all.remove(QStringLiteral("increased"));
         all.remove(QStringLiteral("dark"));
         return all;
     }();
@@ -551,6 +599,81 @@ TEST_CASE("theme.text_scale: Dynamic Type scales list and note text freely and c
         CHECK_THAT(number(child(fonts, "tileLabel"), QStringLiteral("linePitch")), WithinAbs(17.55 * 1.2, 1e-6));
         // Tabular figures are set on the font, not only declared.
         CHECK(child(fonts, "timeColumn")->property("font").value<QFont>().featureTags().contains(QFont::Tag("tnum")));
+    }
+}
+
+TEST_CASE("theme.bold_text: every font role takes the next weight up, to 900, and the others stay as they were",
+          "[ui][theme]")
+{
+    UiRig rig;
+    QObject* theme = rig.theme();
+    QObject* fonts = child(theme, "font");
+    // The roles are the QObject properties of the font set that have a weight.
+    QStringList roles;
+    for (const QString& name : own_properties(fonts))
+    {
+        const QVariant value = fonts->property(name.toLatin1().constData());
+        auto* role = value.value<QObject*>();
+        if (role != nullptr && role->property("weight").isValid())
+        {
+            roles << name;
+        }
+    }
+    REQUIRE(roles.size() > 20);
+
+    const auto weight = [&](const QString& role, const char* property)
+    { return child(fonts, role.toLatin1().constData())->property(property).toInt(); };
+    const auto font_weight = [&](const QString& role, const char* property)
+    { return child(fonts, role.toLatin1().constData())->property(property).value<QFont>().weight(); };
+
+    std::map<QString, int> before;
+    for (const QString& role : roles)
+    {
+        before[role] = weight(role, "weight");
+        // Off: the role is its own weight.
+        CHECK(weight(role, "effectiveWeight") == before[role]);
+        CHECK(font_weight(role, "font") == static_cast<QFont::Weight>(before[role]));
+    }
+
+    rig.set_bold_text(true);
+    for (const QString& role : roles)
+    {
+        INFO(role.toStdString());
+        const int own = before[role];
+        const int expected = std::min(own + 100, 900);
+        CHECK(weight(role, "weight") == own); // the token itself does not move
+        CHECK(weight(role, "effectiveWeight") == expected);
+        CHECK(weight(role, "effectiveSelectedWeight") == std::min(weight(role, "selectedWeight") + 100, 900));
+        CHECK(font_weight(role, "font") == static_cast<QFont::Weight>(expected));
+        CHECK(font_weight(role, "selectedFont") ==
+              static_cast<QFont::Weight>(std::min(weight(role, "selectedWeight") + 100, 900)));
+        CHECK(font_weight(role, "linkFont") ==
+              static_cast<QFont::Weight>(std::min(weight(role, "selectedWeight") + 100, 900)));
+        CHECK(weight(role, "effectiveWeight") > own);
+    }
+
+    // Weights that the roles use, and the cap: 400 to 500, 500 to 600, 600 to 700, 700 to 800, and nothing above 900.
+    QSet<int> seen;
+    for (const auto& [role, own] : before)
+    {
+        seen.insert(own);
+    }
+    for (const int own : {400, 500, 600, 700})
+    {
+        INFO("a role at " << own);
+        CHECK(seen.contains(own));
+    }
+    int capped = 0;
+    REQUIRE(QMetaObject::invokeMethod(child(fonts, "body"), "boldened", Q_RETURN_ARG(int, capped), Q_ARG(int, 900)));
+    CHECK(capped == 900);
+    int top = 0;
+    REQUIRE(QMetaObject::invokeMethod(child(fonts, "body"), "boldened", Q_RETURN_ARG(int, top), Q_ARG(int, 850)));
+    CHECK(top == 900);
+
+    rig.set_bold_text(false);
+    for (const QString& role : roles)
+    {
+        CHECK(weight(role, "effectiveWeight") == before[role]);
     }
 }
 

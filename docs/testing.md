@@ -99,12 +99,19 @@ values in the test, so that a number changes in all of them or the test fails.
 `motion.animators` (`tools/ci/check_qml_motion.py`, label `unit`) fails a `NumberAnimation`, `PropertyAnimation`, `SmoothedAnimation`,
 `SpringAnimation` or `Behavior` on `x`, `y`, `scale` or `opacity` anywhere in `apps/app/qml/`; the Animator types are the only ones allowed.
 
-`contrast_test.cpp` is `a11y.contrast`: every pair of `Theme.contrastPairs` (4.5 to 1 for text, 3 to 1 for a non-text
-indicator) in light and in dark, the 11 tile colours under the tile text, no red or green tile hue, and a floor on how far
-apart two tiles are for a person with deuteranopia. The approved light palette has four pairs under the rule (the Other
-tile border and the placeholder, on two backgrounds each); they are listed in `Theme` with the ratio they have, so that
-they cannot get worse. `theme_test.cpp` is `theme.matches_tokens` (every value of `docs/design/tokens.json` against the
-singleton, both ways) and `theme.dark_resolves`; `safe_frame_test.cpp` is `safe_frame.insets`, `safe_frame.override`, `safe_frame.keyboard` and `safe_frame.reveal`;
+`contrast_test.cpp` is `a11y.contrast`: every pair of `Theme.contrastPairs` in four modes, light and dark, each with and
+without Increase Contrast (4.5 to 1 for text and 3 to 1 for a non-text indicator; 7 to 1 and 4.5 to 1 with Increase Contrast
+on), the 11 tile colours under the tile text, no red or green tile hue, and a floor on how far apart two tiles are for a
+person with deuteranopia. No pair is excused: an entry with an `exception` fails the test. A second case requires that
+Increase Contrast only adds pairs and never lowers a ratio. `theme_test.cpp` is `theme.matches_tokens` (every value of
+`docs/design/tokens.json` against the singleton, both ways, including `colourIncreasedContrast` with the setting on),
+`theme.dark_resolves` and `theme.bold_text` (every font role takes the next weight up with Bold Text on, to a cap of 900,
+for the font, the selected font and the link font); `app.bold_text` (label `ui`) walks the four tabs in light and dark with
+Bold Text and Increase Contrast on, at text scale 1.0 and 3.1, with `check_names`, `check_targets` and `check_text_scale`,
+and `app.theme` checks that the bridge's two new settings reach the `Theme` and back at run time. The portable bridge
+tests (`unit`, `accessibility.*` and `android.increase_contrast`, `android.bold_text`) cover the two new fields of
+`AccessibilityState`, one signal for each change and none for the same value, and what Android's two numbers mean;
+ `safe_frame_test.cpp` is `safe_frame.insets`, `safe_frame.override`, `safe_frame.keyboard` and `safe_frame.reveal`;
 `keyboard_test.cpp` is `keyboard.coverage`, `keyboard.is_text_input` and `keyboard.dismiss`.
 
 The keyboard tests model the phone's window: `UiRig::set_safe_area(62, 34)` gives every `SafeFrame` the insets of an iPhone 17

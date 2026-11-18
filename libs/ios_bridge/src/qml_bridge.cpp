@@ -247,6 +247,16 @@ bool QmlBridge::voice_over_running() const noexcept
     return m_Accessibility.m_VoiceOverRunning;
 }
 
+bool QmlBridge::increase_contrast() const noexcept
+{
+    return m_Accessibility.m_IncreaseContrast;
+}
+
+bool QmlBridge::bold_text() const noexcept
+{
+    return m_Accessibility.m_BoldText;
+}
+
 QString QmlBridge::timing_summary() const
 {
     return QString::fromStdString(m_Timing.summary());
@@ -287,6 +297,14 @@ void QmlBridge::refresh_accessibility()
     if (now.m_ReduceMotion != before.m_ReduceMotion)
     {
         emit reduceMotionChanged();
+    }
+    if (now.m_IncreaseContrast != before.m_IncreaseContrast)
+    {
+        emit increaseContrastChanged();
+    }
+    if (now.m_BoldText != before.m_BoldText)
+    {
+        emit boldTextChanged();
     }
     if (now.m_VoiceOverRunning != before.m_VoiceOverRunning)
     {
