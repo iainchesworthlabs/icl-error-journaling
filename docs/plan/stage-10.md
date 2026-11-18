@@ -78,13 +78,12 @@ These come from the TestFlight feedback so far and are added to by the Stage 7 f
 
 ## Hosting
 
-**Recommendation: keep the one MkDocs Material site on GitHub Pages from this repository, with the guide at its root.**
+**Recommendation: keep the one MkDocs Material site built from this repository, with the guide at its root, served at `https://iainchesworthlabs.com/field-test/` (S3 behind CloudFront; it was first on GitHub Pages).**
 
 What is there already: `mkdocs.yml` (Material theme, `strict: true`), `.github/workflows/docs.yml` (builds the site on
 every pull request that touches `docs/`, and on a push to `main` builds and deploys it with the reusable workflows of
-`icl-common-infra`), and Pages is enabled with the workflow as its source and HTTPS enforced. The address is
-`https://iainchesworthlabs.github.io/icl-error-journaling/`. It returns 404 today because `main` has not had a release
-yet.
+`icl-common-infra`, the deploy being `docs-deploy-aws.yml`: OIDC, no secrets), and HTTPS is enforced by CloudFront. The
+address is `https://iainchesworthlabs.com/field-test/`. It is empty until `main` has had a release.
 
 Why this, and not the alternatives:
 
@@ -99,23 +98,23 @@ Why this, and not the alternatives:
 
 | Page | Address | Used by |
 |---|---|---|
-| Guide home | `https://iainchesworthlabs.github.io/icl-error-journaling/` | App ("User guide"), store descriptions |
-| Support | `https://iainchesworthlabs.github.io/icl-error-journaling/support/` | App Store support URL, Play contact page, app |
-| Privacy | `https://iainchesworthlabs.github.io/icl-error-journaling/privacy/` | App Store privacy policy URL, Play privacy policy, app |
-| Setup file | `https://iainchesworthlabs.github.io/icl-error-journaling/guide/setup-file/` | Import errors screen |
+| Guide home | `https://iainchesworthlabs.com/field-test/` | App ("User guide"), store descriptions |
+| Support | `https://iainchesworthlabs.com/field-test/support/` | App Store support URL, Play contact page, app |
+| Privacy | `https://iainchesworthlabs.com/field-test/privacy/` | App Store privacy policy URL, Play privacy policy, app |
+| Setup file | `https://iainchesworthlabs.com/field-test/guide/setup-file/` | Import errors screen |
 
 The app holds these addresses in one place (a C++ constant exposed to QML, like the About page's source link), so a
 change of domain is one edit and one test.
 
 **Owner actions:**
 
-1. Nothing to enable: Pages is on, with the workflow source. Confirm that the `github-pages` environment allows
-   deployments from `main` (the first deploy shows it).
+1. Set the repository secrets `DOCS_ROLE_ARN`, `DOCS_PREVIEW_ROLE_ARN`, `DOCS_BUCKET` and `DOCS_DISTRIBUTION_ID`
+   (`docs/ci.md`, "The site address"), and turn GitHub Pages off on this repository once the new address answers.
 2. Publish: the guide goes live with the first release to `main`. App Review and Play review fetch the support and
    privacy URLs, so a release to `main` that contains 10.1 has to happen before the Stage 11 submission. If that is too
    late, the owner can choose decision 2's alternative.
-3. Decide on a custom domain (decision 3) before Stage 11 submits, because a store URL that changes later needs a new
-   submission. A custom domain needs a DNS record and the Pages domain setting, both owner actions.
+3. The domain is decided (decision 3): `iainchesworthlabs.com`, set before Stage 11 submits, because a store URL that
+   changes later needs a new submission.
 4. Choose the support contact (decision 4).
 
 ## Support and privacy pages
@@ -325,12 +324,12 @@ Run after the first release to `main` that contains 10.1 to 10.7:
 
 ## Decisions for the owner
 
-1. **Hosting.** One MkDocs site on this repo's Pages, guide at the root and developer pages under "For developers"
+1. **Hosting.** One MkDocs site built from this repo and served at `iainchesworthlabs.com/field-test/`, guide at the root and developer pages under "For developers"
    (recommended), or the guide alone on the site and the developer pages left in the repository only.
 2. **When the site publishes.** On a release to `main`, so the guide matches the released app (recommended), or from
    `develop` until the first public release, so the support and privacy URLs are live sooner. The second changes
    `docs.yml` (a workflow change, `docs/ci.md`).
-3. **Custom domain.** None, the `github.io` address (recommended for now), or a domain the owner holds. To be fixed
+3. **Custom domain.** Decided: `iainchesworthlabs.com`, under the prefix `field-test` (it was the `github.io` address before). To be fixed
    before Stage 11 submits.
 4. **Support contact.** An email address the owner gives (shown on the support page), GitHub issues, or both. Apple
    expects a way to contact the developer on the support page; testers may not have GitHub accounts, so an email

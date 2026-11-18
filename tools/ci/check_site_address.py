@@ -13,7 +13,7 @@ read mkdocs.yml must hold the same address, and this check compares them:
 - no page of docs/ other than the plan pages writes the host out.
 
 The app's own constant joins this list with work package 10.6. A move to a custom domain is then: change `site_url`,
-fix what this check names, and set the domain in the repository's Pages settings (an owner action).
+fix what this check names, and update the deploy jobs of docs.yml (the host and prefix are set there and in the owner's repository variables).
 """
 
 from __future__ import annotations

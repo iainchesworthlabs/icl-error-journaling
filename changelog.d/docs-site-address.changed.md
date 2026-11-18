@@ -1,0 +1,1 @@
+**The user guide, support and privacy pages have a new address.** The links in the app (the help sheet and the Settings rows that open the guide) now open the pages at iainchesworthlabs.com/field-test/. Not yet run on a device.

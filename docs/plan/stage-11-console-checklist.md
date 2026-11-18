@@ -40,7 +40,7 @@ Submitting for review and releasing are yours, at the end. Nothing here does eit
 | SKU | Any text you will recognise, for example `field-test-1` |
 | Primary language | English (Australia), as the record already is. The listing is English (Australia) only, named Field Test. A UK listing was refused by the store and dropped |
 | Content rights | Answer **No** to "contains, shows or accesses third-party content". The app shows only what the user enters |
-| Privacy policy URL, support URL, marketing URL | Uploaded: `https://iainchesworthlabs.github.io/icl-error-journaling/privacy/`, `.../support/` and the site root. These GitHub Pages addresses stay until the project's own domain is live; then change the three files in `store/appstore/en-AU/` and upload again |
+| Privacy policy URL, support URL, marketing URL | Upload `https://iainchesworthlabs.com/field-test/privacy/`, `https://iainchesworthlabs.com/field-test/support/` and `https://iainchesworthlabs.com/field-test/` (the three files in `store/appstore/en-AU/` hold them). Confirm each answers over HTTPS first |
 
 ## 4. Age rating
 
