@@ -76,11 +76,11 @@ TEST_CASE("Rule 4: a note line is (Free Text) and the rendered template or the f
 {
     auto scenario = blank_scenario();
     must_add(scenario.m_Log, template_note_entry(1, on_day(10, 5), TEMPLATE_PLAYED, "Morning Medley"));
-    must_add(scenario.m_Log, free_note_entry(2, on_day(10, 6), "Robot restarted"));
+    must_add(scenario.m_Log, free_note_entry(2, on_day(10, 6), "Device restarted"));
     must_add(scenario.m_Log, free_note_entry(3, on_day(10, 7), ""));
     CHECK(render(scenario)
           == std::string(HEADER)
-                 + "\n\n10:05 (Free Text) Played Morning Medley\n10:06 (Free Text) Robot restarted\n10:07 (Free Text)");
+                 + "\n\n10:05 (Free Text) Played Morning Medley\n10:06 (Free Text) Device restarted\n10:07 (Free Text)");
 }
 
 TEST_CASE("Rule 5: a header-change line names the field with its old and new value", "[export][rule5]")

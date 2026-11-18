@@ -57,9 +57,9 @@ Result<std::string, ExtraVersionsError> normalize_label(std::string_view label)
     {
         return fail(ExtraVersionsError::LABEL_TOO_LONG);
     }
-    if (lower(out) == lower(ROBOT_LABEL))
+    if (lower(out) == lower(SOFTWARE_LABEL))
     {
-        return fail(ExtraVersionsError::LABEL_IS_ROBOT);
+        return fail(ExtraVersionsError::LABEL_IS_SOFTWARE);
     }
     return out;
 }

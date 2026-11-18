@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The versions besides the robot's (HDR-10) in the real store: the database column and the journal carry the stored text,
+// The versions besides the main one (HDR-10) in the real store: the database column and the journal carry the stored text,
 // they survive a restart and a correction, and a database from the build before the column existed migrates with every
 // log in it intact.
 #include "error_journaling/storage_location.hpp"

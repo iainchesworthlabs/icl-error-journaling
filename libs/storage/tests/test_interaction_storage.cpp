@@ -80,7 +80,7 @@ constexpr const char* V3_SCHEMA[] = {
     "INSERT INTO error_entry VALUES ('00000000-0000-4000-8000-0000000000e3', '00000000-0000-4000-8000-0000000000a1',"
     " 'Wrong Response', NULL)",
     "INSERT INTO error_entry VALUES ('00000000-0000-4000-8000-0000000000e5', '00000000-0000-4000-8000-0000000000a1',"
-    " 'Wrong Response', 'the robot paused')",
+    " 'Wrong Response', 'the device paused')",
     "INSERT INTO error_entry VALUES ('00000000-0000-4000-8000-0000000000e4', '00000000-0000-4000-8000-0000000000a1',"
     " 'Other', NULL)",
     "INSERT INTO note_entry VALUES ('00000000-0000-4000-8000-0000000000e1', NULL, 'Played a song')",

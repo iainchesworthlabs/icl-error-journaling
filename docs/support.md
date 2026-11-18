@@ -1,6 +1,6 @@
 # Support
 
-Field Test is an app for logging robot errors during a session. This page says where to get help.
+Field Test is an app for logging errors during a software or hardware testing session. This page says where to get help.
 
 ## Before you ask
 

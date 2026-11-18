@@ -265,7 +265,7 @@ void interaction_day(Builder& b)
     b.error(on_day(10, 20), ERROR_MUTE_DELAY);                                          // 3
     b.interaction(on_day(10, 31), INTERACTION_PLAYED_SONG, {}, "Morning Medley");       // 4
     b.interaction(on_day(10, 40), INTERACTION_SPOKE_WITH, {PERSON_ALEX, PERSON_JORDAN, PERSON_PAT});  // 5
-    b.note(on_day(10, 45), "Robot restarted");                                          // 6
+    b.note(on_day(10, 45), "Device restarted");                                          // 6
     b.interaction(on_day(10, 48), INTERACTION_VISITOR, {}, std::nullopt, "asked about the schedule");  // 7
     b.interaction(on_day(11, 0), INTERACTION_GAVE, {PERSON_JORDAN}, "a card");          // 8
     b.interaction(on_day(11, 10), INTERACTION_SPOKE_WITH, {PERSON_FORGOTTEN});          // 9
@@ -333,7 +333,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
          {
              Builder b(empty_header());
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
-             b.note(on_day(10, 15), "Robot restarted");
+             b.note(on_day(10, 15), "Device restarted");
              b.error(on_day(10, 25), ERROR_MUTE_DELAY);
              return b.finish();
          }},
@@ -354,7 +354,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b;
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE, "asked for Evening Song");
              b.error(on_day(10, 20), ERROR_MUTE_DELAY, "caller said wait");
-             b.note(on_day(10, 20, 30), "Restarted the robot");
+             b.note(on_day(10, 20, 30), "Restarted the device");
              b.error(on_day(10, 40), ERROR_WRONG_TRACK_PLAYED, "went from side A \xE2\x86\x92 side B \xE2\x80\x93 twice");
              return b.finish();
          }},
@@ -444,7 +444,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              b.totals = true;
              b.error(on_day(10, 0), ERROR_WRONG_RESPONSE);
              b.error(on_day(10, 10), ERROR_MUTE_DELAY);  // 2: deleted
-             b.note(on_day(10, 20), "Robot restarted");
+             b.note(on_day(10, 20), "Device restarted");
              b.note(on_day(10, 30), "Deleted note");  // 4: deleted
              const EntryId first_change = b.change(HeaderField::SOFTWARE_VERSION, "1.4.9", on_day(11, 0));
              const EntryId second_change = b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(12, 0));

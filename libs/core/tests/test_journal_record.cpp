@@ -39,7 +39,7 @@ std::vector<JournalRecord> every_op()
     HeaderValues by_id = sample_header();
     by_id.m_Location = LocationValue{sample_id<LocationId>(5), "North Site"};
 
-    Entry edited = sample_error(2, 31, "Wrong Response", "robot stopped; note with \"quotes\" and \\ and \n");
+    Entry edited = sample_error(2, 31, "Wrong Response", "device stopped; note with \"quotes\" and \\ and \n");
     edited.m_EditedUtc = sample_time(45);
     edited.m_Deleted = true;
 

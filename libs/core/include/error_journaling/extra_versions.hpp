@@ -16,8 +16,8 @@ namespace ej
 
 inline constexpr std::size_t MAX_EXTRA_LABEL_LENGTH = 20;
 
-/// A software version with a name: "Influencer" and 4.5.0. The robot's own version is the header's software version and
-/// has no label of its own in the data; the screens call it "Robot".
+/// A software version with a name: "Influencer" and 4.5.0. The main version is the header's software version and
+/// has no label of its own in the data; the screens call it "Software".
 ///
 /// The label is kept in the object, as `SoftwareVersion` keeps its commit, and not in a string: a header is copied and
 /// destroyed inside the journal record variants, and GCC's analysis of those reports a string held there as possibly
@@ -73,7 +73,7 @@ enum class ExtraVersionsError
     EMPTY_LABEL,
     LABEL_TOO_LONG,       // more than `MAX_EXTRA_LABEL_LENGTH` characters
     LABEL_CHARACTERS,     // anything but letters and digits (ASCII), spaces and dashes
-    LABEL_IS_ROBOT,       // "Robot" in any case: that name belongs to the header's software version
+    LABEL_IS_SOFTWARE,    // "Software" in any case: that name belongs to the header's software version
     DUPLICATE_LABEL,      // the same label (in any case) twice
     INVALID_VERSION,      // a version that `SoftwareVersion` refuses
     MALFORMED             // stored text with a line that is not label=version
@@ -84,13 +84,13 @@ enum class ExtraVersionsError
 inline constexpr std::string_view EXTRA_VERSION_NOT_SET = "not set";
 
 /// The name the screens and the log give to the header's own software version.
-inline constexpr std::string_view ROBOT_LABEL = "Robot";
+inline constexpr std::string_view SOFTWARE_LABEL = "Software";
 
 /// The stored text when there are no extra versions. A correction needs a value, and "" is not one.
 inline constexpr std::string_view NO_EXTRA_VERSIONS = "none";
 
 /// A label as it is kept: trimmed, inner runs of spaces collapsed to one. Refused when empty, too long, with a
-/// character other than ASCII letters, digits, space and dash, or when it is "Robot" in any case.
+/// character other than ASCII letters, digits, space and dash, or when it is "Software" in any case.
 [[nodiscard]] Result<std::string, ExtraVersionsError> normalize_label(std::string_view label);
 
 /// Checks the whole list: every label as `normalize_label` does, and no label twice without regard to case.

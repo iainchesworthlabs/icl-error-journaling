@@ -1,6 +1,6 @@
 # Field Test
 
-Field Test is an app for logging robot errors during a session. You tap a tile each time an error happens, add a note
+Field Test is an app for logging errors during a software or hardware testing session. You tap a tile each time an error happens, add a note
 when it helps, and share the day's log when you finish. Everything stays on your iPhone or iPad until you share it.
 
 | If you want to | Go to |

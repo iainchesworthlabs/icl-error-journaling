@@ -7,7 +7,7 @@ and it does not send anything over the internet. This page says what that means 
 
 ## What the app stores
 
-- **Your logs.** Each day's entries, the notes you type and the day's details (unit, place, software versions (the robot's and any others you add), date and
+- **Your logs.** Each day's entries, the notes you type and the day's details (unit, place, software versions (the main one and any others you add), date and
   your name as the tester).
 - **People you add.** Only if you turn on the second board and choose to type a name (see below).
 - **Your setup.** The error types, places and note templates you set up, and your preferences, such as the time format.
@@ -71,10 +71,6 @@ it. If you do not want your log in a backup, switch the backup off for the devic
 - **A day's log:** delete it in the app (History, then the log).
 - **Everything:** delete the app. Its logs, setup and settings are deleted with it. A copy of the data that is in a device
   backup stays there until that backup is replaced or deleted.
-
-## Children
-
-The app is for people who run robot sessions at work. It is not aimed at children and asks for no personal details.
 
 ## Questions
 

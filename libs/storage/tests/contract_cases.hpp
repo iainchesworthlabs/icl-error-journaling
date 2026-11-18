@@ -149,12 +149,12 @@ TEMPLATE_LIST_TEST_CASE("An error entry keeps the label its type had when it was
 {
     TestType f;
     start_log(f);
-    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10, "Wrong Response", "robot paused")));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10, "Wrong Response", "device paused")));
     const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
     const auto& error = std::get<ErrorEntry>(log.m_Log.find(entry_id(1))->m_Body);
     CHECK(error.m_ErrorTypeLabel == "Wrong Response");
     CHECK(error.m_ErrorType == sample_id<ErrorTypeId>(1));
-    CHECK(error.m_AttachedNote == "robot paused");
+    CHECK(error.m_AttachedNote == "device paused");
 }
 
 TEMPLATE_LIST_TEST_CASE("An entry for an unknown log is refused", "[contract][repository]", Fixtures)

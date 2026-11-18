@@ -37,7 +37,7 @@ struct Fixture
 
 std::string typed(int n)
 {
-    return "the robot said take " + std::to_string(n) + " to Sam Example";
+    return "the device said take " + std::to_string(n) + " to Sam Example";
 }
 
 } // namespace

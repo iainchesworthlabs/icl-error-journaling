@@ -1,1 +1,1 @@
-tester,session,error log,robot,journal,tally,timestamp,notes,daily log,testing,tracker,dictation
+tester,session,error log,hardware,journal,tally,timestamp,notes,daily log,testing,tracker,dictation

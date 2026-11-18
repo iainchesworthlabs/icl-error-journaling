@@ -1,4 +1,4 @@
-Field Test is an error log for people who run sessions with a robot.
+Field Test is an error log for people who run software and hardware testing sessions.
 
 Each common error has its own tile on the board. Double-tap the tile and the error goes into the day's log with the local time. Notes, templated notes and changes to the day's header, such as a new software version, go into the same journal, in time order.
 
@@ -14,7 +14,7 @@ OBSERVATIONS, IF YOU WANT THEM
 Observations is an optional second board. It is off until you switch it on in Settings. Use it for what you did around the unit as well as what went wrong. Make your own tile types, such as "Spoke with [person]", and pick the people from a short list you keep on the device. Names are kept in their own store, never in the log or a setup file, and a shared log writes them as initials unless you choose otherwise.
 
 THE DAY'S LOG
-• A header with the tester, date, unit, number suffix (such as UNIT-27-prod), location and robot software version
+• A header with the tester, date, unit, number suffix (such as UNIT-27-prod), location and software version
 • Other versions, such as a phone app, with a name and number of their own
 • Changes to the header during the day are logged with their time
 • Review, edit, copy or delete any entry

@@ -9,7 +9,7 @@ Software Version: v1.4.2
 10:20 T| Mute Delay
 10:31 (Interaction) Played Morning Medley
 10:40 (Interaction) Spoke with someone
-10:45 (Free Text) Robot restarted
+10:45 (Free Text) Device restarted
 10:48 (Interaction) Visitor interaction – asked about the schedule
 11:00 (Interaction) Gave someone a card
 11:10 (Interaction) Spoke with someone

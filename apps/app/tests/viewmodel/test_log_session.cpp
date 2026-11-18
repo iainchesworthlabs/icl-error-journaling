@@ -1864,7 +1864,7 @@ TEST_CASE("A log written before commits existed opens with its version and no co
 namespace
 {
 
-const QString ROBOT_NOTE = QStringLiteral("The robot paused twice");
+const QString DEVICE_NOTE = QStringLiteral("The device paused twice");
 
 /// The entry that a tap made, committed, with its id as text.
 QString committed_tap(SessionRig& rig)
@@ -1910,7 +1910,7 @@ TEST_CASE("attachDraft puts the trimmed draft on the error entry, clears the dra
 {
     SessionRig rig;
     const QString id = committed_tap(rig);
-    rig.session->set_draft(QStringLiteral("  ") + ROBOT_NOTE + QStringLiteral(" \n"));
+    rig.session->set_draft(QStringLiteral("  ") + DEVICE_NOTE + QStringLiteral(" \n"));
     QSignalSpy draft_changed(rig.session.get(), &LogSession::draftChanged);
     QSignalSpy attached(rig.session.get(), &LogSession::draftAttached);
     draft_changed.clear();
@@ -1918,7 +1918,7 @@ TEST_CASE("attachDraft puts the trimmed draft on the error entry, clears the dra
     REQUIRE(rig.session->attachDraft(id));
     // Submitted, not committed: the note is not on the entry, the draft is still there, nothing is confirmed.
     CHECK_FALSE(attached_note_of(rig.entries().front()).has_value());
-    CHECK(rig.session->draft().contains(ROBOT_NOTE));
+    CHECK(rig.session->draft().contains(DEVICE_NOTE));
     CHECK(rig.feedback.saved_notes().empty());
     CHECK(attached.count() == 0);
     CHECK(rig.session->pending_writes() == 1);
@@ -1929,7 +1929,7 @@ TEST_CASE("attachDraft puts the trimmed draft on the error entry, clears the dra
     const auto entries = rig.entries();
     REQUIRE(entries.size() == 1);
     REQUIRE(attached_note_of(entries.front()).has_value());
-    CHECK(*attached_note_of(entries.front()) == ROBOT_NOTE.toStdString());
+    CHECK(*attached_note_of(entries.front()) == DEVICE_NOTE.toStdString());
     CHECK(rig.session->live_entry_count() == 1);
     CHECK(rig.session->draft().isEmpty());
     CHECK(draft_changed.count() >= 1);
@@ -1943,7 +1943,7 @@ TEST_CASE("attachDraft puts the trimmed draft on the error entry, clears the dra
     CHECK(rig.feedback.saved_notes().front() == entries.front().m_Id);
     REQUIRE(attached.count() == 1);
     CHECK(attached.at(0).at(0).toString() == id);
-    CHECK(attached.at(0).at(1).toString() == ROBOT_NOTE);
+    CHECK(attached.at(0).at(1).toString() == DEVICE_NOTE);
     const auto commit = index_of(rig.events, EventKind::COMMIT);
     const auto confirmation = index_of(rig.events, EventKind::CONFIRMATION, "note_saved");
     REQUIRE(commit);
@@ -1960,7 +1960,7 @@ TEST_CASE("attachDraft refuses what cannot be attached and writes nothing", "[vi
     rig.session->set_draft(QStringLiteral(" \n"));
     CHECK_FALSE(rig.session->attachDraft(id));
 
-    rig.session->set_draft(ROBOT_NOTE);
+    rig.session->set_draft(DEVICE_NOTE);
     // An id that is not an id, an entry that is not there, an entry that has not been committed.
     CHECK_FALSE(rig.session->attachDraft(QStringLiteral("not an id")));
     CHECK_FALSE(rig.session->attachDraft(QStringLiteral("00000000-0000-4000-8000-0000000000ff")));
@@ -1973,10 +1973,10 @@ TEST_CASE("attachDraft refuses what cannot be attached and writes nothing", "[vi
     CHECK(rig.session->draft().size() == 10'001);
 
     // A note entry is not an error entry.
-    rig.session->set_draft(ROBOT_NOTE);
+    rig.session->set_draft(DEVICE_NOTE);
     REQUIRE(rig.session->addNote(QStringLiteral("Sam Example visited")));
     rig.gateway.run_all();
-    rig.session->set_draft(ROBOT_NOTE);
+    rig.session->set_draft(DEVICE_NOTE);
     QString note_id;
     for (const Entry& entry : rig.entries())
     {
@@ -1993,7 +1993,7 @@ TEST_CASE("attachDraft refuses what cannot be attached and writes nothing", "[vi
     {
         CHECK_FALSE(attached_note_of(entry).has_value());
     }
-    CHECK(rig.session->draft() == ROBOT_NOTE);
+    CHECK(rig.session->draft() == DEVICE_NOTE);
     CHECK(rig.feedback.saved_notes().size() == 1); // the note entry's
 }
 
@@ -2001,14 +2001,14 @@ TEST_CASE("attachDraft does not replace a note the entry has already", "[viewmod
 {
     SessionRig rig;
     const QString id = committed_tap(rig);
-    rig.session->set_draft(ROBOT_NOTE);
+    rig.session->set_draft(DEVICE_NOTE);
     REQUIRE(rig.session->attachDraft(id));
     rig.gateway.run_all();
     REQUIRE(rig.session->draft().isEmpty());
 
     rig.session->set_draft(QStringLiteral("Another note"));
     CHECK_FALSE(rig.session->attachDraft(id));
-    CHECK(*attached_note_of(rig.entries().front()) == ROBOT_NOTE.toStdString());
+    CHECK(*attached_note_of(rig.entries().front()) == DEVICE_NOTE.toStdString());
     CHECK(rig.session->draft() == QStringLiteral("Another note"));
 }
 
@@ -2017,7 +2017,7 @@ TEST_CASE("A failed attach leaves the entry, keeps the draft, reports the write 
 {
     SessionRig rig;
     const QString id = committed_tap(rig);
-    rig.session->set_draft(ROBOT_NOTE);
+    rig.session->set_draft(DEVICE_NOTE);
     QSignalSpy attached(rig.session.get(), &LogSession::draftAttached);
     rig.storage.repository().fail_next(RepositoryOp::EDIT_ENTRY);
 
@@ -2025,7 +2025,7 @@ TEST_CASE("A failed attach leaves the entry, keeps the draft, reports the write 
     rig.gateway.run_all();
 
     CHECK_FALSE(attached_note_of(rig.entries().front()).has_value());
-    CHECK(rig.session->draft() == ROBOT_NOTE);
+    CHECK(rig.session->draft() == DEVICE_NOTE);
     CHECK(rig.events.count(EventKind::WRITE_FAILED, "attachDraft") == 1);
     CHECK(rig.feedback.saved_notes().empty());
     CHECK(attached.count() == 0);
@@ -2034,7 +2034,7 @@ TEST_CASE("A failed attach leaves the entry, keeps the draft, reports the write 
     // The next try works.
     REQUIRE(rig.session->attachDraft(id));
     rig.gateway.run_all();
-    CHECK(*attached_note_of(rig.entries().front()) == ROBOT_NOTE.toStdString());
+    CHECK(*attached_note_of(rig.entries().front()) == DEVICE_NOTE.toStdString());
     CHECK(rig.session->draft().isEmpty());
 }
 
@@ -2042,13 +2042,13 @@ TEST_CASE("Text typed while the attach is committing is kept, not cleared", "[vi
 {
     SessionRig rig;
     const QString id = committed_tap(rig);
-    rig.session->set_draft(ROBOT_NOTE);
+    rig.session->set_draft(DEVICE_NOTE);
     REQUIRE(rig.session->attachDraft(id));
-    rig.session->set_draft(ROBOT_NOTE + QStringLiteral(" and again"));
+    rig.session->set_draft(DEVICE_NOTE + QStringLiteral(" and again"));
     rig.gateway.run_all();
 
-    CHECK(*attached_note_of(rig.entries().front()) == ROBOT_NOTE.toStdString());
-    CHECK(rig.session->draft() == ROBOT_NOTE + QStringLiteral(" and again"));
+    CHECK(*attached_note_of(rig.entries().front()) == DEVICE_NOTE.toStdString());
+    CHECK(rig.session->draft() == DEVICE_NOTE + QStringLiteral(" and again"));
 }
 
 TEST_CASE("attachDraft is refused while the session is not open", "[viewmodel][session]")
@@ -2078,7 +2078,7 @@ TEST_CASE("The other versions are corrected as a list, shown as a summary, and a
     SessionRig rig(Options().existing());
     CHECK(rig.session->extra_versions().isEmpty());
     CHECK(rig.session->extra_versions_text().isEmpty());
-    CHECK(rig.session->versions_summary() == QStringLiteral("Robot v1.4.2"));
+    CHECK(rig.session->versions_summary() == QStringLiteral("Software v1.4.2"));
 
     QVariantList rows{extra_row("Influencer", "v4.5.0"), extra_row("", ""), extra_row("Gateway", "2.0.1")};
     REQUIRE(rig.session->correctExtraVersions(rows));
@@ -2091,8 +2091,8 @@ TEST_CASE("The other versions are corrected as a list, shown as a summary, and a
     CHECK(rig.session->extra_versions().at(0).toMap().value(QStringLiteral("version")) == QStringLiteral("4.5.0"));
     CHECK(rig.session->extra_versions_text() == QString::fromUtf8("Influencer v4.5.0 \xC2\xB7 Gateway v2.0.1"));
     CHECK(rig.session->versions_summary() ==
-          QString::fromUtf8("Robot v1.4.2 \xC2\xB7 Influencer v4.5.0 \xC2\xB7 Gateway v2.0.1"));
-    // The robot's own version is left as it was.
+          QString::fromUtf8("Software v1.4.2 \xC2\xB7 Influencer v4.5.0 \xC2\xB7 Gateway v2.0.1"));
+    // The main version is left as it was.
     CHECK(rig.session->version_text() == QStringLiteral("1.4.2"));
 
     // An empty list takes them all away.
@@ -2105,7 +2105,7 @@ TEST_CASE("A row of the other versions is refused with a message for the field i
           "[viewmodel][session][extra-versions]")
 {
     SessionRig rig(Options().existing());
-    QVariantList rows{extra_row("Influencer", "4.5.0"), extra_row("influencer", "4.6.0"), extra_row("Robot", "1.0.0"),
+    QVariantList rows{extra_row("Influencer", "4.5.0"), extra_row("influencer", "4.6.0"), extra_row("Software", "1.0.0"),
                       extra_row("Gateway", "2.0"), extra_row("", "1.0.0")};
     CHECK(rig.session->validateExtraRow(rows, 0).isEmpty());
     CHECK(rig.session->extraRowField(rows, 0).isEmpty());
@@ -2114,8 +2114,8 @@ TEST_CASE("A row of the other versions is refused with a message for the field i
     // Only the first refused row carries the message, so one problem is shown at a time.
     CHECK(rig.session->validateExtraRow(rows, 2).isEmpty());
 
-    QVariantList robot{extra_row("Robot", "1.0.0")};
-    CHECK(rig.session->extraRowField(robot, 0) == QStringLiteral("label"));
+    QVariantList device{extra_row("Software", "1.0.0")};
+    CHECK(rig.session->extraRowField(device, 0) == QStringLiteral("label"));
     QVariantList bad_version{extra_row("Gateway", "2.0")};
     CHECK(rig.session->extraRowField(bad_version, 0) == QStringLiteral("version"));
     CHECK_FALSE(rig.session->validateExtraRow(bad_version, 0).isEmpty());
@@ -2126,7 +2126,7 @@ TEST_CASE("A row of the other versions is refused with a message for the field i
 
     const auto posted = rig.gateway.posted();
     CHECK_FALSE(rig.session->correctExtraVersions(rows));
-    CHECK_FALSE(rig.session->correctExtraVersions(robot));
+    CHECK_FALSE(rig.session->correctExtraVersions(device));
     CHECK_FALSE(rig.session->correctExtraVersions(bad_version));
     CHECK(rig.gateway.posted() == posted);
 }
@@ -2161,7 +2161,7 @@ TEST_CASE("session.new_log_carries_names: a new log starts with the names of the
     CHECK(first.value(QStringLiteral("version")).toString().isEmpty());
     CHECK(first.value(QStringLiteral("unset")).toBool());
     CHECK(rig.session->extra_versions_text() == QString::fromUtf8("Influencer not set \xC2\xB7 Gateway not set"));
-    // The robot's version is cleared as before, and each carried name is in the banner.
+    // The device's version is cleared as before, and each carried name is in the banner.
     CHECK(rig.session->version_text().isEmpty());
     const QStringList missing = rig.session->missing_fields();
     CHECK(missing.contains(QStringLiteral("extra_version:Influencer")));

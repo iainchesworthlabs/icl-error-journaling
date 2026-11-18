@@ -528,7 +528,7 @@ TEST_CASE("Every row is its time and its line, in every time format", "[viewmode
 {
     Rig rig;
     rig.start({error_at(1, 9, 5, "Wrong Response"), error_at(2, 13, 20, "Mute Delay", "after the break"),
-               note_at(3, 13, 25, "  Robot\n restarted "), change_at(4, 14, 5, HeaderField::SOFTWARE_VERSION, "1.5.0"),
+               note_at(3, 13, 25, "  Device\n restarted "), change_at(4, 14, 5, HeaderField::SOFTWARE_VERSION, "1.5.0"),
                error_at(5, 23, 59)});
     const TimeFormat formats[] = {
         {TimeStyle::H24, false, MeridiemCase::UPPER}, {TimeStyle::H24, true, MeridiemCase::UPPER},
@@ -694,7 +694,7 @@ TEST_CASE("Edit: the error type, the attached note and the note text each re-ren
     Rig rig;
     const Configuration configuration = sample_configuration();
     rig.start({error_at(1, 11, 10, "Wrong Response"), error_at(2, 11, 20, "Mute Delay", "first note"),
-               note_at(3, 11, 30, "Robot restarted")});
+               note_at(3, 11, 30, "Device restarted")});
 
     SECTION("the error type takes a new name snapshot")
     {
@@ -768,9 +768,9 @@ TEST_CASE("Edit: the error type, the attached note and the note text each re-ren
 
     SECTION("the note text, and a template for it")
     {
-        REQUIRE(rig.model().saveEntry(text_of(3), QVariantMap{{"noteText", "Robot rebooted"}}));
+        REQUIRE(rig.model().saveEntry(text_of(3), QVariantMap{{"noteText", "Device rebooted"}}));
         rig.commit();
-        CHECK(full_line(rig.model(), 2) == "11:30 Robot rebooted");
+        CHECK(full_line(rig.model(), 2) == "11:30 Device rebooted");
 
         const QString played = QString::fromStdString(configuration.m_Templates[0].m_Id.format());
         REQUIRE(rig.model().saveEntry(text_of(3), QVariantMap{{"noteText", "Morning Medley"}, {"templateId", played}}));
@@ -805,7 +805,7 @@ TEST_CASE("Edit: what the sheet shows", "[viewmodel][timeline]")
     Entry error = error_at(1, 11, 10, "Mute Delay", "note one");
     std::get<ErrorEntry>(error.m_Body).m_ErrorType = type;
     rig.start(
-        {error, note_at(2, 14, 5, "Robot restarted"), change_at(3, 15, 0, HeaderField::SOFTWARE_VERSION, "1.5.0")});
+        {error, note_at(2, 14, 5, "Device restarted"), change_at(3, 15, 0, HeaderField::SOFTWARE_VERSION, "1.5.0")});
 
     const QVariantMap e = rig.model().entryForEdit(text_of(1));
     CHECK(e.value("entryId") == text_of(1));
@@ -820,7 +820,7 @@ TEST_CASE("Edit: what the sheet shows", "[viewmodel][timeline]")
 
     const QVariantMap n = rig.model().entryForEdit(text_of(2));
     CHECK(n.value("kind") == "note");
-    CHECK(n.value("noteText") == "Robot restarted");
+    CHECK(n.value("noteText") == "Device restarted");
     CHECK(n.value("templateId") == "");
     CHECK(n.value("localSeconds") == seconds_of(14, 5));
 
@@ -835,7 +835,7 @@ TEST_CASE("Edit: what the sheet shows", "[viewmodel][timeline]")
 TEST_CASE("Edit: refusals give a plain reason and write nothing", "[viewmodel][timeline]")
 {
     Rig rig;
-    rig.start({error_at(1, 11, 10), note_at(2, 11, 20, "Robot restarted"),
+    rig.start({error_at(1, 11, 10), note_at(2, 11, 20, "Device restarted"),
                change_at(3, 11, 30, HeaderField::SOFTWARE_VERSION, "1.5.0")});
     QSignalSpy any(&rig.model(), &QAbstractItemModel::dataChanged);
 
@@ -1792,7 +1792,7 @@ TEST_CASE("Edit: the sheet has the colour of the type and its name", "[viewmodel
     Entry mute = error_at(1, 11, 2, "Mute Delay");
     std::get<ErrorEntry>(mute.m_Body).m_ErrorType = type_named(configuration, "Mute Delay");
     Entry stranger = error_at(2, 11, 5, "Gone Type"); // a type the configuration does not have
-    rig.start(list_of(mute, stranger, note_at(3, 11, 10, "Robot restarted")));
+    rig.start(list_of(mute, stranger, note_at(3, 11, 10, "Device restarted")));
 
     // Mute Delay is the eighth type of the sample: slot 8, Periwinkle.
     const QVariantMap sheet = rig.model().entryForEdit(text_of(1));
@@ -1813,7 +1813,7 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
     {
         Rig rig;
         rig.start(list_of(error_at(1, 11, 2, "Mute Delay"), change_at(2, 12, 0, HeaderField::SOFTWARE_VERSION, "1.5.0"),
-                          note_at(3, 13, 0, "Robot restarted")));
+                          note_at(3, 13, 0, "Device restarted")));
 
         CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") == "Logged at 11:02 on UNIT-27, version v1.4.2.");
         // After the change of the version, the version of the day is the new one.
@@ -1855,7 +1855,7 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         header.m_UnitNumber = UnitNumber::parse("27", "prod").value();
         Rig rig;
         rig.start(list_of(error_at(1, 11, 2, "Mute Delay"), change_at(2, 12, 0, HeaderField::UNIT_NUMBER, "27-dev"),
-                          note_at(3, 13, 0, "Robot restarted")),
+                          note_at(3, 13, 0, "Device restarted")),
                   header);
 
         CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") ==
@@ -1871,7 +1871,7 @@ TEST_CASE("Edit: the footnote says when the entry was logged and on which unit a
         rig.start(list_of(error_at(1, 11, 2, "Mute Delay"),
                           change_at(2, 12, 0, HeaderField::SOFTWARE_VERSION, "1.5.0+e4f5a6b"),
                           change_at(3, 13, 0, HeaderField::SOFTWARE_VERSION, "1.5.0"),
-                          note_at(4, 14, 0, "Robot restarted")),
+                          note_at(4, 14, 0, "Device restarted")),
                   header);
 
         CHECK(rig.model().entryForEdit(text_of(1)).value("footnote") ==

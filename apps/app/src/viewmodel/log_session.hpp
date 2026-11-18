@@ -80,7 +80,7 @@ class LogSession : public QObject, public OpenLogSource
     Q_PROPERTY(QVariantList extraVersions READ extra_versions NOTIFY headerChanged)
     // "Influencer v4.5.0 · Gateway v2.0.1", or empty when there are none.
     Q_PROPERTY(QString extraVersionsText READ extra_versions_text NOTIFY headerChanged)
-    // The robot version first, then the others: "Robot v1.2.3 · Influencer v4.5.0". Empty when there is no version at all.
+    // The main version first, then the others: "Software v1.2.3 · Influencer v4.5.0". Empty when there is no version at all.
     Q_PROPERTY(QString versionsSummary READ versions_summary NOTIFY headerChanged)
     Q_PROPERTY(QString dateText READ date_text NOTIFY headerChanged) // "Sat 7 Nov"
     // HDR-06 banner: keys of empty fields. The keys are those of `header_field_key`, and `software_commit` while the

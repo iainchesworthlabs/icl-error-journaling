@@ -32,7 +32,7 @@ struct HeaderValues
     std::optional<UnitNumber> m_UnitNumber;
     std::optional<LocationValue> m_Location;
     std::optional<SoftwareVersion> m_SoftwareVersion;
-    /// The other versions (HDR-10), such as the influencer app; the software version above is the robot's.
+    /// The other versions (HDR-10), such as the influencer app; the software version above is the main one.
     ExtraVersions m_ExtraVersions;
 };
 

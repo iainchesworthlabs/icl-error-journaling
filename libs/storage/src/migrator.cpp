@@ -501,7 +501,7 @@ std::vector<MigrationStep> product_migration_steps()
     // reads as shared; nothing in a version 1 database says otherwise, and the person is not told of changes that
     // were made before the build could know of them.
     // 2 to 3: the other software versions (HDR-10). Every log that exists gets NULL, which reads as none, so its single
-    // version stays the robot's and nothing is rewritten.
+    // version stays the main one and nothing is rewritten.
     // 3 to 4: the interaction entries and the person cache; `entry` is rebuilt (`add_interactions`).
     return {MigrationStep{
         1, "add day_log.changed_since_share", [](MigrationConnection& sql) -> Result<void, StorageError>

@@ -943,14 +943,14 @@ TEST_CASE("log.note: type and Add, the entry appears after the commit, the field
     QQuickItem* input = screen.named(QStringLiteral("noteInput"));
 
     QMetaObject::invokeMethod(screen.named(QStringLiteral("logComposer")), "focusField");
-    screen.rig.type(QStringLiteral("The robot paused twice"));
+    screen.rig.type(QStringLiteral("The device paused twice"));
     // The draft follows the typing, and the screen keeps nothing.
-    CHECK(sim.session.draft() == QStringLiteral("The robot paused twice"));
+    CHECK(sim.session.draft() == QStringLiteral("The device paused twice"));
 
     screen.rig.tap(screen.named(QStringLiteral("addButton")));
     // Submitted, not committed: the field still has the text and there is no entry yet.
     CHECK(sim.gateway.pending() >= 1);
-    CHECK(input->property("text").toString() == QStringLiteral("The robot paused twice"));
+    CHECK(input->property("text").toString() == QStringLiteral("The device paused twice"));
     CHECK(sim.timeline.entry_count() == 0);
     CHECK_FALSE(screen.toast_shown());
 
@@ -961,7 +961,7 @@ TEST_CASE("log.note: type and Add, the entry appears after the commit, the field
     REQUIRE(saved_entries.size() == 1);
     const NoteEntry* saved_note = note_of(saved_entries.front());
     REQUIRE(saved_note != nullptr);
-    CHECK(saved_note->m_Value == "The robot paused twice");
+    CHECK(saved_note->m_Value == "The device paused twice");
     CHECK(input->property("text").toString().isEmpty());
     CHECK(sim.session.draft().isEmpty());
     CHECK(screen.toast_shown());
@@ -980,9 +980,9 @@ TEST_CASE("log.note: type and Add, the entry appears after the commit, the field
     sim.gateway.run_all();
     screen.rig.settle();
     CHECK(sim.entries().empty());
-    CHECK(input->property("text").toString() == QStringLiteral("The robot paused twice"));
+    CHECK(input->property("text").toString() == QStringLiteral("The device paused twice"));
     CHECK(input->property("cursorPosition").toInt() == input->property("length").toInt());
-    CHECK(sim.session.draft() == QStringLiteral("The robot paused twice"));
+    CHECK(sim.session.draft() == QStringLiteral("The device paused twice"));
 }
 
 TEST_CASE("log.dictation: the microphone starts and stops it, the words go into the note, and a refusal is said once",
@@ -1043,7 +1043,7 @@ TEST_CASE("log.note_add: Add ends dictation first, and the box gives up focus on
 
     screen.rig.tap(screen.named(QStringLiteral("micButton")));
     CHECK(dictation.dictating());
-    emit dictation.dictationText(QStringLiteral("The robot paused twice"));
+    emit dictation.dictationText(QStringLiteral("The device paused twice"));
     screen.rig.tap(screen.named(QStringLiteral("addButton")));
     // Dictation is ended before the note is taken, and the box lets go of focus.
     CHECK(dictation.m_Cancels == 1);
@@ -1065,12 +1065,12 @@ TEST_CASE("log.note: Add adds the note, Return only starts a new line, and an em
     CHECK(sim.gateway.pending() == 0);
 
     QMetaObject::invokeMethod(screen.named(QStringLiteral("logComposer")), "focusField");
-    screen.rig.type(QStringLiteral("Visitor asked about the robot"));
+    screen.rig.type(QStringLiteral("Visitor asked about the device"));
     screen.rig.key(Qt::Key_Return);
     sim.gateway.run_all();
     screen.rig.settle();
     CHECK(sim.entries().empty());
-    CHECK(sim.session.draft() == QStringLiteral("Visitor asked about the robot\n"));
+    CHECK(sim.session.draft() == QStringLiteral("Visitor asked about the device\n"));
     screen.rig.tap(screen.named(QStringLiteral("addButton")));
     sim.gateway.run_all();
     screen.rig.settle();
@@ -1563,7 +1563,7 @@ constexpr auto HOLD = 600ms;
 /// Short of it.
 constexpr auto SHORT_PRESS = 400ms;
 
-const QString ROBOT_NOTE = QStringLiteral("The robot paused twice");
+const QString DEVICE_NOTE = QStringLiteral("The device paused twice");
 
 QString id_of(const Entry& entry)
 {
@@ -1713,7 +1713,7 @@ TEST_CASE("longpress.records_once: a hold records one entry, not two, with one h
     // Cancel, then the draft path on the same tile: a second entry, and the count says two, not three.
     screen.rig.tap(screen.inside(edit_sheet(screen), QStringLiteral("navLeading")));
     screen.rig.advance(1000ms);
-    type_draft(screen, sim, ROBOT_NOTE);
+    type_draft(screen, sim, DEVICE_NOTE);
     hold_and_commit(screen, sim, MUTE_DELAY_ROW);
     sim.gateway.run_all();
     screen.rig.settle();
@@ -1735,7 +1735,7 @@ TEST_CASE("longpress.save: Save attaches the note to the entry, and it is on the
     REQUIRE(edit_sheet_open(screen));
     QQuickItem* sheet = edit_sheet(screen);
 
-    screen.inside(sheet, QStringLiteral("editNote"))->setProperty("text", ROBOT_NOTE);
+    screen.inside(sheet, QStringLiteral("editNote"))->setProperty("text", DEVICE_NOTE);
     screen.rig.advance(50ms);
     screen.rig.tap(screen.inside(sheet, QStringLiteral("navTrailing")));
     sim.gateway.run_all();
@@ -1745,11 +1745,11 @@ TEST_CASE("longpress.save: Save attaches the note to the entry, and it is on the
     CHECK_FALSE(edit_sheet_open(screen));
     const std::vector<Entry> entries = sim.entries();
     REQUIRE(entries.size() == 1);
-    CHECK(attached_note(entries.front()) == ROBOT_NOTE);
+    CHECK(attached_note(entries.front()) == DEVICE_NOTE);
     // One line: the error and its note, as the shared log has it, and not a second line.
     CHECK(sim.timeline.entry_count() == 1);
     CHECK(screen.last_line().contains(QStringLiteral("Mute Delay")));
-    CHECK(screen.last_line().contains(ROBOT_NOTE));
+    CHECK(screen.last_line().contains(DEVICE_NOTE));
     CHECK(screen.text_of(QStringLiteral("lastBarCount")) == QStringLiteral("1 today"));
 }
 
@@ -1763,7 +1763,7 @@ TEST_CASE("longpress.cancel: Cancel closes the sheet and leaves the entry as the
     screen.rig.advance(500ms);
     REQUIRE(edit_sheet_open(screen));
     QQuickItem* sheet = edit_sheet(screen);
-    screen.inside(sheet, QStringLiteral("editNote"))->setProperty("text", ROBOT_NOTE);
+    screen.inside(sheet, QStringLiteral("editNote"))->setProperty("text", DEVICE_NOTE);
     screen.rig.advance(50ms);
     sim.events.clear();
 
@@ -1836,30 +1836,30 @@ TEST_CASE("longpress.draft_attaches: a hold with a draft attaches it to the same
     sim.load();
     Screen screen(sim);
     QQuickItem* input = screen.named(QStringLiteral("noteInput"));
-    type_draft(screen, sim, ROBOT_NOTE);
+    type_draft(screen, sim, DEVICE_NOTE);
 
     // Down, 500 ms: the hold records the entry and the draft is attached to it, and the finger is still on the tile.
     const int finger = screen.rig.press(screen.tile(MUTE_DELAY_ROW));
     screen.rig.advance(400ms);
     CHECK(sim.events.count(EventKind::HAPTIC) == 0); // a press alone has recorded nothing and has not touched the draft
-    CHECK(sim.session.draft() == ROBOT_NOTE);
+    CHECK(sim.session.draft() == DEVICE_NOTE);
     screen.rig.advance(200ms);
     CHECK(sim.events.count(EventKind::HAPTIC, "impact") == 1); // the hold asked for the entry
     CHECK(sim.entries().empty());
-    CHECK(sim.session.draft() == ROBOT_NOTE); // and the draft stays until the attach has committed
+    CHECK(sim.session.draft() == DEVICE_NOTE); // and the draft stays until the attach has committed
     sim.gateway.run_all();
     screen.rig.settle();
     screen.rig.release(finger);
 
     const std::vector<Entry> entries = sim.entries();
     REQUIRE(entries.size() == 1);
-    CHECK(attached_note(entries.front()) == ROBOT_NOTE);
+    CHECK(attached_note(entries.front()) == DEVICE_NOTE);
     CHECK(sim.session.draft().isEmpty());
     CHECK(input->property("text").toString().isEmpty());
     CHECK_FALSE(edit_sheet_open(screen));
     // One entry and one line: the error with its note.
     CHECK(sim.timeline.entry_count() == 1);
-    CHECK(screen.last_line().contains(ROBOT_NOTE));
+    CHECK(screen.last_line().contains(DEVICE_NOTE));
     CHECK(screen.text_of(QStringLiteral("lastBarCount")) == QStringLiteral("1 today"));
     CHECK(screen.badge_text(MUTE_DELAY_ROW) == QStringLiteral("1"));
     CHECK(screen.toast_text() == QStringLiteral("Mute Delay logged at 08:55 with note"));
@@ -1876,7 +1876,7 @@ TEST_CASE("longpress.draft_undo: one Undo removes the entry with its note and pu
     sim.load();
     Screen screen(sim);
     QQuickItem* input = screen.named(QStringLiteral("noteInput"));
-    type_draft(screen, sim, ROBOT_NOTE);
+    type_draft(screen, sim, DEVICE_NOTE);
     hold_and_commit(screen, sim, MUTE_DELAY_ROW);
     sim.gateway.run_all();
     screen.rig.settle();
@@ -1894,8 +1894,8 @@ TEST_CASE("longpress.draft_undo: one Undo removes the entry with its note and pu
     CHECK_FALSE(screen.badge_visible(MUTE_DELAY_ROW));
     CHECK_FALSE(screen.toast_shown());
     // The draft is back in the composer, with the cursor at its end.
-    CHECK(sim.session.draft() == ROBOT_NOTE);
-    CHECK(input->property("text").toString() == ROBOT_NOTE);
+    CHECK(sim.session.draft() == DEVICE_NOTE);
+    CHECK(input->property("text").toString() == DEVICE_NOTE);
     CHECK(input->property("cursorPosition").toInt() == input->property("length").toInt());
     // One undo was enough, and a second has nothing to undo.
     CHECK_FALSE(sim.undo.undo());
@@ -1907,7 +1907,7 @@ TEST_CASE("longpress.draft_tap: a double-tap with a draft leaves the draft alone
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    type_draft(screen, sim, ROBOT_NOTE);
+    type_draft(screen, sim, DEVICE_NOTE);
 
     screen.double_tap_tile(sim, MUTE_DELAY_ROW);
     screen.rig.advance(600ms);
@@ -1915,8 +1915,8 @@ TEST_CASE("longpress.draft_tap: a double-tap with a draft leaves the draft alone
     const std::vector<Entry> entries = sim.entries();
     REQUIRE(entries.size() == 1);
     CHECK(attached_note(entries.front()).isEmpty());
-    CHECK(sim.session.draft() == ROBOT_NOTE);
-    CHECK(screen.named(QStringLiteral("noteInput"))->property("text").toString() == ROBOT_NOTE);
+    CHECK(sim.session.draft() == DEVICE_NOTE);
+    CHECK(screen.named(QStringLiteral("noteInput"))->property("text").toString() == DEVICE_NOTE);
     CHECK(screen.toast_text() == QStringLiteral("Mute Delay logged at 08:55"));
     CHECK_FALSE(edit_sheet_open(screen));
     CHECK(sim.feedback.saved_notes().empty());
@@ -1926,7 +1926,7 @@ TEST_CASE("longpress.draft_tap: a double-tap with a draft leaves the draft alone
     sim.gateway.run_all();
     screen.rig.settle();
     CHECK(sim.entries().empty());
-    CHECK(sim.session.draft() == ROBOT_NOTE);
+    CHECK(sim.session.draft() == DEVICE_NOTE);
 }
 
 TEST_CASE("longpress.draft_slow_commit: a hold with a draft that passes before the commit attaches it once the entry is in",
@@ -1935,13 +1935,13 @@ TEST_CASE("longpress.draft_slow_commit: a hold with a draft that passes before t
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    type_draft(screen, sim, ROBOT_NOTE);
+    type_draft(screen, sim, DEVICE_NOTE);
 
     const int finger = screen.rig.press(screen.tile(MUTE_DELAY_ROW));
     screen.rig.advance(HOLD);
     screen.rig.release(finger);
     CHECK(sim.entries().empty());
-    CHECK(sim.session.draft() == ROBOT_NOTE);
+    CHECK(sim.session.draft() == DEVICE_NOTE);
 
     sim.gateway.run_all(); // the entry; the attach is queued behind it
     screen.rig.settle();
@@ -1950,7 +1950,7 @@ TEST_CASE("longpress.draft_slow_commit: a hold with a draft that passes before t
 
     const std::vector<Entry> entries = sim.entries();
     REQUIRE(entries.size() == 1);
-    CHECK(attached_note(entries.front()) == ROBOT_NOTE);
+    CHECK(attached_note(entries.front()) == DEVICE_NOTE);
     CHECK(sim.session.draft().isEmpty());
     CHECK_FALSE(edit_sheet_open(screen));
 }
@@ -1961,7 +1961,7 @@ TEST_CASE("longpress.draft_failed: when the attach cannot be saved the entry sta
     LogRig sim(Options().existing());
     sim.load();
     Screen screen(sim);
-    type_draft(screen, sim, ROBOT_NOTE);
+    type_draft(screen, sim, DEVICE_NOTE);
 
     const int finger = screen.rig.press(screen.tile(MUTE_DELAY_ROW));
     // The edit is the write to fail; the entry before it is saved.
@@ -1974,7 +1974,7 @@ TEST_CASE("longpress.draft_failed: when the attach cannot be saved the entry sta
     const std::vector<Entry> entries = sim.entries();
     REQUIRE(entries.size() == 1);
     CHECK(attached_note(entries.front()).isEmpty());
-    CHECK(sim.session.draft() == ROBOT_NOTE);
+    CHECK(sim.session.draft() == DEVICE_NOTE);
     CHECK(sim.events.count(EventKind::WRITE_FAILED, "attachDraft") == 1);
     CHECK(screen.named(QStringLiteral("logWriteFailedBanner"))->isVisible());
     CHECK(sim.feedback.saved_notes().empty());
@@ -2006,7 +2006,7 @@ TEST_CASE("longpress.note_action: with a draft each tile has a VoiceOver element
     // Made only while there is a draft, so a board with none pays nothing for them.
     CHECK(screen.rig.find_items(QStringLiteral("boardNoteAction")).empty());
 
-    type_draft(screen, sim, ROBOT_NOTE);
+    type_draft(screen, sim, DEVICE_NOTE);
     screen.rig.advance(32ms);
     // One for each tile that can be held: eleven error tiles, not Other.
     const QStringList names = with_note_names();
@@ -2020,7 +2020,7 @@ TEST_CASE("longpress.note_action: with a draft each tile has a VoiceOver element
     sim.session.set_draft(QStringLiteral("   "));
     screen.rig.advance(32ms);
     CHECK(with_note_names().isEmpty());
-    sim.session.set_draft(ROBOT_NOTE);
+    sim.session.set_draft(DEVICE_NOTE);
     screen.rig.advance(32ms);
 
     // VoiceOver activates it: no gesture, one entry, the draft on its line.
@@ -2034,7 +2034,7 @@ TEST_CASE("longpress.note_action: with a draft each tile has a VoiceOver element
     screen.rig.settle();
     const std::vector<Entry> entries = sim.entries();
     REQUIRE(entries.size() == 1);
-    CHECK(attached_note(entries.front()) == ROBOT_NOTE);
+    CHECK(attached_note(entries.front()) == DEVICE_NOTE);
     CHECK(sim.session.draft().isEmpty());
     screen.rig.advance(32ms);
     CHECK(with_note_names().isEmpty());
