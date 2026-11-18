@@ -13,7 +13,7 @@ This page is the overview. The steps are in the pages it links to.
 | What it logs | What went wrong | What you did or saw |
 | Tile types | Error types | Observation types, which you make yourself |
 | After a double-tap | Logged at once | Logged at once, or asks who or for an answer if the type's line has a place for one |
-| Line in the shared log | `10:05 T| Wrong Response` | `10:12 (Interaction) Spoke with A.S.` |
+| Line in the shared log | `10:05 T| Wrong Response` | `10:12 (Observation) Spoke with A.S.` |
 | Read by the ticket indexer | Yes, by the `T|` marker | No: the line has no `T|` |
 | In the totals line | Counted | Not counted |
 
@@ -38,7 +38,7 @@ Each type has a name and, if you want, a **line in the log**:
 - A line with neither never asks anything. With no line, the log shows the name of the type.
 
 [Setting up the Observations board](setup.md#setting-up-the-observations-board) has the editor. A setup file can bring
-observation types too, as `interaction_types` ([The setup file](setup-file.md#interaction-types)).
+observation types too, as `observation_types` ([The setup file](setup-file.md#observation-types)).
 
 ## People
 

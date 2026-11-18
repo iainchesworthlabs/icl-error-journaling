@@ -40,7 +40,7 @@ The words Field Test uses, in alphabetical order.
 
 **Marker**
 : The text after the time on a line that says what kind of line it is: `T|` for an error, `(Free Text)` for a note,
-  `(Interaction)` for an observation.
+  `(Observation)` for an observation.
 
 **Note template**
 : A chip above the note field. It asks a question and writes the line of the note for you.

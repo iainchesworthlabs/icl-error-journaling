@@ -108,17 +108,17 @@ reads `Location changed:  → Back Room Annex`, with the old value empty.
 
 ### An observation
 
-With the second board on, an observation is a line marked `(Interaction)`, with no error prefix, so the ticket indexer
+With the second board on, an observation is a line marked `(Observation)`, with no error prefix, so the ticket indexer
 does not read it:
 
 ```
-10:12 (Interaction) Spoke with A.S.
-10:40 (Interaction) Spoke with A.S., J.P. and P.S.I.
-11:10 (Interaction) Spoke with someone
-11:20 (Interaction) Spoke with (person not set)
+10:12 (Observation) Spoke with A.S.
+10:40 (Observation) Spoke with A.S., J.P. and P.S.I.
+11:10 (Observation) Spoke with someone
+11:20 (Observation) Spoke with (person not set)
 ```
 
-- The marker is `(Interaction)` by default. The app keeps it as a preference (`interaction_marker`); an empty value drops
+- The marker is `(Observation)` by default. The app keeps it as a preference (`observation_marker`); an empty value drops
   the marker and its space. Whether Settings offers it was not checked for this page.
 - A person's name follows **Names in shared logs**: initials (the default), the full name, or `someone`. A person who is
   forgotten reads `someone`. A type that asks for a person that was never chosen reads `(person not set)`.
