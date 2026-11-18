@@ -1,9 +1,21 @@
+---
+template: marketing.html
+title: Privacy
+title_tag: "Privacy: Field Test"
+description: "Field Test collects no data about you. What the app stores, where it is kept and what leaves your device."
+layout: prose
+---
 # Privacy
 
 Last changed: 18 November 2026.
 
 **Field Test collects no data about you.** It has no accounts, no analytics, no advertising and no crash reporting,
 and it does not send anything over the internet. This page says what that means in practice.
+
+<div class="icl-callout"><p><strong>In one minute</strong>
+Field Test collects no data about you. It has no account, no analytics, no advertising and no crash reporting, and it does not send anything over the internet. Your logs and setup stay on your device. They leave only when you share them, to the place you pick. The App Store lists the app as Data Not Collected.</p>
+<p><strong>Check it yourself</strong>
+The source code is public under the GNU General Public License, version 3 or later.</p></div>
 
 ## What the app stores
 

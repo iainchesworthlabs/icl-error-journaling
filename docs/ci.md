@@ -353,6 +353,33 @@ agree; (3) the owner updates the `homepage` in the repository settings and uploa
 from `github.io` to `iainchesworthlabs.com/field-test/` before any store submission, so no old address has to stay alive.
 Do a move before a store submission: a store URL that changes later needs a new submission.
 
+## The Field Test pages
+
+The site's front pages (home, How to use, Features, FAQ, What's new, Privacy, Support, Accessibility, Press) are Markdown
+files in `docs/` whose body is plain HTML, drawn by `tools/docs/theme/marketing.html`. They are script-free, because a preview
+blocks every script. The guide is still MkDocs Material, with its colours set from the same palette
+(`docs/assets/guide.css`). The look is the company site's shell:
+
+- `tools/docs/site-kit/v1/` is a **pinned copy** of the company kit (`icl.css`, the header and footer, the palette checker).
+  Nothing is fetched at build or run time. `tools/docs/site_shell_hook.py` lets the templates include the kit's header and
+  footer, puts `data-app="field-test"` on the guide's pages and copies `icl.css` to `assets/icl.css` of the site. To move
+  to a newer kit, copy the files of its `/assets/v1/` folder over the copy, with the same layout.
+- `docs/theme.css` is the Field Test palette: eight colour roles, light and dark, in one file. To change a colour (the
+  purple header card may turn green), change that file only.
+- `docs/assets/field-test.css` is the layout the shell does not have. It uses the shell's variables and holds no colour.
+- `check_site_kit.py` fails when a file of the copy differs from the kit's `SHA256SUMS.txt`, or the palette fails the
+  company's checker (`check-palette.mjs`, Node 20 or later: shape, and WCAG 2.2 AA contrast against the shell's neutrals).
+- `check_site_pages.py` builds the site (`mkdocs build --strict`) and fails on a page that has no title, no canonical
+  address or not one `h1`; a Field Test page that has a `<script>` (except JSON-LD), a `<style>` or `style=`, loads
+  anything from another host, links to an email address or to a picture that still shows the old name of the app
+  (`STALE_PICTURES` in the check); any page that links to a file or an anchor that is not in the built site, or to
+  `/field-test/` instead of by a relative link; and a built site that lacks an address that is printed in the store listing
+  or the app (`/`, `privacy/`, `support/`, `guide/`, `demo/demo-setup.ejconfig`).
+
+Both run in the **Confidentiality** job of `ci.yml` (the page check installs `requirements/docs.txt`), and
+`tools/ci/precheck.py` runs them (the page check is skipped there when `mkdocs-material` is not installed). Their tests are
+`tools/tests/test_check_site.py`.
+
 ## iOS property list check
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_ios_plist.py` on `apps/app/packaging/ios/Info.plist.in` (with the CMake
