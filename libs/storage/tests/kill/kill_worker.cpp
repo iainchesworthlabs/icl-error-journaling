@@ -10,7 +10,8 @@
 //   ACK <n>     after operation n returned success, and never before
 //   DONE        the workload ended by itself
 //   TYPED <n>   the note field changed for the nth time (mode `draft`)
-//   MIGRATING   a migration is about to run (mode `migrate`: the test-only steps, from the current version to two on)
+//   MIGRATING   a migration is about to run (mode `migrate`: the test-only steps, from the current version to two on;
+//               mode `migrate-product`: the product's steps)
 //   MIGRATED    it finished
 //   RECOVERING  recovery is about to run
 //   RECOVERED <outcome>
@@ -353,6 +354,26 @@ int run_migration(const Arguments& arguments)
     return 0;
 }
 
+/// Mode `migrate-product`: the product's own steps, from the version the store has to the current schema. For a store
+/// of the build before the rename of Interactions to Observations (the version 4 fixture).
+int run_product_migration(const Arguments& arguments)
+{
+    const StorageLocation location(arguments.m_Directory);
+    ScriptedClock clock(UtcMillis{std::chrono::milliseconds(arguments.m_Seed)});
+    Crasher crasher(arguments);
+    MigrationOptions options;
+    options.m_Hook = crasher.hook();
+    say("MIGRATING");
+    auto report = Migrator(location, clock, product_migration_steps(), SQLITE_SCHEMA_VERSION, std::move(options)).run();
+    if (!report)
+    {
+        say("ERROR migration: " + describe(report.error()));
+        return 2;
+    }
+    say(std::string("MIGRATED ") + std::string(migration_outcome_name(report->m_Outcome)));
+    return 0;
+}
+
 int run_recovery(const Arguments& arguments)
 {
     const StorageLocation location(arguments.m_Directory);
@@ -398,6 +419,10 @@ int main(int argc, char** argv)
     if (arguments->m_Mode == "migrate")
     {
         return run_migration(*arguments);
+    }
+    if (arguments->m_Mode == "migrate-product")
+    {
+        return run_product_migration(*arguments);
     }
     say("ERROR unknown mode");
     return 64;

@@ -12,7 +12,9 @@ namespace ej::viewmodel
 namespace
 {
 const QString KEY_NAME_EXPORT = QStringLiteral("export/nameExport");
-const QString KEY_MARKER = QStringLiteral("export/interactionMarker");
+const QString KEY_MARKER = QStringLiteral("export/observationMarker");
+// legacy: the key written before the rename of Interactions to Observations. Read for ever, never written.
+const QString LEGACY_KEY_MARKER = QStringLiteral("export/interactionMarker");
 
 QString from_std(std::string_view text)
 {
@@ -97,6 +99,15 @@ void ExportPreferences::load()
     if (settings.contains(KEY_MARKER))
     {
         m_Marker = clean_marker(settings.value(KEY_MARKER).toString());
+    }
+    else if (settings.contains(LEGACY_KEY_MARKER))
+    {
+        // The old default was never a choice, so it reads as the new default; a word the person typed is kept as typed.
+        m_Marker = clean_marker(settings.value(LEGACY_KEY_MARKER).toString());
+        if (m_Marker == export_format::LEGACY_DEFAULT_INTERACTION_MARKER)
+        {
+            m_Marker = std::string(export_format::DEFAULT_INTERACTION_MARKER);
+        }
     }
 }
 

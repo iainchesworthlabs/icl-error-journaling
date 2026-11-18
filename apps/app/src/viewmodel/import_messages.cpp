@@ -42,7 +42,7 @@ Noun noun_of(const std::string& section)
     {
         return {translate("Location"), translate("Locations")};
     }
-    if (section == "interaction_types")
+    if (section == "observation_types" || section == "interaction_types")
     {
         return {translate("Observation type"), translate("Observation types")};
     }
@@ -97,7 +97,7 @@ QString last_part(const std::string& field)
 bool is_list_section(const std::string& section)
 {
     return section == "error_types" || section == "locations" || section == "note_templates" ||
-           section == "interaction_types";
+           section == "observation_types" || section == "interaction_types";
 }
 
 QString whole_file_message(const ConfigError& error)

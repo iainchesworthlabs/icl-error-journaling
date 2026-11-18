@@ -10,7 +10,8 @@ libs/core/            ej_core: QtCore only; the domain model (Stage 1), namespac
                              The optional interactions board: interaction.hpp
                              (`InteractionType`, the line patterns with {person} and {value}, the 20-person pick rule),
                              person.hpp (`Person`, the name rules, the name levels full, initials and hidden, and the
-                             text of a {person} slot); `InteractionEntry` is in entry.hpp and its `"v":2` journal record
+                             text of a {person} slot); `InteractionEntry` is in entry.hpp and its `"v":3` journal record
+                             (kind `observation`; `"v":2`, kind `interaction`, is the earlier spelling and is still read)
                              in journal_record.hpp
                              Storage contract (Stage 2, no file or database access): log_repository.hpp (the
                              `LogRepository` interface, `DeleteConfirmation`), storage_error.hpp, clock.hpp,
@@ -37,9 +38,10 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              (`CrashPoint` and `CrashHook`, the places the kill harness ends the process),
                              draft_store.hpp (`DraftStore` and the `DraftTimer` interface under it: the note draft,
                              written at most 300 ms after it changes), migrator.hpp (`Migrator`: schema migrations with a
-                             backup copy and a marker; the product's steps take version 1 to 4: `day_log.changed_since_share`,
+                             backup copy and a marker; the product's steps take version 1 to 5: `day_log.changed_since_share`,
                              `day_log.extra_versions`, and the interaction entries with the `person` cache, which rebuilds
-                             `entry` so that its kind may be `interaction`), people_journal.hpp (the records of
+                             `entry` so that its kind may be `interaction`, and the rename of Interactions to Observations in
+                             version 5, which rebuilds `entry` again and renames the three tables), people_journal.hpp (the records of
                              `people.jsonl`: add, rename, retire, touch, move (`set_person_location`) and forget a person, their CRC and the state they
                              fold to) and people_store.hpp (`PeopleStore`: the list of people, a journal of its own with
                              its own sequence numbers and lock, and `PeopleCache`, which the SQLite repository implements for
@@ -68,7 +70,9 @@ libs/storage/         ej_storage: the repositories behind `LogRepository` and th
                              perf/test_launch_cost.cpp (`perf`: the launch check on a year of logs);
                              test_people_journal.cpp (`unit`), test_people_store.cpp and test_interaction_storage.cpp (the
                              step from schema 3 to 4, recovery of interactions and people, no name in a log journal;
-                             `integration`); people_names.hpp (the stand-ins the tests use as people);
+                             `integration`), test_legacy_interactions.cpp with legacy_store.hpp and fixtures/legacy-interactions/
+                             (a store the build before the rename of Interactions to Observations wrote: the step from
+                             4 to 5, a lost database rebuilt from old journals, old records under new; `integration`); people_names.hpp (the stand-ins the tests use as people);
                              helpers: temp_dir.hpp, raw_db.hpp (a second connection), recording_journal.hpp
 libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one small interface per capability, namespace
                       `ej::bridge`
@@ -196,10 +200,16 @@ main.cpp                                   Rig (tests)
   AppRoot(Environment, AppPlatform, StartedStorage)
 ```
 
-**Observations and people in the store**. An interaction is an entry kind
-in the same `entry` table and the same log journal as an error or a note: tables `interaction_entry` and
-`interaction_entry_person` (the people of an entry by id and position, never a name), and the record is written at journal
-version 2 (`journal_version_for`; every other record stays at 1). The list of people is a second, small store: `people.jsonl`
+**Observations and people in the store**. An observation is an entry kind
+in the same `entry` table and the same log journal as an error or a note: tables `observation_entry` and
+`observation_entry_person` (the people of an entry by id and position, never a name), and the record, kind `observation`, is
+written at journal version 3 (`journal_version_for`; every other record stays at 1). The board was called Interactions
+before 1.0, and what that build stored stays readable for ever: a record at version 2 with kind `interaction` decodes to the
+same entry and encodes back to the same bytes, the database step from 4 to 5 (`rename_interactions_to_observations`)
+rebuilds `entry` with the new kind and copies the three `interaction_*` tables into `observation_*`, the setup file reads
+`interaction_types` and `interactions_board_enabled` as well as the new keys, and the preference files read their old keys
+(`legacy` in the code marks each place). A journal is never rewritten by the update: old records stay above, new ones are
+appended below, and an entry edited by this build is written again in the new form. The list of people is a second, small store: `people.jsonl`
 beside the database, with its own sequence numbers, CRC and lock, written by `PeopleStore`; the `person` table of the database
 is only its cache, which `Recovery::run` makes right at every launch from the journal (counts only in the report:
 `people_recovered`, `people_lost`). A people journal that is lost or damaged costs names, never entries: an entry holds the
@@ -208,7 +218,7 @@ a new file that replaces the old by a rename) and blanks the table's row; entrie
 that shipped before interactions does with a `"v":2` line is what it does with any version it does not know: it counts the
 line as unsupported and bad, the accepted run ends before it, and the records after it are kept aside and not applied
 (`test_journal_reader.cpp`, T-I2-9). A build that old would therefore read a log only as far as its first interaction, which
-is why a downgrade is not supported. The same holds for a `"v":3` line, which this build does not know.
+is why a downgrade is not supported. The same holds for a `"v":4` line, which this build does not know.
 
 **The store.** `start_sqlite_storage` starts the `ThreadedStorageGateway`. Its factory runs on the storage thread: it makes
 the folders, runs `Recovery::run`, opens the `FileJournal`, the `SqliteLogRepository` and the `FileConfigStore`, and hands the

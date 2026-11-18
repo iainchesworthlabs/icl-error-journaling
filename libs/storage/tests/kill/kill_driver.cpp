@@ -28,6 +28,7 @@
 #include "error_journaling/people_store.hpp"
 #include "error_journaling/recovery.hpp"
 #include "kill_workload.hpp"
+#include "legacy_store.hpp"
 #include "migration_steps.hpp"
 #include "platform/process_containment.hpp"
 #include "recovery_fixture.hpp"
@@ -1262,6 +1263,121 @@ TEST_CASE("kill: a migration killed at random moments leaves the old version or 
                                 " killed_before_the_end=" + decimal(killed_before_the_end);
     print(summary);
     append_summary(summary);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The rename of Interactions to Observations, killed (T-O9-2): a store the build before it wrote loses no entry
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+
+/// A copy of the old-format store (version 4 database, version 2 journal records).
+class OldFormatStore
+{
+public:
+    OldFormatStore()
+    {
+        copy_legacy_store(m_Dir.path());
+    }
+    [[nodiscard]] const std::filesystem::path& root() const
+    {
+        return m_Dir.path();
+    }
+    [[nodiscard]] StorageLocation location() const
+    {
+        return StorageLocation(m_Dir.path());
+    }
+
+private:
+    TempDir m_Dir;
+};
+
+QStringList product_migration_arguments(const std::filesystem::path& dir, std::uint64_t crash_hit,
+                                        bool wait_to_be_killed)
+{
+    QStringList arguments = migration_arguments(dir, crash_hit, wait_to_be_killed);
+    arguments[1] = QStringLiteral("migrate-product");
+    return arguments;
+}
+
+/// The next launch after a kill: the migration resumes or is rolled back, recovery brings the store to the current
+/// schema, and every entry the old build acknowledged is there, as the old build wrote it.
+void relaunch_old_format_store(const OldFormatStore& store, const std::map<LogId, StateDigest>& expected,
+                               const std::map<std::string, std::string>& journals)
+{
+    ScriptedClock clock(sample_time(7000));
+    REQUIRE(Migrator::resume(store.location(), clock).has_value());
+    CHECK_FALSE(std::filesystem::exists(store.location().migration_marker()));
+    REQUIRE(recover(store.location()).has_value());
+    check_legacy_content(store.location(), expected);
+    RawDb db(store.location().database_path());
+    CHECK(db.scalar(QStringLiteral("PRAGMA user_version")).toLongLong() == SQLITE_SCHEMA_VERSION);
+    CHECK(db.scalar(QStringLiteral("PRAGMA quick_check")).toString() == QStringLiteral("ok"));
+    CHECK(snapshot_of(store.root() / "journal") == journals);
+}
+
+} // namespace
+
+TEST_CASE("kill: the rename of Interactions to Observations, killed at each crash point, loses no entry",
+          "[kill][migration][points][legacy]")
+{
+    const auto expected = reference_digests();
+    const auto journals = snapshot_of(legacy_store_fixture() / "journal");
+    for (const bool external : {false, true})
+    {
+        bool finished = false;
+        for (std::uint64_t hit = 1; hit <= 10 && !finished; ++hit)
+        {
+            INFO("killed at crash point " << hit << (external ? " from outside" : ", ends itself"));
+            OldFormatStore store;
+            Worker worker(product_migration_arguments(store.root(), hit, external));
+            REQUIRE(worker.wait_until([&] { return worker.output().m_At || !worker.running(); }));
+            if (worker.output().m_At)
+            {
+                worker.kill_now();
+            }
+            else
+            {
+                REQUIRE(worker.wait_for_end());
+            }
+            CHECK(worker.output().m_Error.empty());
+            if (!worker.output().m_At && worker.exit_code() == 0)
+            {
+                finished = true; // the migration has fewer crash points than this: every one was tried
+            }
+            relaunch_old_format_store(store, expected, journals);
+        }
+        CHECK(finished);
+    }
+}
+
+TEST_CASE("kill: the rename of Interactions to Observations, killed at random moments, loses no entry",
+          "[kill][migration][random][legacy]")
+{
+    const std::uint64_t master = master_seed();
+    const std::uint64_t count = env_number("EJ_KILL_MIGRATION_ITERATIONS", DEFAULT_ITERATIONS);
+    print("ej-kill master_seed=" + hex(master) + " rename migration iterations=" + decimal(count));
+    const auto expected = reference_digests();
+    const auto journals = snapshot_of(legacy_store_fixture() / "journal");
+    for (std::uint64_t iteration = 0; iteration < count; ++iteration)
+    {
+        const std::uint64_t seed = iteration_seed(master, 5'000'000 + env_number("EJ_KILL_FIRST", 0) + iteration);
+        SplitMix64 rng(seed);
+        const std::chrono::microseconds delay = log_uniform_delay(rng);
+        INFO("rename migration iteration " << iteration << ", seed " << hex(seed) << ", kill after " << delay.count()
+                                           << " us");
+        OldFormatStore store;
+        Worker worker(product_migration_arguments(store.root(), 0, false));
+        REQUIRE(worker.wait_until([&] { return worker.output().m_Recovering || !worker.running(); }));
+        if (worker.running())
+        {
+            spin_for(delay);
+            worker.kill_now();
+        }
+        CHECK(worker.output().m_Error.empty());
+        relaunch_old_format_store(store, expected, journals);
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

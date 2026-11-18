@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "preferences": {
+    "facilitator": "Sam Example",
+    "unit_prefix": "UNIT",
+    "interactions_board_enabled": true,
+    "time_format": {
+      "style": "24h",
+      "seconds": false,
+      "meridiem": "upper"
+    },
+    "include_totals": false
+  },
+  "error_types": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000a1",
+      "name": "Wrong Response",
+      "retired": false,
+      "board_position": 1
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a2",
+      "name": "Sequence Out of Order",
+      "retired": false,
+      "board_position": 2
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a3",
+      "name": "Incorrect Action",
+      "retired": false,
+      "board_position": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a4",
+      "name": "Audio Dropout",
+      "retired": false,
+      "board_position": 4
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a5",
+      "name": "Step Skipped",
+      "retired": false,
+      "board_position": 5
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a6",
+      "name": "Lost Connection",
+      "retired": false,
+      "board_position": 6
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a7",
+      "name": "WiFi Connect Failed",
+      "retired": false,
+      "board_position": 7
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a8",
+      "name": "Stopped Responding",
+      "retired": false,
+      "board_position": 8
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a9",
+      "name": "Timed Out",
+      "retired": false,
+      "board_position": 9
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000aa",
+      "name": "Slow Response",
+      "retired": false,
+      "board_position": 10
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000ab",
+      "name": "Unexpected Stop",
+      "retired": false,
+      "board_position": 11
+    }
+  ],
+  "locations": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000b1",
+      "name": "North Site",
+      "sort_order": 1,
+      "retired": false
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000b2",
+      "name": "South Site",
+      "sort_order": 2,
+      "retired": false
+    }
+  ],
+  "note_templates": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000c1",
+      "name": "Began task",
+      "value_prompt": "Which task?",
+      "output_pattern": "Began task {value}",
+      "icon": "list",
+      "sort_order": 1
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000c2",
+      "name": "Entered room",
+      "value_prompt": "Which room?",
+      "output_pattern": "Entered {value}",
+      "icon": "speech",
+      "sort_order": 2
+    }
+  ],
+  "interaction_types": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000d1",
+      "name": "Paired with",
+      "retired": false,
+      "board_position": 1,
+      "line_pattern": "Paired with {person}"
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d2",
+      "name": "Began task",
+      "retired": false,
+      "board_position": 2,
+      "line_pattern": "Began task {value}"
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d3",
+      "name": "Entered room 1",
+      "retired": false,
+      "board_position": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d4",
+      "name": "Assigned",
+      "retired": false,
+      "board_position": 4,
+      "line_pattern": "Assigned {person} {value}"
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d5",
+      "name": "Start task",
+      "retired": false,
+      "board_position": 5
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000d6",
+      "name": "End task",
+      "retired": false,
+      "board_position": 6
+    }
+  ]
+}

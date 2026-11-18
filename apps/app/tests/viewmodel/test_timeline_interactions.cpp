@@ -168,12 +168,12 @@ TEST_CASE("review.interaction_rows: rows read as the export does, with the full 
 {
     Fixture f;
     REQUIRE(f.model().rowCount() == 6);
-    CHECK(f.line(0) == QStringLiteral("10:10 (Interaction) Paired with Alex Sample"));
-    CHECK(f.line(1) == QStringLiteral("10:20 (Interaction) Paired with (person not set)"));
-    CHECK(f.line(2) == QStringLiteral("10:25 (Interaction) Assigned a task – was pleased"));
+    CHECK(f.line(0) == QStringLiteral("10:10 (Observation) Paired with Alex Sample"));
+    CHECK(f.line(1) == QStringLiteral("10:20 (Observation) Paired with (person not set)"));
+    CHECK(f.line(2) == QStringLiteral("10:25 (Observation) Assigned a task – was pleased"));
     CHECK(f.line(3) == QStringLiteral("10:30 T| Wrong Response"));
-    CHECK(f.line(4) == QStringLiteral("10:40 (Interaction) Paired with someone"));
-    CHECK(f.line(5) == QStringLiteral("10:50 (Interaction) Start task"));
+    CHECK(f.line(4) == QStringLiteral("10:40 (Observation) Paired with someone"));
+    CHECK(f.line(5) == QStringLiteral("10:50 (Observation) Start task"));
     CHECK(f.model().data(f.model().index(0), TimelineModel::KIND).toString() == "interaction");
 
     // The screen row is the export line at the full level: the same text, not another rendering.
@@ -191,7 +191,7 @@ TEST_CASE("review.interaction_rows: copy follows the sharing level; a deleted in
 {
     Fixture f;
     REQUIRE(f.model().copyLine(0));
-    CHECK(f.m_Clipboard.text() == "10:10 (Interaction) Paired with A.S.");
+    CHECK(f.m_Clipboard.text() == "10:10 (Observation) Paired with A.S.");
 
     const int before = f.model().property("entryCount").toInt();
     REQUIRE(f.model().deleteEntry(id_text(1)));
@@ -236,10 +236,10 @@ TEST_CASE("edit.interaction: change the person, the answer, the note, the type a
         edit.insert("personIds", QStringList{person_text(PERSON_JORDAN), person_text(PERSON_ALEX)});
         REQUIRE(f.model().validateEdit(id_text(2), edit).isEmpty());
         CHECK(f.model().previewLine(id_text(2), edit) ==
-              QStringLiteral("10:20 (Interaction) Paired with Jordan Placeholder and Alex Sample"));
+              QStringLiteral("10:20 (Observation) Paired with Jordan Placeholder and Alex Sample"));
         REQUIRE(f.model().saveEntry(id_text(2), edit));
         f.commit();
-        CHECK(f.line(1) == QStringLiteral("10:20 (Interaction) Paired with Jordan Placeholder and Alex Sample"));
+        CHECK(f.line(1) == QStringLiteral("10:20 (Observation) Paired with Jordan Placeholder and Alex Sample"));
     }
     SECTION("the answer and the note")
     {
@@ -248,7 +248,7 @@ TEST_CASE("edit.interaction: change the person, the answer, the note, the type a
         edit.insert("attachedNote", "");
         REQUIRE(f.model().saveEntry(id_text(3), edit));
         f.commit();
-        CHECK(f.line(2) == QStringLiteral("10:25 (Interaction) Assigned a book"));
+        CHECK(f.line(2) == QStringLiteral("10:25 (Observation) Assigned a book"));
     }
     SECTION("the type takes the name of the new one and the entry keeps its people")
     {
@@ -256,7 +256,7 @@ TEST_CASE("edit.interaction: change the person, the answer, the note, the type a
         edit.insert("interactionTypeId", type_text(INTERACTION_START_TASK));
         REQUIRE(f.model().saveEntry(id_text(1), edit));
         f.commit();
-        CHECK(f.line(0) == QStringLiteral("10:10 (Interaction) Start task"));
+        CHECK(f.line(0) == QStringLiteral("10:10 (Observation) Start task"));
         const Entry* entry = f.m_Document->log().find(sample_id<EntryId>(1));
         REQUIRE(entry != nullptr);
         const auto& body = std::get<InteractionEntry>(entry->m_Body);
@@ -269,7 +269,7 @@ TEST_CASE("edit.interaction: change the person, the answer, the note, the type a
         edit.insert("localSeconds", 11 * 3600);
         REQUIRE(f.model().saveEntry(id_text(1), edit));
         f.commit();
-        CHECK(f.line(5) == QStringLiteral("11:00 (Interaction) Paired with Alex Sample"));
+        CHECK(f.line(5) == QStringLiteral("11:00 (Observation) Paired with Alex Sample"));
     }
     SECTION("a person can be taken off")
     {
@@ -277,7 +277,7 @@ TEST_CASE("edit.interaction: change the person, the answer, the note, the type a
         edit.insert("personIds", QStringList{});
         REQUIRE(f.model().saveEntry(id_text(1), edit));
         f.commit();
-        CHECK(f.line(0) == QStringLiteral("10:10 (Interaction) Paired with (person not set)"));
+        CHECK(f.line(0) == QStringLiteral("10:10 (Observation) Paired with (person not set)"));
     }
     SECTION("nothing changed is not a save")
     {
@@ -349,9 +349,9 @@ TEST_CASE("review.interaction_rows: a past log shows interactions the same way a
     // The screen: full names and the marker.
     REQUIRE(model.rowCount() == 2);
     CHECK(model.data(model.index(0), TimelineModel::FULL_LINE).toString() ==
-          QStringLiteral("10:10 (Interaction) Paired with Alex Sample and Jordan Placeholder"));
+          QStringLiteral("10:10 (Observation) Paired with Alex Sample and Jordan Placeholder"));
     CHECK(model.data(model.index(1), TimelineModel::FULL_LINE).toString() ==
-          QStringLiteral("10:20 (Interaction) Paired with (person not set)"));
+          QStringLiteral("10:20 (Observation) Paired with (person not set)"));
 
     // Re-sharing: the setting in force now, not the one at the time the log was made.
     REQUIRE(model.copyAll());
@@ -368,7 +368,7 @@ TEST_CASE("review.interaction_rows: a past log shows interactions the same way a
     CHECK(clipboard.text().find("Sample") == std::string::npos);
     CHECK(clipboard.text().find("Placeholder") == std::string::npos);
     REQUIRE(model.copyLine(0));
-    CHECK(clipboard.text() == "10:10 (Interaction) Paired with someone");
+    CHECK(clipboard.text() == "10:10 (Observation) Paired with someone");
 }
 
 TEST_CASE("review.copy: a row that is not there, a row of an error and a model with no log copy what they can",

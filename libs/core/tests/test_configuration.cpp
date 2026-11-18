@@ -682,7 +682,7 @@ TEST_CASE("The error prefix helpers trim spaces and judge the text", "[config][e
     CHECK(ej::error_prefix_problem("a\xC2\x85" "b") == ej::ErrorPrefixProblem::CONTROL_CHARACTER);
 }
 
-TEST_CASE("config.interaction_types: read, write and refuse", "[config][interaction]")
+TEST_CASE("config.observation_types: read, write and refuse", "[config][interaction]")
 {
     const auto config = imported(sample());
     REQUIRE(config.m_InteractionTypes.size() == 6);
@@ -710,20 +710,20 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
     SECTION("absent keys give an empty list and the file still reads")
     {
         auto text = sample();
-        text.erase(text.find(",\n  \"interaction_types\""));
+        text.erase(text.find(",\n  \"observation_types\""));
         text += "\n}\n";
         const auto old_shape = imported(text);
         CHECK(old_shape.m_InteractionTypes.empty());
         CHECK_FALSE(old_shape.m_InteractionsBoardEnabled.has_value());
         const auto written = ej::export_configuration(old_shape);
-        CHECK(written.find("interaction_types") == std::string::npos);
-        CHECK(written.find("interactions_board_enabled") == std::string::npos);
+        CHECK(written.find("observation_types") == std::string::npos);
+        CHECK(written.find("observations_board_enabled") == std::string::npos);
     }
     SECTION("an empty list is accepted")
     {
         auto text = sample();
-        text.erase(text.find("\"interaction_types\""));
-        text += "\"interaction_types\": []\n}\n";
+        text.erase(text.find("\"observation_types\""));
+        text += "\"observation_types\": []\n}\n";
         CHECK(imported(text).m_InteractionTypes.empty());
     }
     SECTION("a duplicate name is refused, ignoring case")
@@ -731,9 +731,9 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
         const auto errors = errors_of(edited(sample(), "\"Assigned\"", "\"paired WITH\""));
         REQUIRE(errors.size() == 1);
         CHECK(errors[0].m_Code == Code::DUPLICATE);
-        CHECK(errors[0].m_Path == "/interaction_types/3/name");
+        CHECK(errors[0].m_Path == "/observation_types/3/name");
         CHECK(errors[0].m_Problem == ConfigError::Problem::NAME_TAKEN);
-        CHECK(errors[0].m_Section == "interaction_types");
+        CHECK(errors[0].m_Section == "observation_types");
         CHECK(errors[0].m_Item == 4);
         CHECK(errors[0].m_Other == 1);
     }
@@ -745,10 +745,10 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
         const auto taken = position("3");
         REQUIRE(taken.size() == 1);
         CHECK(taken[0].m_Problem == ConfigError::Problem::POSITION_TAKEN);
-        CHECK(has(taken, Code::DUPLICATE, "/interaction_types/3/board_position"));
-        CHECK(has(position("0"), Code::OUT_OF_RANGE, "/interaction_types/3/board_position"));
-        CHECK(has(position("12"), Code::OUT_OF_RANGE, "/interaction_types/3/board_position"));
-        CHECK(has(position("\"4\""), Code::WRONG_TYPE, "/interaction_types/3/board_position"));
+        CHECK(has(taken, Code::DUPLICATE, "/observation_types/3/board_position"));
+        CHECK(has(position("0"), Code::OUT_OF_RANGE, "/observation_types/3/board_position"));
+        CHECK(has(position("12"), Code::OUT_OF_RANGE, "/observation_types/3/board_position"));
+        CHECK(has(position("\"4\""), Code::WRONG_TYPE, "/observation_types/3/board_position"));
     }
     SECTION("a retired type may share a position with a live one")
     {
@@ -764,7 +764,7 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
         {
             const auto errors = errors_of(edited(sample(), from, pattern));
             REQUIRE(errors.size() == 1);
-            CHECK(errors[0].m_Path == "/interaction_types/0/line_pattern");
+            CHECK(errors[0].m_Path == "/observation_types/0/line_pattern");
             return errors[0].m_Problem;
         };
         CHECK(problem_of("\"Paired with {person\"") == Problem::STRAY_BRACE);
@@ -777,9 +777,9 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
     {
         CHECK(has(errors_of(edited(sample(), "\"line_pattern\": \"Paired with {person}\"",
                                    "\"line_pattern\": \"Paired with {person}\", \"asks\": \"person\"")),
-                  Code::UNKNOWN_FIELD, "/interaction_types/0/asks"));
-        CHECK(has(errors_of(edited(sample(), "\"interaction_types\": [", "\"interaction_types\": {}, \"x\": [")),
-                  Code::WRONG_TYPE, "/interaction_types"));
+                  Code::UNKNOWN_FIELD, "/observation_types/0/asks"));
+        CHECK(has(errors_of(edited(sample(), "\"observation_types\": [", "\"observation_types\": {}, \"x\": [")),
+                  Code::WRONG_TYPE, "/observation_types"));
     }
 }
 
@@ -800,7 +800,7 @@ TEST_CASE("config.no_people: a setup file never holds a person", "[config][inter
     }
     // Inside an interaction type too.
     CHECK(has(errors_of(edited(sample(), "0000000000d3\",", "0000000000d3\", \"people\": [],")), Code::UNKNOWN_FIELD,
-              "/interaction_types/2/people"));
+              "/observation_types/2/people"));
     // Nothing the writer produces holds a person key.
     const auto written = ej::export_configuration(imported(sample()));
     CHECK(written.find("\"people\"") == std::string::npos);
@@ -824,23 +824,112 @@ TEST_CASE("config.board_switch: the file can carry the switch, and without it no
     CHECK_FALSE(without.m_InteractionsBoardEnabled.has_value());
 
     const std::string anchor = "\"include_totals\": false";
-    const auto on = imported(edited(sample(), anchor, anchor + ", \"interactions_board_enabled\": true"));
+    const auto on = imported(edited(sample(), anchor, anchor + ", \"observations_board_enabled\": true"));
     REQUIRE(on.m_InteractionsBoardEnabled.has_value());
     CHECK(*on.m_InteractionsBoardEnabled);
-    const auto off = imported(edited(sample(), anchor, anchor + ", \"interactions_board_enabled\": false"));
+    const auto off = imported(edited(sample(), anchor, anchor + ", \"observations_board_enabled\": false"));
     REQUIRE(off.m_InteractionsBoardEnabled.has_value());
     CHECK_FALSE(*off.m_InteractionsBoardEnabled);
 
     SECTION("both values survive a write and a read")
     {
-        CHECK(ej::export_configuration(on).find("\"interactions_board_enabled\": true") != std::string::npos);
+        CHECK(ej::export_configuration(on).find("\"observations_board_enabled\": true") != std::string::npos);
         CHECK(imported(ej::export_configuration(on)).m_InteractionsBoardEnabled == true);
         CHECK(imported(ej::export_configuration(off)).m_InteractionsBoardEnabled == false);
         CHECK(ej::export_configuration(on) == ej::export_configuration(imported(ej::export_configuration(on))));
     }
     SECTION("a value that is not true or false is refused")
     {
-        CHECK(has(errors_of(edited(sample(), anchor, anchor + ", \"interactions_board_enabled\": \"yes\"")),
-                  Code::WRONG_TYPE, "/preferences/interactions_board_enabled"));
+        CHECK(has(errors_of(edited(sample(), anchor, anchor + ", \"observations_board_enabled\": \"yes\"")),
+                  Code::WRONG_TYPE, "/preferences/observations_board_enabled"));
     }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The rename of Interactions to Observations: setup files written before it keep reading (`legacy` spellings)
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+
+/// A setup file as the build before the rename wrote it (`interaction_types`, `interactions_board_enabled`). Written by
+/// that build from the stand-in data, never by hand.
+std::string legacy_fixture(const char* name)
+{
+    return read_file((std::string(EJ_FIXTURE_DIR) + "/legacy-interactions/" + name).c_str());
+}
+
+} // namespace
+
+TEST_CASE("config.read_old_keys: a file with the old keys reads to the same setup as one with the new keys",
+          "[config][interaction][legacy]")
+{
+    const auto old_file = imported(legacy_fixture("setup-interaction-keys.json"));
+    const auto current = imported(sample());
+    REQUIRE(old_file.m_InteractionTypes.size() == 6);
+    REQUIRE(current.m_InteractionTypes.size() == 6);
+    CHECK(ej::export_configuration(old_file) == ej::export_configuration(current));
+
+    const auto board_on = imported(legacy_fixture("setup-interaction-keys-board-on.json"));
+    REQUIRE(board_on.m_InteractionsBoardEnabled.has_value());
+    CHECK(*board_on.m_InteractionsBoardEnabled);
+    CHECK(board_on.m_InteractionTypes.size() == 6);
+}
+
+TEST_CASE("config.write_new_keys: a setup written from an old file has only the new keys, and reads back equal",
+          "[config][interaction][legacy]")
+{
+    const auto board_on = imported(legacy_fixture("setup-interaction-keys-board-on.json"));
+    const auto written = ej::export_configuration(board_on);
+    CHECK(written.find("interaction_types") == std::string::npos);
+    CHECK(written.find("interactions_board_enabled") == std::string::npos);
+    CHECK(written.find("\"observation_types\"") != std::string::npos);
+    CHECK(written.find("\"observations_board_enabled\": true") != std::string::npos);
+    CHECK(ej::export_configuration(imported(written)) == written);
+    // The sample the app ships is the new form, and the old file's setup writes to exactly it (without the switch).
+    CHECK(ej::export_configuration(imported(legacy_fixture("setup-interaction-keys.json"))) == sample());
+}
+
+TEST_CASE("config.both_spellings_refused: a file with both spellings of one key is refused and names both",
+          "[config][interaction][legacy]")
+{
+    const std::string old_list = legacy_fixture("setup-interaction-keys.json");
+    const auto with_both =
+        edited(sample(), "\"observation_types\": [", "\"interaction_types\": [], \"observation_types\": [");
+    const auto errors = errors_of(with_both);
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0].m_Code == Code::DUPLICATE);
+    CHECK(errors[0].m_Path == "/interaction_types");
+    CHECK(errors[0].m_Message.find("observation_types") != std::string::npos);
+    CHECK(errors[0].m_Message.find("interaction_types") != std::string::npos);
+    CHECK_FALSE(old_list.empty());
+
+    const std::string anchor = "\"include_totals\": false";
+    const auto board = errors_of(edited(
+        sample(), anchor, anchor + ", \"observations_board_enabled\": true, \"interactions_board_enabled\": false"));
+    REQUIRE(board.size() == 1);
+    CHECK(board[0].m_Path == "/preferences/interactions_board_enabled");
+    CHECK(board[0].m_Message.find("observations_board_enabled") != std::string::npos);
+}
+
+TEST_CASE("config.error_sections: a problem names the section the file used, old or new",
+          "[config][interaction][legacy]")
+{
+    const std::string old_text = legacy_fixture("setup-interaction-keys.json");
+    const auto old_errors = errors_of(edited(old_text, "\"board_position\": 1,", "\"board_position\": 12,"));
+    REQUIRE(old_errors.size() == 1);
+    CHECK(old_errors[0].m_Path == "/interaction_types/0/board_position");
+    CHECK(old_errors[0].m_Section == "interaction_types");
+    CHECK(old_errors[0].m_Item == 1);
+
+    const auto new_errors = errors_of(edited(sample(), "\"board_position\": 1,", "\"board_position\": 12,"));
+    REQUIRE(new_errors.size() == 1);
+    CHECK(new_errors[0].m_Path == "/observation_types/0/board_position");
+    CHECK(new_errors[0].m_Section == "observation_types");
+
+    const auto board_type = errors_of(
+        edited(old_text, "\"line_pattern\": \"Paired with {person}\"", "\"line_pattern\": \"Paired with {nobody}\""));
+    REQUIRE(board_type.size() == 1);
+    CHECK(board_type[0].m_Section == "interaction_types");
+    CHECK(board_type[0].m_Code == Code::BAD_PATTERN);
 }

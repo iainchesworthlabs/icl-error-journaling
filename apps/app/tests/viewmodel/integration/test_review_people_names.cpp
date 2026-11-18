@@ -58,7 +58,7 @@ TEST_CASE("review.interaction_rows: a name follows the list of people, a rename 
     REQUIRE(session.setInteractionPeople(entry, QStringList{alex}));
     rig.settle();
     REQUIRE(timeline.rowCount() == 1);
-    CHECK(row_line(timeline, 0).endsWith(QStringLiteral("(Interaction) Paired with Alex Sample")));
+    CHECK(row_line(timeline, 0).endsWith(QStringLiteral("(Observation) Paired with Alex Sample")));
 
     changed.clear();
     REQUIRE(admin.renamePerson(alex, QStringLiteral("Alex Sampler")).isEmpty());

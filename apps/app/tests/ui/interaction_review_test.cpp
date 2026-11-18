@@ -312,17 +312,17 @@ TEST_CASE("review.interaction_rows: wording equals the export at full names; swi
     auto list = people_list();
     Editor e(&people, list.get());
 
-    const std::vector<QString> expected = {QStringLiteral("10:10 (Interaction) Paired with Alex Sample"),
-                                           QStringLiteral("10:20 (Interaction) Paired with (person not set)"),
-                                           QStringLiteral("10:25 (Interaction) Assigned a task – was pleased"),
-                                           QStringLiteral("10:40 (Interaction) Start task")};
+    const std::vector<QString> expected = {QStringLiteral("10:10 (Observation) Paired with Alex Sample"),
+                                           QStringLiteral("10:20 (Observation) Paired with (person not set)"),
+                                           QStringLiteral("10:25 (Observation) Assigned a task – was pleased"),
+                                           QStringLiteral("10:40 (Observation) Start task")};
     CHECK(joined(e.lines()) == joined(expected));
 
     SECTION("Copy puts the line on the clipboard at the sharing level")
     {
         e.tap_action(0, "copyAction");
         CHECK(QString::fromStdString(e.m_World.clipboard().text()) ==
-              QStringLiteral("10:10 (Interaction) Paired with A.S."));
+              QStringLiteral("10:10 (Observation) Paired with A.S."));
         e.commit();
         CHECK(joined(e.lines()) == joined(expected));
     }
@@ -352,15 +352,15 @@ TEST_CASE("edit.interaction: the sheet shows an interaction and Save and Cancel 
     CHECK(e.in("editType")->property("text").toString() == QStringLiteral("Observation"));
     CHECK(e.in("editType")->property("value").toString() == QStringLiteral("Paired with"));
     CHECK(e.in("editPeople")->property("value").toString() == QStringLiteral("Alex Sample"));
-    CHECK(e.preview() == QStringLiteral("10:10 (Interaction) Paired with Alex Sample"));
+    CHECK(e.preview() == QStringLiteral("10:10 (Observation) Paired with Alex Sample"));
 
     SECTION("a change shows in the preview and Cancel writes nothing")
     {
         e.pick({test::PERSON_JORDAN});
-        CHECK(e.preview() == QStringLiteral("10:10 (Interaction) Paired with Alex Sample and Jordan Placeholder"));
+        CHECK(e.preview() == QStringLiteral("10:10 (Observation) Paired with Alex Sample and Jordan Placeholder"));
         e.tap("navLeading"); // Cancel
         e.commit();
-        CHECK(e.lines()[0] == QStringLiteral("10:10 (Interaction) Paired with Alex Sample"));
+        CHECK(e.lines()[0] == QStringLiteral("10:10 (Observation) Paired with Alex Sample"));
     }
 
     SECTION("Save writes the change")
@@ -368,7 +368,7 @@ TEST_CASE("edit.interaction: the sheet shows an interaction and Save and Cancel 
         e.pick({test::PERSON_ALEX, test::PERSON_JORDAN}); // Alex off, Jordan on
         e.tap("navTrailing");                             // Save
         e.commit();
-        CHECK(e.lines()[0] == QStringLiteral("10:10 (Interaction) Paired with Jordan Placeholder"));
+        CHECK(e.lines()[0] == QStringLiteral("10:10 (Observation) Paired with Jordan Placeholder"));
     }
 
     SECTION("the type is changed on a page of its own")
@@ -377,10 +377,10 @@ TEST_CASE("edit.interaction: the sheet shows an interaction and Save and Cancel 
         REQUIRE(e.page() == QStringLiteral("type"));
         e.tap_row("interactionTypeRow", QStringLiteral("Start task"));
         REQUIRE(e.page() == QStringLiteral("main"));
-        CHECK(e.preview() == QStringLiteral("10:10 (Interaction) Start task"));
+        CHECK(e.preview() == QStringLiteral("10:10 (Observation) Start task"));
         e.tap("navTrailing");
         e.commit();
-        CHECK(e.lines()[0] == QStringLiteral("10:10 (Interaction) Start task"));
+        CHECK(e.lines()[0] == QStringLiteral("10:10 (Observation) Start task"));
     }
 }
 
@@ -399,7 +399,7 @@ TEST_CASE("edit.interaction: the people are set on a skipped entry, the answer a
         CHECK(e.in("editPeople")->property("value").toString() == QStringLiteral("Jordan Placeholder, Alex Sample"));
         e.tap("navTrailing");
         e.commit();
-        CHECK(e.lines()[1] == QStringLiteral("10:20 (Interaction) Paired with Jordan Placeholder and Alex Sample"));
+        CHECK(e.lines()[1] == QStringLiteral("10:20 (Observation) Paired with Jordan Placeholder and Alex Sample"));
     }
 
     SECTION("the answer and the note")
@@ -409,10 +409,10 @@ TEST_CASE("edit.interaction: the people are set on a skipped entry, the answer a
         e.in("editAnswer")->setProperty("text", QStringLiteral("a book"));
         e.in("editNote")->setProperty("text", QString());
         e.m_Rig.advance(std::chrono::milliseconds(50));
-        CHECK(e.preview() == QStringLiteral("10:25 (Interaction) Assigned a book"));
+        CHECK(e.preview() == QStringLiteral("10:25 (Observation) Assigned a book"));
         e.tap("navTrailing");
         e.commit();
-        CHECK(e.lines()[2] == QStringLiteral("10:25 (Interaction) Assigned a book"));
+        CHECK(e.lines()[2] == QStringLiteral("10:25 (Observation) Assigned a book"));
     }
 
     SECTION("a type that asks for nothing has no People row and no answer")

@@ -23,6 +23,7 @@ add_executable(ej_storage_integration_tests
     test_draft_store_sqlite.cpp
     test_file_journal.cpp
     test_interaction_storage.cpp
+    test_legacy_interactions.cpp
     test_migrator.cpp
     test_people_store.cpp
     test_platform_files.cpp
@@ -36,6 +37,9 @@ add_executable(ej_storage_integration_tests
     test_version_commit.cpp)
 target_link_libraries(ej_storage_integration_tests
     PRIVATE ej_storage Qt6::Sql Catch2::Catch2 icl::warnings icl::coverage)
+# The store the build before the rename of Interactions to Observations wrote (journals and database): test_legacy_interactions.cpp.
+target_compile_definitions(ej_storage_integration_tests
+    PRIVATE EJ_LEGACY_STORE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/legacy-interactions/store")
 # platform/*.hpp: the internal headers of the platform pieces, which test_platform_files.cpp calls directly.
 target_include_directories(ej_storage_integration_tests
     PRIVATE "${PROJECT_SOURCE_DIR}/libs/core/tests" "${PROJECT_SOURCE_DIR}/libs/storage/src")

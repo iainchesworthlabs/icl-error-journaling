@@ -199,7 +199,8 @@ TEST_CASE("The product's migration steps are the only ones between version 1 and
     REQUIRE(report.has_value());
     CHECK(report->m_Outcome == MigrationOutcome::MIGRATED);
     CHECK(report->m_Steps == std::vector<std::string>{"add day_log.changed_since_share", "add day_log.extra_versions",
-                                                      "add interaction entries and people"});
+                                                      "add interaction entries and people",
+                                                      "rename interactions to observations"});
     RawDb raw(store.database());
     CHECK(raw.scalar(QStringLiteral("SELECT count(*) FROM day_log WHERE changed_since_share = 0")).toInt() == 1);
 }
