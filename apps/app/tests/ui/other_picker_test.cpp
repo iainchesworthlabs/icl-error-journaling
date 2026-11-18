@@ -54,9 +54,9 @@ namespace
 const QString OFF_GROUP = QStringLiteral("Not on your board");
 const QString ON_GROUP = QStringLiteral("On your board");
 const QString ECHO = QString::fromUtf8("\xC3\x89"
-                                       "cho Delay");
+                                       "cho Timeout");
 
-/// The sample configuration with Stopped Unexpectedly taken off the board, "Écho Delay" added to the master list without
+/// The sample configuration with Stopped Unexpectedly taken off the board, "Écho Timeout" added to the master list without
 /// a place on it, and a retired type that no sheet lists.
 Configuration picker_configuration()
 {
@@ -66,7 +66,7 @@ Configuration picker_configuration()
     ErrorType echo;
     echo.m_Id = sample_id<ErrorTypeId>(600);
     echo.m_Name = "\xC3\x89"
-                  "cho Delay";
+                  "cho Timeout";
     configuration.m_ErrorTypes.push_back(std::move(echo));
 
     ErrorType retired;
@@ -400,11 +400,11 @@ TEST_CASE("other.filter: typing narrows both sections with one reset for each ch
     QSignalSpy resets(f.m_Picker.get(), &QAbstractItemModel::modelReset);
 
     input->forceActiveFocus();
-    f.m_Rig.type(QStringLiteral("MUTE"));
+    f.m_Rig.type(QStringLiteral("DING"));
     CHECK(resets.count() == 4);
-    CHECK(f.m_Picker->filter() == QStringLiteral("MUTE"));
+    CHECK(f.m_Picker->filter() == QStringLiteral("DING"));
     CHECK(input->property("activeFocus").toBool());
-    CHECK(input->property("text").toString() == QStringLiteral("MUTE"));
+    CHECK(input->property("text").toString() == QStringLiteral("DING"));
 
     // Case does not matter; the one type that matches is on the board, so the other section is not shown at all.
     std::vector<Row> all = rows(f);
@@ -417,7 +417,7 @@ TEST_CASE("other.filter: typing narrows both sections with one reset for each ch
     {
         f.m_Rig.key(Qt::Key_Backspace);
     }
-    f.m_Rig.type(QStringLiteral("navig"));
+    f.m_Rig.type(QStringLiteral("unexp"));
     all = rows(f);
     REQUIRE(all.size() == 1);
     CHECK(all.front().m_Text == QStringLiteral("Stopped Unexpectedly"));
@@ -429,10 +429,10 @@ TEST_CASE("other.filter: typing narrows both sections with one reset for each ch
     {
         f.m_Rig.key(Qt::Key_Backspace);
     }
-    f.m_Rig.type(QStringLiteral("delay"));
+    f.m_Rig.type(QStringLiteral("out"));
     all = rows(f);
     CHECK(labels_in(all, OFF_GROUP) == QStringList{ECHO});
-    CHECK(labels_in(all, ON_GROUP).size() == 3); // Stopped Responding, Timed Out, Slow Response
+    CHECK(labels_in(all, ON_GROUP).size() == 3); // Sequence Out of Order, Audio Dropout, Timed Out
 }
 
 TEST_CASE("other.filter: no match shows the message, and the clear button brings every type back", "[ui][other]")
@@ -517,8 +517,8 @@ TEST_CASE("other.pick: Cancel closes the sheet and records nothing, and the filt
     f.open();
     QQuickItem* input = f.find(QStringLiteral("searchInput"));
     input->forceActiveFocus();
-    f.m_Rig.type(QStringLiteral("mute"));
-    REQUIRE(f.m_Picker->filter() == QStringLiteral("mute"));
+    f.m_Rig.type(QStringLiteral("ding"));
+    REQUIRE(f.m_Picker->filter() == QStringLiteral("ding"));
 
     f.m_Rig.tap(f.find(QStringLiteral("navLeading")));
     f.play(500ms);
@@ -546,7 +546,7 @@ TEST_CASE("other.add: a valid name is added, nothing is recorded, and the type i
     f.open();
     QQuickItem* input = f.find(QStringLiteral("searchInput"));
     input->forceActiveFocus();
-    f.m_Rig.type(QStringLiteral("mute"));
+    f.m_Rig.type(QStringLiteral("ding"));
     f.scroll_to_add();
 
     QQuickItem* name = f.find(QStringLiteral("pickerNewName"));
@@ -713,7 +713,7 @@ TEST_CASE("other.checks: names, targets, reading order and text scale, in light 
     SECTION("with the add form open")
     {
         // A short list, so that no row is scrolled out of its frame: the reading-order check knows nothing of clipping.
-        f.m_Picker->set_filter(QStringLiteral("mute"));
+        f.m_Picker->set_filter(QStringLiteral("ding"));
         f.m_Rig.layout();
         f.scroll_to_add();
         f.m_Rig.tap(f.find(QStringLiteral("pickerAdd")));
@@ -739,7 +739,7 @@ TEST_CASE("other.safe_area: nothing interactive enters an inset, at 59 and 34 an
 {
     Fixture f;
     // A short list, so that nothing scrolls out of the window.
-    f.m_Picker->set_filter(QStringLiteral("mute"));
+    f.m_Picker->set_filter(QStringLiteral("ding"));
 
     SECTION("59 and 34")
     {
@@ -803,6 +803,6 @@ TEST_CASE("other.add_row: adding a type is the first row, above the lists, and a
     // A search that finds something keeps the plain label.
     f.m_Rig.tap(f.find(QStringLiteral("clearButton")));
     input->forceActiveFocus();
-    f.m_Rig.type(QStringLiteral("mute"));
+    f.m_Rig.type(QStringLiteral("ding"));
     CHECK(add->property("text").toString() == QStringLiteral("Add a new error type"));
 }

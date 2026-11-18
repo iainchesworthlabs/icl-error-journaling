@@ -496,13 +496,13 @@ TEST_CASE("Retiring an error type removes it from the list and the board but kee
     REQUIRE(board_changed.count() == 1);
     QAbstractItemModel& board = *rig.m_Settings.board_layout();
     CHECK(board.data(board.index(2, 0), role_named(board, "isEmpty")).toBool());
-    CHECK(text_at(board, 3, role_named(board, "label")) == "File Not Found");
+    CHECK(text_at(board, 3, role_named(board, "label")) == "Audio Dropout");
     // The file still has it, retired, so past entries still name it.
     const auto read_back = import_configuration(*rig.store().saved());
     REQUIRE(read_back.has_value());
     REQUIRE(read_back->m_ErrorTypes.size() == 11);
     CHECK(read_back->m_ErrorTypes[2].m_Retired);
-    CHECK(read_back->m_ErrorTypes[2].m_Name == "Wrong Output");
+    CHECK(read_back->m_ErrorTypes[2].m_Name == "Incorrect Action");
 
     CHECK_FALSE(rig.m_Settings.retireErrorType(third).isEmpty());
     CHECK_FALSE(rig.m_Settings.renameErrorType(third, "Something Else").isEmpty());
@@ -603,7 +603,7 @@ TEST_CASE("A drag moves the tile; the tiles between shift; colours stay with the
     rig.commit();
 
     CHECK(labels_in(board).mid(0, 4) ==
-          QStringList{"Sequence Out of Order", "Wrong Output", "Wrong Response", "File Not Found"});
+          QStringList{"Sequence Out of Order", "Incorrect Action", "Wrong Response", "Audio Dropout"});
     REQUIRE(changed.count() == 1);
     CHECK(changed.at(0).at(0).value<QModelIndex>().row() == 0);
     CHECK(changed.at(0).at(1).value<QModelIndex>().row() == 2);
@@ -617,7 +617,7 @@ TEST_CASE("A drag moves the tile; the tiles between shift; colours stay with the
     // And back.
     CHECK(rig.m_Settings.moveBoardTile(3, 1).isEmpty());
     rig.commit();
-    CHECK(labels_in(board).mid(0, 3) == QStringList{"Wrong Response", "Sequence Out of Order", "Wrong Output"});
+    CHECK(labels_in(board).mid(0, 3) == QStringList{"Wrong Response", "Sequence Out of Order", "Incorrect Action"});
     CHECK(import_configuration(*rig.store().saved()).has_value());
 }
 
@@ -775,14 +775,14 @@ TEST_CASE("A note template is added with its name, prompt and pattern", "[viewmo
     rig.load_sample();
     QSignalSpy inserted(rig.m_Settings.templates(), &QAbstractItemModel::rowsInserted);
 
-    CHECK(rig.m_Settings.addTemplate("Requested song", "Which task?", "Task {value} requested twice").isEmpty());
+    CHECK(rig.m_Settings.addTemplate("Requested task", "Which task?", "Task {value} requested twice").isEmpty());
     CHECK(rig.m_Settings.templates()->rowCount() == 2);
     rig.commit();
 
     const QAbstractItemModel& templates = *rig.m_Settings.templates();
     REQUIRE(templates.rowCount() == 3);
     CHECK(inserted.count() == 1);
-    CHECK(text_at(templates, 2, role_named(templates, "name")) == "Requested song");
+    CHECK(text_at(templates, 2, role_named(templates, "name")) == "Requested task");
     CHECK(text_at(templates, 2, role_named(templates, "valuePrompt")) == "Which task?");
     CHECK(text_at(templates, 2, role_named(templates, "outputPattern")) == "Task {value} requested twice");
     CHECK(text_at(templates, 2, role_named(templates, "templateId")).size() == 36);
@@ -865,8 +865,8 @@ TEST_CASE("A new template starts with a question and a line made from its name",
 
     CHECK(settings.defaultTemplateQuestion("Began task") == "Began task?");
     CHECK(settings.defaultTemplateLine("Began task") == "Began task: [answer]");
-    CHECK(settings.defaultTemplateQuestion("  Visitor  ") == "Visitor?");
-    CHECK(settings.defaultTemplateLine("  Visitor  ") == "Visitor: [answer]");
+    CHECK(settings.defaultTemplateQuestion("  Observer  ") == "Observer?");
+    CHECK(settings.defaultTemplateLine("  Observer  ") == "Observer: [answer]");
     CHECK(settings.defaultTemplateQuestion("   ").isEmpty());
     CHECK(settings.defaultTemplateLine("").isEmpty());
 
@@ -877,7 +877,7 @@ TEST_CASE("A new template starts with a question and a line made from its name",
         CHECK(settings.validatePattern(stored).isEmpty());
     }
     CHECK(settings.previewTemplateLine(settings.patternFromField(settings.defaultTemplateLine("Began task")), "",
-                                       37800) == "10:30 Began task: task 1");
+                                       37800) == "10:30 Began task: 1");
 }
 
 TEST_CASE("A template with a bad name, prompt or pattern is refused and nothing is saved",
@@ -890,7 +890,7 @@ TEST_CASE("A template with a bad name, prompt or pattern is refused and nothing 
     CHECK_FALSE(rig.m_Settings.addTemplate("Name", "", "Began task {value}").isEmpty());
     CHECK_FALSE(rig.m_Settings.addTemplate("Name", "Which task?", "Played").isEmpty());
     CHECK_FALSE(rig.m_Settings.addTemplate("Name", "Which task?", "Began task {name}").isEmpty());
-    CHECK_FALSE(rig.m_Settings.addTemplate("played SONG", "Which task?", "Began task {value}").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addTemplate("began TASK", "Which task?", "Began task {value}").isEmpty());
     CHECK_FALSE(rig.m_Settings.addTemplate(QString(201, 'x'), "Which task?", "Began task {value}").isEmpty());
     CHECK_FALSE(rig.m_Settings.addTemplate("Name", QString(201, 'x'), "Began task {value}").isEmpty());
     CHECK(rig.m_Gateway.pending() == 0);
@@ -903,7 +903,7 @@ TEST_CASE("A template is renamed and edited; a name in use is refused", "[viewmo
     const QString played = id_of(rig.m_Settings.configuration().m_Templates[0]);
     const QAbstractItemModel& templates = *rig.m_Settings.templates();
 
-    CHECK_FALSE(rig.m_Settings.renameTemplate(played, "visitor interaction").isEmpty());
+    CHECK_FALSE(rig.m_Settings.renameTemplate(played, "entered ROOM").isEmpty());
     CHECK_FALSE(rig.m_Settings.renameTemplate("nonsense", "Whatever").isEmpty());
     CHECK_FALSE(rig.m_Settings.updateTemplate(played, "Began task", "Which task?", "No placeholder").isEmpty());
     CHECK(rig.m_Gateway.pending() == 0);

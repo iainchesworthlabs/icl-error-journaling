@@ -202,13 +202,13 @@ InteractionType make_type(std::uint64_t number, std::string name, std::optional<
     return type;
 }
 
-/// Entries 1 to 4: spoke with Alex; spoke with nobody (skipped); gave a toy with a note; greeted.
+/// Entries 1 to 4: spoke with Alex; spoke with nobody (skipped); gave a task with a note; greeted.
 std::vector<Entry> interaction_log()
 {
-    return {test::interaction_entry(1, test::on_day(10, 10), test::INTERACTION_SPOKE_WITH, {test::PERSON_ALEX}),
-            test::interaction_entry(2, test::on_day(10, 20), test::INTERACTION_SPOKE_WITH, {}),
-            test::interaction_entry(3, test::on_day(10, 25), test::INTERACTION_GAVE, {}, "a toy", "was pleased"),
-            test::interaction_entry(4, test::on_day(10, 40), test::INTERACTION_GREETED, {})};
+    return {test::interaction_entry(1, test::on_day(10, 10), test::INTERACTION_PAIRED_WITH, {test::PERSON_ALEX}),
+            test::interaction_entry(2, test::on_day(10, 20), test::INTERACTION_PAIRED_WITH, {}),
+            test::interaction_entry(3, test::on_day(10, 25), test::INTERACTION_ASSIGNED, {}, "a task", "was pleased"),
+            test::interaction_entry(4, test::on_day(10, 40), test::INTERACTION_START_TASK, {})};
 }
 
 Options interaction_options(const PersonNames* people, QObject* people_model)
@@ -218,9 +218,9 @@ Options interaction_options(const PersonNames* people, QObject* people_model)
     options.people = people;
     options.people_model = people_model;
     options.interaction_types = {
-        make_type(test::INTERACTION_SPOKE_WITH, "Paired with", "Paired with {person}", InteractionAsks::PERSON),
-        make_type(test::INTERACTION_GAVE, "Assigned", "Assigned {value}", InteractionAsks::TEXT),
-        make_type(test::INTERACTION_GREETED, "Start task", std::nullopt, InteractionAsks::NOTHING)};
+        make_type(test::INTERACTION_PAIRED_WITH, "Paired with", "Paired with {person}", InteractionAsks::PERSON),
+        make_type(test::INTERACTION_ASSIGNED, "Assigned", "Assigned {value}", InteractionAsks::TEXT),
+        make_type(test::INTERACTION_START_TASK, "Start task", std::nullopt, InteractionAsks::NOTHING)};
     return options;
 }
 
@@ -405,14 +405,14 @@ TEST_CASE("edit.interaction: the people are set on a skipped entry, the answer a
     SECTION("the answer and the note")
     {
         e.open(3);
-        CHECK(e.in("editAnswer")->property("text").toString() == QStringLiteral("a toy"));
+        CHECK(e.in("editAnswer")->property("text").toString() == QStringLiteral("a task"));
         e.in("editAnswer")->setProperty("text", QStringLiteral("a book"));
         e.in("editNote")->setProperty("text", QString());
         e.m_Rig.advance(std::chrono::milliseconds(50));
-        CHECK(e.preview() == QStringLiteral("10:25 (Interaction) Assigned a ticket"));
+        CHECK(e.preview() == QStringLiteral("10:25 (Interaction) Assigned a book"));
         e.tap("navTrailing");
         e.commit();
-        CHECK(e.lines()[2] == QStringLiteral("10:25 (Interaction) Assigned a ticket"));
+        CHECK(e.lines()[2] == QStringLiteral("10:25 (Interaction) Assigned a book"));
     }
 
     SECTION("a type that asks for nothing has no People row and no answer")

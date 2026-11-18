@@ -51,7 +51,7 @@ Entry sample_interaction(std::uint64_t id, std::int64_t minute)
     body.m_Type = sample_id<InteractionTypeId>(3);
     body.m_TypeLabel = "Paired with";
     body.m_People = {sample_id<PersonId>(1), sample_id<PersonId>(2)};
-    body.m_Value = "task 1";
+    body.m_Value = "1";
     body.m_AttachedNote = "asked about \"the schedule\"";
     entry.m_Body = std::move(body);
     return entry;
@@ -118,14 +118,14 @@ TEST_CASE("interaction.line_render: one slot, both slots and none", "[interactio
     const std::optional<std::string> none = "Start task";
 
     CHECK(render_interaction_text(person_only, "Paired with", ALEX, std::nullopt) == "Paired with Alex Sample");
-    CHECK(render_interaction_text(value_only, "Began task", PERSON_NOT_SET, "  task 1 \n") ==
+    CHECK(render_interaction_text(value_only, "Began task", PERSON_NOT_SET, "  1 \n") ==
           "Began task 1");
-    CHECK(render_interaction_text(both, "Assigned", ALEX, "a card") == "Gave Alex Sample a card");
+    CHECK(render_interaction_text(both, "Assigned", ALEX, "a card") == "Assigned Alex Sample a card");
     CHECK(render_interaction_text(none, "Start task", ALEX, "ignored") == "Start task");
-    CHECK(render_interaction_text(value_only, "Began task", ALEX, std::nullopt) == "Played ");
+    CHECK(render_interaction_text(value_only, "Began task", ALEX, std::nullopt) == "Began task ");
 
     // The value is never expanded again, and a literal brace is written twice.
-    CHECK(render_interaction_text(value_only, "Began task", ALEX, "{person}") == "Played {person}");
+    CHECK(render_interaction_text(value_only, "Began task", ALEX, "{person}") == "Began task {person}");
     CHECK(render_interaction_text(std::optional<std::string>("{{{person}}}"), "x", ALEX, std::nullopt) ==
           "{Alex Sample}");
 }
@@ -325,7 +325,7 @@ TEST_CASE("journal.v2_roundtrip: an interaction is written at version 2 and read
     CHECK(body.m_Type == expected.m_Type);
     CHECK(body.m_TypeLabel == "Paired with");
     CHECK(body.m_People == expected.m_People);
-    CHECK(body.m_Value == "task 1");
+    CHECK(body.m_Value == "1");
     CHECK(body.m_AttachedNote == "asked about \"the schedule\"");
     CHECK(encode_record(*decoded).value() == *line);
 

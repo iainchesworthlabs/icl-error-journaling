@@ -95,8 +95,8 @@ struct Fixture
             note.m_Captured = on_day(10, 30);
             note.m_Body = NoteEntry{std::nullopt, "Began task 1"};
             REQUIRE(document->add_entry(std::move(note), Origin::USER, {}));
-            REQUIRE(document->add_entry(error_at(4, 11, 2, type_named(sample, "Wrong Output"),
-                                                 "Wrong Output", "asked for task 2"),
+            REQUIRE(document->add_entry(error_at(4, 11, 2, type_named(sample, "Incorrect Action"),
+                                                 "Incorrect Action", "asked for task 2"),
                                         Origin::USER, {}));
             REQUIRE(document->change_header(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(13, 15),
                                             sample_id<EntryId>(5), {}));
@@ -223,13 +223,13 @@ TEST_CASE("The text on the sheet writes a name at the chosen level, and the re-s
     fixture.m_Rig.world().m_ExportPreferences = &preferences;
     Configuration configuration = sample_configuration();
     InteractionType spoke;
-    spoke.m_Id = test_id<InteractionTypeId>(INTERACTION_SPOKE_WITH);
+    spoke.m_Id = test_id<InteractionTypeId>(INTERACTION_PAIRED_WITH);
     spoke.m_Name = "Paired with";
     spoke.m_LinePattern = "Paired with {person}";
     spoke.m_Asks = InteractionAsks::PERSON;
     configuration.m_InteractionTypes = {spoke};
     fixture.m_Configuration.set(configuration);
-    REQUIRE(fixture.document->add_entry(interaction_entry(8, on_day(14, 3), INTERACTION_SPOKE_WITH, {PERSON_ALEX}),
+    REQUIRE(fixture.document->add_entry(interaction_entry(8, on_day(14, 3), INTERACTION_PAIRED_WITH, {PERSON_ALEX}),
                                         Origin::USER, {}));
     fixture.m_Rig.gateway().run_all();
     fixture.make_service();

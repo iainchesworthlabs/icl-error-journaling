@@ -90,7 +90,7 @@ TEST_CASE("settings.interaction_types: a name must be given and differ, ignoring
     const auto saves = rig.store().saves();
 
     CHECK_FALSE(rig.m_Settings.addInteractionType("   ", "").isEmpty());
-    CHECK_FALSE(rig.m_Settings.addInteractionType("GREETED", "").isEmpty());
+    CHECK_FALSE(rig.m_Settings.addInteractionType("START TASK", "").isEmpty());
     CHECK_FALSE(rig.m_Settings.addInteractionType("Two", "[person] and [person]").isEmpty());
     CHECK_FALSE(rig.m_Settings.addInteractionType("Brace", "Oops {").isEmpty());
     CHECK_FALSE(rig.m_Settings.addInteractionType("Unknown", "{name}").isEmpty());

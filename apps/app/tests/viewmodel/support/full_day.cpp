@@ -443,9 +443,9 @@ void Day::step_8_tap()
 {
     Rig& rig = m_Rig;
     rig.go_to(7, 11, 2, 10);
-    REQUIRE(rig.tap(board_type("Wrong Output")));
+    REQUIRE(rig.tap(board_type("Incorrect Action")));
     rig.settle();
-    CHECK(board_count("Wrong Output") == 1);
+    CHECK(board_count("Incorrect Action") == 1);
     CHECK(rig.timeline().entry_count() == 5);
 }
 
@@ -548,7 +548,7 @@ void Day::step_12_review_edits()
         edit.insert(QStringLiteral("attachedNote"), QStringLiteral("asked for task 2"));
         const QString preview = rig.timeline().previewLine(entry, edit);
         CHECK(preview ==
-              QStringLiteral("11:02 T| Wrong Output ") + DASH + QStringLiteral(" asked for task 2"));
+              QStringLiteral("11:02 T| Incorrect Action ") + DASH + QStringLiteral(" asked for task 2"));
         CHECK(rig.timeline().saveEntry(entry, edit));
         rig.settle();
         CHECK(line_of(entry) == preview);

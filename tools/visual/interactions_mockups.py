@@ -61,7 +61,7 @@ MIXED = [
     ("10:20", "(Interaction)", "Paired with Alex Sample"),
     ("10:30", "T|", "Stopped Responding"),
     ("10:48", "(Interaction)", "Began task 1"),
-    ("11:02", "T|", "Wrong Output – asked for task 2"),
+    ("11:02", "T|", "Incorrect Action – asked for task 2"),
     ("11:15", "(Interaction)", "Start task"),
 ]
 

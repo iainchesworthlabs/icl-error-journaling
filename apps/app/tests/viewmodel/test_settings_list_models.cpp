@@ -221,7 +221,7 @@ TEST_CASE("The template list orders by sort order", "[viewmodel][settings][model
     model.refresh(configuration);
 
     REQUIRE(model.rowCount() == 2);
-    CHECK(model.data(model.index(0), TemplateListModel::NAME).toString() == "Entered room 1");
+    CHECK(model.data(model.index(0), TemplateListModel::NAME).toString() == "Entered room");
     CHECK(model.data(model.index(1), TemplateListModel::OUTPUT_PATTERN).toString() == "Began task {value}");
 }
 

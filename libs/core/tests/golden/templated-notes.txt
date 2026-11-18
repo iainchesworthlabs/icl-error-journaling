@@ -6,6 +6,6 @@ Software Version: v1.4.2
 
 09:00 (Free Text) Began task 1
 09:30 (Free Text) Entered room 1: Sam Example waved
-10:00 (Free Text) Song task 2 requested twice
-10:15 (Free Text) Played Spaced Song
+10:00 (Free Text) Task 2 requested twice
+10:15 (Free Text) Began task Spaced Out
 10:30 (Free Text) Calibration done

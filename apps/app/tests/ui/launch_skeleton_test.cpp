@@ -285,7 +285,7 @@ struct Phone
             REQUIRE(error.isEmpty());
             services.settle();
         };
-        rename("00000000-0000-4000-8000-0000000000c1", "Song");
+        rename("00000000-0000-4000-8000-0000000000c1", "Task");
         rename("00000000-0000-4000-8000-0000000000c2", "Guest");
         services.settle();
     }

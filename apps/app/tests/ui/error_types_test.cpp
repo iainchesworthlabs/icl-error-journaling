@@ -126,7 +126,7 @@ TEST_CASE("editor.error_types: a new type fills the first empty tile, and a bann
     // The sheet says, before the save, where the type goes.
     CHECK(in_sheet(world, QStringLiteral("colourGroup"))->property("footer").toString() ==
           QStringLiteral("It goes on the board at position 5."));
-    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Connection Lost"));
+    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Lost Connection"));
     tap_in_sheet(world, QStringLiteral("navTrailing"));
     world.settle();
     world.m_Ui.layout();
@@ -135,9 +135,9 @@ TEST_CASE("editor.error_types: a new type fills the first empty tile, and a bann
     QQuickItem* banner = item(world, QStringLiteral("addedBanner"));
     CHECK(banner->isVisible());
     CHECK(banner->property("title").toString() == QStringLiteral("Added to the board at position 5"));
-    CHECK(banner->property("message").toString() == QStringLiteral("Connection Lost is on the first empty tile."));
+    CHECK(banner->property("message").toString() == QStringLiteral("Lost Connection is on the first empty tile."));
     // It is listed with the board's types, at its place.
-    CHECK(names(world).back() == QStringLiteral("Connection Lost"));
+    CHECK(names(world).back() == QStringLiteral("Lost Connection"));
     CHECK_FALSE(item(world, QStringLiteral("otherGroup"))->isVisible());
 }
 
@@ -294,7 +294,7 @@ TEST_CASE("editor.error_types: a refused move and a failed save are shown in a b
     world.m_Rig.store().fail_next_save(make_error(StorageErrorKind::DISK_FULL, "no room"));
     const QStringList before = names(world);
     world.m_Ui.tap(
-        find_item(row_with(world, TYPES, QStringLiteral("Wrong Output")), QStringLiteral("editorMoveLater")));
+        find_item(row_with(world, TYPES, QStringLiteral("Incorrect Action")), QStringLiteral("editorMoveLater")));
     world.settle();
     CHECK(banner->isVisible());
     CHECK(names(world) == before);

@@ -176,7 +176,7 @@ TEST_CASE("extra_versions.unset: a name with no value is stored as label=, read 
     // A list of unset names is still a list, and the checks on names still apply.
     CHECK(parse_extra_versions("Gateway=").has_value());
     CHECK(parse_extra_versions("Gateway=\ngateway=").error() == ExtraVersionsError::DUPLICATE_LABEL);
-    CHECK(parse_extra_versions("Device=").error() == ExtraVersionsError::LABEL_IS_SOFTWARE);
+    CHECK(parse_extra_versions("Software=").error() == ExtraVersionsError::LABEL_IS_SOFTWARE);
 }
 
 TEST_CASE("extra_versions.stored_old_text: text written before unset values existed reads as it did", "[unit][extra-versions]")

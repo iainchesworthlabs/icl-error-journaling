@@ -183,7 +183,7 @@ TEST_CASE("import.errors: the core's messages are shown in file order and nothin
     SECTION("duplicate ids and names")
     {
         std::string text = replace_first(sample_text(), "0000000000a2", "0000000000a1");
-        text = replace_first(text, "Wrong Output", "Wrong Response");
+        text = replace_first(text, "Incorrect Action", "Wrong Response");
         world.m_Rig.store().add_file("/files/bad.json", text);
         begin(world, flow, QStringLiteral("/files/bad.json"), QStringLiteral("bad.json"));
 

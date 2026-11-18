@@ -7,4 +7,4 @@ Software Version: v1.4.2
 01:50 T| Wrong Response
 02:30 T| Stopped Responding
 02:30 T| Timed Out
-03:10 T| Wrong Output
+03:10 T| Incorrect Action

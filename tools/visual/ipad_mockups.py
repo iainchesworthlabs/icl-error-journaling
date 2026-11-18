@@ -47,11 +47,11 @@ HEADER_CARD = 64
 TYPES = [
     ("Wrong Response", 2),
     ("Sequence Out of Order", 0),
-    ("Wrong Output", 1),
-    ("File Not Found", 0),
+    ("Incorrect Action", 1),
+    ("Audio Dropout", 0),
     ("Step Skipped", 0),
-    ("Connection Lost", 0),
-    ("Value Out of Range", 0),
+    ("Lost Connection", 0),
+    ("Wi-Fi Connect Failed", 0),
     ("Stopped Responding", 1),
     ("Timed Out", 1),
     ("Slow Response", 0),
@@ -63,7 +63,7 @@ ENTRIES = [
     ("10:05", "T|", "Wrong Response"),
     ("10:20", "T|", "Stopped Responding"),
     ("10:30", "(Free Text)", "Began task 1"),
-    ("11:02", "T|", "Wrong Output – asked for task 2"),
+    ("11:02", "T|", "Incorrect Action – asked for task 2"),
     ("11:40", "T|", "Timed Out"),
     ("12:10", "(Free Text)", "Began task 2"),
 ]
@@ -71,7 +71,7 @@ ENTRIES = [
 ICON = {
     "chevron": '<path d="M9 6l6 6-6 6"></path>',
     "back": '<path d="M15 6l-6 6 6 6"></path>',
-    "song": '<path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>',
+    "list": '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>',
     "note": '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>',
     "search": '<circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path>',
     "tick": '<path d="M5 12l5 5L20 7"></path>',
@@ -171,7 +171,7 @@ class Page:
         return (
             f'<div style="background: {c["surface"]}; border-radius: 16px; padding: 12px; height: {COMPOSER}px; box-sizing: border-box; '
             f'display: flex; flex-direction: column; gap: 10px; box-shadow: {self.shadow()}">'
-            f'<div style="display: flex; gap: 8px">{chip("song", "Began task")}{chip("note", "Entered room 1")}</div>'
+            f'<div style="display: flex; gap: 8px">{chip("list", "Began task")}{chip("note", "Entered room 1")}</div>'
             f'<div style="display: flex; gap: 8px; align-items: center">'
             f'<div style="flex-grow: 1; height: 44px; box-sizing: border-box; border-radius: 12px; border: 1px solid {c["border"]}; '
             f'background: {c["fieldBackground"]}; padding: 0 12px; display: flex; align-items: center; font-size: 15px; '
@@ -479,11 +479,11 @@ def other_screen(p: Page) -> str:
     on = "".join(
         [
             row("Stopped Unexpectedly", p.tiles[10]),
-            row("Connection Lost", p.tiles[5]),
-            row("File Not Found", p.tiles[3]),
+            row("Lost Connection", p.tiles[5]),
+            row("Audio Dropout", p.tiles[3]),
             row("Wrong Response", p.tiles[0], "2 today"),
             row("Stopped Responding", p.tiles[7], "1 today"),
-            row("Wrong Output", p.tiles[2], "1 today", last=True),
+            row("Incorrect Action", p.tiles[2], "1 today", last=True),
         ]
     )
     inner = (
@@ -536,7 +536,7 @@ def edit_entry_screen(p: Page) -> str:
         sheet_nav(p, "Cancel", "Edit entry", "Save")
         + f'<div style="padding: 0 16px; display: flex; flex-direction: column; gap: 12px">'
         f'<div style="background: {c["surfaceRaised"]}; border-radius: 14px; overflow: hidden">'
-        f'{field("Error", "Wrong Output")}'
+        f'{field("Error", "Incorrect Action")}'
         f'<div style="display: flex; align-items: center; height: 52px; padding: 0 14px; font-size: 16px"><span style="flex-grow: 1">Time</span>'
         f'<span style="padding: 6px 10px; border-radius: 8px; background: {c["timeChipBackground"]}; font-size: 16px; font-weight: 500; '
         f'font-variant-numeric: tabular-nums">11:02</span></div></div>'
@@ -545,7 +545,7 @@ def edit_entry_screen(p: Page) -> str:
         f"asked for task 2</div>"
         f'{p.section_label("In the shared log")}'
         f'<div style="background: {c["surfaceRaised"]}; border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.45">'
-        f'11:02 T| Wrong Output – asked for task 2<div style="margin-top: 6px; font-size: 13px; color: {c["textSecondary"]}">'
+        f'11:02 T| Incorrect Action – asked for task 2<div style="margin-top: 6px; font-size: 13px; color: {c["textSecondary"]}">'
         f"Logged at 11:02 on UNIT-27, version 1.4.2 (a1b2c3d).</div></div>"
         f'<div style="height: 52px; display: flex; align-items: center; justify-content: center; background: {c["surfaceRaised"]}; '
         f'border-radius: 14px; color: {c["destructive"]}; font-size: 16px; font-weight: 600">Delete entry</div></div>'

@@ -62,7 +62,7 @@ Configuration configuration_with_interactions()
 {
     Configuration configuration = sample_configuration();
     InteractionType spoke;
-    spoke.m_Id = test_id<InteractionTypeId>(INTERACTION_SPOKE_WITH);
+    spoke.m_Id = test_id<InteractionTypeId>(INTERACTION_PAIRED_WITH);
     spoke.m_Name = "Paired with";
     spoke.m_LinePattern = "Paired with {person}";
     spoke.m_Asks = InteractionAsks::PERSON;
@@ -88,8 +88,8 @@ struct Fixture
         const LogId id = sample_id<LogId>(1);
         REQUIRE(m_Storage.memory().create_log(id, sample_header()));
         const std::vector<Entry> entries = {
-            error_at(1, 10, 5), interaction_entry(2, on_day(10, 12), INTERACTION_SPOKE_WITH, {PERSON_ALEX}),
-            interaction_entry(3, on_day(10, 40), INTERACTION_SPOKE_WITH, {PERSON_ALEX, PERSON_JORDAN})};
+            error_at(1, 10, 5), interaction_entry(2, on_day(10, 12), INTERACTION_PAIRED_WITH, {PERSON_ALEX}),
+            interaction_entry(3, on_day(10, 40), INTERACTION_PAIRED_WITH, {PERSON_ALEX, PERSON_JORDAN})};
         for (const Entry& entry : entries)
         {
             REQUIRE(m_Storage.memory().add_entry(id, entry));

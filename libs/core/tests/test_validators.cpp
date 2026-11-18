@@ -263,8 +263,8 @@ NoteTemplate make_template(std::string pattern)
 
 TEST_CASE("render_note substitutes the value", "[note-template]")
 {
-    CHECK(ej::render_note(make_template("Began task {value}"), "task 1") == "Began task 1");
-    CHECK(ej::render_note(make_template("Entered {value}"), "Sam Example") == "Visitor: Sam Example");
+    CHECK(ej::render_note(make_template("Began task {value}"), "1") == "Began task 1");
+    CHECK(ej::render_note(make_template("Entered {value}"), "Sam Example") == "Entered Sam Example");
     CHECK(ej::render_note(make_template("{value} played twice"), "task 2") == "task 2 played twice");
 }
 
@@ -291,10 +291,10 @@ TEST_CASE("validate_pattern rejects bad patterns", "[note-template]")
 TEST_CASE("render_note inserts the value verbatim, trimmed", "[note-template]")
 {
     CHECK(ej::render_note(make_template("Began task {value}"), "{value}") == "Began task {value}");
-    CHECK(ej::render_note(make_template("Began task {value}"), "a { b }") == "Played a { b }");
-    CHECK(ej::render_note(make_template("Began task {value}"), "  task 1 \t\n") == "Began task 1");
-    CHECK(ej::render_note(make_template("Began task {value}"), "   ") == "Played ");
-    CHECK(ej::render_note(make_template("Began task {value}"), "") == "Played ");
+    CHECK(ej::render_note(make_template("Began task {value}"), "a { b }") == "Began task a { b }");
+    CHECK(ej::render_note(make_template("Began task {value}"), "  1 \t\n") == "Began task 1");
+    CHECK(ej::render_note(make_template("Began task {value}"), "   ") == "Began task ");
+    CHECK(ej::render_note(make_template("Began task {value}"), "") == "Began task ");
 }
 
 TEST_CASE("render_note is total on an invalid pattern", "[note-template]")

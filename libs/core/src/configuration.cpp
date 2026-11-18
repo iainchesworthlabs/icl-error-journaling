@@ -966,7 +966,7 @@ void read_templates(Reader& r, const QJsonObject& root, Configuration& out)
             {
                 r.add(Code::OUT_OF_RANGE, child(path, "icon"),
                       shown(*icon) + " is not an icon name. Use lower-case letters, digits and dashes, for example "
-                                     "\"music\".");
+                                     "\"list\".");
             }
         }
         if (const auto order = r.integer(*object, "sort_order", path, -MAX_SORT_ORDER, MAX_SORT_ORDER,

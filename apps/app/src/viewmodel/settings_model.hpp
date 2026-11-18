@@ -231,7 +231,7 @@ public:
     /// The log line a note made from `pattern` and `value` would have, made by the renderer that makes the review
     /// screen's lines: "10:30 Began task 1". The time is `localSeconds` (seconds since local
     /// midnight, 0 to 86399) on today's date in the device zone, in the user's time format; a negative value means
-    /// now. A blank `value` is shown as "task 1", the designs' sample. For a pattern that is not valid it
+    /// now. A blank `value` is shown as "1", the designs' sample. For a pattern that is not valid it
     /// returns "Fix the line to see an example." (check `validatePattern` to style it differently), and for a
     /// `localSeconds` above 86399 an empty string. Nothing is written.
     Q_INVOKABLE QString previewTemplateLine(const QString& pattern, const QString& value, int localSeconds = -1) const;

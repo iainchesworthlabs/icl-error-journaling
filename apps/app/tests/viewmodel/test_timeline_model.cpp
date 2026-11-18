@@ -371,7 +371,7 @@ Configuration configuration_for(const ExportContext& context)
         location.m_Name = std::string(context.m_LocationName(location.m_Id));
         configuration.m_Locations.push_back(location);
     }
-    for (const std::uint64_t number : {TEMPLATE_PLAYED, TEMPLATE_VISITOR, TEMPLATE_REQUESTED})
+    for (const std::uint64_t number : {TEMPLATE_PLAYED, TEMPLATE_OBSERVER, TEMPLATE_REQUESTED})
     {
         configuration.m_Templates.push_back(*context.m_Template(test_id<NoteTemplateId>(number)));
     }
@@ -773,11 +773,11 @@ TEST_CASE("Edit: the error type, the attached note and the note text each re-ren
         CHECK(full_line(rig.model(), 2) == "11:30 Device rebooted");
 
         const QString played = QString::fromStdString(configuration.m_Templates[0].m_Id.format());
-        REQUIRE(rig.model().saveEntry(text_of(3), QVariantMap{{"noteText", "task 1"}, {"templateId", played}}));
+        REQUIRE(rig.model().saveEntry(text_of(3), QVariantMap{{"noteText", "1"}, {"templateId", played}}));
         rig.commit();
         CHECK(full_line(rig.model(), 2) == "11:30 Began task 1");
         CHECK(rig.model().entryForEdit(text_of(3)).value("templateId") == played);
-        CHECK(rig.model().entryForEdit(text_of(3)).value("noteText") == "task 1");
+        CHECK(rig.model().entryForEdit(text_of(3)).value("noteText") == "1");
     }
 
     SECTION("an edit keeps the id and the deleted flag, and takes its edit time from the clock")
@@ -1563,7 +1563,7 @@ void check_melbourne_autumn_days(const TimeZoneProvider& zones)
     second.m_Captured = Timestamp{utc(2026, 4, 4, 14, 0), MELBOURNE}; // 01:00 AEDT, to be edited into the repeated hour
     Entry repeat = error_at(3, 0, 0, "Timed Out");
     repeat.m_Captured = Timestamp{utc(2026, 4, 4, 16, 30), MELBOURNE}; // 02:30 AEST, the second 02:30
-    Entry last = error_at(4, 0, 0, "Wrong Output");
+    Entry last = error_at(4, 0, 0, "Incorrect Action");
     last.m_Captured = Timestamp{utc(2026, 4, 4, 17, 10), MELBOURNE};
     rig.start({entry, second, repeat, last}, header);
 
@@ -1600,7 +1600,7 @@ void check_melbourne_autumn_days(const TimeZoneProvider& zones)
 
         CHECK(rig.document().log().find(sample_id<EntryId>(2))->m_Captured.m_Utc == utc(2026, 4, 4, 15, 30));
         CHECK(full_lines(rig.model()) == std::vector<QString>{"01:50 T| Wrong Response", "02:30 T| Stopped Responding",
-                                                              "02:30 T| Timed Out", "03:10 T| Wrong Output"});
+                                                              "02:30 T| Timed Out", "03:10 T| Incorrect Action"});
         REQUIRE(rig.model().copyAll());
         check_golden("melbourne-dst-autumn", rig.clipboard().text());
     }
@@ -1743,7 +1743,7 @@ TEST_CASE("A row splits its line into the marker and the rest", "[viewmodel][tim
     Rig rig;
     Entry unshowable = error_at(5, 12, 0);
     unshowable.m_Captured.m_Zone = "Nowhere/Land";
-    rig.start(list_of(error_at(1, 9, 42), error_at(2, 10, 5, "Wrong Output", "asked for task 2"),
+    rig.start(list_of(error_at(1, 9, 42), error_at(2, 10, 5, "Incorrect Action", "asked for task 2"),
                       note_at(3, 10, 30, "Began task 1"),
                       change_at(4, 11, 0, HeaderField::SOFTWARE_VERSION, "1.5.0"), unshowable));
 
@@ -1753,7 +1753,7 @@ TEST_CASE("A row splits its line into the marker and the rest", "[viewmodel][tim
 
     CHECK(row_text(rig.model(), 1, TimelineModel::PREFIX_TEXT) == "T|");
     CHECK(row_text(rig.model(), 1, TimelineModel::REST_TEXT) ==
-          "Wrong Output \xE2\x80\x93 asked for task 2");
+          "Incorrect Action \xE2\x80\x93 asked for task 2");
 
     CHECK(row_text(rig.model(), 2, TimelineModel::PREFIX_TEXT).isEmpty()); // a note has no marker on the screen
     CHECK(row_text(rig.model(), 2, TimelineModel::REST_TEXT) == "Began task 1");

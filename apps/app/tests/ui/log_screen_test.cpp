@@ -178,7 +178,7 @@ private:
 
 /// The part of the settings model the screen calls, with the names of `SettingsModel`: the templates for the chips, the
 /// unit prefix of the card, `patternToField` and `previewTemplateLine`, which writes the line as the renderer does for a value (the sample
-/// "task 1" while it is blank, at the sample time 10:30).
+/// "1" while it is blank, at the sample time 10:30).
 class FakeSettings : public QObject
 {
     Q_OBJECT
@@ -199,7 +199,7 @@ public:
     Q_INVOKABLE QString previewTemplateLine(const QString& pattern, const QString& value, int /*localSeconds*/ = -1) const
     {
         QString line = pattern;
-        line.replace(QStringLiteral("{value}"), value.trimmed().isEmpty() ? QStringLiteral("task 1") : value.trimmed());
+        line.replace(QStringLiteral("{value}"), value.trimmed().isEmpty() ? QStringLiteral("1") : value.trimmed());
         return QStringLiteral("10:30 ") + line;
     }
 
@@ -378,7 +378,7 @@ struct Options
     /// machine may not give.
     Options& short_templates()
     {
-        m_Configuration.m_Templates.at(0).m_Name = "Song";
+        m_Configuration.m_Templates.at(0).m_Name = "Task";
         m_Configuration.m_Templates.at(1).m_Name = "Guest";
         return *this;
     }
@@ -1090,7 +1090,7 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     REQUIRE(chips.size() == 2);
     CHECK(chips[0]->property("text").toString() == QStringLiteral("Began task"));
     // The icons of the chips come from the templates' `icon` role.
-    CHECK(chips[0]->property("iconKind").toString() == QStringLiteral("music"));
+    CHECK(chips[0]->property("iconKind").toString() == QStringLiteral("list"));
     CHECK(chips[1]->property("iconKind").toString() == QStringLiteral("speech"));
 
     QQuickItem* sheet = screen.named(QStringLiteral("logTemplateSheet"));
@@ -1118,8 +1118,8 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     CHECK(sim.entries().empty());
 
     // Typing clears the message; Add records the template id and the value, and the sheet closes.
-    screen.rig.type(QStringLiteral("task 1"));
-    CHECK(field->property("text").toString() == QStringLiteral("task 1"));
+    screen.rig.type(QStringLiteral("1"));
+    CHECK(field->property("text").toString() == QStringLiteral("1"));
     CHECK(field->property("errorText").toString().isEmpty());
     CHECK(screen.text_of(QStringLiteral("templateValuePreviewText")) ==
           QStringLiteral("10:30 Began task 1"));
@@ -1133,7 +1133,7 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     REQUIRE(note != nullptr);
     REQUIRE(note->m_Template.has_value());
     CHECK(QString::fromStdString(note->m_Template->format()) == PLAYED_SONG);
-    CHECK(note->m_Value == "task 1");
+    CHECK(note->m_Value == "1");
     CHECK_FALSE(sheet->property("isOpen").toBool());
     CHECK(screen.toast_text() == QStringLiteral("Note added at 08:55"));
     // The free-text draft was not touched.
@@ -2562,9 +2562,9 @@ TEST_CASE("layout.header_two_lines: at the largest text sizes the header card is
 namespace
 {
 
-constexpr int SPOKE_WITH_ROW = 0;
+constexpr int PAIRED_WITH_ROW = 0;
 constexpr int PLAYED_SONG_ROW = 1;
-constexpr int VISITOR_ROW = 2;
+constexpr int OBSERVER_ROW = 2;
 const QString NORTH_SITE_ID = QStringLiteral("00000000-0000-4000-8000-0000000000b1");
 
 /// The Log screen on the Interactions board.
@@ -2621,17 +2621,17 @@ TEST_CASE("board.log_first: a double-tap logs the interaction before the picker 
     LogRig sim(Options().existing());
     sim.load();
     InteractionScreen screen(sim);
-    REQUIRE(screen.itile(SPOKE_WITH_ROW)->property("label").toString() == QStringLiteral("Paired with"));
+    REQUIRE(screen.itile(PAIRED_WITH_ROW)->property("label").toString() == QStringLiteral("Paired with"));
 
     // One tap logs nothing.
-    screen.rig.tap(screen.itile(SPOKE_WITH_ROW));
+    screen.rig.tap(screen.itile(PAIRED_WITH_ROW));
     CHECK(sim.gateway.pending() == 0);
     screen.rig.advance(WINDOW_RUN_OUT);
 
     // The second tap asks for the entry; the picker is not open until it has been committed.
-    screen.rig.tap(screen.itile(SPOKE_WITH_ROW));
+    screen.rig.tap(screen.itile(PAIRED_WITH_ROW));
     screen.rig.advance(DOUBLE_TAP_GAP);
-    screen.rig.tap(screen.itile(SPOKE_WITH_ROW));
+    screen.rig.tap(screen.itile(PAIRED_WITH_ROW));
     CHECK(sim.gateway.pending() >= 1);
     CHECK_FALSE(screen.open(QStringLiteral("logPersonPicker")));
     sim.gateway.run_all();
@@ -2651,7 +2651,7 @@ TEST_CASE("board.log_first: a double-tap logs the interaction before the picker 
     REQUIRE(sim.entries().size() == 1);
     CHECK(first_interaction(sim)->m_People.empty());
     CHECK(sim.board.total_count() == 0);
-    CHECK(sim.interactions.data(sim.interactions.index(SPOKE_WITH_ROW), viewmodel::InteractionBoardModel::COUNT).toInt() == 1);
+    CHECK(sim.interactions.data(sim.interactions.index(PAIRED_WITH_ROW), viewmodel::InteractionBoardModel::COUNT).toInt() == 1);
 }
 
 TEST_CASE("board.log_first: Undo removes the entry and closes the picker", "[ui][log][interaction]")
@@ -2659,7 +2659,7 @@ TEST_CASE("board.log_first: Undo removes the entry and closes the picker", "[ui]
     LogRig sim(Options().existing());
     sim.load();
     InteractionScreen screen(sim);
-    screen.double_tap(sim, screen.itile(SPOKE_WITH_ROW));
+    screen.double_tap(sim, screen.itile(PAIRED_WITH_ROW));
     REQUIRE(screen.open(QStringLiteral("logPersonPicker")));
 
     sim.undo.undo();
@@ -2677,7 +2677,7 @@ TEST_CASE("picker.search_and_add: type a name once, it is added and ticked, Done
     sim.load();
     InteractionScreen screen(sim);
     sim.people.seed("Jordan Placeholder");
-    screen.double_tap(sim, screen.itile(SPOKE_WITH_ROW));
+    screen.double_tap(sim, screen.itile(PAIRED_WITH_ROW));
     QQuickItem* picker = screen.sheet(QStringLiteral("logPersonPicker"));
     REQUIRE(screen.open(QStringLiteral("logPersonPicker")));
 
@@ -2718,7 +2718,7 @@ TEST_CASE("picker.group: several people, Everyone here, and the limit of 20 is s
     {
         sim.people.seed(QStringLiteral("Person %1").arg(i, 2, 10, QLatin1Char('0')), NORTH_SITE_ID);
     }
-    screen.double_tap(sim, screen.itile(SPOKE_WITH_ROW));
+    screen.double_tap(sim, screen.itile(PAIRED_WITH_ROW));
     QQuickItem* picker = screen.sheet(QStringLiteral("logPersonPicker"));
     REQUIRE(screen.open(QStringLiteral("logPersonPicker")));
 
@@ -2754,14 +2754,14 @@ TEST_CASE("board.log_first: a type with an answer asks for it in a sheet, and Ca
     REQUIRE(sim.entries().size() == 1);
     CHECK_FALSE(screen.open(QStringLiteral("logPersonPicker")));
     REQUIRE(screen.open(QStringLiteral("logInteractionAnswerSheet")));
-    CHECK(screen.inside(screen.sheet(QStringLiteral("logInteractionAnswerSheet")), QStringLiteral("templateValuePreviewText"))->property("text").toString().contains(QStringLiteral("Played")));
+    CHECK(screen.inside(screen.sheet(QStringLiteral("logInteractionAnswerSheet")), QStringLiteral("templateValuePreviewText"))->property("text").toString().contains(QStringLiteral("Began task")));
 
     QMetaObject::invokeMethod(screen.sheet(QStringLiteral("logInteractionAnswerSheet")), "addRequested",
-                              Q_ARG(QString, QStringLiteral("task 1")));
+                              Q_ARG(QString, QStringLiteral("1")));
     sim.gateway.run_all();
     screen.rig.advance(600ms);
     screen.rig.settle();
-    CHECK(first_interaction(sim)->m_Value == std::optional<std::string>("task 1"));
+    CHECK(first_interaction(sim)->m_Value == std::optional<std::string>("1"));
     CHECK_FALSE(screen.open(QStringLiteral("logInteractionAnswerSheet")));
 
     // Cancel on the next one leaves it as logged.
@@ -2778,7 +2778,7 @@ TEST_CASE("board.hold_note: a hold with a typed note puts the note on the intera
     InteractionScreen screen(sim);
     sim.session.set_draft(QStringLiteral("Asked about the schedule"));
     screen.rig.layout();
-    screen.rig.hold(screen.itile(VISITOR_ROW), 700ms);
+    screen.rig.hold(screen.itile(OBSERVER_ROW), 700ms);
     sim.gateway.run_all();
     screen.rig.settle();
     sim.gateway.run_all();
@@ -2797,12 +2797,12 @@ TEST_CASE("board.voiceover: tiles are named, a screen reader activation logs onc
     LogRig sim(Options().existing());
     sim.load();
     InteractionScreen screen(sim);
-    CHECK(screen.itile(SPOKE_WITH_ROW)->property("accessibleName").toString() == QStringLiteral("Paired with"));
-    REQUIRE(accessible_press(screen.itile(VISITOR_ROW)));
+    CHECK(screen.itile(PAIRED_WITH_ROW)->property("accessibleName").toString() == QStringLiteral("Paired with"));
+    REQUIRE(accessible_press(screen.itile(OBSERVER_ROW)));
     sim.gateway.run_all();
     screen.rig.settle();
     CHECK(sim.entries().size() == 1);
-    CHECK(screen.itile(VISITOR_ROW)->property("accessibleName").toString() == QStringLiteral("Entered room 1, 1 today"));
+    CHECK(screen.itile(OBSERVER_ROW)->property("accessibleName").toString() == QStringLiteral("Entered room 1, 1 today"));
 
     sim.undo.dismiss();
     screen.rig.layout();
@@ -2936,7 +2936,7 @@ TEST_CASE("board.hold_note: a hold on an interaction with an empty composer open
     LogRig sim(Options().existing());
     sim.load();
     InteractionScreen screen(sim);
-    screen.rig.hold(screen.itile(SPOKE_WITH_ROW), 700ms);
+    screen.rig.hold(screen.itile(PAIRED_WITH_ROW), 700ms);
     sim.gateway.run_all();
     screen.rig.settle();
     screen.rig.advance(600ms);
@@ -2953,7 +2953,7 @@ TEST_CASE("board.hold_note: the People row of that Edit sheet opens the person p
     sim.load();
     InteractionScreen screen(sim);
     sim.people.seed("Jordan Placeholder");
-    screen.rig.hold(screen.itile(SPOKE_WITH_ROW), 700ms);
+    screen.rig.hold(screen.itile(PAIRED_WITH_ROW), 700ms);
     sim.gateway.run_all();
     screen.rig.settle();
     screen.rig.advance(600ms);
@@ -3114,7 +3114,7 @@ TEST_CASE("fold.state_kept: a fold or unfold with the person picker open keeps t
     screen.rig.set_window_size(QSize(841, 701));
     screen.rig.set_safe_area(WIDE_TOP, WIDE_BOTTOM);
     screen.rig.layout();
-    screen.double_tap(sim, screen.itile(SPOKE_WITH_ROW));
+    screen.double_tap(sim, screen.itile(PAIRED_WITH_ROW));
     QQuickItem* picker = screen.sheet(QStringLiteral("logPersonPicker"));
     REQUIRE(screen.open(QStringLiteral("logPersonPicker")));
     QQuickItem* search = screen.named(QStringLiteral("personPickerSearch"));

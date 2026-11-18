@@ -36,7 +36,7 @@ TEST_CASE("editor.templates: the templates are listed with their question and li
     world.load("Templates");
     world.m_Ui.layout();
 
-    CHECK(names(world) == QStringList{QStringLiteral("Began task"), QStringLiteral("Entered room 1")});
+    CHECK(names(world) == QStringList{QStringLiteral("Began task"), QStringLiteral("Entered room")});
     QQuickItem* first = row_with(world, ROWS, QStringLiteral("Began task"));
     REQUIRE(first != nullptr);
     CHECK(first->property("detail").toString() == QStringLiteral("Asks: Which task? · Logs: Began task [answer]"));
@@ -74,9 +74,9 @@ TEST_CASE("editor.templates: Add a template opens an empty page, and a good Save
     REQUIRE(item(world, QStringLiteral("nameField")) != nullptr);
     CHECK(field_text(world, QStringLiteral("nameField")).isEmpty());
 
-    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Requested song"));
+    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Requested task"));
     enter_text(world, QStringLiteral("promptField"), QStringLiteral("Which task?"));
-    enter_text(world, QStringLiteral("patternField"), QStringLiteral("Song {value} requested"));
+    enter_text(world, QStringLiteral("patternField"), QStringLiteral("Task {value} requested"));
     QQuickItem* save = nullptr;
     for (QQuickItem* trailing : items(world, QStringLiteral("navTrailing")))
     {
@@ -89,8 +89,8 @@ TEST_CASE("editor.templates: Add a template opens an empty page, and a good Save
     world.m_Ui.tap(save);
     settle_page(world);
 
-    CHECK(names(world) == QStringList{QStringLiteral("Began task"), QStringLiteral("Entered room 1"),
-                                      QStringLiteral("Requested song")});
+    CHECK(names(world) == QStringList{QStringLiteral("Began task"), QStringLiteral("Entered room"),
+                                      QStringLiteral("Requested task")});
 }
 
 TEST_CASE("editor.templates: the Settings button asks to close", "[ui][editor]")

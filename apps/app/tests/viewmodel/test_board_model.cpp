@@ -285,7 +285,7 @@ TEST_CASE("A tap raises its tile and not Other, and the signals follow the commi
     QObject::connect(&fixture.m_Board, &QAbstractItemModel::dataChanged,
                      [&events] { events.record(EventKind::MARK, "board changed"); });
 
-    const EntryId entry = fixture.tap(fixture.type(2)); // Wrong Output, tile 3
+    const EntryId entry = fixture.tap(fixture.type(2)); // Incorrect Action, tile 3
 
     // Held: the touch has been acknowledged and nothing else has happened.
     CHECK(fixture.m_Feedback.touches() == 1);
@@ -298,7 +298,7 @@ TEST_CASE("A tap raises its tile and not Other, and the signals follow the commi
 
     CHECK(fixture.count(2) == 1);
     CHECK(fixture.value(2, BoardModel::HAS_COUNT).toBool());
-    CHECK(fixture.value(2, BoardModel::ACCESSIBLE_NAME).toString() == "Wrong Output, 1 today");
+    CHECK(fixture.value(2, BoardModel::ACCESSIBLE_NAME).toString() == "Incorrect Action, 1 today");
     CHECK(fixture.count(OTHER) == 0);
     CHECK(fixture.m_Board.total_count() == 1);
 

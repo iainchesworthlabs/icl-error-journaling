@@ -140,7 +140,7 @@ TEST_CASE("The board says what each type asks for", "[viewmodel][interaction][un
     CHECK(f.m_Board.asksFor(id(2)) == "nothing");
     CHECK(f.m_Board.hasValueSlot(id(3)));
     CHECK_FALSE(f.m_Board.hasValueSlot(id(0)));
-    CHECK(f.m_Board.previewLine(id(1), "task 1") == "Began task 1");
+    CHECK(f.m_Board.previewLine(id(1), "1") == "Began task 1");
 }
 
 TEST_CASE("An interaction is logged with no people, then people and an answer are put on it",
@@ -175,7 +175,7 @@ TEST_CASE("An interaction is logged with no people, then people and an answer ar
     CHECK_FALSE(body.m_Value.has_value());
 
     // An answer, a draft as the note, and a refusal of what is not an interaction entry.
-    CHECK(session.setInteractionValue(entry, "  task 1  "));
+    CHECK(session.setInteractionValue(entry, "  1  "));
     rig.settle();
     session.set_draft("Asked twice");
     CHECK(session.attachDraft(entry));
@@ -183,7 +183,7 @@ TEST_CASE("An interaction is logged with no people, then people and an answer ar
     const auto again = rig.stored_open_log();
     const auto& changed =
         std::get<InteractionEntry>(again->m_Log.find(EntryId(*Uuid::parse(entry.toStdString())))->m_Body);
-    CHECK(changed.m_Value == std::optional<std::string>("task 1"));
+    CHECK(changed.m_Value == std::optional<std::string>("1"));
     CHECK(changed.m_AttachedNote == std::optional<std::string>("Asked twice"));
     CHECK_FALSE(session.setInteractionValue(entry, "   "));
     CHECK_FALSE(session.setInteractionPeople("not an id", {}));
@@ -225,7 +225,7 @@ TEST_CASE("edit.no_lost_edit: a held note and the people put on a moment later b
     REQUIRE(session.attachDraft(entry));
     const QString person = QString::fromStdString(Uuid::from_random(11, 12).format());
     REQUIRE(session.setInteractionPeople(entry, {person}));
-    REQUIRE(session.setInteractionValue(entry, "task 1"));
+    REQUIRE(session.setInteractionValue(entry, "1"));
     rig.settle();
 
     const auto log = rig.stored_open_log();
@@ -233,5 +233,5 @@ TEST_CASE("edit.no_lost_edit: a held note and the people put on a moment later b
     const auto& body = std::get<InteractionEntry>(log->m_Log.find(EntryId(*Uuid::parse(entry.toStdString())))->m_Body);
     CHECK(body.m_AttachedNote == std::optional<std::string>("Asked about the schedule"));
     CHECK(body.m_People.size() == 1);
-    CHECK(body.m_Value == std::optional<std::string>("task 1"));
+    CHECK(body.m_Value == std::optional<std::string>("1"));
 }

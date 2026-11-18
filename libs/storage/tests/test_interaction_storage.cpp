@@ -414,7 +414,7 @@ struct InteractionStore
                     .has_value());
         REQUIRE((*people)->touch_person(person(2)).has_value());
         REQUIRE(store.repo()
-                    .add_entry(log_id(1), sample_interaction_entry(3, 30, {person(1)}, "task 1"))
+                    .add_entry(log_id(1), sample_interaction_entry(3, 30, {person(1)}, "1"))
                     .has_value());
         REQUIRE(store.repo().add_entry(log_id(1), sample_interaction_entry(4, 40)).has_value());
         REQUIRE(store.repo().add_entry(log_id(1), sample_note(5, 50, "Began a task")).has_value());

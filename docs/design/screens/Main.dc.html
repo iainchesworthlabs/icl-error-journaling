@@ -36,10 +36,10 @@ input::placeholder{color:#6B7A86}
     <div style="background: #FFFFFF; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 2px rgba(20,33,43,0.06)">
       <div style="display: flex; gap: 8px">
         <button onClick="{{pickSong}}" style="height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #C9D3DC; background: #F7F9FB; font-family: inherit; font-size: 13px; font-weight: 500; color: #14212B; display: flex; align-items: center; gap: 6px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5B7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5B7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>
           Began task
         </button>
-        <button onClick="{{pickVisitor}}" style="height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #C9D3DC; background: #F7F9FB; font-family: inherit; font-size: 13px; font-weight: 500; color: #14212B; display: flex; align-items: center; gap: 6px">
+        <button onClick="{{pickObserver}}" style="height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #C9D3DC; background: #F7F9FB; font-family: inherit; font-size: 13px; font-weight: 500; color: #14212B; display: flex; align-items: center; gap: 6px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5B7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
           Entered room 1
         </button>
@@ -113,11 +113,11 @@ class Component extends DCLogic {
     this.types = [
       { id: 'hal', name: 'Wrong Response', bg: '#DCE8F7' },
       { id: 'seq', name: 'Sequence Out of Order', bg: '#E6E0F5' },
-      { id: 'wrongsong', name: 'Wrong Output', bg: '#FBE3CF' },
-      { id: 'findsong', name: 'File Not Found', bg: '#D3ECEE' },
+      { id: 'wrongsong', name: 'Incorrect Action', bg: '#FBE3CF' },
+      { id: 'findsong', name: 'Audio Dropout', bg: '#D3ECEE' },
       { id: 'skip', name: 'Step Skipped', bg: '#F3DDEB' },
-      { id: 'drop', name: 'Connection Lost', bg: '#FFF0C2' },
-      { id: 'vol', name: 'Value Out of Range', bg: '#E0E6EE' },
+      { id: 'drop', name: 'Lost Connection', bg: '#FFF0C2' },
+      { id: 'vol', name: 'Wi-Fi Connect Failed', bg: '#E0E6EE' },
       { id: 'mute', name: 'Stopped Responding', bg: '#D9E2FB' },
       { id: 'speech', name: 'Timed Out', bg: '#F6E2D6' },
       { id: 'songlat', name: 'Slow Response', bg: '#ECE5D3' },
@@ -294,7 +294,7 @@ class Component extends DCLogic {
       onDraft: (e) => this.setState({ draft: e.target.value }),
       addNote: () => this.addNote(),
       pickSong: () => this.setState({ draft: 'Played ' }),
-      pickVisitor: () => this.setState({ draft: 'Entered room 1: ' }),
+      pickObserver: () => this.setState({ draft: 'Entered room 1: ' }),
       lastLine: s.lastLine,
       entryCount: s.entryCount,
       showToast: s.showToast,

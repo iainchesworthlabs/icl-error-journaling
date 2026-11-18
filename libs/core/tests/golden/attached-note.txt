@@ -7,4 +7,4 @@ Software Version: v1.4.2
 10:05 T| Wrong Response – asked for task 2
 10:20 T| Stopped Responding – caller said wait
 10:20 (Free Text) Restarted the device
-10:40 T| Wrong Output – went from side A → side B – twice
+10:40 T| Incorrect Action – went from side A → side B – twice

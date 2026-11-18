@@ -7,5 +7,5 @@ Software Version: v1.4.2
 10:05 T| Stopped Responding
 10:05 T| Timed Out
 10:05 T| Wrong Response
-10:05 T| Wrong Output
+10:05 T| Incorrect Action
 10:05 (Free Text) Same millisecond note

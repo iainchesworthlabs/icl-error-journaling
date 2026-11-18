@@ -41,7 +41,7 @@ The log has a header (tester, date, unit, location, software version) and one li
 
 ```
 10:20 T| Stopped Responding
-11:02 T| Wrong Output – asked for task 2
+11:02 T| Incorrect Action – asked for task 2
 ```
 
 An error line is the time, the error prefix `T|`, the error type, and then the note after a dash. The downstream ticket

@@ -64,7 +64,7 @@ TEST_CASE("editor.error_types: a sheet opened for a position puts the new type t
     const auto& types = world.model().configuration().m_ErrorTypes;
     CHECK(types.back().m_Name == "Echo Delay");
     CHECK(types.back().m_BoardPosition == 3);
-    // Wrong Output had position 3 and is off the board now.
+    // Incorrect Action had position 3 and is off the board now.
     CHECK_FALSE(types.at(2).m_BoardPosition.has_value());
 }
 
@@ -72,12 +72,12 @@ TEST_CASE("editor.error_types: the sheet for a type shows its name and keeps the
 {
     World world;
     QQuickItem* sheet = world.load("ErrorTypeEdit");
-    open_for(sheet, id_of_row(world, 2), QStringLiteral("Wrong Output"), 3);
+    open_for(sheet, id_of_row(world, 2), QStringLiteral("Incorrect Action"), 3);
     world.play(400);
     world.m_Ui.layout();
 
     CHECK(name_of(panel(world)) == QStringLiteral("Error type"));
-    CHECK(field_text(world, QStringLiteral("nameField")) == QStringLiteral("Wrong Output"));
+    CHECK(field_text(world, QStringLiteral("nameField")) == QStringLiteral("Incorrect Action"));
     CHECK(in_sheet(world, QStringLiteral("retireRow"))->isVisible());
     QQuickItem* swatch = in_sheet(world, QStringLiteral("editSwatch"));
     REQUIRE(swatch->isVisible());

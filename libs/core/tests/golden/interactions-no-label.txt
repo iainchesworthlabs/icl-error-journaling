@@ -11,7 +11,7 @@ Software Version: v1.4.2
 10:40 Paired with A.S., J.P. and P.S.I.
 10:45 (Free Text) Device restarted
 10:48 Entered room 1 – asked about the schedule
-11:00 Gave J.P. a card
+11:00 Assigned J.P. a card
 11:10 Paired with someone
 11:20 Paired with (person not set)
 11:40 T| Wrong Response

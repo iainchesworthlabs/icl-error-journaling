@@ -50,7 +50,7 @@ and did not add is kept if you leave the app.
 **Note templates** are the chips above the field. Tap one, answer its question and tap **Add**. The line in the log is
 written for you, and the sheet shows how it will look.
 
-![The Began task sheet with the answer task 1 typed and the line in the log below it.](img/log-template-value.png){ width="270" }
+![The Began task sheet with the answer 1 typed and the line in the log below it.](img/log-template-value.png){ width="270" }
 
 ## The Last bar
 

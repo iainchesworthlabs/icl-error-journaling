@@ -21,7 +21,7 @@ using viewmodel::TimelineModel;
 namespace
 {
 
-constexpr auto SPOKE_WITH = "00000000-0000-4000-8000-0000000000d1";
+constexpr auto PAIRED_WITH = "00000000-0000-4000-8000-0000000000d1";
 
 QString row_line(TimelineModel& timeline, int row)
 {
@@ -52,7 +52,7 @@ TEST_CASE("review.interaction_rows: a name follows the list of people, a rename 
     REQUIRE_FALSE(alex.isEmpty());
 
     auto& session = *rig.root().session();
-    const QString entry = session.recordInteractionEntry(QString::fromLatin1(SPOKE_WITH));
+    const QString entry = session.recordInteractionEntry(QString::fromLatin1(PAIRED_WITH));
     REQUIRE_FALSE(entry.isEmpty());
     rig.settle();
     REQUIRE(session.setInteractionPeople(entry, QStringList{alex}));

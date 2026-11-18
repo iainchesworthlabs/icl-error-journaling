@@ -206,7 +206,7 @@ Item {
     property bool recoveryDismissed: false
     // The template whose value the sheet is asking for, or null.
     property var activeTemplate: null
-    // The icon of each template's chip, by templateId: "music" and "speech" as the setup file names them, and the speech
+    // The icon of each template's chip, by templateId: "list" and "speech" as the setup file names them, and the speech
     // bubble for a template that names none or one the app does not draw (the model gives "note").
     property var chipIcons: ({})
 
@@ -349,7 +349,7 @@ Item {
         for (let i = 0; i < templateRows.count; ++i) {
             const row = templateRows.objectAt(i) as TemplateRow;
             if (row !== null)
-                icons[row.templateId] = row.icon === "music" ? "music" : "speech";
+                icons[row.templateId] = row.icon === "list" ? "list" : "speech";
         }
         chipIcons = icons;
     }

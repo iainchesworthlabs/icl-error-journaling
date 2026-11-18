@@ -5,7 +5,7 @@ import ErrorJournalingApp
 // A template chip: the 32 pt pill with a hairline border that starts a note ("Began task"). It is drawn 32 pt high and
 // its touch area is 44 pt, through the margin of its tap handler. The name never truncates: a name wider than `maxWidth`
 // wraps onto more lines and the chip grows. The name is 13/500 with 12 pt either side; `iconKind` adds a 14 pt Icon in
-// primaryText 6 pt before it (the music note of "Began task", the speech bubble of "Entered room 1").
+// primaryText 6 pt before it (the list of "Began task", the speech bubble of "Entered room").
 Item {
     id: root
 

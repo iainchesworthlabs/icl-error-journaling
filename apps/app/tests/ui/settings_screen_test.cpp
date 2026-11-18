@@ -564,8 +564,8 @@ TEST_CASE("settings.board_layout: Move later calls moveBoardTile once and the bo
     const QString fourth = fixture.tile_label(3);
     const int third_slot = log_slot(2);
     const int fourth_slot = log_slot(3);
-    CHECK(third == "Wrong Output");
-    CHECK(fourth == "File Not Found");
+    CHECK(third == "Incorrect Action");
+    CHECK(fourth == "Audio Dropout");
 
     fixture.tap(QStringLiteral("miniTile2"));
     fixture.tap(QStringLiteral("miniMoveLater"));
@@ -803,7 +803,7 @@ TEST_CASE("settings.board_limit: a change the model refuses shows its words inli
     // The first save finishes; the refusal stays until it is dismissed or another call succeeds.
     fixture.m_Ui.settle();
     CHECK(fixture.saves() == before + 1);
-    CHECK(fixture.tile_label(3) == "Wrong Output");
+    CHECK(fixture.tile_label(3) == "Incorrect Action");
     CHECK(fixture.shown(QStringLiteral("settingsMessage")) != nullptr);
     fixture.tap(QStringLiteral("bannerClose"));
     CHECK(fixture.shown(QStringLiteral("settingsMessage")) == nullptr);
@@ -828,7 +828,7 @@ TEST_CASE("settings.board_limit: a write that fails shows the model's words", "[
     fixture.tap(QStringLiteral("miniTile2"));
     fixture.tap(QStringLiteral("miniMoveLater"));
     fixture.m_Ui.settle();
-    CHECK(fixture.tile_label(2) == "Wrong Output");
+    CHECK(fixture.tile_label(2) == "Incorrect Action");
     CHECK(fixture.shown(QStringLiteral("settingsMessage")) != nullptr);
 }
 

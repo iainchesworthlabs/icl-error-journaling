@@ -38,7 +38,7 @@ the board in the order shown. The rest are found under **Other** on the Log scre
 A template is a quick note you log often. Tap its chip above the note field on the Log screen, answer its one question,
 and the line goes in the log.
 
-![The list of note templates: Began task, which asks Which song and logs Played answer, and Entered room 1.](img/templates.png){ width="270" }
+![The list of note templates: Began task, which asks Which task and logs Began task and the answer, and Entered room 1.](img/templates.png){ width="270" }
 
 Each template has three parts:
 

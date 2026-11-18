@@ -859,7 +859,7 @@ TEST_CASE("A templated note stores the template and the value and the renderer m
     CHECK(note->m_Value == "Blue Moon");
     const auto line = render_entry_line(rig.document().log(), rig.entries().front().m_Id, rig.context());
     REQUIRE(line.has_value());
-    CHECK(line->find("Played Blue Moon") != std::string::npos);
+    CHECK(line->find("Began task Blue Moon") != std::string::npos);
     CHECK(rig.feedback.saved_notes().size() == 1);
 }
 

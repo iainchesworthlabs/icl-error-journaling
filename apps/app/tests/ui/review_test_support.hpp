@@ -164,7 +164,7 @@ private:
     return {error_at(configuration, 1, 10, 5),
             error_at(configuration, 2, 10, 20, "Stopped Responding"),
             note_at(3, 10, 30, "Began task 1"),
-            error_at(configuration, 4, 11, 2, "Wrong Output", "asked for task 2"),
+            error_at(configuration, 4, 11, 2, "Incorrect Action", "asked for task 2"),
             change_at(5, 13, 15, HeaderField::SOFTWARE_VERSION, "1.5.0"),
             error_at(configuration, 6, 13, 40, "Timed Out")};
 }
@@ -175,7 +175,7 @@ private:
     return {QStringLiteral("10:05 T| Wrong Response"),
             QStringLiteral("10:20 T| Stopped Responding"),
             QStringLiteral("10:30 Began task 1"),
-            QStringLiteral("11:02 T| Wrong Output – asked for task 2"),
+            QStringLiteral("11:02 T| Incorrect Action – asked for task 2"),
             QStringLiteral("13:15 Software Version changed: v1.4.2 → v1.5.0"),
             QStringLiteral("13:40 T| Timed Out")};
 }

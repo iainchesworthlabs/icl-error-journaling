@@ -202,7 +202,7 @@ private:
         entries.push_back(review::error_at(m_Configuration, 2, 10, 20, "Stopped Responding"));
         entries.push_back(review::note_at(3, 10, 30, "Began task 1"));
         entries.push_back(
-            review::error_at(m_Configuration, 4, 11, 2, "Wrong Output", std::string("asked for task 2")));
+            review::error_at(m_Configuration, 4, 11, 2, "Incorrect Action", std::string("asked for task 2")));
         entries.push_back(review::change_at(5, 13, 15, HeaderField::SOFTWARE_VERSION, "1.5.0"));
         entries.push_back(review::error_at(m_Configuration, 6, 13, 40, "Timed Out"));
         return entries;

@@ -189,7 +189,7 @@ TEST_CASE("Duplicate ids and names are rejected", "[config]")
     {
         CHECK(has(errors_of(edited(sample(), "\"South Site\"", "\"north site\"")), Code::DUPLICATE,
                   "/locations/1/name"));
-        CHECK(has(errors_of(edited(sample(), "\"Entered room 1\"", "\"Began task\"")), Code::DUPLICATE,
+        CHECK(has(errors_of(edited(sample(), "\"Entered room\"", "\"Began task\"")), Code::DUPLICATE,
                   "/note_templates/1/name"));
     }
 }
@@ -243,7 +243,7 @@ TEST_CASE("Several faults are all reported, in file order", "[config]")
     auto text = edited(sample(), "\"Sam Example\"", "\"\"");
     text = edited(text, "\"Sequence Out of Order\"", "\"Wrong Response\"");
     text = edited(text, "00000000-0000-4000-8000-0000000000b2", "oops");
-    text = edited(text, "Entered {value}", "Visitor");
+    text = edited(text, "Entered {value}", "Observer");
 
     const auto errors = errors_of(text);
     std::vector<std::string> paths;
@@ -355,14 +355,14 @@ TEST_CASE("Messages never echo a long value", "[config]")
 TEST_CASE("A template may name its icon; a file without the key is read as before", "[config]")
 {
     const auto configuration = imported(sample());
-    CHECK(configuration.m_Templates[0].m_Icon == "music");
+    CHECK(configuration.m_Templates[0].m_Icon == "list");
     CHECK(configuration.m_Templates[1].m_Icon == "speech");
 
     // The key is optional: a template without it has the default icon, and the export leaves the key out.
     auto without = configuration;
     without.m_Templates[0].m_Icon.clear();
     const std::string text = ej::export_configuration(without);
-    CHECK(text.find("\"icon\": \"music\"") == std::string::npos);
+    CHECK(text.find("\"icon\": \"list\"") == std::string::npos);
     CHECK(text.find("\"icon\": \"speech\"") != std::string::npos);
     const auto again = imported(text);
     CHECK(again.m_Templates[0].m_Icon.empty());
@@ -372,12 +372,12 @@ TEST_CASE("A template may name its icon; a file without the key is read as befor
 TEST_CASE("An icon name is lower-case letters, digits and dashes, and no longer than 32", "[config]")
 {
     const std::string base = sample();
-    const std::string icon = "\"icon\": \"music\"";
+    const std::string icon = "\"icon\": \"list\"";
 
-    CHECK(imported(edited(base, icon, "\"icon\": \"speech-bubble-2\"")).m_Templates[0].m_Icon == "speech-bubble-2");
+    CHECK(imported(edited(base, icon, "\"icon\": \"file-2\"")).m_Templates[0].m_Icon == "file-2");
     CHECK(imported(edited(base, icon, "\"icon\": \"" + std::string(32, 'a') + "\"")).m_Templates[0].m_Icon.size() == 32);
 
-    CHECK(has(errors_of(edited(base, icon, "\"icon\": \"Music\"")), Code::OUT_OF_RANGE, "/note_templates/0/icon"));
+    CHECK(has(errors_of(edited(base, icon, "\"icon\": \"List\"")), Code::OUT_OF_RANGE, "/note_templates/0/icon"));
     CHECK(has(errors_of(edited(base, icon, "\"icon\": \"a b\"")), Code::OUT_OF_RANGE, "/note_templates/0/icon"));
     CHECK(has(errors_of(edited(base, icon, "\"icon\": \"\"")), Code::OUT_OF_RANGE, "/note_templates/0/icon"));
     CHECK(has(errors_of(edited(base, icon, "\"icon\": \"" + std::string(33, 'a') + "\"")), Code::OUT_OF_RANGE,
@@ -728,7 +728,7 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
     }
     SECTION("a duplicate name is refused, ignoring case")
     {
-        const auto errors = errors_of(edited(sample(), "\"Assigned\"", "\"spoke WITH\""));
+        const auto errors = errors_of(edited(sample(), "\"Assigned\"", "\"paired WITH\""));
         REQUIRE(errors.size() == 1);
         CHECK(errors[0].m_Code == Code::DUPLICATE);
         CHECK(errors[0].m_Path == "/interaction_types/3/name");

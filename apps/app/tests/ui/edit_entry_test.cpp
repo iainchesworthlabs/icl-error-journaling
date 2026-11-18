@@ -176,7 +176,7 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
     REQUIRE(e.is_open());
     const QString before = prd_example_lines()[3];
 
-    CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Output"));
+    CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Incorrect Action"));
     CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("11:02"));
     CHECK(e.in("editSheet", "editNote")->property("text").toString() == QStringLiteral("asked for task 2"));
     CHECK(e.preview() == before);
@@ -185,15 +185,15 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
     SECTION("the note")
     {
         e.set_note(QStringLiteral("asked for task 1"));
-        CHECK(e.preview() == QStringLiteral("11:02 T| Wrong Output – asked for task 1"));
-        CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Output"));
+        CHECK(e.preview() == QStringLiteral("11:02 T| Incorrect Action – asked for task 1"));
+        CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Incorrect Action"));
         CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("11:02"));
     }
 
     SECTION("an empty note takes the dash out of the line")
     {
         e.set_note(QString());
-        CHECK(e.preview() == QStringLiteral("11:02 T| Wrong Output"));
+        CHECK(e.preview() == QStringLiteral("11:02 T| Incorrect Action"));
     }
 
     SECTION("the type")
@@ -215,13 +215,13 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
             if (row->property("checked").toBool())
             {
                 ++checked;
-                CHECK(row->property("text").toString() == QStringLiteral("Wrong Output"));
+                CHECK(row->property("text").toString() == QStringLiteral("Incorrect Action"));
             }
         }
         CHECK(checked == 1);
         e.tap_in("editSheet", "navLeading");
         CHECK_FALSE((e.page() == QStringLiteral("type")));
-        CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Output"));
+        CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Incorrect Action"));
     }
 
     SECTION("the time, with Cancel putting the old time back")
@@ -236,7 +236,7 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
         e.set_time(9, 30);
         e.done_time();
         CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("09:30"));
-        CHECK(e.preview() == QStringLiteral("09:30 T| Wrong Output – asked for task 2"));
+        CHECK(e.preview() == QStringLiteral("09:30 T| Incorrect Action – asked for task 2"));
     }
 }
 
@@ -356,7 +356,7 @@ TEST_CASE("edit.time_order: an earlier time moves the row", "[ui][edit]")
     e.commit();
     const std::vector<QString> lines = e.lines();
     REQUIRE(lines.size() == 6);
-    CHECK(lines[0] == QStringLiteral("09:00 T| Wrong Output – asked for task 2"));
+    CHECK(lines[0] == QStringLiteral("09:00 T| Incorrect Action – asked for task 2"));
     CHECK(lines[1] == prd_example_lines()[0]);
     CHECK(e.m_World.timeline().rowOf(id_text(4)) == 0);
 }
@@ -558,13 +558,13 @@ TEST_CASE("edit.dst: a time in the hour the clocks skip is refused with the mode
     Entry entry;
     entry.m_Id = test::sample_id<EntryId>(1);
     entry.m_Captured = Timestamp{test::utc(2026, 10, 3, 15, 30), MelbourneDstZones::ZONE};
-    entry.m_Body = NoteEntry{std::nullopt, "Checked the volume"};
+    entry.m_Body = NoteEntry{std::nullopt, "Checked the setting"};
     Options options;
     options.zones = &zones;
     options.entries = std::vector<Entry>{entry};
     options.header = header;
     Editor e(std::move(options));
-    REQUIRE(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("01:30 Checked the volume")}));
+    REQUIRE(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("01:30 Checked the setting")}));
 
     e.open(1);
     CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("01:30"));
@@ -603,10 +603,10 @@ TEST_CASE("edit.dst: a time in the hour the clocks skip is refused with the mode
     e.done_time();
     CHECK_FALSE(e.time_open());
     REQUIRE(e.can_save());
-    CHECK(e.preview() == QStringLiteral("03:30 Checked the volume"));
+    CHECK(e.preview() == QStringLiteral("03:30 Checked the setting"));
     e.save();
     e.commit();
-    CHECK(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("03:30 Checked the volume")}));
+    CHECK(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("03:30 Checked the setting")}));
 }
 
 TEST_CASE("edit.dst: a time in the repeated hour is allowed and says that the first one is used", "[ui][edit]")
@@ -618,7 +618,7 @@ TEST_CASE("edit.dst: a time in the repeated hour is allowed and says that the fi
     Entry entry;
     entry.m_Id = test::sample_id<EntryId>(1);
     entry.m_Captured = Timestamp{test::utc(2026, 4, 4, 14, 30), MelbourneDstZones::ZONE};
-    entry.m_Body = NoteEntry{std::nullopt, "Checked the volume"};
+    entry.m_Body = NoteEntry{std::nullopt, "Checked the setting"};
     Options options;
     options.zones = &zones;
     options.entries = std::vector<Entry>{entry};
@@ -638,7 +638,7 @@ TEST_CASE("edit.dst: a time in the repeated hour is allowed and says that the fi
     CHECK(e.can_save());
     e.save();
     e.commit();
-    CHECK(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("02:30 Checked the volume")}));
+    CHECK(joined(e.lines()) == joined(std::vector<QString>{QStringLiteral("02:30 Checked the setting")}));
 }
 
 namespace
@@ -800,7 +800,7 @@ TEST_CASE("edit.voiceover: Cancel, Save and Delete entry are buttons, and the sh
     CHECK(names.contains(QStringLiteral("Cancel")));
     CHECK(names.contains(QStringLiteral("Save")));
     CHECK(names.contains(QStringLiteral("Delete entry")));
-    CHECK(names.contains(QStringLiteral("Error, Wrong Output")));
+    CHECK(names.contains(QStringLiteral("Error, Incorrect Action")));
     CHECK(names.contains(QStringLiteral("Time, 11:02")));
     // The sheet cannot be dismissed by a swipe: Cancel and Save are the ways out.
     CHECK_FALSE(e.sheet()->property("dismissible").toBool());

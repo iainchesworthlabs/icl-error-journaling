@@ -81,7 +81,7 @@ TEST_CASE("The context resolves live, retired and renamed types, locations and t
     Sample sample;
     Configuration configuration = sample.configuration();
     const ErrorTypeId live = type_named(configuration, "Wrong Response");
-    const ErrorTypeId retired = type_named(configuration, "Value Out of Range");
+    const ErrorTypeId retired = type_named(configuration, "Wi-Fi Connect Failed");
     const ErrorTypeId renamed = type_named(configuration, "Stopped Responding");
     for (ErrorType& type : configuration.m_ErrorTypes)
     {
@@ -100,7 +100,7 @@ TEST_CASE("The context resolves live, retired and renamed types, locations and t
     const ExportContext context = ExportContextBuilder(sample.m_Source, sample.m_Zones).build();
 
     CHECK(context.m_ErrorTypeName(live) == "Wrong Response");
-    CHECK(context.m_ErrorTypeName(retired) == "Value Out of Range"); // retired types still resolve (a past log uses them)
+    CHECK(context.m_ErrorTypeName(retired) == "Wi-Fi Connect Failed"); // retired types still resolve (a past log uses them)
     CHECK(context.m_ErrorTypeName(renamed) == "Mute Lag");    // the lookup gives the current name
     CHECK(context.m_LocationName(location_named(configuration, "North Site")) == "North Site");
     CHECK(context.m_LocationName(location_named(configuration, "South Site")) == "South Site"); // retired
@@ -147,7 +147,7 @@ TEST_CASE("An unknown id gives the empty answer the renderer reports as an error
         Entry entry;
         entry.m_Id = sample_id<EntryId>(1);
         entry.m_Captured = on_day(10, 5);
-        entry.m_Body = NoteEntry{sample_id<NoteTemplateId>(9999), "task 1"};
+        entry.m_Body = NoteEntry{sample_id<NoteTemplateId>(9999), "1"};
         REQUIRE(log.add(entry));
         const auto text = export_text(log, context);
         REQUIRE_FALSE(text.has_value());
@@ -250,7 +250,7 @@ TEST_CASE("export_text of a log built by commands is the PRD example, byte for b
 
     const ErrorTypeId wrong_response = type_named(configuration, "Wrong Response");
     const ErrorTypeId stopped_responding = type_named(configuration, "Stopped Responding");
-    const ErrorTypeId wrong_track = type_named(configuration, "Wrong Output");
+    const ErrorTypeId wrong_track = type_named(configuration, "Incorrect Action");
     const ErrorTypeId speech_delay = type_named(configuration, "Timed Out");
     Entry note;
     note.m_Id = sample_id<EntryId>(3);
@@ -260,7 +260,7 @@ TEST_CASE("export_text of a log built by commands is the PRD example, byte for b
     REQUIRE(rig.document->add_entry(error_at(1, 10, 5, wrong_response, "Wrong Response"), Origin::USER, {}));
     REQUIRE(rig.document->add_entry(error_at(2, 10, 20, stopped_responding, "Stopped Responding"), Origin::USER, {}));
     REQUIRE(rig.document->add_entry(std::move(note), Origin::USER, {}));
-    REQUIRE(rig.document->add_entry(error_at(4, 11, 2, wrong_track, "Wrong Output", "asked for task 2"),
+    REQUIRE(rig.document->add_entry(error_at(4, 11, 2, wrong_track, "Incorrect Action", "asked for task 2"),
                                     Origin::USER, {}));
     REQUIRE(
         rig.document->change_header(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(13, 15), sample_id<EntryId>(5), {}));

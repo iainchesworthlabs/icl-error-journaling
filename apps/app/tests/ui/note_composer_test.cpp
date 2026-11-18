@@ -44,8 +44,8 @@ public:
     Templates()
     {
         m_Model.setItemRoleNames({{Qt::UserRole + 1, "templateId"}, {Qt::UserRole + 2, "name"}});
-        add(QStringLiteral("played-song"), QStringLiteral("Began task"));
-        add(QStringLiteral("visitor"), QStringLiteral("Entered room 1"));
+        add(QStringLiteral("began-task"), QStringLiteral("Began task"));
+        add(QStringLiteral("observer"), QStringLiteral("Entered room 1"));
     }
 
     void add(const QString& id, const QString& name)
@@ -165,7 +165,7 @@ TEST_CASE("composer.draft_binding: a draft set from outside replaces the text wi
 
     f.host->setProperty("draft", QStringLiteral("Began task 2"));
     CHECK(f.text() == QStringLiteral("Began task 2"));
-    CHECK(f.cursor() == 19);
+    CHECK(f.cursor() == 12);
     CHECK(edited.count() == 0);
 
     f.host->setProperty("draft", QStringLiteral("Began task 2 again"));
@@ -226,7 +226,7 @@ TEST_CASE("composer.chips: a chip emits chipChosen with its template id, and a l
           "[ui][composer]")
 {
     Fixture f;
-    f.templates.add(QStringLiteral("long"), QStringLiteral("A visitor asked about the Wrong Response at North Site"));
+    f.templates.add(QStringLiteral("long"), QStringLiteral("An observer asked about the Wrong Response at North Site"));
     f.rig.layout();
     QSignalSpy chosen(f.composer, SIGNAL(chipChosen(QString)));
 
@@ -241,7 +241,7 @@ TEST_CASE("composer.chips: a chip emits chipChosen with its template id, and a l
     REQUIRE(chips.size() == 3);
     CHECK(chips[0].m_Name == QStringLiteral("Began task"));
     CHECK(chips[1].m_Name == QStringLiteral("Entered room 1"));
-    CHECK(chips[2].m_Name == QStringLiteral("A visitor asked about the Wrong Response at North Site"));
+    CHECK(chips[2].m_Name == QStringLiteral("An observer asked about the Wrong Response at North Site"));
     for (const Node& chip : chips)
     {
         CHECK(chip.m_Role == QAccessible::Button);
@@ -256,8 +256,8 @@ TEST_CASE("composer.chips: a chip emits chipChosen with its template id, and a l
     f.rig.tap(chips[1].m_Item);
     f.rig.tap(chips[0].m_Item);
     REQUIRE(chosen.count() == 2);
-    CHECK(chosen.at(0).at(0).toString() == QStringLiteral("visitor"));
-    CHECK(chosen.at(1).at(0).toString() == QStringLiteral("played-song"));
+    CHECK(chosen.at(0).at(0).toString() == QStringLiteral("observer"));
+    CHECK(chosen.at(1).at(0).toString() == QStringLiteral("began-task"));
 
     f.rig.set_text_scale(3.1);
     expect_clean(check_text_scale(f.rig));
@@ -599,7 +599,7 @@ TEST_CASE("composer.skeleton: shapes only, with the same geometry as the card", 
     Fixture f;
     // Two short chips, which share a row whatever the font, as the two skeleton chips do.
     f.templates.model()->clear();
-    f.templates.add(QStringLiteral("a"), QStringLiteral("Song"));
+    f.templates.add(QStringLiteral("a"), QStringLiteral("Task"));
     f.templates.add(QStringLiteral("b"), QStringLiteral("Visit"));
     f.rig.layout();
     const QRectF card = f.rig.geometry(f.composer);

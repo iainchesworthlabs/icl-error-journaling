@@ -9,7 +9,7 @@ Software Version: v1.4.2
 09:20 T| Wrong Response
 09:30 (Free Text) Began task 1
 09:45 T| Wrong Response
-10:00 T| Wrong Output – asked for task 2
+10:00 T| Incorrect Action – asked for task 2
 10:15 T| Echo Delay
-10:30 T| Wrong Output
+10:30 T| Incorrect Action
 10:40 Software Version changed: v1.4.2 → v1.5.0

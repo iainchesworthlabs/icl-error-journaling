@@ -75,7 +75,7 @@ TEST_CASE("Rule 3: an error line, with an attached note after an en dash", "[exp
 TEST_CASE("Rule 4: a note line is (Free Text) and the rendered template or the free text", "[export][rule4]")
 {
     auto scenario = blank_scenario();
-    must_add(scenario.m_Log, template_note_entry(1, on_day(10, 5), TEMPLATE_PLAYED, "task 1"));
+    must_add(scenario.m_Log, template_note_entry(1, on_day(10, 5), TEMPLATE_PLAYED, "1"));
     must_add(scenario.m_Log, free_note_entry(2, on_day(10, 6), "Device restarted"));
     must_add(scenario.m_Log, free_note_entry(3, on_day(10, 7), ""));
     CHECK(render(scenario)
@@ -153,7 +153,7 @@ TEST_CASE("Rule 7: totals are in the declared order, zero counts are left out, u
     must_add(scenario.m_Log, error_entry(4, on_day(10, 4), ERROR_SPEECH_DELAY));
     must_add(scenario.m_Log, error_entry(5, on_day(10, 5), ERROR_WRONG_TRACK_PLAYED));  // also not listed
     const auto text = render(scenario);
-    CHECK(text.ends_with("\n\nTotals: Timed Out 2, Stopped Responding 1, Wrong Response 1, Wrong Output 1"));
+    CHECK(text.ends_with("\n\nTotals: Timed Out 2, Stopped Responding 1, Wrong Response 1, Incorrect Action 1"));
 }
 
 TEST_CASE("Rule 7: no totals line when there are no errors", "[export][rule7]")
@@ -187,7 +187,7 @@ TEST_CASE("Rule 9: line breaks and runs of white space in free text collapse to 
     CHECK(render(scenario)
           == std::string(HEADER)
                  + "\n\n10:01 (Free Text) one two three\n10:02 (Free Text) tab here and spaces\n10:03 T| Stopped Responding " + DASH
-                 + " note with breaks\n10:04 (Free Text) Played Two Lines\n10:05 (Free Text) next line sep");
+                 + " note with breaks\n10:04 (Free Text) Began task Two Lines\n10:05 (Free Text) next line sep");
 }
 
 TEST_CASE("Rule 9: the header block is one line per field too", "[export][rule9]")

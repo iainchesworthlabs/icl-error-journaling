@@ -196,7 +196,7 @@ TEST_CASE("A pattern is refused in a sentence for each of its three faults", "[v
 
     SECTION("no placeholder")
     {
-        set_item(root, "note_templates", 1, "output_pattern", "Visitor");
+        set_item(root, "note_templates", 1, "output_pattern", "Observer");
         CHECK(messages_of(root) ==
               QStringList{"Note template 2: the line in the log has no {value} where the answer goes."});
     }
@@ -265,7 +265,7 @@ TEST_CASE("Other faults of an item have a sentence each", "[viewmodel][import][u
     }
     SECTION("an icon name with capitals")
     {
-        set_item(root, "note_templates", 0, "icon", "Music Note");
+        set_item(root, "note_templates", 0, "icon", "List Item");
         CHECK(messages_of(root) ==
               QStringList{"Note template 1: the icon name can use only lower-case letters, digits and dashes."});
     }
