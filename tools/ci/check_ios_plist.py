@@ -11,8 +11,7 @@ Parses apps/app/packaging/ios/Info.plist.in with the CMake placeholders stubbed 
   * a document type names the exported type (role Viewer, handler rank Owner) and one names public.json (rank Alternate);
   * LSSupportsOpeningDocumentsInPlace is false, UIFileSharingEnabled is absent or false;
   * no usage-description key (the application asks for no permission);
-  * CADisableMinimumFrameDurationOnPhone is true, so that a ProMotion phone can run the application at 120 Hz
-   ;
+  * CADisableMinimumFrameDurationOnPhone is true, so that a ProMotion phone can run the application at 120 Hz;
   * the launch screen: UILaunchScreen names a colour and an image that exist in the asset catalogue, each with a light and
     a dark variant, the image ignores the safe area, the PNGs are 1206 x 2622 px (402 x 874 pt at 3x) and opaque, and the
     colour is the `background` token in both modes.

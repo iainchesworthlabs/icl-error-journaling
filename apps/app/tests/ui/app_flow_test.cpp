@@ -2983,7 +2983,9 @@ TEST_CASE("help.settings_group: the Help group lists Quick help and the three on
     activate(app, QStringLiteral("settingsPrivacy"));
     const QVariantList opened = app.url_opener->property("opened").toList();
     REQUIRE(opened.size() == 3);
-    const QString site = opened.at(0).toString();
+    const QString guide = opened.at(0).toString();
+    CHECK(guide.endsWith(QStringLiteral("/guide/")));
+    const QString site = guide.chopped(QStringLiteral("guide/").size());
     CHECK(site.startsWith(QStringLiteral("https://")));
     CHECK(site.endsWith(QLatin1Char('/')));
     CHECK(opened.at(1).toString() == site + QStringLiteral("support/"));
