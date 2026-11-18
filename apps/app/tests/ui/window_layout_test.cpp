@@ -70,15 +70,23 @@ TEST_CASE("layout.classes: the class follows the window's size, at the edges and
         CHECK_FALSE(layout->property("wide").toBool());
     }
 
-    SECTION("the edges: 600 wide is Regular, 1100 by 640 is Wide")
+    SECTION("the edges: 600 wide is Regular, 1100 by 640 is Wide, and 1024 by 640 is Wide in landscape only")
     {
         CHECK(size_class(rig, QSize(599, 1180)) == COMPACT);
         CHECK(size_class(rig, QSize(600, 1180)) == REGULAR);
-        CHECK(size_class(rig, QSize(1099, 820)) == REGULAR);
+        CHECK(size_class(rig, QSize(1099, 820)) == WIDE);
         CHECK(size_class(rig, QSize(1100, 820)) == WIDE);
         CHECK(size_class(rig, QSize(1100, 640)) == WIDE);
         CHECK(size_class(rig, QSize(1100, 639)) == REGULAR);
         CHECK(size_class(rig, QSize(1400, 500)) == REGULAR);
+        // The 10.2 inch iPad and the 1024 by 768 iPads in landscape; one point narrower, or too short, is not.
+        CHECK(size_class(rig, QSize(1080, 810)) == WIDE);
+        CHECK(size_class(rig, QSize(1024, 768)) == WIDE);
+        CHECK(size_class(rig, QSize(1024, 640)) == WIDE);
+        CHECK(size_class(rig, QSize(1023, 768)) == REGULAR);
+        CHECK(size_class(rig, QSize(1024, 639)) == REGULAR);
+        // Square or taller is not landscape.
+        CHECK(size_class(rig, QSize(1024, 1024)) == REGULAR);
         CHECK(rig.window_layout()->property("regular").toBool());
     }
 
@@ -101,6 +109,8 @@ TEST_CASE("layout.classes: the class follows the window's size, at the edges and
             CHECK(size_class(rig, portrait) == REGULAR);
             CHECK(size_class(rig, portrait.transposed()) == WIDE);
         }
+        for (const QSize landscape : {QSize(1024, 768), QSize(1080, 810), QSize(1112, 834), QSize(1133, 744)})
+            CHECK(size_class(rig, landscape) == WIDE);
         // A two-thirds Split View window.
         CHECK(size_class(rig, QSize(694, 820)) == REGULAR);
     }

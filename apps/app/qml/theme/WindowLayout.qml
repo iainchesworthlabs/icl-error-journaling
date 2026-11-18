@@ -11,7 +11,8 @@ import QtQuick
 //     Compact   narrower than Theme.layout.regularMinWidth (600): the phone layout. Every derived value equals the
 //               phone's Theme value, so a phone does not change.
 //     Regular   wider, and not Wide: the phone layout in centred columns with larger tiles (an iPad in portrait).
-//     Wide      at least Theme.layout.wideMinWidth by wideMinHeight (1100 by 640): the board and the log side by
+//     Wide      at least Theme.layout.wideMinWidth by wideMinHeight (1100 by 640), or at least wideMinWidthLandscape
+//               (1024) wide, wider than it is tall and wideMinHeight high: the board and the log side by
 //               side (an iPad in landscape).
 //
 // One input is set from outside: the shell binds `windowWidth` and `windowHeight` to its own size (as it binds
@@ -38,7 +39,9 @@ QtObject {
     // ---- the class ----
 
     readonly property int sizeClass: {
-        if (windowWidth >= Theme.layout.wideMinWidth && windowHeight >= Theme.layout.wideMinHeight)
+        const tallEnough = windowHeight >= Theme.layout.wideMinHeight;
+        const landscape = windowWidth > windowHeight && windowWidth >= Theme.layout.wideMinWidthLandscape;
+        if (tallEnough && (windowWidth >= Theme.layout.wideMinWidth || landscape))
             return WindowLayout.Wide;
         if (windowWidth >= Theme.layout.regularMinWidth)
             return WindowLayout.Regular;
