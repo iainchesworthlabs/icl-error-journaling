@@ -1,0 +1,16 @@
+/* The guide is MkDocs Material. This file sets Material's colours from the Field Test palette (theme.css), so the guide
+   and the Field Test pages look related, and styles the slim bar above Material's header. */
+html[data-app] { color-scheme: light dark; }
+body[data-md-color-scheme] {
+  --md-primary-fg-color: var(--app-primary);
+  --md-primary-fg-color--light: var(--app-primary);
+  --md-primary-fg-color--dark: var(--app-primary);
+  --md-primary-bg-color: var(--app-on-primary);
+  --md-primary-bg-color--light: var(--app-on-primary);
+  --md-accent-fg-color: var(--app-link);
+  --md-typeset-a-color: var(--app-link);
+}
+.ft-guidebar { background: var(--app-gradient-from); color: var(--app-on-gradient); font-size: 0.8rem; }
+.ft-guidebar__in { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; max-width: 61rem; margin-inline: auto; padding: 0.25rem 0.8rem; }
+.ft-guidebar a { color: inherit; display: inline-block; padding: 0.4rem 0; }
+.ft-guidebar a:hover { text-decoration: underline; }

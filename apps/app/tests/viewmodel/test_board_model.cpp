@@ -285,7 +285,7 @@ TEST_CASE("A tap raises its tile and not Other, and the signals follow the commi
     QObject::connect(&fixture.m_Board, &QAbstractItemModel::dataChanged,
                      [&events] { events.record(EventKind::MARK, "board changed"); });
 
-    const EntryId entry = fixture.tap(fixture.type(2)); // Wrong Track Played, tile 3
+    const EntryId entry = fixture.tap(fixture.type(2)); // Incorrect Action, tile 3
 
     // Held: the touch has been acknowledged and nothing else has happened.
     CHECK(fixture.m_Feedback.touches() == 1);
@@ -298,7 +298,7 @@ TEST_CASE("A tap raises its tile and not Other, and the signals follow the commi
 
     CHECK(fixture.count(2) == 1);
     CHECK(fixture.value(2, BoardModel::HAS_COUNT).toBool());
-    CHECK(fixture.value(2, BoardModel::ACCESSIBLE_NAME).toString() == "Wrong Track Played, 1 today");
+    CHECK(fixture.value(2, BoardModel::ACCESSIBLE_NAME).toString() == "Incorrect Action, 1 today");
     CHECK(fixture.count(OTHER) == 0);
     CHECK(fixture.m_Board.total_count() == 1);
 
@@ -325,7 +325,7 @@ TEST_CASE("A tap raises its tile and not Other, and the signals follow the commi
 TEST_CASE("A tap on a type that is not on the board raises Other only", "[viewmodel][board]")
 {
     Configuration configuration = sample_configuration();
-    configuration.m_ErrorTypes[10].m_BoardPosition.reset(); // Navigation Failure leaves the board
+    configuration.m_ErrorTypes[10].m_BoardPosition.reset(); // Unexpected Stop leaves the board
     BoardFixture fixture(std::move(configuration));
     const Spies spies(fixture.m_Board);
 
@@ -603,7 +603,7 @@ TEST_CASE("Signal counts: one per commit, one for a new log, one for a configura
 
     SECTION("a note, a header correction and a share change no tile")
     {
-        Entry note = sample_note(900, 20, "Played Morning Medley");
+        Entry note = sample_note(900, 20, "Began task 1");
         REQUIRE(
             fixture.m_Rig.document->add_entry(std::move(note), Origin::USER, fixture.m_Rig.keep(fixture.m_Results)));
         REQUIRE(fixture.m_Rig.document->correct_header(HeaderField::UNIT_NUMBER, "28",

@@ -1,6 +1,6 @@
 # Getting started
 
-Field Test is for logging what goes wrong during a robot session, as it happens, and sharing the log at the end of the
+Field Test is for logging what goes wrong during a software or hardware testing session, as it happens, and sharing the log at the end of the
 day. You tap a tile for each error, add a short note when it helps, and share one plain text log.
 
 Everything stays on your device. Nothing is sent anywhere unless you share the log yourself ([Privacy](../privacy.md)).
@@ -40,6 +40,6 @@ one becomes a tile. [Setting up the board](setup.md) shows how.
 2. **Double-tap** a tile. A message says what was logged and when, and the tile's count goes up.
 3. If you tapped the wrong tile, tap **Undo** on the message within five seconds.
 
-![The Log screen with a board of tiles, the count on each tile and a message that says Mute Delay logged at 10:20 with an Undo button.](img/log-board.png){ width="270" }
+![The Log screen with a board of tiles, the count on each tile and a message that says Stopped Responding logged at 10:20 with an Undo button.](img/log-board.png){ width="270" }
 
 Next: [A day of logging](logging.md).

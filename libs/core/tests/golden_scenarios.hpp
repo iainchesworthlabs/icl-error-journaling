@@ -58,16 +58,16 @@ struct Scenario
 
 /// The fictional names of the scenario world, for tests that build their own logs.
 inline constexpr std::uint64_t ERROR_WRONG_RESPONSE = 1;
-inline constexpr std::uint64_t ERROR_MUTE_DELAY = 2;
+inline constexpr std::uint64_t ERROR_STOPPED_RESPONDING = 2;
 inline constexpr std::uint64_t ERROR_WRONG_TRACK_PLAYED = 3;
 inline constexpr std::uint64_t ERROR_SPEECH_DELAY = 4;
 inline constexpr std::uint64_t ERROR_LATE_GREETING = 5;
 inline constexpr std::uint64_t ERROR_ECHO_DELAY_RETIRED = 6;
-inline constexpr std::uint64_t INTERACTION_GREETED = 1;
-inline constexpr std::uint64_t INTERACTION_SPOKE_WITH = 2;
+inline constexpr std::uint64_t INTERACTION_START_TASK = 1;
+inline constexpr std::uint64_t INTERACTION_PAIRED_WITH = 2;
 inline constexpr std::uint64_t INTERACTION_PLAYED_SONG = 3;
-inline constexpr std::uint64_t INTERACTION_VISITOR = 4;
-inline constexpr std::uint64_t INTERACTION_GAVE = 5;
+inline constexpr std::uint64_t INTERACTION_OBSERVER = 4;
+inline constexpr std::uint64_t INTERACTION_ASSIGNED = 5;
 inline constexpr std::uint64_t PERSON_ALEX = 1;
 inline constexpr std::uint64_t PERSON_JORDAN = 2;
 inline constexpr std::uint64_t PERSON_PAT = 3;
@@ -75,7 +75,7 @@ inline constexpr std::uint64_t PERSON_FORGOTTEN = 4;  // in no list: a name that
 inline constexpr std::uint64_t LOCATION_NORTH_SITE = 1;
 inline constexpr std::uint64_t LOCATION_SOUTH_SITE = 2;
 inline constexpr std::uint64_t TEMPLATE_PLAYED = 1;
-inline constexpr std::uint64_t TEMPLATE_VISITOR = 2;
+inline constexpr std::uint64_t TEMPLATE_OBSERVER = 2;
 inline constexpr std::uint64_t TEMPLATE_REQUESTED = 3;
 
 }  // namespace ej::test

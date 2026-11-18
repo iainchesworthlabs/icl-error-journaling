@@ -79,7 +79,7 @@ TEST_CASE("settings.interaction_type_edit: a row opens the sheet, and retiring r
     world.m_Ui.layout();
     const qsizetype before = names(world).size();
 
-    QQuickItem* row = row_with(world, TYPES, QStringLiteral("Spoke with"));
+    QQuickItem* row = row_with(world, TYPES, QStringLiteral("Paired with"));
     REQUIRE(row != nullptr);
     world.m_Ui.tap(label_of(row));
     world.play(400);
@@ -90,5 +90,5 @@ TEST_CASE("settings.interaction_type_edit: a row opens the sheet, and retiring r
     tap_in_sheet(world, QStringLiteral("retireRow"));
     CHECK_FALSE(sheet_is_open(world));
     CHECK(names(world).size() == before - 1);
-    CHECK_FALSE(names(world).contains(QStringLiteral("Spoke with")));
+    CHECK_FALSE(names(world).contains(QStringLiteral("Paired with")));
 }

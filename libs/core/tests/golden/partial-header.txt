@@ -6,4 +6,4 @@ Software Version: v1.4.2
 
 10:05 T| Wrong Response
 10:30 Location changed:  → Back Room Annex
-10:45 T| Mute Delay
+10:45 T| Stopped Responding

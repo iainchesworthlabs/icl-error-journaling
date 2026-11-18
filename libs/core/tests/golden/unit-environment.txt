@@ -6,6 +6,6 @@ Software Version: v1.4.2
 
 10:05 T| Wrong Response
 11:00 UNIT # changed: UNIT-27-prod → UNIT-27-dev
-11:30 T| Mute Delay
+11:30 T| Stopped Responding
 12:00 UNIT # changed: UNIT-27-dev → UNIT-31
-12:30 T| Speech Delay
+12:30 T| Timed Out

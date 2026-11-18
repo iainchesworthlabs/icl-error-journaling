@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The versions besides the robot's (HDR-10): the labels, the stored text, the journal, the history and the export. Also
+// The versions besides the main one (HDR-10): the labels, the stored text, the journal, the history and the export. Also
 // the "v" of a version (HDR-04): typed or not, printed once.
 #include "error_journaling/export_renderer.hpp"
 #include "error_journaling/extra_versions.hpp"
@@ -66,8 +66,8 @@ TEST_CASE("A label is trimmed, collapsed and checked", "[extra-versions]")
     CHECK(normalize_label("a=b").error() == ExtraVersionsError::LABEL_CHARACTERS);
     CHECK(normalize_label("a\nb").error() == ExtraVersionsError::LABEL_CHARACTERS);
     CHECK(normalize_label("Influencer\xC3\xA9").error() == ExtraVersionsError::LABEL_CHARACTERS);
-    CHECK(normalize_label("robot").error() == ExtraVersionsError::LABEL_IS_ROBOT);
-    CHECK(normalize_label("ROBOT").error() == ExtraVersionsError::LABEL_IS_ROBOT);
+    CHECK(normalize_label("software").error() == ExtraVersionsError::LABEL_IS_SOFTWARE);
+    CHECK(normalize_label("SOFTWARE").error() == ExtraVersionsError::LABEL_IS_SOFTWARE);
 }
 
 TEST_CASE("The list is stored one label=version per line and reads back", "[extra-versions]")
@@ -90,7 +90,7 @@ TEST_CASE("Stored lists that are wrong are refused", "[extra-versions]")
     CHECK(parse_extra_versions("").error() == ExtraVersionsError::MALFORMED);
     CHECK(parse_extra_versions("Influencer").error() == ExtraVersionsError::MALFORMED);
     CHECK(parse_extra_versions("Influencer=4.5").error() == ExtraVersionsError::INVALID_VERSION);
-    CHECK(parse_extra_versions("Robot=1.0.0").error() == ExtraVersionsError::LABEL_IS_ROBOT);
+    CHECK(parse_extra_versions("Software=1.0.0").error() == ExtraVersionsError::LABEL_IS_SOFTWARE);
     CHECK(parse_extra_versions("A=1.0.0\na=2.0.0").error() == ExtraVersionsError::DUPLICATE_LABEL);
     CHECK(check_extra_versions({labelled(" A", "1.0.0")}).error() == ExtraVersionsError::LABEL_CHARACTERS);
 }
@@ -102,7 +102,7 @@ TEST_CASE("The header field takes the list, with none as a value of its own", "[
     REQUIRE(set_header_field(header, HeaderField::EXTRA_VERSIONS, "Influencer=v4.5.0").has_value());
     CHECK(header.m_ExtraVersions.size() == 1);
     CHECK(header_field_text(header, HeaderField::EXTRA_VERSIONS) == "Influencer=4.5.0");
-    const auto refused = set_header_field(header, HeaderField::EXTRA_VERSIONS, "Robot=1.0.0");
+    const auto refused = set_header_field(header, HeaderField::EXTRA_VERSIONS, "Software=1.0.0");
     REQUIRE_FALSE(refused.has_value());
     CHECK(refused.error().m_Kind == HeaderError::Kind::INVALID_EXTRA_VERSIONS);
     REQUIRE(set_header_field(header, HeaderField::EXTRA_VERSIONS, "none").has_value());
@@ -176,7 +176,7 @@ TEST_CASE("extra_versions.unset: a name with no value is stored as label=, read 
     // A list of unset names is still a list, and the checks on names still apply.
     CHECK(parse_extra_versions("Gateway=").has_value());
     CHECK(parse_extra_versions("Gateway=\ngateway=").error() == ExtraVersionsError::DUPLICATE_LABEL);
-    CHECK(parse_extra_versions("Robot=").error() == ExtraVersionsError::LABEL_IS_ROBOT);
+    CHECK(parse_extra_versions("Software=").error() == ExtraVersionsError::LABEL_IS_SOFTWARE);
 }
 
 TEST_CASE("extra_versions.stored_old_text: text written before unset values existed reads as it did", "[unit][extra-versions]")

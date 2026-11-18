@@ -196,7 +196,7 @@ QString pattern_message(PatternError error)
     {
     case PatternError::MISSING_PLACEHOLDER:
         return SettingsModel::tr("The line needs the answer in it. Tap Insert answer to put it where it goes, for "
-                                 "example \xE2\x80\x9CPlayed [answer]\xE2\x80\x9D.");
+                                 "example \xE2\x80\x9C" "Began task [answer]\xE2\x80\x9D.");
     case PatternError::UNBALANCED_BRACE:
         return SettingsModel::tr("The line has a curly bracket on its own. Remove it, or type two in a row to show one "
                                  "in the log. Tap Insert answer for the answer.");
@@ -1298,7 +1298,7 @@ QString SettingsModel::previewInteractionLine(const QString& name, const QString
         return tr("Fix the line to see an example.");
     }
     const QString label = name.trimmed().isEmpty() ? tr("Observation") : name.trimmed();
-    const QString value = tr("Morning Medley");
+    const QString value = tr("1");
     const std::optional<std::string> answer = std::string(value.toStdString());
     return QString::fromStdString(
         render_interaction_text(*checked, label.toStdString(), "Alex Sample", answer));
@@ -1548,7 +1548,7 @@ QString SettingsModel::previewTemplateLine(const QString& pattern, const QString
     Entry entry;
     entry.m_Id = EntryId(Uuid::from_random(~std::uint64_t{0}, ~std::uint64_t{0}));
     entry.m_Captured = when;
-    const QString shown = value.trimmed().isEmpty() ? tr("Morning Medley") : value;
+    const QString shown = value.trimmed().isEmpty() ? tr("1") : value;
     entry.m_Body = NoteEntry{scratch_template.m_Id, shown.toStdString()};
     Log scratch{HeaderValues{}};
     if (!scratch.add(entry))
@@ -1627,7 +1627,7 @@ QString SettingsModel::addTemplate(const QString& name, const QString& prompt, c
         return template_name.error();
     }
     const auto template_prompt =
-        checked_text(prompt, MAX_NAME, tr("Enter the question to ask, for example \"Which song?\"."));
+        checked_text(prompt, MAX_NAME, tr("Enter the question to ask, for example \"Which task?\"."));
     if (!template_prompt)
     {
         return template_prompt.error();
@@ -1700,7 +1700,7 @@ QString SettingsModel::updateTemplate(const QString& id, const QString& name, co
         return template_name.error();
     }
     const auto template_prompt =
-        checked_text(prompt, MAX_NAME, tr("Enter the question to ask, for example \"Which song?\"."));
+        checked_text(prompt, MAX_NAME, tr("Enter the question to ask, for example \"Which task?\"."));
     if (!template_prompt)
     {
         return template_prompt.error();

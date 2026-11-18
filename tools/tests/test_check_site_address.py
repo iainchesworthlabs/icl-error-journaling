@@ -69,8 +69,8 @@ class SiteAddressCheck(unittest.TestCase):
         self.assertEqual(address_check.check(self.root), [])
 
     def test_a_page_that_writes_the_host_out_is_found(self) -> None:
-        self.change("docs/index.md", "{{ site_url }}", site_address.site_url(self.root))
-        self.assertTrue(any("docs/index.md" in p for p in address_check.check(self.root)))
+        self.change("docs/guide/setup-file.md", "{{ site_url }}", site_address.site_url(self.root))
+        self.assertTrue(any("docs/guide/setup-file.md" in p for p in address_check.check(self.root)))
 
     def test_a_missing_site_url_is_not_a_pass(self) -> None:
         self.change("mkdocs.yml", "site_url:", "site_address:")

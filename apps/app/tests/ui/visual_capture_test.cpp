@@ -493,12 +493,12 @@ void note(Phone& phone, const QString& text, int day, int hour, int minute)
     phone.services.settle();
 }
 
-/// A note through the template chip "Played song", as the chip's value prompt makes it.
+/// A note through the template chip "Began task", as the chip's value prompt makes it.
 void played_song(Phone& phone, const QString& value, int day, int hour, int minute)
 {
     phone.services.go_to(day, hour, minute, 30);
     auto& templates = *phone.services.root().settings()->templates();
-    const int row = row_with_label(templates, QStringLiteral("Played song"), "name");
+    const int row = row_with_label(templates, QStringLiteral("Began task"), "name");
     REQUIRE(row >= 0);
     REQUIRE(phone.services.session().addTemplatedNote(role_of(templates, row, "templateId").toString(), value));
     phone.services.settle();
@@ -517,17 +517,17 @@ void attach_note(Phone& phone, int timeline_row, const QString& text)
 }
 
 /// The day of the Log, LogBanner, Recovery, WriteFailed and TemplateValue mock-ups: seven entries, two of them notes,
-/// and the last one is Mute Delay at 10:20 (the "Last" bar and the toast say so). The counts are Wrong Response 2,
-/// Wrong Track Played 1, Speech Delay 1 and Mute Delay 1.
+/// and the last one is Stopped Responding at 10:20 (the "Last" bar and the toast say so). The counts are Wrong Response 2,
+/// Incorrect Action 1, Timed Out 1 and Stopped Responding 1.
 void log_day(Phone& phone)
 {
     record(phone, QStringLiteral("Wrong Response"), 7, 9, 0);
     record(phone, QStringLiteral("Wrong Response"), 7, 9, 15);
-    record(phone, QStringLiteral("Wrong Track Played"), 7, 9, 40);
-    played_song(phone, QStringLiteral("Morning Medley"), 7, 9, 50);
-    record(phone, QStringLiteral("Speech Delay"), 7, 9, 58);
-    note(phone, QStringLiteral("Played Evening Song"), 7, 10, 5);
-    record(phone, QStringLiteral("Mute Delay"), 7, 10, 20);
+    record(phone, QStringLiteral("Incorrect Action"), 7, 9, 40);
+    played_song(phone, QStringLiteral("1"), 7, 9, 50);
+    record(phone, QStringLiteral("Timed Out"), 7, 9, 58);
+    note(phone, QStringLiteral("Began task 2"), 7, 10, 5);
+    record(phone, QStringLiteral("Stopped Responding"), 7, 10, 20);
 }
 
 /// The day of the Review and Edit entry mock-ups: seven entries, in the order and at the times that Review shows.
@@ -535,17 +535,17 @@ void review_day(Phone& phone)
 {
     record(phone, QStringLiteral("Wrong Response"), 7, 9, 42);
     record(phone, QStringLiteral("Wrong Response"), 7, 10, 5);
-    record(phone, QStringLiteral("Mute Delay"), 7, 10, 20);
-    played_song(phone, QStringLiteral("Morning Medley"), 7, 10, 30);
-    record(phone, QStringLiteral("Wrong Track Played"), 7, 11, 2);
-    attach_note(phone, 4, QStringLiteral("asked for Evening Song"));
-    record(phone, QStringLiteral("Speech Delay"), 7, 11, 40);
-    note(phone, QStringLiteral("Played Evening Song"), 7, 12, 10);
+    record(phone, QStringLiteral("Stopped Responding"), 7, 10, 20);
+    played_song(phone, QStringLiteral("1"), 7, 10, 30);
+    record(phone, QStringLiteral("Incorrect Action"), 7, 11, 2);
+    attach_note(phone, 4, QStringLiteral("asked for task 2"));
+    record(phone, QStringLiteral("Timed Out"), 7, 11, 40);
+    note(phone, QStringLiteral("Began task 2"), 7, 12, 10);
 }
 
 // ---- the second board in Review (Stage 14, I-9) ----
 
-const QString SPOKE_WITH = QStringLiteral("00000000-0000-4000-8000-0000000000d1");
+const QString PAIRED_WITH = QStringLiteral("00000000-0000-4000-8000-0000000000d1");
 const QString PLAYED_SONG = QStringLiteral("00000000-0000-4000-8000-0000000000d2");
 const QString HELPED = QStringLiteral("00000000-0000-4000-8000-0000000000d6");
 
@@ -597,9 +597,9 @@ void interaction_day(Phone& phone)
     const QString alex = person_named(phone, QStringLiteral("Alex Sample"));
     const QString jordan = person_named(phone, QStringLiteral("Jordan Placeholder"));
     record(phone, QStringLiteral("Wrong Response"), 7, 9, 42);
-    interaction(phone, SPOKE_WITH, {alex}, 10, 10);
-    interaction(phone, PLAYED_SONG, {}, 10, 30, QStringLiteral("Morning Medley"));
-    interaction(phone, SPOKE_WITH, {}, 11, 2);
+    interaction(phone, PAIRED_WITH, {alex}, 10, 10);
+    interaction(phone, PLAYED_SONG, {}, 10, 30, QStringLiteral("1"));
+    interaction(phone, PAIRED_WITH, {}, 11, 2);
     interaction(phone, HELPED, {jordan, alex}, 11, 40);
     phone.services.advance(6s);
     phone.choose_tab(REVIEW_TAB);
@@ -617,16 +617,16 @@ void scene_edit_interaction(Phone& phone)
     phone.play();
 }
 
-/// The day of the board mock-ups with the longest label: "Sequence Out of Order" three times, Mute Delay once.
+/// The day of the board mock-ups with the longest label: "Sequence Out of Order" three times, Stopped Responding once.
 void label_day(Phone& phone)
 {
     record(phone, QStringLiteral("Sequence Out of Order"), 7, 9, 0);
     record(phone, QStringLiteral("Sequence Out of Order"), 7, 9, 20);
     record(phone, QStringLiteral("Sequence Out of Order"), 7, 9, 40);
-    note(phone, QStringLiteral("Played Morning Medley"), 7, 9, 50);
-    note(phone, QStringLiteral("Played Evening Song"), 7, 10, 0);
-    note(phone, QStringLiteral("Visitor: Sam Example"), 7, 10, 10);
-    record(phone, QStringLiteral("Mute Delay"), 7, 10, 20);
+    note(phone, QStringLiteral("Began task 1"), 7, 9, 50);
+    note(phone, QStringLiteral("Began task 2"), 7, 10, 0);
+    note(phone, QStringLiteral("Observer: Sam Example"), 7, 10, 10);
+    record(phone, QStringLiteral("Stopped Responding"), 7, 10, 20);
 }
 
 /// Ends the open log: shared at `hour:minute` of `day` when asked, and a new log started on `next_day` at 08:50 (the
@@ -652,11 +652,11 @@ void close_log(Phone& phone, int day, int hour, int minute, bool shared, int nex
 /// The scene starts on 2 Nov, so the first log is the one the app opened that day.
 void history_day(Phone& phone)
 {
-    const QStringList cycle{QStringLiteral("Wrong Response"),     QStringLiteral("Track Skipped"),
-                            QStringLiteral("Mute Delay"),         QStringLiteral("Wrong Track Played"),
-                            QStringLiteral("Speech Delay"),       QStringLiteral("Track Not Found"),
-                            QStringLiteral("Audio Drop Out"),     QStringLiteral("Volume Jump"),
-                            QStringLiteral("Navigation Failure"), QStringLiteral("Track Delay")};
+    const QStringList cycle{QStringLiteral("Wrong Response"),     QStringLiteral("Step Skipped"),
+                            QStringLiteral("Stopped Responding"),         QStringLiteral("Incorrect Action"),
+                            QStringLiteral("Timed Out"),       QStringLiteral("Audio Dropout"),
+                            QStringLiteral("Lost Connection"),     QStringLiteral("WiFi Connect Failed"),
+                            QStringLiteral("Unexpected Stop"), QStringLiteral("Slow Response")};
     const auto entries = [&](int day, int count, int first_hour, int first_minute)
     {
         for (int i = 0; i < count; ++i)
@@ -671,21 +671,21 @@ void history_day(Phone& phone)
     close_log(phone, 2, 0, 0, false, 5);
 
     fill_header(phone, QStringLiteral("27"), QStringLiteral("North Site"), QStringLiteral("1.4.1"));
-    // The Past-log mock-up's first rows: 09:15 Wrong Response, 09:48 Track Skipped, a note at 10:30, 11:02 Mute Delay,
-    // 13:20 Wrong Track Played, 15:44 Speech Delay.
+    // The Past-log mock-up's first rows: 09:15 Wrong Response, 09:48 Step Skipped, a note at 10:30, 11:02 Stopped Responding,
+    // 13:20 Incorrect Action, 15:44 Timed Out.
     record(phone, QStringLiteral("Wrong Response"), 5, 9, 15);
-    record(phone, QStringLiteral("Track Skipped"), 5, 9, 48);
-    played_song(phone, QStringLiteral("Morning Medley"), 5, 10, 30);
-    record(phone, QStringLiteral("Mute Delay"), 5, 11, 2);
-    record(phone, QStringLiteral("Wrong Track Played"), 5, 13, 20);
-    attach_note(phone, 4, QStringLiteral("asked for Evening Song"));
-    record(phone, QStringLiteral("Speech Delay"), 5, 15, 44);
-    record(phone, QStringLiteral("Track Not Found"), 5, 15, 50);
-    record(phone, QStringLiteral("Audio Drop Out"), 5, 16, 5);
-    record(phone, QStringLiteral("Volume Jump"), 5, 16, 20);
-    record(phone, QStringLiteral("Track Delay"), 5, 16, 35);
-    record(phone, QStringLiteral("Navigation Failure"), 5, 16, 40);
-    note(phone, QStringLiteral("Played Evening Song"), 5, 16, 45);
+    record(phone, QStringLiteral("Step Skipped"), 5, 9, 48);
+    played_song(phone, QStringLiteral("1"), 5, 10, 30);
+    record(phone, QStringLiteral("Stopped Responding"), 5, 11, 2);
+    record(phone, QStringLiteral("Incorrect Action"), 5, 13, 20);
+    attach_note(phone, 4, QStringLiteral("asked for task 2"));
+    record(phone, QStringLiteral("Timed Out"), 5, 15, 44);
+    record(phone, QStringLiteral("Audio Dropout"), 5, 15, 50);
+    record(phone, QStringLiteral("Lost Connection"), 5, 16, 5);
+    record(phone, QStringLiteral("WiFi Connect Failed"), 5, 16, 20);
+    record(phone, QStringLiteral("Slow Response"), 5, 16, 35);
+    record(phone, QStringLiteral("Unexpected Stop"), 5, 16, 40);
+    note(phone, QStringLiteral("Began task 2"), 5, 16, 45);
     close_log(phone, 5, 16, 58, true, 6);
 
     fill_header(phone, QStringLiteral("27"), QStringLiteral("North Site"), QStringLiteral("1.4.1"));
@@ -776,7 +776,7 @@ void scene_write_failed(Phone& phone)
     log_with_day(phone);
     phone.services.advance(6s);
     phone.services.repository().fail_next(RepositoryOp::ADD_ENTRY);
-    REQUIRE(phone.services.tap(phone.type_id(QStringLiteral("Mute Delay"))));
+    REQUIRE(phone.services.tap(phone.type_id(QStringLiteral("Stopped Responding"))));
     phone.services.settle();
     phone.ui.advance(300ms);
 }
@@ -789,7 +789,7 @@ void scene_template_value(Phone& phone)
     phone.ui.advance(300ms);
     phone.tap_item(phone.nth(QStringLiteral("chip"), 0));
     phone.play();
-    phone.type_into(QStringLiteral("templateValueField"), QStringLiteral("Morning Medley"));
+    phone.type_into(QStringLiteral("templateValueField"), QStringLiteral("1"));
     phone.play();
 }
 
@@ -811,7 +811,7 @@ void scene_tile_labels_large(Phone& phone)
 void scene_other(Phone& phone)
 {
     // Two types that are not on the board, as the Error types editor adds them: the picker lists them first.
-    for (const QString& name : {QStringLiteral("Audio Echo"), QStringLiteral("Screen Freeze")})
+    for (const QString& name : {QStringLiteral("Output Echo"), QStringLiteral("Screen Freeze")})
     {
         const QString problem = phone.services.settings().addErrorType(name);
         INFO(problem.toStdString());
@@ -998,7 +998,7 @@ void use_short_board(Phone& phone, int kept, int placed)
     phone.play();
 }
 
-/// Four types on the board and a fifth, Track Skipped, off it: positions 5 to 11 are empty.
+/// Four types on the board and a fifth, Step Skipped, off it: positions 5 to 11 are empty.
 void board_settings_empty(Phone& phone)
 {
     use_short_board(phone, 5, 4);
@@ -1022,7 +1022,7 @@ void scene_error_type_new_on_board(Phone& phone)
     scene_board_type_picker(phone);
     phone.tap(QStringLiteral("settingsPickerNewType"));
     phone.play();
-    phone.type_into(QStringLiteral("nameField"), QStringLiteral("Audio Drop Out"));
+    phone.type_into(QStringLiteral("nameField"), QStringLiteral("Lost Connection"));
     phone.play();
 }
 
@@ -1032,7 +1032,7 @@ void scene_error_types_added(Phone& phone)
     open_settings_page(phone, QStringLiteral("settingsErrorTypes"));
     phone.tap(QStringLiteral("addRow"));
     phone.play();
-    phone.type_into(QStringLiteral("nameField"), QStringLiteral("Audio Drop Out"));
+    phone.type_into(QStringLiteral("nameField"), QStringLiteral("Lost Connection"));
     phone.tap(QStringLiteral("navTrailing"), phone.sheet_of(phone.need(QStringLiteral("nameField"))));
     phone.services.settle();
     phone.play();
@@ -1101,7 +1101,7 @@ void scene_error_types(Phone& phone)
 void scene_error_type_edit(Phone& phone)
 {
     open_settings_page(phone, QStringLiteral("settingsErrorTypes"));
-    // The row of "Track Delay" is the 10th of the board.
+    // The row of "Slow Response" is the 10th of the board.
     phone.tap_item(phone.nth(QStringLiteral("typeRow"), 9));
     phone.play();
     QQuickItem* field = phone.need(QStringLiteral("nameField"));
@@ -1111,7 +1111,7 @@ void scene_error_type_edit(Phone& phone)
     {
         phone.ui.key(Qt::Key_Backspace);
     }
-    phone.ui.type(QStringLiteral("Mute Delay"));
+    phone.ui.type(QStringLiteral("Stopped Responding"));
     phone.play();
     // Save: the model refuses the duplicate name and the sheet says so.
     phone.tap(QStringLiteral("navTrailing"), phone.sheet_of(phone.need(QStringLiteral("nameField"))));
@@ -1230,9 +1230,9 @@ std::vector<Scene> phone_scenes()
 {
     return {
         {QStringLiteral("Main"), TODAY, scene_main,
-         QStringLiteral("Seven entries, the last Mute Delay at 10:20, with its toast.")},
+         QStringLiteral("Seven entries, the last Stopped Responding at 10:20, with its toast.")},
         {QStringLiteral("Other"), TODAY, scene_other,
-         QStringLiteral("The picker over the Log screen. Two types that are not on the board (Audio Echo, Screen "
+         QStringLiteral("The picker over the Log screen. Two types that are not on the board (Output Echo, Screen "
                         "Freeze) were added in Settings so that \"Not on your board\" has rows; the mock-up's order of "
                         "the board's types is its own.")},
         {QStringLiteral("Header"), TODAY, scene_header,
@@ -1244,7 +1244,7 @@ std::vector<Scene> phone_scenes()
         {QStringLiteral("Review"), TODAY, scene_review,
          QStringLiteral("The mock-up's seven entries; the second row is swiped open.")},
         {QStringLiteral("EditEntry"), TODAY, scene_edit_entry,
-         QStringLiteral("The 11:02 Wrong Track Played entry, with its note.")},
+         QStringLiteral("The 11:02 Incorrect Action entry, with its note.")},
         {QStringLiteral("NewDay"), TODAY, scene_new_day,
          QStringLiteral(
              "The prompt on Sunday 8 Nov over the Log screen; the mock-up's backdrop is blocks, not the screen.")},
@@ -1260,9 +1260,9 @@ std::vector<Scene> phone_scenes()
          QStringLiteral("Header fields empty, seven entries logged before it was filled (HDR-06).")},
         {QStringLiteral("TemplateValue"), TODAY, scene_template_value,
          QStringLiteral(
-             "The \"Played song\" prompt with \"Morning Medley\" typed; there is no keyboard in the capture.")},
+             "The \"Began task\" prompt with \"task 1\" typed; there is no keyboard in the capture.")},
         {QStringLiteral("WriteFailed"), TODAY, scene_write_failed,
-         QStringLiteral("A real failed commit of the next Mute Delay tap (the store is told to fail it).")},
+         QStringLiteral("A real failed commit of the next Stopped Responding tap (the store is told to fail it).")},
         {QStringLiteral("Recovery"), TODAY, scene_recovery,
          QStringLiteral("A relaunch whose start-up recovery reports REBUILT; the app's own words for it.")},
         {QStringLiteral("HeaderNewLogRow"), TODAY, scene_header_new_log_row,
@@ -1276,7 +1276,7 @@ std::vector<Scene> phone_scenes()
                         "mock-up shows PM.")},
         {QStringLiteral("ErrorTypes"), TODAY, scene_error_types, QStringLiteral("Settings, Error types.")},
         {QStringLiteral("ErrorTypeEdit"), TODAY, scene_error_type_edit,
-         QStringLiteral("Track Delay renamed to \"Mute Delay\" so that the duplicate refusal shows; its colour differs "
+         QStringLiteral("Slow Response renamed to \"Stopped Responding\" so that the duplicate refusal shows; its colour differs "
                         "from the mock-up's.")},
         {QStringLiteral("Locations"), TODAY, scene_locations,
          QStringLiteral("A third location, East Depot, added, and \"West Yard\" typed in the new-location field.")},
@@ -1299,7 +1299,7 @@ std::vector<Scene> phone_scenes()
          QStringLiteral(
              "The sample setup with an unnamed error type, a repeated location name and a pattern with no {value}.")},
         {QStringLiteral("BoardLayoutSelected"), TODAY, scene_board_layout_selected,
-         QStringLiteral("Position 9 (Speech Delay) selected.")},
+         QStringLiteral("Position 9 (Timed Out) selected.")},
         {QStringLiteral("LogEmptyBoard"), TODAY, scene_log_empty_board,
          QStringLiteral("The sample setup with no error types, the header filled in.")},
         {QStringLiteral("BoardSettingsEmpty"), TODAY, scene_board_settings_empty,
@@ -1307,11 +1307,11 @@ std::vector<Scene> phone_scenes()
         {QStringLiteral("BoardTypePicker"), TODAY, scene_board_type_picker,
          QStringLiteral("The empty position 5 tapped on that board.")},
         {QStringLiteral("ErrorTypeNewOnBoard"), TODAY, scene_error_type_new_on_board,
-         QStringLiteral("New error type chosen in the picker, \"Audio Drop Out\" typed; there is no keyboard in the "
+         QStringLiteral("New error type chosen in the picker, \"Lost Connection\" typed; there is no keyboard in the "
                         "capture, and the field shows its own focus.")},
         {QStringLiteral("ErrorTypesAdded"), TODAY, scene_error_types_added,
          QStringLiteral(
-             "Audio Drop Out added in Error types on that board. The mock-up's list is the sample's; the app "
+             "Lost Connection added in Error types on that board. The mock-up's list is the sample's; the app "
              "lists the six types it has.")},
         {QStringLiteral("TileLabels"), TODAY, scene_tile_labels,
          QStringLiteral("\"Sequence Out of Order\" logged three times; the mock-up's dashed design note is not UI and "
@@ -1391,7 +1391,7 @@ std::vector<Scene> extra_scenes()
         {QStringLiteral("HoldNote"), TODAY, scene_hold_note,
          QStringLiteral("A hold on Wrong Response with an empty composer.")},
         {QStringLiteral("OtherSearch"), TODAY,
-         [](Phone& phone) { scene_other_search(phone, QStringLiteral("Track")); },
+         [](Phone& phone) { scene_other_search(phone, QStringLiteral("Step")); },
          QStringLiteral("Other, searching for \"Track\".")},
         {QStringLiteral("OtherNoMatch"), TODAY,
          [](Phone& phone) { scene_other_search(phone, QStringLiteral("Zebra")); },

@@ -1,5 +1,5 @@
 {
-  "description": "An iPhone app for logging robot session errors through the day and sharing the log",
+  "description": "An iPhone app for logging errors during software and hardware testing sessions through the day and sharing the log",
   "homepage": "https://iainchesworthlabs.com/field-test/",
   "repository": {
     "has_issues": true,

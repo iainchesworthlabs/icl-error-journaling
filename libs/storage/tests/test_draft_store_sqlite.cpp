@@ -67,12 +67,12 @@ TEST_CASE("Committing a note clears the draft with the entry, and the store then
     REQUIRE(store.repo().create_log(log_id(1), sample_header()).has_value());
     DraftStore draft(store.repo(), store.clock(), timer);
 
-    REQUIRE(draft.set("Played a song for Sam Example").has_value());
+    REQUIRE(draft.set("Began a task for Sam Example").has_value());
     timer.advance(300ms);
     REQUIRE(store.repo().get_draft().value().has_value());
-    REQUIRE(draft.set("Played a song for Sam Example, twice").has_value()); // pending, not written
+    REQUIRE(draft.set("Began a task for Sam Example, twice").has_value()); // pending, not written
 
-    REQUIRE(store.repo().add_entry(log_id(1), sample_note(1, 1, "Played a song for Sam Example, twice")).has_value());
+    REQUIRE(store.repo().add_entry(log_id(1), sample_note(1, 1, "Began a task for Sam Example, twice")).has_value());
     CHECK_FALSE(store.repo().get_draft().value().has_value()); // the same transaction
     draft.committed();
     timer.advance(5s);

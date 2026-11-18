@@ -19,7 +19,7 @@ namespace ej::ui
 ///     UiRig rig;
 ///     use(rig, services);
 ///     rig.load("LogScreen", screen_properties(services));
-///     services.tap(type_id(services, "Mute Delay"));    // the haptic, then recordError: nothing has been committed
+///     services.tap(type_id(services, "Stopped Responding"));    // the haptic, then recordError: nothing has been committed
 ///     rig.settle();                                     // the commit, then the toast, the count and the Last bar
 ///     rig.advance(5s);                                  // the undo window ends
 ///
@@ -33,7 +33,7 @@ void use(UiRig& rig, test::Rig& services);
 /// from the test, which makes it).
 [[nodiscard]] QVariantMap screen_properties(test::Rig& services, const QVariantMap& more = {});
 
-/// The `typeId` role of the board row whose label is `label` ("Mute Delay"); empty when there is none.
+/// The `typeId` role of the board row whose label is `label` ("Stopped Responding"); empty when there is none.
 [[nodiscard]] QString type_id(test::Rig& services, const QString& label);
 
 /// The `count` role of the board row whose label is `label`; -1 when there is none.

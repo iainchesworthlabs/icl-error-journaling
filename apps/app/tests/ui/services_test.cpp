@@ -59,17 +59,17 @@ TEST_CASE("services: between a tap and its commit nothing has changed, and settl
     QQuickItem* screen = rig.load_source(QByteArray(SCREEN), screen_properties(services));
     REQUIRE(screen != nullptr);
 
-    const QString mute_delay = type_id(services, QStringLiteral("Mute Delay"));
-    REQUIRE_FALSE(mute_delay.isEmpty());
-    CHECK(services.tap(mute_delay)); // the haptic, then recordError
-    CHECK(board_count(services, QStringLiteral("Mute Delay")) == 0);
+    const QString stopped_responding = type_id(services, QStringLiteral("Stopped Responding"));
+    REQUIRE_FALSE(stopped_responding.isEmpty());
+    CHECK(services.tap(stopped_responding)); // the haptic, then recordError
+    CHECK(board_count(services, QStringLiteral("Stopped Responding")) == 0);
     CHECK_FALSE(screen->property("toast").toBool());
 
     rig.settle(); // the commit, then everything it sets off
-    CHECK(board_count(services, QStringLiteral("Mute Delay")) == 1);
+    CHECK(board_count(services, QStringLiteral("Stopped Responding")) == 1);
     CHECK(screen->property("total").toInt() == 1);
     CHECK(screen->property("toast").toBool());
-    CHECK(screen->property("toastText").toString().contains(QStringLiteral("Mute Delay")));
+    CHECK(screen->property("toastText").toString().contains(QStringLiteral("Stopped Responding")));
 }
 
 TEST_CASE("services: advancing the rig moves the undo window", "[ui][services]")
@@ -80,7 +80,7 @@ TEST_CASE("services: advancing the rig moves the undo window", "[ui][services]")
     use(rig, services);
     QQuickItem* screen = rig.load_source(QByteArray(SCREEN), screen_properties(services));
     REQUIRE(screen != nullptr);
-    CHECK(services.tap(type_id(services, QStringLiteral("Mute Delay"))));
+    CHECK(services.tap(type_id(services, QStringLiteral("Stopped Responding"))));
     rig.settle();
     REQUIRE(screen->property("toast").toBool());
 

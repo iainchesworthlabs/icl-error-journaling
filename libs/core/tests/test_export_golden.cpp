@@ -60,10 +60,10 @@ TEST_CASE("The PRD example is the golden prd-example.txt, byte for byte", "[expo
         "Software Version: v1.4.2\n"
         "\n"
         "10:05 T| Wrong Response\n"
-        "10:20 T| Mute Delay\n"
-        "10:30 (Free Text) Played Morning Medley\n"
-        "11:02 T| Wrong Track Played \xE2\x80\x93 asked for Evening Song\n"
+        "10:20 T| Stopped Responding\n"
+        "10:30 (Free Text) Began task 1\n"
+        "11:02 T| Incorrect Action \xE2\x80\x93 asked for task 2\n"
         "13:15 Software Version changed: v1.4.2 \xE2\x86\x92 v1.5.0\n"
-        "13:40 T| Speech Delay";
+        "13:40 T| Timed Out";
     CHECK(*text == prd_example);
 }

@@ -345,20 +345,20 @@ void Day::step_4_single_tap()
 void Day::step_5_double_tap()
 {
     Rig& rig = m_Rig;
-    const QString mute_delay = board_type("Mute Delay");
+    const QString stopped_responding = board_type("Stopped Responding");
     rig.go_to(7, 10, 20, 0);
-    REQUIRE(rig.tap(mute_delay));
+    REQUIRE(rig.tap(stopped_responding));
     rig.settle();
     rig.go_to(7, 10, 20, 1);
-    REQUIRE(rig.tap(mute_delay));
+    REQUIRE(rig.tap(stopped_responding));
     rig.settle();
 
-    CHECK(rig.undo().text() == QStringLiteral("Mute Delay logged ") + TIMES + QStringLiteral("2 at 10:20"));
+    CHECK(rig.undo().text() == QStringLiteral("Stopped Responding logged ") + TIMES + QStringLiteral("2 at 10:20"));
     CHECK(rig.undo().repeat_count() == 2);
-    CHECK(board_count("Mute Delay") == 2);
+    CHECK(board_count("Stopped Responding") == 2);
     rig.advance(5s);
     CHECK_FALSE(rig.undo().active());
-    CHECK(board_count("Mute Delay") == 2);
+    CHECK(board_count("Stopped Responding") == 2);
 }
 
 // ------------------------------------------------------------------------------------------------------- 6
@@ -443,9 +443,9 @@ void Day::step_8_tap()
 {
     Rig& rig = m_Rig;
     rig.go_to(7, 11, 2, 10);
-    REQUIRE(rig.tap(board_type("Wrong Track Played")));
+    REQUIRE(rig.tap(board_type("Incorrect Action")));
     rig.settle();
-    CHECK(board_count("Wrong Track Played") == 1);
+    CHECK(board_count("Incorrect Action") == 1);
     CHECK(rig.timeline().entry_count() == 5);
 }
 
@@ -460,7 +460,7 @@ void Day::step_9_restart()
     const QString header_before = rig.timeline().header_text();
     REQUIRE(lines_before.size() == 5);
 
-    rig.session().set_draft(QStringLiteral("Visitor from head office"));
+    rig.session().set_draft(QStringLiteral("Reviewer from head office"));
     rig.session().flushDraft();
     rig.settle();
     rig.restart();
@@ -473,7 +473,7 @@ void Day::step_9_restart()
     CHECK(rig.timeline().header_text() == header_before);
     CHECK(timeline_lines() == lines_before);
     CHECK(board_counts() == counts_before);
-    CHECK(rig.session().draft() == QStringLiteral("Visitor from head office")); // DS-03, NOTE-03
+    CHECK(rig.session().draft() == QStringLiteral("Reviewer from head office")); // DS-03, NOTE-03
     CHECK_FALSE(rig.undo().active());
     CHECK(rig.session().recovery_notice().isEmpty());
 
@@ -515,9 +515,9 @@ void Day::step_11_wrong_tile()
 {
     Rig& rig = m_Rig;
     rig.go_to(7, 13, 41, 30);
-    REQUIRE(rig.tap(board_type("Track Delay")));
+    REQUIRE(rig.tap(board_type("Slow Response")));
     rig.settle();
-    CHECK(board_count("Track Delay") == 1);
+    CHECK(board_count("Slow Response") == 1);
     CHECK(rig.timeline().entry_count() == 7);
 }
 
@@ -535,20 +535,20 @@ void Day::step_12_review_edits()
     {
         const QString note = entry_starting(QStringLiteral("10:30 "));
         QVariantMap edit;
-        edit.insert(QStringLiteral("noteText"), QStringLiteral("Played Morning Medley"));
+        edit.insert(QStringLiteral("noteText"), QStringLiteral("Began task 1"));
         CHECK(rig.timeline().validateEdit(note, edit).isEmpty());
         CHECK(rig.timeline().saveEntry(note, edit));
         rig.settle();
-        CHECK(line_of(note) == QStringLiteral("10:30 Played Morning Medley"));
+        CHECK(line_of(note) == QStringLiteral("10:30 Began task 1"));
     }
     // b) An attached note on the 11:02 error; the preview is the line that is then saved.
     {
         const QString entry = entry_starting(QStringLiteral("11:02 "));
         QVariantMap edit;
-        edit.insert(QStringLiteral("attachedNote"), QStringLiteral("asked for Evening Song"));
+        edit.insert(QStringLiteral("attachedNote"), QStringLiteral("asked for task 2"));
         const QString preview = rig.timeline().previewLine(entry, edit);
         CHECK(preview ==
-              QStringLiteral("11:02 T| Wrong Track Played ") + DASH + QStringLiteral(" asked for Evening Song"));
+              QStringLiteral("11:02 T| Incorrect Action ") + DASH + QStringLiteral(" asked for task 2"));
         CHECK(rig.timeline().saveEntry(entry, edit));
         rig.settle();
         CHECK(line_of(entry) == preview);
@@ -565,20 +565,20 @@ void Day::step_12_review_edits()
         CHECK(rig.session().version_text() == QStringLiteral("1.5.0"));
         CHECK(rig.timeline().header_text().contains(QStringLiteral("Software Version: v1.4.2")));
     }
-    // d) The wrong tile: Track Delay at 13:41:30 was Speech Delay at 13:40:00.
+    // d) The wrong tile: Slow Response at 13:41:30 was Timed Out at 13:40:00.
     {
         const QString entry = entry_starting(QStringLiteral("13:41 "));
         QVariantMap edit;
-        edit.insert(QStringLiteral("errorTypeId"), board_type("Speech Delay"));
+        edit.insert(QStringLiteral("errorTypeId"), board_type("Timed Out"));
         edit.insert(QStringLiteral("localSeconds"), 13 * 3600 + 40 * 60);
         CHECK(rig.timeline().saveEntry(entry, edit));
         rig.settle();
-        CHECK(line_of(entry) == QStringLiteral("13:40 T| Speech Delay"));
-        CHECK(rig.timeline().last_line() == QStringLiteral("13:40 T| Speech Delay"));
-        CHECK(board_count("Track Delay") == 0);
-        CHECK(board_count("Speech Delay") == 1);
+        CHECK(line_of(entry) == QStringLiteral("13:40 T| Timed Out"));
+        CHECK(rig.timeline().last_line() == QStringLiteral("13:40 T| Timed Out"));
+        CHECK(board_count("Slow Response") == 0);
+        CHECK(board_count("Timed Out") == 1);
     }
-    // e) Delete the second Mute Delay, undo, delete again and let the window pass.
+    // e) Delete the second Stopped Responding, undo, delete again and let the window pass.
     {
         const QString first = entry_starting(QStringLiteral("10:20 "));
         const QString second = entry_starting(QStringLiteral("10:20 "), rig.timeline().rowOf(first) + 1);
@@ -586,10 +586,10 @@ void Day::step_12_review_edits()
         CHECK(rig.timeline().deleteEntry(second));
         rig.settle();
         CHECK(rig.undo().text() == QStringLiteral("Entry deleted"));
-        CHECK(board_count("Mute Delay") == 1);
+        CHECK(board_count("Stopped Responding") == 1);
         CHECK(rig.undo().undo());
         rig.settle();
-        CHECK(board_count("Mute Delay") == 2);
+        CHECK(board_count("Stopped Responding") == 2);
         CHECK(rig.timeline().rowOf(second) >= 0);
 
         CHECK(rig.timeline().deleteEntry(second));
@@ -597,7 +597,7 @@ void Day::step_12_review_edits()
         CHECK(rig.undo().text() == QStringLiteral("Entry deleted"));
         rig.advance(5s);
         CHECK_FALSE(rig.undo().active());
-        CHECK(board_count("Mute Delay") == 1);
+        CHECK(board_count("Stopped Responding") == 1);
         CHECK_FALSE(rig.undo().undo());
 
         const auto stored = rig.stored_open_log();
@@ -631,7 +631,7 @@ void Day::step_13_golden_check_1()
     Rig& rig = m_Rig;
     CHECK(rig.timeline().copyAll());
     CHECK(rig.timeline().entry_count() == 6);
-    CHECK(rig.timeline().last_line() == QStringLiteral("13:40 T| Speech Delay"));
+    CHECK(rig.timeline().last_line() == QStringLiteral("13:40 T| Timed Out"));
 
     const QStringList golden = golden_lines();
     REQUIRE(golden.size() == 12);

@@ -29,7 +29,7 @@ TEST_CASE("icon.kinds: every kind of the design has a path, and an unknown kind 
                             QStringLiteral("close"),        QStringLiteral("check"),       QStringLiteral("warning"),
                             QStringLiteral("info"),         QStringLiteral("ring"),        QStringLiteral("search"),
                             QStringLiteral("share"),        QStringLiteral("file"),        QStringLiteral("list"),
-                            QStringLiteral("music"),        QStringLiteral("speech"),      QStringLiteral("calendar"),
+                            QStringLiteral("speech"),      QStringLiteral("calendar"),
                             QStringLiteral("grip"),         QStringLiteral("copy"),        QStringLiteral("trash"),
                             QStringLiteral("swap"),         QStringLiteral("board"),       QStringLiteral("sun"),
                             QStringLiteral("eye")};

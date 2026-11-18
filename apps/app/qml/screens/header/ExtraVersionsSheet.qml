@@ -3,8 +3,8 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import ErrorJournalingApp
 
-// The Other versions sheet of Today's details (HDR-10): the software versions besides the robot's, each with a name, for
-// example "Influencer" (the phone app that controls the robot) and 4.5.0. The Header shows them as one row ("Other
+// The Other versions sheet of Today's details (HDR-10): the software versions besides the main one, each with a name, for
+// example "Influencer" (a companion phone app) and 4.5.0. The Header shows them as one row ("Other
 // versions", with "Influencer v4.5.0" as its value) so that the screen does not grow with every version; this sheet is
 // where they are added, edited and removed.
 //
@@ -127,7 +127,7 @@ Sheet {
                     wrapMode: Text.WordWrap
                     color: Theme.colour.textSecondary
                     font: Theme.font.caption.font
-                    text: qsTr("Other software that is running, such as the phone app that controls the robot. The robot’s own version is on Today’s details.")
+                    text: qsTr("Other software that is running, such as a companion phone app. The main software version is on Today’s details.")
                 }
 
                 Repeater {

@@ -1,5 +1,5 @@
 site_name: Field Test
-site_description: An app for logging robot session errors through the day and sharing the log
+site_description: An app for logging errors during software and hardware testing sessions through the day and sharing the log
 repo_url: https://github.com/iainchesworthlabs/icl-error-journaling
 # The one place that holds the site's address. Pages write {{ site_url }}; tools/ci/check_site_address.py holds the files
 # that cannot read this line (the store URL files) to it. A custom domain is a change here (docs/ci.md, "The site address").
@@ -17,31 +17,39 @@ exclude_docs: |
   releasing.md
   licensing.md
   design/
+  plan/
   signing-key.asc
 strict: true
 # Publishes config/sample-config.json as demo/demo-setup.ejconfig for App Review and new users.
 hooks:
   - tools/docs/demo_setup_hook.py
   - tools/docs/site_address_hook.py
+  - tools/docs/site_shell_hook.py
 markdown_extensions:
   - attr_list  # sets the width of the guide's pictures: ![alt](img/x.png){ width="270" }
+  - def_list  # the questions and answers of the FAQ page
 theme:
   name: material
+  custom_dir: tools/docs/theme  # the Field Test pages (marketing.html) and the guide's colours; see tools/docs/site_shell_hook.py
+  font: false  # no web font: the site loads nothing from other sites
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
   features:
     - navigation.sections
     - content.code.copy
+# The Field Test pages (marketing.html) are not in the guide's menu. The menu holds the guide only.
 nav:
-  - Home: index.md
-  - User guide:
+  - Guide:
       - Guide contents: guide/index.md
       - Getting started: guide/getting-started.md
       - Setting up the board: guide/setup.md
       - A day of logging: guide/logging.md
-      - Today's details: guide/todays-details.md
+      - "Today's details": guide/todays-details.md
       - Sharing and the next day: guide/sharing.md
       - History: guide/history.md
       - The setup file: guide/setup-file.md
       - Questions and answers: guide/faq.md
       - Troubleshooting: guide/troubleshooting.md
-  - Support: support.md
-  - Privacy: privacy.md

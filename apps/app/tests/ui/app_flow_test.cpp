@@ -621,7 +621,7 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     // and the toast follow it. The first tap logs nothing.
     events.clear();
     app.services.go_to(7, 10, 5);
-    const QString mute = app.tile(QStringLiteral("Mute Delay"));
+    const QString mute = app.tile(QStringLiteral("Stopped Responding"));
     app.ui.tap(app.need(mute));
     CHECK(events.count(EventKind::HAPTIC, "impact") == 0);
     const int finger = app.ui.press(app.need(mute));
@@ -636,7 +636,7 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     REQUIRE(commit >= 0);
     CHECK(haptic < commit);
     CHECK(events.count(EventKind::HAPTIC, "impact") == 1);
-    CHECK(app.count_of(QStringLiteral("Mute Delay")) == 1);
+    CHECK(app.count_of(QStringLiteral("Stopped Responding")) == 1);
     CHECK(undo.active());
     app.ui.advance(400ms); // the toast, and the window of the double-tap runs out
     CHECK(app.shown(QStringLiteral("logToast")));
@@ -647,7 +647,7 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     app.ui.tap(app.need(mute));
     app.ui.tap(app.need(mute));
     app.ui.settle();
-    CHECK(app.count_of(QStringLiteral("Mute Delay")) == 2);
+    CHECK(app.count_of(QStringLiteral("Stopped Responding")) == 2);
     CHECK(undo.repeat_count() == 2);
     CHECK(events.count(EventKind::HAPTIC, "impact") == 2);
 
@@ -655,15 +655,15 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     app.tap(QStringLiteral("toastUndo"));
     app.ui.settle();
     app.play();
-    CHECK(app.count_of(QStringLiteral("Mute Delay")) == 1);
+    CHECK(app.count_of(QStringLiteral("Stopped Responding")) == 1);
 
     // A note: type it, Add; the success haptic follows the commit, the field clears.
     events.clear();
     app.services.go_to(7, 10, 30, 5);
     app.ui.tap(app.need(QStringLiteral("noteInput")));
-    app.ui.type(QStringLiteral("Caller asked for the next song"));
+    app.ui.type(QStringLiteral("Caller asked for the next step"));
     app.ui.advance(16ms);
-    CHECK(session.draft() == QStringLiteral("Caller asked for the next song"));
+    CHECK(session.draft() == QStringLiteral("Caller asked for the next step"));
     app.tap(QStringLiteral("addButton"));
     app.ui.settle();
     CHECK(events.count(EventKind::HAPTIC, "success") == 1);
@@ -674,7 +674,7 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     app.tap(QStringLiteral("toastUndo"));
     app.ui.settle();
     app.play();
-    CHECK(session.draft() == QStringLiteral("Caller asked for the next song"));
+    CHECK(session.draft() == QStringLiteral("Caller asked for the next step"));
     app.services.go_to(7, 10, 31, 0);
     app.tap(QStringLiteral("addButton"));
     app.ui.settle();
@@ -712,14 +712,14 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     app.play();
     CHECK(app.services.platform().sheets_presented() == 1);
     REQUIRE_FALSE(app.services.platform().shared_texts().empty());
-    CHECK(app.services.platform().shared_texts().front().find("Mute Delay") != std::string::npos);
+    CHECK(app.services.platform().shared_texts().front().find("Stopped Responding") != std::string::npos);
 
     // Settings, and back to Log.
     app.choose_tab(SETTINGS_TAB);
     CHECK(app.shown(QStringLiteral("settingsScreen")));
     app.choose_tab(LOG_TAB);
     CHECK(app.shown(QStringLiteral("logScreen")));
-    CHECK(app.count_of(QStringLiteral("Mute Delay")) == 1);
+    CHECK(app.count_of(QStringLiteral("Stopped Responding")) == 1);
 }
 
 TEST_CASE(
@@ -1899,7 +1899,7 @@ TEST_CASE("ipad.rotation_keeps_state: a draft, the focus, a toast with Undo and 
 
     // A draft in the composer, with the focus there, and a toast with Undo.
     app.ui.tap(app.need(QStringLiteral("noteInput")));
-    app.ui.type(QStringLiteral("Caller asked for the next song"));
+    app.ui.type(QStringLiteral("Caller asked for the next step"));
     app.ui.advance(16ms);
     QQuickItem* input = app.ui.focused_input();
     REQUIRE(input != nullptr);
@@ -1915,7 +1915,7 @@ TEST_CASE("ipad.rotation_keeps_state: a draft, the focus, a toast with Undo and 
         app.ui.set_window_size(size);
         app.ui.set_safe_area(size.width() > 600 ? IPAD_TOP : 59.0, size.width() > 600 ? IPAD_BOTTOM : 34.0);
         app.ui.layout();
-        CHECK(app.services.session().draft() == QStringLiteral("Caller asked for the next song"));
+        CHECK(app.services.session().draft() == QStringLiteral("Caller asked for the next step"));
         CHECK(app.ui.focused_input() == input);
         CHECK(app.need(QStringLiteral("logToast"))->property("present").toBool());
         CHECK(app.services.root().timeline()->rowCount() == entries);
@@ -3223,11 +3223,11 @@ TEST_CASE("shell.toggle: the switch shows and hides the tab, an empty board offe
     App app(true, false);
     app.with_boards(false);
     app.load();
-    const QString mute = app.tile(QStringLiteral("Mute Delay"));
+    const QString mute = app.tile(QStringLiteral("Stopped Responding"));
     app.ui.tap(app.need(mute));
     app.ui.tap(app.need(mute));
     app.ui.settle();
-    const int entries = app.count_of(QStringLiteral("Mute Delay"));
+    const int entries = app.count_of(QStringLiteral("Stopped Responding"));
     REQUIRE(entries == 1);
 
     // On, in Settings: the tab is there at once, and the row says what turning it off does.
@@ -3255,7 +3255,7 @@ TEST_CASE("shell.toggle: the switch shows and hides the tab, an empty board offe
     CHECK(shell_tab(app) == 0);
     CHECK_FALSE(app.shown(QStringLiteral("tabInteractions")));
     CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("errors"));
-    CHECK(app.count_of(QStringLiteral("Mute Delay")) == entries);
+    CHECK(app.count_of(QStringLiteral("Stopped Responding")) == entries);
 
     // On again: the tab is back and the board is as it was.
     app.boards->setProperty("interactionsEnabled", true);
@@ -3518,7 +3518,7 @@ TEST_CASE("fold.state_kept: a fold or unfold on the Interactions board loses no 
     app.ui.layout();
 
     app.ui.tap(app.need(QStringLiteral("noteInput")));
-    app.ui.type(QStringLiteral("Visitor asked about the next song"));
+    app.ui.type(QStringLiteral("Tester asked about the next step"));
     app.ui.advance(16ms);
     QQuickItem* input = app.ui.focused_input();
     REQUIRE(input != nullptr);
@@ -3531,7 +3531,7 @@ TEST_CASE("fold.state_kept: a fold or unfold on the Interactions board loses no 
         app.ui.set_window_size(size);
         app.ui.set_safe_area(size.width() > 600 ? IPAD_TOP : 40.0, IPAD_BOTTOM);
         app.ui.layout();
-        CHECK(app.services.session().draft() == QStringLiteral("Visitor asked about the next song"));
+        CHECK(app.services.session().draft() == QStringLiteral("Tester asked about the next step"));
         CHECK(app.ui.focused_input() == input);
         CHECK(app.need(QStringLiteral("logScreen"))->property("onInteractions").toBool());
         CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("interactions"));

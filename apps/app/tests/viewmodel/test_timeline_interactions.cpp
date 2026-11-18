@@ -76,10 +76,10 @@ Configuration configuration_with_interactions()
 {
     Configuration configuration = sample_configuration();
     configuration.m_InteractionTypes = {
-        make_type(INTERACTION_SPOKE_WITH, "Spoke with", "Spoke with {person}", InteractionAsks::PERSON),
-        make_type(INTERACTION_GAVE, "Gave", "Gave {value}", InteractionAsks::TEXT),
-        make_type(INTERACTION_GREETED, "Greeted", std::nullopt, InteractionAsks::NOTHING),
-        make_type(INTERACTION_VISITOR, "Visitor", std::nullopt, InteractionAsks::NOTHING, true)};
+        make_type(INTERACTION_PAIRED_WITH, "Paired with", "Paired with {person}", InteractionAsks::PERSON),
+        make_type(INTERACTION_ASSIGNED, "Assigned", "Assigned {value}", InteractionAsks::TEXT),
+        make_type(INTERACTION_START_TASK, "Start task", std::nullopt, InteractionAsks::NOTHING),
+        make_type(INTERACTION_OBSERVER, "Observer", std::nullopt, InteractionAsks::NOTHING, true)};
     return configuration;
 }
 
@@ -98,7 +98,7 @@ QString person_text(std::uint64_t number)
     return QString::fromStdString(test_id<PersonId>(number).format());
 }
 
-/// Entries 1 to 6, in time order: spoke with Alex; spoke with nobody (skipped); gave a toy with a note; an error; spoke
+/// Entries 1 to 6, in time order: spoke with Alex; spoke with nobody (skipped); gave a task with a note; an error; spoke
 /// with a forgotten person; greeted.
 struct Fixture
 {
@@ -112,12 +112,12 @@ struct Fixture
         Entry error = sample_error(4, 0, "Wrong Response", std::nullopt);
         error.m_Captured = on_day(10, 30);
         const std::vector<Entry> entries = {
-            interaction_entry(1, on_day(10, 10), INTERACTION_SPOKE_WITH, {PERSON_ALEX}),
-            interaction_entry(2, on_day(10, 20), INTERACTION_SPOKE_WITH, {}),
-            interaction_entry(3, on_day(10, 25), INTERACTION_GAVE, {}, "a toy", "was pleased"),
+            interaction_entry(1, on_day(10, 10), INTERACTION_PAIRED_WITH, {PERSON_ALEX}),
+            interaction_entry(2, on_day(10, 20), INTERACTION_PAIRED_WITH, {}),
+            interaction_entry(3, on_day(10, 25), INTERACTION_ASSIGNED, {}, "a task", "was pleased"),
             error,
-            interaction_entry(5, on_day(10, 40), INTERACTION_SPOKE_WITH, {PERSON_FORGOTTEN}),
-            interaction_entry(6, on_day(10, 50), INTERACTION_GREETED, {})};
+            interaction_entry(5, on_day(10, 40), INTERACTION_PAIRED_WITH, {PERSON_FORGOTTEN}),
+            interaction_entry(6, on_day(10, 50), INTERACTION_START_TASK, {})};
         for (const Entry& entry : entries)
         {
             REQUIRE(m_Storage.memory().add_entry(id, entry));
@@ -168,12 +168,12 @@ TEST_CASE("review.interaction_rows: rows read as the export does, with the full 
 {
     Fixture f;
     REQUIRE(f.model().rowCount() == 6);
-    CHECK(f.line(0) == QStringLiteral("10:10 (Interaction) Spoke with Alex Sample"));
-    CHECK(f.line(1) == QStringLiteral("10:20 (Interaction) Spoke with (person not set)"));
-    CHECK(f.line(2) == QStringLiteral("10:25 (Interaction) Gave a toy – was pleased"));
+    CHECK(f.line(0) == QStringLiteral("10:10 (Interaction) Paired with Alex Sample"));
+    CHECK(f.line(1) == QStringLiteral("10:20 (Interaction) Paired with (person not set)"));
+    CHECK(f.line(2) == QStringLiteral("10:25 (Interaction) Assigned a task – was pleased"));
     CHECK(f.line(3) == QStringLiteral("10:30 T| Wrong Response"));
-    CHECK(f.line(4) == QStringLiteral("10:40 (Interaction) Spoke with someone"));
-    CHECK(f.line(5) == QStringLiteral("10:50 (Interaction) Greeted"));
+    CHECK(f.line(4) == QStringLiteral("10:40 (Interaction) Paired with someone"));
+    CHECK(f.line(5) == QStringLiteral("10:50 (Interaction) Start task"));
     CHECK(f.model().data(f.model().index(0), TimelineModel::KIND).toString() == "interaction");
 
     // The screen row is the export line at the full level: the same text, not another rendering.
@@ -191,7 +191,7 @@ TEST_CASE("review.interaction_rows: copy follows the sharing level; a deleted in
 {
     Fixture f;
     REQUIRE(f.model().copyLine(0));
-    CHECK(f.m_Clipboard.text() == "10:10 (Interaction) Spoke with A.S.");
+    CHECK(f.m_Clipboard.text() == "10:10 (Interaction) Paired with A.S.");
 
     const int before = f.model().property("entryCount").toInt();
     REQUIRE(f.model().deleteEntry(id_text(1)));
@@ -206,8 +206,8 @@ TEST_CASE("edit.interaction: the values the sheet starts from", "[viewmodel][edi
     Fixture f;
     const QVariantMap alex = f.edit_of(1);
     CHECK(alex.value("kind").toString() == "interaction");
-    CHECK(alex.value("interactionTypeId").toString() == type_text(INTERACTION_SPOKE_WITH));
-    CHECK(alex.value("interactionTypeName").toString() == "Spoke with");
+    CHECK(alex.value("interactionTypeId").toString() == type_text(INTERACTION_PAIRED_WITH));
+    CHECK(alex.value("interactionTypeName").toString() == "Paired with");
     CHECK(alex.value("personIds").toStringList() == QStringList{person_text(PERSON_ALEX)});
     CHECK(alex.value("personNames").toMap().value(person_text(PERSON_ALEX)).toString() == "Alex Sample");
     CHECK(alex.value("asksPerson").toBool());
@@ -216,7 +216,7 @@ TEST_CASE("edit.interaction: the values the sheet starts from", "[viewmodel][edi
     CHECK(forgotten.value("personNames").toMap().value(person_text(PERSON_FORGOTTEN)).toString() == "someone");
 
     const QVariantMap gave = f.edit_of(3);
-    CHECK(gave.value("value").toString() == "a toy");
+    CHECK(gave.value("value").toString() == "a task");
     CHECK(gave.value("attachedNote").toString() == "was pleased");
     CHECK(gave.value("asksText").toBool());
 
@@ -236,10 +236,10 @@ TEST_CASE("edit.interaction: change the person, the answer, the note, the type a
         edit.insert("personIds", QStringList{person_text(PERSON_JORDAN), person_text(PERSON_ALEX)});
         REQUIRE(f.model().validateEdit(id_text(2), edit).isEmpty());
         CHECK(f.model().previewLine(id_text(2), edit) ==
-              QStringLiteral("10:20 (Interaction) Spoke with Jordan Placeholder and Alex Sample"));
+              QStringLiteral("10:20 (Interaction) Paired with Jordan Placeholder and Alex Sample"));
         REQUIRE(f.model().saveEntry(id_text(2), edit));
         f.commit();
-        CHECK(f.line(1) == QStringLiteral("10:20 (Interaction) Spoke with Jordan Placeholder and Alex Sample"));
+        CHECK(f.line(1) == QStringLiteral("10:20 (Interaction) Paired with Jordan Placeholder and Alex Sample"));
     }
     SECTION("the answer and the note")
     {
@@ -248,19 +248,19 @@ TEST_CASE("edit.interaction: change the person, the answer, the note, the type a
         edit.insert("attachedNote", "");
         REQUIRE(f.model().saveEntry(id_text(3), edit));
         f.commit();
-        CHECK(f.line(2) == QStringLiteral("10:25 (Interaction) Gave a book"));
+        CHECK(f.line(2) == QStringLiteral("10:25 (Interaction) Assigned a book"));
     }
     SECTION("the type takes the name of the new one and the entry keeps its people")
     {
         QVariantMap edit;
-        edit.insert("interactionTypeId", type_text(INTERACTION_GREETED));
+        edit.insert("interactionTypeId", type_text(INTERACTION_START_TASK));
         REQUIRE(f.model().saveEntry(id_text(1), edit));
         f.commit();
-        CHECK(f.line(0) == QStringLiteral("10:10 (Interaction) Greeted"));
+        CHECK(f.line(0) == QStringLiteral("10:10 (Interaction) Start task"));
         const Entry* entry = f.m_Document->log().find(sample_id<EntryId>(1));
         REQUIRE(entry != nullptr);
         const auto& body = std::get<InteractionEntry>(entry->m_Body);
-        CHECK(body.m_TypeLabel == "Greeted");
+        CHECK(body.m_TypeLabel == "Start task");
         CHECK(body.m_People.size() == 1);
     }
     SECTION("the time moves the row")
@@ -269,7 +269,7 @@ TEST_CASE("edit.interaction: change the person, the answer, the note, the type a
         edit.insert("localSeconds", 11 * 3600);
         REQUIRE(f.model().saveEntry(id_text(1), edit));
         f.commit();
-        CHECK(f.line(5) == QStringLiteral("11:00 (Interaction) Spoke with Alex Sample"));
+        CHECK(f.line(5) == QStringLiteral("11:00 (Interaction) Paired with Alex Sample"));
     }
     SECTION("a person can be taken off")
     {
@@ -277,7 +277,7 @@ TEST_CASE("edit.interaction: change the person, the answer, the note, the type a
         edit.insert("personIds", QStringList{});
         REQUIRE(f.model().saveEntry(id_text(1), edit));
         f.commit();
-        CHECK(f.line(0) == QStringLiteral("10:10 (Interaction) Spoke with (person not set)"));
+        CHECK(f.line(0) == QStringLiteral("10:10 (Interaction) Paired with (person not set)"));
     }
     SECTION("nothing changed is not a save")
     {
@@ -293,7 +293,7 @@ TEST_CASE("edit.interaction: what is refused", "[viewmodel][edit][interaction]")
     Fixture f;
     QVariantMap edit;
 
-    edit.insert("interactionTypeId", type_text(INTERACTION_VISITOR)); // retired: cannot be moved to
+    edit.insert("interactionTypeId", type_text(INTERACTION_OBSERVER)); // retired: cannot be moved to
     CHECK_FALSE(f.model().validateEdit(id_text(1), edit).isEmpty());
     edit.clear();
     edit.insert("interactionTypeId", type_text(99));
@@ -336,8 +336,8 @@ TEST_CASE("review.interaction_rows: a past log shows interactions the same way a
     const LogId id = sample_id<LogId>(1);
     REQUIRE(storage.memory().create_log(id, sample_header()));
     REQUIRE(storage.memory().add_entry(
-        id, interaction_entry(1, on_day(10, 10), INTERACTION_SPOKE_WITH, {PERSON_ALEX, PERSON_JORDAN})));
-    REQUIRE(storage.memory().add_entry(id, interaction_entry(2, on_day(10, 20), INTERACTION_SPOKE_WITH, {})));
+        id, interaction_entry(1, on_day(10, 10), INTERACTION_PAIRED_WITH, {PERSON_ALEX, PERSON_JORDAN})));
+    REQUIRE(storage.memory().add_entry(id, interaction_entry(2, on_day(10, 20), INTERACTION_PAIRED_WITH, {})));
     REQUIRE(storage.memory().archive_log(id));
     auto loaded = storage.memory().load_log(id);
     REQUIRE(loaded.has_value());
@@ -349,26 +349,26 @@ TEST_CASE("review.interaction_rows: a past log shows interactions the same way a
     // The screen: full names and the marker.
     REQUIRE(model.rowCount() == 2);
     CHECK(model.data(model.index(0), TimelineModel::FULL_LINE).toString() ==
-          QStringLiteral("10:10 (Interaction) Spoke with Alex Sample and Jordan Placeholder"));
+          QStringLiteral("10:10 (Interaction) Paired with Alex Sample and Jordan Placeholder"));
     CHECK(model.data(model.index(1), TimelineModel::FULL_LINE).toString() ==
-          QStringLiteral("10:20 (Interaction) Spoke with (person not set)"));
+          QStringLiteral("10:20 (Interaction) Paired with (person not set)"));
 
     // Re-sharing: the setting in force now, not the one at the time the log was made.
     REQUIRE(model.copyAll());
-    CHECK(clipboard.text().find("Spoke with A.S. and J.P.") != std::string::npos);
+    CHECK(clipboard.text().find("Paired with A.S. and J.P.") != std::string::npos);
     CHECK(clipboard.text().find("Alex") == std::string::npos);
 
     preferences.set_name_export("full");
     REQUIRE(model.copyAll());
-    CHECK(clipboard.text().find("Spoke with Alex Sample and Jordan Placeholder") != std::string::npos);
+    CHECK(clipboard.text().find("Paired with Alex Sample and Jordan Placeholder") != std::string::npos);
 
     preferences.set_name_export("hidden");
     REQUIRE(model.copyAll());
-    CHECK(clipboard.text().find("Spoke with someone") != std::string::npos);
+    CHECK(clipboard.text().find("Paired with someone") != std::string::npos);
     CHECK(clipboard.text().find("Sample") == std::string::npos);
     CHECK(clipboard.text().find("Placeholder") == std::string::npos);
     REQUIRE(model.copyLine(0));
-    CHECK(clipboard.text() == "10:10 (Interaction) Spoke with someone");
+    CHECK(clipboard.text() == "10:10 (Interaction) Paired with someone");
 }
 
 TEST_CASE("review.copy: a row that is not there, a row of an error and a model with no log copy what they can",
@@ -392,11 +392,11 @@ TEST_CASE("edit.interaction: the types an entry can be changed to keep its own, 
     CHECK(f.model().interactionTypesFor("not an id").isEmpty());
     CHECK(f.model().interactionTypesFor(id_text(99)).isEmpty());
 
-    // Entry 6 is a Greeted. Retired since, it is still offered, once; the retired Visitor, not its own, is not.
+    // Entry 6 is a Start task. Retired since, it is still offered, once; the retired Observer, not its own, is not.
     Configuration retired = configuration_with_interactions();
     for (InteractionType& type : retired.m_InteractionTypes)
     {
-        type.m_Retired = type.m_Retired || type.m_Id == test_id<InteractionTypeId>(INTERACTION_GREETED);
+        type.m_Retired = type.m_Retired || type.m_Id == test_id<InteractionTypeId>(INTERACTION_START_TASK);
     }
     f.m_Config.set(retired);
     CHECK(f.model().interactionTypesFor(id_text(6)).size() == 3);
@@ -404,17 +404,17 @@ TEST_CASE("edit.interaction: the types an entry can be changed to keep its own, 
     // Gone from the setup altogether: the entry's own type is added from the name it was logged with.
     Configuration gone = configuration_with_interactions();
     std::erase_if(gone.m_InteractionTypes, [](const InteractionType& type)
-                  { return type.m_Id == test_id<InteractionTypeId>(INTERACTION_GREETED); });
+                  { return type.m_Id == test_id<InteractionTypeId>(INTERACTION_START_TASK); });
     f.m_Config.set(gone);
     const QVariantList list = f.model().interactionTypesFor(id_text(6));
     REQUIRE(list.size() == 3);
-    CHECK(list.back().toMap().value("typeId").toString() == type_text(INTERACTION_GREETED));
+    CHECK(list.back().toMap().value("typeId").toString() == type_text(INTERACTION_START_TASK));
     const auto& body = std::get<InteractionEntry>(f.m_Document->log().find(sample_id<EntryId>(6))->m_Body);
     CHECK(list.back().toMap().value("name").toString() == QString::fromStdString(body.m_TypeLabel));
 
     // The same type, as it is, is allowed though the setup lost it; a type with no name is not.
     QVariantMap same;
-    same.insert("interactionTypeId", type_text(INTERACTION_GREETED));
+    same.insert("interactionTypeId", type_text(INTERACTION_START_TASK));
     CHECK(f.model().validateEdit(id_text(6), same).isEmpty());
     Configuration nameless = configuration_with_interactions();
     nameless.m_InteractionTypes.push_back(make_type(40, "", std::nullopt, InteractionAsks::NOTHING));

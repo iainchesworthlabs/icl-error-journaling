@@ -7,4 +7,4 @@ Software Version: v1.4.2
 10:05 T| Wrong Response
 11:00 Software Version changed: v1.4.2 → v1.5.1
 12:00 UNIT # changed: UNIT-28 → UNIT-31
-12:30 T| Mute Delay
+12:30 T| Stopped Responding

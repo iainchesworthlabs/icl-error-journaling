@@ -5,5 +5,5 @@ Location:
 Software Version:
 
 10:05 T| Wrong Response
-10:15 (Free Text) Robot restarted
-10:25 T| Mute Delay
+10:15 (Free Text) Device restarted
+10:25 T| Stopped Responding

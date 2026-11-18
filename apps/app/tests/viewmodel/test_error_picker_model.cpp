@@ -32,8 +32,8 @@ namespace
 constexpr int OFF = ErrorPickerModel::OFF_BOARD;
 constexpr int ON = ErrorPickerModel::ON_BOARD;
 
-/// The sample configuration with Navigation Failure taken off the board, a new "Écho Delay" that was never on it, and a
-/// retired type. Master list indices: 0 to 10 the sample types, 11 Écho Delay, 12 the retired type.
+/// The sample configuration with Unexpected Stop taken off the board, a new "Écho Timeout" that was never on it, and a
+/// retired type. Master list indices: 0 to 10 the sample types, 11 Écho Timeout, 12 the retired type.
 Configuration picker_configuration()
 {
     Configuration configuration = sample_configuration();
@@ -42,7 +42,7 @@ Configuration picker_configuration()
     ErrorType echo;
     echo.m_Id = sample_id<ErrorTypeId>(600);
     echo.m_Name = "\xC3\x89"
-                  "cho Delay"; // "Écho Delay"
+                  "cho Timeout"; // "Écho Timeout"
     configuration.m_ErrorTypes.push_back(std::move(echo));
 
     ErrorType retired;
@@ -140,11 +140,11 @@ TEST_CASE("The picker lists the live types in two sections with today's counts",
 
     // Not on your board first, then on your board, each in master-list order; the retired type is absent.
     REQUIRE(picker.rowCount() == 12);
-    CHECK(fixture.label(0) == "Navigation Failure");
+    CHECK(fixture.label(0) == "Unexpected Stop");
     CHECK(fixture.label(1) == "\xC3\x89"
-                              "cho Delay");
+                              "cho Timeout");
     CHECK(fixture.label(2) == "Wrong Response");
-    CHECK(fixture.label(11) == "Track Delay");
+    CHECK(fixture.label(11) == "Slow Response");
     CHECK_FALSE(fixture.labels().contains("Retired Type"));
 
     CHECK(fixture.value(0, ErrorPickerModel::SECTION).toInt() == OFF);
@@ -206,7 +206,7 @@ TEST_CASE("Counts follow commits, undo and a new log", "[viewmodel][picker]")
     CHECK(spies.m_Data.at(0).at(1).value<QModelIndex>().row() == 2);
     CHECK(spies.m_Data.at(0).at(2).value<QList<int>>() == QList<int>{ErrorPickerModel::COUNT});
 
-    const EntryId off_board = fixture.tap_and_commit(fixture.type(11)); // Écho Delay, off the board: row 1
+    const EntryId off_board = fixture.tap_and_commit(fixture.type(11)); // Écho Timeout, off the board: row 1
     CHECK(fixture.value(1, ErrorPickerModel::COUNT).toInt() == 1);
     CHECK(spies.m_Data.size() == 2);
 
@@ -254,14 +254,14 @@ TEST_CASE("The filter is a case-insensitive substring match with one reset per c
 
     SECTION("case")
     {
-        picker.set_filter("DELAY");
+        picker.set_filter("OUT");
         CHECK(fixture.labels() == QStringList{"\xC3\x89"
-                                              "cho Delay",
-                                              "Mute Delay", "Speech Delay", "Track Delay"});
-        picker.set_filter("mute");
-        CHECK(fixture.labels() == QStringList{"Mute Delay"});
-        picker.set_filter("ute DEL");
-        CHECK(fixture.labels() == QStringList{"Mute Delay"});
+                                              "cho Timeout",
+                                              "Sequence Out of Order", "Audio Dropout", "Timed Out"});
+        picker.set_filter("ding");
+        CHECK(fixture.labels() == QStringList{"Stopped Responding"});
+        picker.set_filter("ped RESP");
+        CHECK(fixture.labels() == QStringList{"Stopped Responding"});
     }
 
     SECTION("letters beyond ASCII fold too, and accents are not removed")
@@ -269,7 +269,7 @@ TEST_CASE("The filter is a case-insensitive substring match with one reset per c
         picker.set_filter("\xC3\xA9"
                           "CHO"); // "écHO"
         CHECK(fixture.labels() == QStringList{"\xC3\x89"
-                                              "cho Delay"});
+                                              "cho Timeout"});
         picker.set_filter("echo"); // an unaccented e is not an accented one
         CHECK(picker.rowCount() == 0);
     }
@@ -283,7 +283,7 @@ TEST_CASE("The filter is a case-insensitive substring match with one reset per c
 
     SECTION("a filter that matches only a type on the board")
     {
-        picker.set_filter("response");
+        picker.set_filter("wrong");
         REQUIRE(picker.rowCount() == 1);
         CHECK(fixture.label(0) == "Wrong Response");
         CHECK(fixture.value(0, ErrorPickerModel::SECTION).toInt() == ON);
@@ -291,7 +291,7 @@ TEST_CASE("The filter is a case-insensitive substring match with one reset per c
 
     SECTION("a filter that matches only a type that is not on the board")
     {
-        picker.set_filter("navigation");
+        picker.set_filter("unexpected");
         REQUIRE(picker.rowCount() == 1);
         CHECK(fixture.value(0, ErrorPickerModel::SECTION).toInt() == OFF);
     }
@@ -304,9 +304,9 @@ TEST_CASE("The filter is a case-insensitive substring match with one reset per c
 
     SECTION("white space around the filter is ignored and an empty filter lists everything")
     {
-        picker.set_filter("  mute ");
-        CHECK(fixture.labels() == QStringList{"Mute Delay"});
-        CHECK(picker.filter() == "  mute "); // the property reads back what was typed
+        picker.set_filter("  ding ");
+        CHECK(fixture.labels() == QStringList{"Stopped Responding"});
+        CHECK(picker.filter() == "  ding "); // the property reads back what was typed
         picker.set_filter("   ");
         CHECK(picker.rowCount() == 12);
         picker.set_filter({});
@@ -315,8 +315,8 @@ TEST_CASE("The filter is a case-insensitive substring match with one reset per c
 
     SECTION("counts are on the filtered rows")
     {
-        fixture.tap_and_commit(fixture.type(7)); // Mute Delay
-        picker.set_filter("mute");
+        fixture.tap_and_commit(fixture.type(7)); // Stopped Responding
+        picker.set_filter("ding");
         REQUIRE(picker.rowCount() == 1);
         CHECK(fixture.value(0, ErrorPickerModel::COUNT).toInt() == 1);
         fixture.tap_and_commit(fixture.type(7));
@@ -332,16 +332,16 @@ TEST_CASE("One modelReset per filter change and filterChanged only when it chang
     const PickerSpies spies(fixture.m_Picker);
     ErrorPickerModel& picker = fixture.m_Picker;
 
-    picker.set_filter("track");
+    picker.set_filter("slow");
     CHECK(spies.m_Reset.size() == 1);
     CHECK(spies.m_AboutToReset.size() == 1);
     CHECK(spies.m_Filter.size() == 1);
 
-    picker.set_filter("track"); // the same text: nothing
+    picker.set_filter("slow"); // the same text: nothing
     CHECK(spies.m_Reset.size() == 1);
     CHECK(spies.m_Filter.size() == 1);
 
-    picker.set_filter("tracks"); // matches nothing, still one reset
+    picker.set_filter("slows"); // matches nothing, still one reset
     CHECK(spies.m_Reset.size() == 2);
     CHECK(spies.m_Filter.size() == 2);
 
@@ -432,7 +432,7 @@ TEST_CASE("addType refuses what the editor refuses and says why", "[viewmodel][p
         {
             fixture.m_Editor.refuse_next(
                 viewmodel::ConfigEditError{viewmodel::ConfigEditError::Code::REFUSED, message});
-            CHECK(picker.addType("Mute delay").isEmpty());
+            CHECK(picker.addType("Stopped responding").isEmpty());
             CHECK(picker.add_type_error() == message);
         }
     }
@@ -462,7 +462,7 @@ TEST_CASE("A configuration change keeps the filter and resets only when the list
 {
     PickerFixture fixture;
     ErrorPickerModel& picker = fixture.m_Picker;
-    picker.set_filter("delay");
+    picker.set_filter("out");
     REQUIRE(picker.rowCount() == 4);
     const PickerSpies spies(picker);
 
@@ -479,12 +479,12 @@ TEST_CASE("A configuration change keeps the filter and resets only when the list
 
     SECTION("a type that matches the filter is added")
     {
-        picker.addType("Greeting Delay");
+        picker.addType("Greeting Timeout");
         fixture.m_Editor.commit();
         CHECK(spies.m_Reset.size() == 1);
         REQUIRE(picker.rowCount() == 5);
-        CHECK(fixture.label(1) == "Greeting Delay");
-        CHECK(picker.filter() == "delay");
+        CHECK(fixture.label(1) == "Greeting Timeout");
+        CHECK(picker.filter() == "out");
     }
 
     SECTION("a type that does not match the filter is added")
@@ -497,20 +497,20 @@ TEST_CASE("A configuration change keeps the filter and resets only when the list
     SECTION("a type moves between the sections")
     {
         Configuration configuration = fixture.m_Config.configuration();
-        configuration.m_ErrorTypes[7].m_BoardPosition.reset(); // Mute Delay leaves the board
+        configuration.m_ErrorTypes[8].m_BoardPosition.reset(); // Timed Out leaves the board
         fixture.m_Config.set(std::move(configuration));
         CHECK(spies.m_Reset.size() == 1);
         REQUIRE(picker.rowCount() == 4);
-        CHECK(fixture.label(0) == "Mute Delay");
+        CHECK(fixture.label(0) == "Timed Out");
         CHECK(fixture.label(1) == "É"
-                                  "cho Delay");
+                                  "cho Timeout");
         CHECK(fixture.value(0, ErrorPickerModel::SECTION).toInt() == OFF);
     }
 
     SECTION("a type is retired")
     {
         Configuration configuration = fixture.m_Config.configuration();
-        configuration.m_ErrorTypes[7].m_Retired = true;
+        configuration.m_ErrorTypes[8].m_Retired = true;
         fixture.m_Config.set(std::move(configuration));
         CHECK(spies.m_Reset.size() == 1);
         CHECK(picker.rowCount() == 3);

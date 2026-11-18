@@ -49,9 +49,9 @@ Entry sample_interaction(std::uint64_t id, std::int64_t minute)
     entry.m_Captured = Timestamp{sample_time(minute), "Europe/London"};
     InteractionEntry body;
     body.m_Type = sample_id<InteractionTypeId>(3);
-    body.m_TypeLabel = "Spoke with";
+    body.m_TypeLabel = "Paired with";
     body.m_People = {sample_id<PersonId>(1), sample_id<PersonId>(2)};
-    body.m_Value = "Morning Medley";
+    body.m_Value = "1";
     body.m_AttachedNote = "asked about \"the schedule\"";
     entry.m_Body = std::move(body);
     return entry;
@@ -106,36 +106,36 @@ TEST_CASE("interaction.name_rules: names match without regard to case, spacing o
 
 TEST_CASE("interaction.line_render: a type with no pattern reads as its name", "[interaction][line]")
 {
-    CHECK(render_interaction_text(std::nullopt, "Visitor interaction", "someone", std::nullopt) ==
-          "Visitor interaction");
+    CHECK(render_interaction_text(std::nullopt, "Entered room 1", "someone", std::nullopt) ==
+          "Entered room 1");
 }
 
 TEST_CASE("interaction.line_render: one slot, both slots and none", "[interaction][line]")
 {
-    const std::optional<std::string> person_only = "Spoke with {person}";
-    const std::optional<std::string> value_only = "Played {value}";
-    const std::optional<std::string> both = "Gave {person} {value}";
-    const std::optional<std::string> none = "Greeted";
+    const std::optional<std::string> person_only = "Paired with {person}";
+    const std::optional<std::string> value_only = "Began task {value}";
+    const std::optional<std::string> both = "Assigned {person} {value}";
+    const std::optional<std::string> none = "Start task";
 
-    CHECK(render_interaction_text(person_only, "Spoke with", ALEX, std::nullopt) == "Spoke with Alex Sample");
-    CHECK(render_interaction_text(value_only, "Played song", PERSON_NOT_SET, "  Morning Medley \n") ==
-          "Played Morning Medley");
-    CHECK(render_interaction_text(both, "Gave", ALEX, "a card") == "Gave Alex Sample a card");
-    CHECK(render_interaction_text(none, "Greeted", ALEX, "ignored") == "Greeted");
-    CHECK(render_interaction_text(value_only, "Played song", ALEX, std::nullopt) == "Played ");
+    CHECK(render_interaction_text(person_only, "Paired with", ALEX, std::nullopt) == "Paired with Alex Sample");
+    CHECK(render_interaction_text(value_only, "Began task", PERSON_NOT_SET, "  1 \n") ==
+          "Began task 1");
+    CHECK(render_interaction_text(both, "Assigned", ALEX, "a card") == "Assigned Alex Sample a card");
+    CHECK(render_interaction_text(none, "Start task", ALEX, "ignored") == "Start task");
+    CHECK(render_interaction_text(value_only, "Began task", ALEX, std::nullopt) == "Began task ");
 
     // The value is never expanded again, and a literal brace is written twice.
-    CHECK(render_interaction_text(value_only, "Played song", ALEX, "{person}") == "Played {person}");
+    CHECK(render_interaction_text(value_only, "Began task", ALEX, "{person}") == "Began task {person}");
     CHECK(render_interaction_text(std::optional<std::string>("{{{person}}}"), "x", ALEX, std::nullopt) ==
           "{Alex Sample}");
 }
 
 TEST_CASE("interaction.line_render: a person who is not set reads as such", "[interaction][line]")
 {
-    const std::optional<std::string> pattern = "Spoke with {person}";
+    const std::optional<std::string> pattern = "Paired with {person}";
     const Names nobody;
-    CHECK(render_interaction_text(pattern, "Spoke with", people_at(nobody, NameLevel::FULL), std::nullopt) ==
-          "Spoke with (person not set)");
+    CHECK(render_interaction_text(pattern, "Paired with", people_at(nobody, NameLevel::FULL), std::nullopt) ==
+          "Paired with (person not set)");
     // Not set is not a name, so it reads the same at every level.
     CHECK(people_at(nobody, NameLevel::INITIALS) == "(person not set)");
     CHECK(people_at(nobody, NameLevel::HIDDEN) == "(person not set)");
@@ -143,29 +143,29 @@ TEST_CASE("interaction.line_render: a person who is not set reads as such", "[in
 
 TEST_CASE("interaction.line_render: patterns are validated", "[interaction][line]")
 {
-    CHECK(validate_interaction_pattern("Spoke with {person}").has_value());
-    CHECK(validate_interaction_pattern("Played {value}").has_value());
-    CHECK(validate_interaction_pattern("Gave {person} {value}").has_value());
-    CHECK(validate_interaction_pattern("Greeted").has_value());
+    CHECK(validate_interaction_pattern("Paired with {person}").has_value());
+    CHECK(validate_interaction_pattern("Began task {value}").has_value());
+    CHECK(validate_interaction_pattern("Assigned {person} {value}").has_value());
+    CHECK(validate_interaction_pattern("Start task").has_value());
     CHECK(validate_interaction_pattern("Braces {{ and }}").has_value());
 
-    CHECK(validate_interaction_pattern("Spoke with {person} and {person}").error() ==
+    CHECK(validate_interaction_pattern("Paired with {person} and {person}").error() ==
           InteractionPatternError::REPEATED_PLACEHOLDER);
     CHECK(validate_interaction_pattern("{value} then {value}").error() ==
           InteractionPatternError::REPEATED_PLACEHOLDER);
-    CHECK(validate_interaction_pattern("Spoke with {name}").error() == InteractionPatternError::UNKNOWN_PLACEHOLDER);
-    CHECK(validate_interaction_pattern("Spoke with {person").error() == InteractionPatternError::UNBALANCED_BRACE);
-    CHECK(validate_interaction_pattern("Spoke with }").error() == InteractionPatternError::UNBALANCED_BRACE);
+    CHECK(validate_interaction_pattern("Paired with {name}").error() == InteractionPatternError::UNKNOWN_PLACEHOLDER);
+    CHECK(validate_interaction_pattern("Paired with {person").error() == InteractionPatternError::UNBALANCED_BRACE);
+    CHECK(validate_interaction_pattern("Paired with }").error() == InteractionPatternError::UNBALANCED_BRACE);
     CHECK(validate_interaction_pattern("").error() == InteractionPatternError::EMPTY);
 }
 
 TEST_CASE("interaction.line_render: what a pattern asks for", "[interaction][line]")
 {
     CHECK(interaction_asks_for(std::nullopt) == InteractionAsks::NOTHING);
-    CHECK(interaction_asks_for(std::string("Greeted")) == InteractionAsks::NOTHING);
-    CHECK(interaction_asks_for(std::string("Spoke with {person}")) == InteractionAsks::PERSON);
-    CHECK(interaction_asks_for(std::string("Played {value}")) == InteractionAsks::TEXT);
-    CHECK(interaction_asks_for(std::string("Gave {person} {value}")) == InteractionAsks::PERSON);
+    CHECK(interaction_asks_for(std::string("Start task")) == InteractionAsks::NOTHING);
+    CHECK(interaction_asks_for(std::string("Paired with {person}")) == InteractionAsks::PERSON);
+    CHECK(interaction_asks_for(std::string("Began task {value}")) == InteractionAsks::TEXT);
+    CHECK(interaction_asks_for(std::string("Assigned {person} {value}")) == InteractionAsks::PERSON);
     for (const auto asks : {InteractionAsks::NOTHING, InteractionAsks::PERSON, InteractionAsks::TEXT})
     {
         CHECK(interaction_asks_from_key(interaction_asks_key(asks)) == asks);
@@ -175,13 +175,13 @@ TEST_CASE("interaction.line_render: what a pattern asks for", "[interaction][lin
 
 TEST_CASE("interaction.line_render: the export line has the label and no ticket marker", "[interaction][line]")
 {
-    CHECK(render_interaction_export_line("10:12", "(Interaction)", "Spoke with Alex Sample", std::nullopt) ==
-          "10:12 (Interaction) Spoke with Alex Sample");
-    CHECK(render_interaction_export_line("10:48", "(Interaction)", "Visitor interaction",
+    CHECK(render_interaction_export_line("10:12", "(Interaction)", "Paired with Alex Sample", std::nullopt) ==
+          "10:12 (Interaction) Paired with Alex Sample");
+    CHECK(render_interaction_export_line("10:48", "(Interaction)", "Entered room 1",
                                          std::string("asked about\n the   schedule")) ==
-          "10:48 (Interaction) Visitor interaction \xE2\x80\x93 asked about the schedule");
+          "10:48 (Interaction) Entered room 1 \xE2\x80\x93 asked about the schedule");
     // An empty label is dropped with its space; an empty note adds nothing.
-    CHECK(render_interaction_export_line("10:12", "", "Greeted", std::string("  ")) == "10:12 Greeted");
+    CHECK(render_interaction_export_line("10:12", "", "Start task", std::string("  ")) == "10:12 Start task");
     CHECK(export_format::DEFAULT_INTERACTION_MARKER == "(Interaction)");
 }
 
@@ -235,9 +235,9 @@ TEST_CASE("interaction.group_render: one, two and three people in pick order", "
     const Names forgotten{ALEX, std::nullopt};
     CHECK(people_at(forgotten, NameLevel::FULL) == "Alex Sample and someone");
 
-    const std::optional<std::string> pattern = "Spoke with {person}";
-    CHECK(render_interaction_text(pattern, "Spoke with", people_at(three, NameLevel::FULL), std::nullopt) ==
-          "Spoke with Alex Sample, Jordan Placeholder and Pat Stand-in");
+    const std::optional<std::string> pattern = "Paired with {person}";
+    CHECK(render_interaction_text(pattern, "Paired with", people_at(three, NameLevel::FULL), std::nullopt) ==
+          "Paired with Alex Sample, Jordan Placeholder and Pat Stand-in");
 }
 
 TEST_CASE("interaction.group_render: at most twenty people, repeats ignored", "[interaction][group]")
@@ -323,9 +323,9 @@ TEST_CASE("journal.v2_roundtrip: an interaction is written at version 2 and read
     const auto& body = std::get<InteractionEntry>(entry.m_Body);
     const auto& expected = std::get<InteractionEntry>(std::get<AddEntryBody>(record.m_Body).m_Entry.m_Body);
     CHECK(body.m_Type == expected.m_Type);
-    CHECK(body.m_TypeLabel == "Spoke with");
+    CHECK(body.m_TypeLabel == "Paired with");
     CHECK(body.m_People == expected.m_People);
-    CHECK(body.m_Value == "Morning Medley");
+    CHECK(body.m_Value == "1");
     CHECK(body.m_AttachedNote == "asked about \"the schedule\"");
     CHECK(encode_record(*decoded).value() == *line);
 
@@ -485,7 +485,7 @@ TEST_CASE("export.interaction_lines: an interaction renders at the name level of
         return std::nullopt;
     };
     context.m_InteractionPattern = [](InteractionTypeId) -> std::optional<std::string>
-    { return std::string("Spoke with {person}"); };
+    { return std::string("Paired with {person}"); };
 
     const auto line_at = [&](NameLevel level)
     {
@@ -494,15 +494,15 @@ TEST_CASE("export.interaction_lines: an interaction renders at the name level of
     };
     // The note is the attached one, and there is no ticket marker.
     CHECK(line_at(NameLevel::FULL).value() ==
-          "00:05 (Interaction) Spoke with Alex Sample and Jordan Placeholder \xE2\x80\x93 asked about \"the schedule\"");
+          "00:05 (Interaction) Paired with Alex Sample and Jordan Placeholder \xE2\x80\x93 asked about \"the schedule\"");
     CHECK(line_at(NameLevel::INITIALS).value() ==
-          "00:05 (Interaction) Spoke with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
+          "00:05 (Interaction) Paired with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
     CHECK(line_at(NameLevel::HIDDEN).value() ==
-          "00:05 (Interaction) Spoke with someone \xE2\x80\x93 asked about \"the schedule\"");
+          "00:05 (Interaction) Paired with someone \xE2\x80\x93 asked about \"the schedule\"");
     // An empty label drops the label and its space.
     context.m_InteractionMarker = "";
     CHECK(line_at(NameLevel::INITIALS).value() ==
-          "00:05 Spoke with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
+          "00:05 Paired with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
 }
 
 TEST_CASE("export.interaction_lines: the type is looked up only when the entry has no snapshot", "[interaction][export]")
@@ -515,10 +515,10 @@ TEST_CASE("export.interaction_lines: the type is looked up only when the entry h
     const FakeTimeZoneProvider zones({{"Europe/London", std::chrono::minutes(0)}});
     context.m_Zones = &zones;
     CHECK(render_entry_line(log, sample_id<EntryId>(1), context).error() == RenderError::UNKNOWN_INTERACTION_TYPE);
-    context.m_InteractionTypeName = [](InteractionTypeId) -> std::string_view { return "Spoke with"; };
+    context.m_InteractionTypeName = [](InteractionTypeId) -> std::string_view { return "Paired with"; };
     // No pattern and no person source: the line is the name, and a person nobody can name is not printed.
     CHECK(render_entry_line(log, sample_id<EntryId>(1), context).value() ==
-          "00:05 (Interaction) Spoke with \xE2\x80\x93 asked about \"the schedule\"");
+          "00:05 (Interaction) Paired with \xE2\x80\x93 asked about \"the schedule\"");
 }
 
 TEST_CASE("export.interaction_lines: error lines are byte for byte as they were without interactions",
@@ -531,7 +531,7 @@ TEST_CASE("export.interaction_lines: error lines are byte for byte as they were 
     Log log(sample_header());
     REQUIRE(log.add(sample_error(1, 3)).has_value());
     REQUIRE(log.add(sample_interaction(2, 5)).has_value());
-    REQUIRE(log.add(sample_error(3, 20, "Mute Delay", "heard it twice")).has_value());
+    REQUIRE(log.add(sample_error(3, 20, "Stopped Responding", "heard it twice")).has_value());
 
     ExportContext context;
     context.m_Zones = &zones;
@@ -540,7 +540,7 @@ TEST_CASE("export.interaction_lines: error lines are byte for byte as they were 
     REQUIRE(first.has_value());
     REQUIRE(second.has_value());
     CHECK(*first == "00:03 T| Wrong Response");
-    CHECK(*second == "00:20 T| Mute Delay \xE2\x80\x93 heard it twice");
+    CHECK(*second == "00:20 T| Stopped Responding \xE2\x80\x93 heard it twice");
 
     for (const NameLevel level : {NameLevel::FULL, NameLevel::INITIALS, NameLevel::HIDDEN})
     {
@@ -549,7 +549,7 @@ TEST_CASE("export.interaction_lines: error lines are byte for byte as they were 
             context.m_NameLevel = level;
             context.m_InteractionMarker = marker;
             context.m_InteractionPattern = [](InteractionTypeId) -> std::optional<std::string>
-            { return std::string("Spoke with {person}"); };
+            { return std::string("Paired with {person}"); };
             CHECK(render_entry_line(log, sample_id<EntryId>(1), context).value() == *first);
             CHECK(render_entry_line(log, sample_id<EntryId>(3), context).value() == *second);
             CHECK(render_entry_line(log, sample_id<EntryId>(2), context).value().find("T|") == std::string::npos);

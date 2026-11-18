@@ -168,7 +168,7 @@ TEST_CASE("export.name_levels: copy and share of a log of the real people write 
     // The default is initials.
     for (const std::string& text : {copied(), shared()})
     {
-        CHECK(count_of(text, "(Interaction) Spoke with A.S. and J.P.") == 1);
+        CHECK(count_of(text, "(Interaction) Paired with A.S. and J.P.") == 1);
         CHECK(text.find("Alex") == std::string::npos);
         CHECK(text.find("Jordan") == std::string::npos);
         CHECK(text.find("Pat") == std::string::npos);
@@ -178,7 +178,7 @@ TEST_CASE("export.name_levels: copy and share of a log of the real people write 
     rig.export_preferences().set_name_export("full");
     for (const std::string& text : {copied(), shared()})
     {
-        CHECK(count_of(text, "Spoke with Alex Sample and Jordan Placeholder") == 1);
+        CHECK(count_of(text, "Paired with Alex Sample and Jordan Placeholder") == 1);
         // Each name once, in its line: no list of people anywhere else, and the third person is not there.
         CHECK(count_of(text, "Alex Sample") == 1);
         CHECK(count_of(text, "Jordan Placeholder") == 1);
@@ -188,7 +188,7 @@ TEST_CASE("export.name_levels: copy and share of a log of the real people write 
     rig.export_preferences().set_name_export("hidden");
     for (const std::string& text : {copied(), shared()})
     {
-        CHECK(count_of(text, "(Interaction) Spoke with someone") == 1);
+        CHECK(count_of(text, "(Interaction) Paired with someone") == 1);
         CHECK(text.find("Sample") == std::string::npos);
         CHECK(text.find("Placeholder") == std::string::npos);
         CHECK(text.find("Pat") == std::string::npos);

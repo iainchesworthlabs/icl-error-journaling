@@ -132,7 +132,7 @@ TEMPLATE_LIST_TEST_CASE("Added entries come back whole and in time order, equal 
     TestType f;
     start_log(f);
     require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 30)));
-    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_note(2, 10, "Played a song")));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_note(2, 10, "Began a task")));
     require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(3, 30)));  // the same minute as 1
     require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(4, 20)));
 
@@ -140,7 +140,7 @@ TEMPLATE_LIST_TEST_CASE("Added entries come back whole and in time order, equal 
     CHECK(time_order(log) == std::vector<EntryId>{entry_id(2), entry_id(4), entry_id(1), entry_id(3)});
     REQUIRE(log.m_Log.entries().size() == 4);
     CHECK(log.m_Log.entries()[0].m_Id == entry_id(1));  // arrival order is the stored order
-    CHECK(std::get<NoteEntry>(log.m_Log.find(entry_id(2))->m_Body).m_Value == "Played a song");
+    CHECK(std::get<NoteEntry>(log.m_Log.find(entry_id(2))->m_Body).m_Value == "Began a task");
     CHECK(log.m_Log.find(entry_id(1))->m_Captured.m_Zone == "Australia/Melbourne");
 }
 
@@ -149,12 +149,12 @@ TEMPLATE_LIST_TEST_CASE("An error entry keeps the label its type had when it was
 {
     TestType f;
     start_log(f);
-    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10, "Wrong Response", "robot paused")));
+    require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 10, "Wrong Response", "device paused")));
     const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
     const auto& error = std::get<ErrorEntry>(log.m_Log.find(entry_id(1))->m_Body);
     CHECK(error.m_ErrorTypeLabel == "Wrong Response");
     CHECK(error.m_ErrorType == sample_id<ErrorTypeId>(1));
-    CHECK(error.m_AttachedNote == "robot paused");
+    CHECK(error.m_AttachedNote == "device paused");
 }
 
 TEMPLATE_LIST_TEST_CASE("An entry for an unknown log is refused", "[contract][repository]", Fixtures)
@@ -724,16 +724,16 @@ TEMPLATE_LIST_TEST_CASE("An interaction entry comes back whole, with its people 
     require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_error(1, 30)));
     require_ok(f.repo().add_entry(log_id(FIRST_LOG),
                                   sample_interaction_entry(2, 20, {person_id(7), person_id(3), person_id(9)},
-                                                           "Morning Medley", "asked about the schedule")));
+                                                           "1", "asked about the schedule")));
     require_ok(f.repo().add_entry(log_id(FIRST_LOG), sample_interaction_entry(3, 10)));
 
     const StoredLog log = f.repo().load_log(log_id(FIRST_LOG)).value();
     CHECK(time_order(log) == std::vector<EntryId>{entry_id(3), entry_id(2), entry_id(1)});
     const auto& named = std::get<InteractionEntry>(log.m_Log.find(entry_id(2))->m_Body);
     CHECK(named.m_Type == sample_id<InteractionTypeId>(1));
-    CHECK(named.m_TypeLabel == "Spoke with");
+    CHECK(named.m_TypeLabel == "Paired with");
     CHECK(named.m_People == std::vector<PersonId>{person_id(7), person_id(3), person_id(9)});
-    CHECK(named.m_Value == "Morning Medley");
+    CHECK(named.m_Value == "1");
     CHECK(named.m_AttachedNote == "asked about the schedule");
     const auto& nobody = std::get<InteractionEntry>(log.m_Log.find(entry_id(3))->m_Body);
     CHECK(nobody.m_People.empty());

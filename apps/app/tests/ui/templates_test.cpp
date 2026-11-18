@@ -36,10 +36,10 @@ TEST_CASE("editor.templates: the templates are listed with their question and li
     world.load("Templates");
     world.m_Ui.layout();
 
-    CHECK(names(world) == QStringList{QStringLiteral("Played song"), QStringLiteral("Visitor interaction")});
-    QQuickItem* first = row_with(world, ROWS, QStringLiteral("Played song"));
+    CHECK(names(world) == QStringList{QStringLiteral("Began task"), QStringLiteral("Entered room")});
+    QQuickItem* first = row_with(world, ROWS, QStringLiteral("Began task"));
     REQUIRE(first != nullptr);
-    CHECK(first->property("detail").toString() == QStringLiteral("Asks: Which song? · Logs: Played [answer]"));
+    CHECK(first->property("detail").toString() == QStringLiteral("Asks: Which task? · Logs: Began task [answer]"));
     CHECK(item(world, QStringLiteral("templateGroup"))->property("title").toString() ==
           QStringLiteral("Chips on the Log screen · 2"));
 
@@ -53,8 +53,8 @@ TEST_CASE("editor.templates: the templates are listed with their question and li
         CHECK(up->opacity() == 1.0);
         CHECK(up->isVisible());
     }
-    CHECK(field_text(world, QStringLiteral("nameField")) == QStringLiteral("Played song"));
-    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played [answer]"));
+    CHECK(field_text(world, QStringLiteral("nameField")) == QStringLiteral("Began task"));
+    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Began task [answer]"));
 
     // Back returns to the list, and nothing was saved.
     world.m_Ui.tap(find_item(world.m_Ui.root(), QStringLiteral("navLeading")));
@@ -74,9 +74,9 @@ TEST_CASE("editor.templates: Add a template opens an empty page, and a good Save
     REQUIRE(item(world, QStringLiteral("nameField")) != nullptr);
     CHECK(field_text(world, QStringLiteral("nameField")).isEmpty());
 
-    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Requested song"));
-    enter_text(world, QStringLiteral("promptField"), QStringLiteral("Which song?"));
-    enter_text(world, QStringLiteral("patternField"), QStringLiteral("Song {value} requested"));
+    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Requested task"));
+    enter_text(world, QStringLiteral("promptField"), QStringLiteral("Which task?"));
+    enter_text(world, QStringLiteral("patternField"), QStringLiteral("Task {value} requested"));
     QQuickItem* save = nullptr;
     for (QQuickItem* trailing : items(world, QStringLiteral("navTrailing")))
     {
@@ -89,8 +89,8 @@ TEST_CASE("editor.templates: Add a template opens an empty page, and a good Save
     world.m_Ui.tap(save);
     settle_page(world);
 
-    CHECK(names(world) == QStringList{QStringLiteral("Played song"), QStringLiteral("Visitor interaction"),
-                                      QStringLiteral("Requested song")});
+    CHECK(names(world) == QStringList{QStringLiteral("Began task"), QStringLiteral("Entered room"),
+                                      QStringLiteral("Requested task")});
 }
 
 TEST_CASE("editor.templates: the Settings button asks to close", "[ui][editor]")
@@ -109,8 +109,8 @@ TEST_CASE("editor.voiceover: the template rows are buttons named with their ques
     QQuickItem* screen = world.load("Templates");
     world.m_Ui.layout();
 
-    QQuickItem* first = row_with(world, ROWS, QStringLiteral("Played song"));
-    CHECK(name_of(label_of(first)) == QStringLiteral("Played song, Asks: Which song? · Logs: Played [answer]"));
+    QQuickItem* first = row_with(world, ROWS, QStringLiteral("Began task"));
+    CHECK(name_of(label_of(first)) == QStringLiteral("Began task, Asks: Which task? · Logs: Began task [answer]"));
     CHECK(name_of(label_of(item(world, QStringLiteral("addRow")))) == QStringLiteral("Add a template"));
     CHECK(name_of(find_item(screen, QStringLiteral("navLeading"))) == QStringLiteral("Back to Settings"));
 

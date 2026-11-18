@@ -71,11 +71,11 @@ TEST_CASE("toast.text_and_window: shows the text, a new window starts on a new g
           "[ui][toast]")
 {
     UiRig rig;
-    QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Mute Delay logged at 10:20"), 1));
+    QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Timed Out logged at 10:20"), 1));
     rig.advance(300ms);
 
     CHECK(require_item(rig, QStringLiteral("toastText"))->property("text").toString() ==
-          QStringLiteral("Mute Delay logged at 10:20"));
+          QStringLiteral("Timed Out logged at 10:20"));
     CHECK(toast->property("windowStarts").toInt() == 1);
     // The mock-ups have no countdown bar (owner decision), so the toast draws none.
     CHECK(rig.find(QStringLiteral("toastBarTrack")) == nullptr);
@@ -84,11 +84,11 @@ TEST_CASE("toast.text_and_window: shows the text, a new window starts on a new g
 
     // The same generation with another line is no new window.
     rig.advance(3000ms);
-    toast->setProperty("text", QStringLiteral("Mute Delay logged at 10:21"));
+    toast->setProperty("text", QStringLiteral("Timed Out logged at 10:21"));
     rig.advance(16ms);
     CHECK(toast->property("windowStarts").toInt() == 1);
     CHECK(require_item(rig, QStringLiteral("toastText"))->property("text").toString() ==
-          QStringLiteral("Mute Delay logged at 10:21"));
+          QStringLiteral("Timed Out logged at 10:21"));
 
     // A new generation is.
     toast->setProperty("generation", 2);
@@ -99,7 +99,7 @@ TEST_CASE("toast.text_and_window: shows the text, a new window starts on a new g
 TEST_CASE("toast.undo: the button asks once, and is disabled while the undo is being committed", "[ui][toast]")
 {
     UiRig rig;
-    QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Mute Delay logged at 10:20"), 1));
+    QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Timed Out logged at 10:20"), 1));
     rig.advance(300ms);
     QSignalSpy requested(toast, SIGNAL(undoRequested()));
     QQuickItem* button = rig.find(QStringLiteral("toastUndo"));
@@ -130,7 +130,7 @@ TEST_CASE("toast.undo: the button asks once, and is disabled while the undo is b
 TEST_CASE("toast.undo: the button is named for what it undoes, drawn 40 pt high with a 44 pt touch area", "[ui][toast]")
 {
     UiRig rig;
-    QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Mute Delay logged at 10:20"), 1));
+    QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Timed Out logged at 10:20"), 1));
     rig.advance(300ms);
     const QRectF rect = rig.geometry(rig.find(QStringLiteral("toastUndo")));
     CHECK(rect.width() >= 44);
@@ -146,7 +146,7 @@ TEST_CASE("toast.undo: the button is named for what it undoes, drawn 40 pt high 
         if (node.m_ObjectName == QStringLiteral("toastUndo"))
         {
             found = true;
-            CHECK(node.m_Name == QStringLiteral("Undo, Mute Delay logged at 10:20"));
+            CHECK(node.m_Name == QStringLiteral("Undo, Timed Out logged at 10:20"));
             CHECK(node.m_Name.startsWith(QStringLiteral("Undo")));
         }
     }
@@ -156,7 +156,7 @@ TEST_CASE("toast.undo: the button is named for what it undoes, drawn 40 pt high 
 TEST_CASE("toast.repeat: a repeat changes the text in place, without the toast closing and opening", "[ui][toast]")
 {
     UiRig rig;
-    QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Mute Delay logged at 10:20"), 1));
+    QQuickItem* toast = load_toast(rig, toast_properties(true, QStringLiteral("Timed Out logged at 10:20"), 1));
     rig.advance(300ms);
     QQuickItem* card = rig.find(QStringLiteral("toastCard"));
     REQUIRE(card != nullptr);
@@ -166,7 +166,7 @@ TEST_CASE("toast.repeat: a repeat changes the text in place, without the toast c
     auto* fadeOut = object_named(toast, QStringLiteral("toastFadeOut"));
     auto* fadeIn = object_named(toast, QStringLiteral("toastFadeIn"));
 
-    toast->setProperty("text", QStringLiteral("Mute Delay logged ×2 at 10:21"));
+    toast->setProperty("text", QStringLiteral("Stopped Responding logged ×2 at 10:21"));
     toast->setProperty("generation", 2);
     for (int frame = 0; frame < 10; ++frame)
     {
@@ -178,12 +178,12 @@ TEST_CASE("toast.repeat: a repeat changes the text in place, without the toast c
         CHECK_FALSE(fadeIn->property("running").toBool());
     }
     CHECK(require_item(rig, QStringLiteral("toastText"))->property("text").toString() ==
-          QStringLiteral("Mute Delay logged ×2 at 10:21"));
+          QStringLiteral("Stopped Responding logged ×2 at 10:21"));
     CHECK(rig.find(QStringLiteral("toastCard")) == card);
 
     // The new line is announced once, and the bar is a new window.
     REQUIRE(announced.count() == 1);
-    CHECK(announced.at(0).at(0).toString() == QStringLiteral("Mute Delay logged ×2 at 10:21"));
+    CHECK(announced.at(0).at(0).toString() == QStringLiteral("Stopped Responding logged ×2 at 10:21"));
     CHECK(toast->property("windowStarts").toInt() == 2);
 }
 
@@ -209,7 +209,7 @@ TEST_CASE("toast.lifecycle: in and out, and announced once", "[ui][toast]")
     CHECK_FALSE(in_tree);
 
     // It opens: the card is shown at once and has slid in and faded in by the end of the animation.
-    toast->setProperty("text", QStringLiteral("Mute Delay logged at 10:20"));
+    toast->setProperty("text", QStringLiteral("Timed Out logged at 10:20"));
     toast->setProperty("generation", 1);
     toast->setProperty("active", true);
     rig.advance(16ms);
@@ -219,7 +219,7 @@ TEST_CASE("toast.lifecycle: in and out, and announced once", "[ui][toast]")
     CHECK(card->opacity() == 1.0);
     CHECK(card->y() == 0.0);
     CHECK(announced.count() == 1);
-    CHECK(announced.at(0).at(0).toString() == QStringLiteral("Mute Delay logged at 10:20"));
+    CHECK(announced.at(0).at(0).toString() == QStringLiteral("Timed Out logged at 10:20"));
     // Staying open does not say it again.
     rig.advance(2000ms);
     CHECK(announced.count() == 1);
@@ -251,7 +251,7 @@ TEST_CASE("toast.lifecycle: with Reduce Motion it fades and does not move", "[ui
     rig.advance(300ms);
     QQuickItem* card = rig.find(QStringLiteral("toastCard"));
 
-    toast->setProperty("text", QStringLiteral("Mute Delay logged at 10:20"));
+    toast->setProperty("text", QStringLiteral("Timed Out logged at 10:20"));
     toast->setProperty("generation", 1);
     toast->setProperty("active", true);
     rig.advance(16ms);
@@ -303,19 +303,19 @@ TEST_CASE("toast.shield: a touch on the toast never reaches the tile under it, a
                 width: 370
                 height: 104
                 typeId: "mute-delay"
-                label: "Mute Delay"
+                label: "Stopped Responding"
                 colourSlot: 8
                 count: 0
                 hasCount: false
                 isOther: false
                 isEmpty: false
-                accessibleName: "Mute Delay"
+                accessibleName: "Stopped Responding"
             }
             UndoToast {
                 objectName: "toast"
                 width: 370
                 active: wrapper.shown
-                text: "Mute Delay logged at 10:20"
+                text: "Timed Out logged at 10:20"
                 undoing: false
                 generation: 1
                 windowMs: 5000

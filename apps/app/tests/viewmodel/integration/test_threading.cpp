@@ -134,7 +134,7 @@ TEST_CASE("The store is used only on its own thread, never the GUI thread", "[vi
     // A tap, a note, a header correction, a draft, a review edit, a share and a new log: every kind of call.
     rig.go_to(7, 10, 0);
     REQUIRE(rig.tap(type_id_at(rig, 0)));
-    REQUIRE(rig.add_note(QStringLiteral("Played Morning Medley")));
+    REQUIRE(rig.add_note(QStringLiteral("Began task 1")));
     CHECK(rig.session().correctHeader(QStringLiteral("unit_number"), QStringLiteral("27")));
     rig.session().set_draft(QStringLiteral("a draft"));
     rig.advance(400ms);
@@ -195,7 +195,7 @@ TEST_CASE("Confirmation waits for the commit: no count, toast, Last bar, row or 
 
     rig.hold_commits();
     REQUIRE(rig.tap(type_id_at(rig, 0)));
-    REQUIRE(rig.add_note(QStringLiteral("Played Morning Medley")));
+    REQUIRE(rig.add_note(QStringLiteral("Began task 1")));
     rig.pump();
     // The touch-down impact has fired; nothing that says "saved" has.
     CHECK(rig.platform().haptic_count(ej::bridge::HapticKind::IMPACT) == 1);

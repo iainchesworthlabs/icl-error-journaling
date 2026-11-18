@@ -13,11 +13,11 @@ namespace ej
 struct NoteTemplate
 {
     NoteTemplateId m_Id;
-    std::string m_Name;           // "Played song"
-    std::string m_ValuePrompt;    // "Which song?"
-    std::string m_OutputPattern;  // "Played {value}"
+    std::string m_Name;           // "Began task"
+    std::string m_ValuePrompt;    // "Which task?"
+    std::string m_OutputPattern;  // "Began task {value}"
     int m_SortOrder = 0;
-    /// The name of the chip's icon ("music", "speech"): lower-case letters, digits and dashes. Empty is the default
+    /// The name of the chip's icon ("list", "speech"): lower-case letters, digits and dashes. Empty is the default
     /// icon. A name the app has no picture for is shown as the default one.
     std::string m_Icon;
 };

@@ -1,11 +1,19 @@
+---
+template: marketing.html
+title: Support
+title_tag: "Support: Field Test"
+description: "Where to get help with Field Test, and how to report a problem."
+layout: prose
+---
 # Support
 
-Field Test is an app for logging robot errors during a session. This page says where to get help.
+Field Test is an app for logging errors during a software or hardware testing session. This page says where to get help.
 
 ## Before you ask
 
-The [home page](index.md) links to the guide as it is written. Most questions about setting up the board, logging and
-sharing are answered there.
+- The [Guide](guide/index.md) covers setting up the board, logging and sharing.
+- The [FAQ](faq.md) has short answers.
+- [Troubleshooting](guide/troubleshooting.md) covers messages the app shows when something goes wrong.
 
 ## How to get in touch
 
@@ -30,3 +38,7 @@ show a problem, make a small example with made-up names first.
 The app has no accounts and sends nothing from your device, so nobody on the project can see your logs or look up your
 setup. If you lose a phone, the log is on the phone and in the phone's own backup, if you have one. See
 [Privacy](privacy.md).
+
+## Press
+
+The app icon and a short description are on the [press page](press.md).

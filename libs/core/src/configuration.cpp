@@ -760,7 +760,7 @@ void report_pattern(Reader& r, const std::string& path, const QString& pattern, 
         case PatternError::MISSING_PLACEHOLDER:
             r.add(Code::BAD_PATTERN, path,
                   shown(pattern) +
-                      " has no {value}. Put {value} where the typed text should go, for example \"Played {value}\".",
+                      " has no {value}. Put {value} where the typed text should go, for example \"Began task {value}\".",
                   problem_detail(ConfigError::Problem::NO_PLACEHOLDER));
             break;
         case PatternError::UNBALANCED_BRACE:
@@ -781,7 +781,7 @@ void report_interaction_pattern(Reader& r, const std::string& path, const QStrin
     switch (error)
     {
         case InteractionPatternError::EMPTY:
-            r.add(Code::OUT_OF_RANGE, path, "this is empty. Enter a line, for example \"Spoke with {person}\".",
+            r.add(Code::OUT_OF_RANGE, path, "this is empty. Enter a line, for example \"Paired with {person}\".",
                   empty_detail());
             break;
         case InteractionPatternError::UNBALANCED_BRACE:
@@ -966,7 +966,7 @@ void read_templates(Reader& r, const QJsonObject& root, Configuration& out)
             {
                 r.add(Code::OUT_OF_RANGE, child(path, "icon"),
                       shown(*icon) + " is not an icon name. Use lower-case letters, digits and dashes, for example "
-                                     "\"music\".");
+                                     "\"list\".");
             }
         }
         if (const auto order = r.integer(*object, "sort_order", path, -MAX_SORT_ORDER, MAX_SORT_ORDER,

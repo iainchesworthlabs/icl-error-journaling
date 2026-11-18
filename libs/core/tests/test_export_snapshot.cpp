@@ -104,13 +104,13 @@ TEST_CASE("Changing an entry's type takes a new snapshot and keeps the note", "[
     auto entry = ErrorEntry::from_tap(test_id<ErrorTypeId>(ERROR_WRONG_RESPONSE), "Wrong Response", std::string("note"));
     REQUIRE(entry.has_value());
 
-    const auto other = test_id<ErrorTypeId>(ERROR_MUTE_DELAY);
+    const auto other = test_id<ErrorTypeId>(ERROR_STOPPED_RESPONDING);
     REQUIRE_FALSE(entry->retype(other, "").has_value());
     CHECK(entry->m_ErrorTypeLabel == "Wrong Response");  // a refused retype changes nothing
 
-    REQUIRE(entry->retype(other, "Mute Delay").has_value());
+    REQUIRE(entry->retype(other, "Stopped Responding").has_value());
     CHECK(entry->m_ErrorType == other);
-    CHECK(entry->m_ErrorTypeLabel == "Mute Delay");
+    CHECK(entry->m_ErrorTypeLabel == "Stopped Responding");
     CHECK(entry->m_AttachedNote == std::optional<std::string>("note"));
 
     auto scenario = blank_scenario();
@@ -120,7 +120,7 @@ TEST_CASE("Changing an entry's type takes a new snapshot and keeps the note", "[
     stored.m_Body = *entry;
     REQUIRE(scenario.m_Log.add(stored).has_value());
     rename_in_configuration(scenario);
-    CHECK(render(scenario).ends_with("10:05 T| Mute Delay – note"));
+    CHECK(render(scenario).ends_with("10:05 T| Stopped Responding – note"));
 }
 
 TEST_CASE("Every golden file is unchanged when the entries carry snapshots equal to the names", "[export][snapshot][unit]")

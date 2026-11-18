@@ -60,7 +60,7 @@ public:
     Q_INVOKABLE bool hasValueSlot(const QString& typeId) const;
     /// The name of the type, or empty.
     Q_INVOKABLE QString typeName(const QString& typeId) const;
-    /// The line the entry will have, with the answer typed so far and no people ("Played Morning Medley").
+    /// The line the entry will have, with the answer typed so far and no people ("Began task 1").
     Q_INVOKABLE QString previewLine(const QString& typeId, const QString& value) const;
 
 signals:

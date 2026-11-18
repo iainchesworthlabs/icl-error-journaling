@@ -40,9 +40,9 @@ Entry mixed_entry(std::uint64_t number, std::int64_t minute)
     switch (number % 7)
     {
     case 0:
-        return sample_note(number, minute, "Played a song for Sam Example, take " + std::to_string(number));
+        return sample_note(number, minute, "Began a task for Sam Example, take " + std::to_string(number));
     case 3:
-        return sample_error(number, minute, "Wrong Response", "the robot paused, entry " + std::to_string(number));
+        return sample_error(number, minute, "Wrong Response", "the device paused, entry " + std::to_string(number));
     case 5:
         return sample_error(number, minute, "Other");
     default:

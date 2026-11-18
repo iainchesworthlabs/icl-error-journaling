@@ -86,8 +86,8 @@ struct SettingsRig
     configuration.m_Tester = "Sam Example";
     configuration.m_UnitPrefix = "UNIT";
     const std::pair<std::uint64_t, const char*> errors[] = {
-        {ERROR_WRONG_RESPONSE, "Wrong Response"},         {ERROR_MUTE_DELAY, "Mute Delay"},
-        {ERROR_WRONG_TRACK_PLAYED, "Wrong Track Played"}, {ERROR_SPEECH_DELAY, "Speech Delay"},
+        {ERROR_WRONG_RESPONSE, "Wrong Response"},         {ERROR_STOPPED_RESPONDING, "Stopped Responding"},
+        {ERROR_WRONG_TRACK_PLAYED, "Incorrect Action"}, {ERROR_SPEECH_DELAY, "Timed Out"},
         {ERROR_LATE_GREETING, "Late Greeting"},           {ERROR_ECHO_DELAY_RETIRED, "Echo Delay"}};
     int position = 1;
     for (const auto& [number, name] : errors)
@@ -114,9 +114,9 @@ struct SettingsRig
     }
     order = 1;
     for (const auto& [number, name, pattern] :
-         {std::tuple<std::uint64_t, const char*, const char*>{TEMPLATE_PLAYED, "Played song", "Played {value}"},
-          {TEMPLATE_VISITOR, "Visitor", "Visitor interaction: {value}"},
-          {TEMPLATE_REQUESTED, "Requested song", "Song {value} requested twice"}})
+         {std::tuple<std::uint64_t, const char*, const char*>{TEMPLATE_PLAYED, "Began task", "Began task {value}"},
+          {TEMPLATE_OBSERVER, "Observer", "Entered room 1: {value}"},
+          {TEMPLATE_REQUESTED, "Requested task", "Task {value} requested twice"}})
     {
         NoteTemplate note_template;
         note_template.m_Id = test_id<NoteTemplateId>(number);

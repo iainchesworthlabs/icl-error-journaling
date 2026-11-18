@@ -169,7 +169,7 @@ Operation Workload::next()
         base.m_Log = m_Logs.back();
         const EntryId id = next_entry_id();
         base.m_Entry = sample_note(0, minute_of(base.m_Number),
-                                   "Played a song for Sam Example, take " + std::to_string(base.m_Number));
+                                   "Began a task for Sam Example, take " + std::to_string(base.m_Number));
         base.m_Entry.m_Id = id;
         // A note is captured when it is committed, which is after every draft typed before it: a note replayed from the
         // journal takes out a draft written no later than that.
@@ -230,7 +230,7 @@ Operation Workload::make_add(Operation base, bool header_change)
     else if (base.m_Number % 5 == 0)
     {
         base.m_Entry = sample_error(0, minute_of(base.m_Number), "Wrong Response",
-                                    "the robot paused, entry " + std::to_string(base.m_Number));
+                                    "the device paused, entry " + std::to_string(base.m_Number));
     }
     else
     {
@@ -342,7 +342,7 @@ Operation Workload::make_edit(Operation base)
     else if (target.m_IsNote)
     {
         base.m_Entry =
-            sample_note(0, 0, "Edited, the robot took the song for Sam Example, edit " + std::to_string(base.m_Number));
+            sample_note(0, 0, "Edited, the device took the song for Sam Example, edit " + std::to_string(base.m_Number));
     }
     else
     {

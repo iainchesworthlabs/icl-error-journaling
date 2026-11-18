@@ -311,8 +311,8 @@ TEST_CASE("Another tile takes the slot, and the earlier tap can no longer be und
     {
         UndoRig rig;
         rig.commit(tap(1, melbourne(10, 20), 1, "Wrong Response"));
-        rig.commit(tap(2, melbourne(10, 21), 2, "Mute Delay"));
-        CHECK(rig.text() == "Mute Delay logged at 10:21");
+        rig.commit(tap(2, melbourne(10, 21), 2, "Stopped Responding"));
+        CHECK(rig.text() == "Stopped Responding logged at 10:21");
         CHECK(rig.controller.repeat_count() == 1);
 
         REQUIRE(rig.controller.undo());
@@ -326,7 +326,7 @@ TEST_CASE("Another tile takes the slot, and the earlier tap can no longer be und
     {
         UndoRig rig;
         rig.commit(tap(1, melbourne(10, 20), 1, "Wrong Response"));
-        rig.commit(tap(2, melbourne(10, 21), 2, "Mute Delay"));
+        rig.commit(tap(2, melbourne(10, 21), 2, "Stopped Responding"));
         rig.commit(tap(3, melbourne(10, 22), 1, "Wrong Response"));
         CHECK(rig.text() == "Wrong Response logged at 10:22");
         CHECK(rig.controller.repeat_count() == 1);
@@ -340,7 +340,7 @@ TEST_CASE("A note between two taps of one tile resets the count", "[viewmodel][u
     rig.commit(tap(2, melbourne(10, 21)));
     REQUIRE(rig.controller.repeat_count() == 2);
 
-    rig.commit(sample_note(3, melbourne(10, 22), "Played Morning Medley"));
+    rig.commit(sample_note(3, melbourne(10, 22), "Began task 1"));
     CHECK(rig.text() == "Note added at 10:22");
     rig.commit(tap(4, melbourne(10, 23)));
     CHECK(rig.text() == "Wrong Response logged at 10:23");
@@ -566,7 +566,7 @@ TEST_CASE("A note gets a toast, and its undo returns the text to the composer", 
     std::vector<std::string> returned;
     rig.controller.set_note_undo_target([&returned](const std::string& text) { returned.push_back(text); });
 
-    REQUIRE(rig.document->add_entry(sample_note(1, melbourne(10, 30), "Played Morning Medley"), Origin::USER,
+    REQUIRE(rig.document->add_entry(sample_note(1, melbourne(10, 30), "Began task 1"), Origin::USER,
                                     rig.count(rig.m_Done)));
     CHECK_FALSE(rig.controller.active());
     rig.gateway().run_all();
@@ -582,7 +582,7 @@ TEST_CASE("A note gets a toast, and its undo returns the text to the composer", 
     CHECK(rig.deleted_in_store(1));
     CHECK_FALSE(rig.controller.active());
     REQUIRE(returned.size() == 1);
-    CHECK(returned[0] == "Played Morning Medley");
+    CHECK(returned[0] == "Began task 1");
 }
 
 TEST_CASE("A note whose undo commit fails keeps its text for the retry", "[viewmodel][undo]")
@@ -590,7 +590,7 @@ TEST_CASE("A note whose undo commit fails keeps its text for the retry", "[viewm
     UndoRig rig;
     std::vector<std::string> returned;
     rig.controller.set_note_undo_target([&returned](const std::string& text) { returned.push_back(text); });
-    rig.commit(sample_note(1, melbourne(10, 30), "Played Morning Medley"));
+    rig.commit(sample_note(1, melbourne(10, 30), "Began task 1"));
     rig.storage().repository().fail_next(RepositoryOp::SET_ENTRY_DELETED);
 
     REQUIRE(rig.controller.undo());
@@ -601,7 +601,7 @@ TEST_CASE("A note whose undo commit fails keeps its text for the retry", "[viewm
     REQUIRE(rig.controller.undo());
     rig.gateway().run_all();
     REQUIRE(returned.size() == 1);
-    CHECK(returned[0] == "Played Morning Medley");
+    CHECK(returned[0] == "Began task 1");
 }
 
 TEST_CASE("The undo of a tap does not touch the composer", "[viewmodel][undo]")
@@ -624,7 +624,7 @@ TEST_CASE("A tap that a held tile gave a draft says so, and its undo gives the d
     CHECK(rig.text() == "Wrong Response logged at 10:20");
     const int generation = rig.controller.generation();
 
-    rig.controller.note_attached(entry_id(1), "The robot paused twice");
+    rig.controller.note_attached(entry_id(1), "The device paused twice");
     CHECK(rig.text() == "Wrong Response logged at 10:20 with note");
     // The window is the tap's: it does not restart.
     CHECK(rig.controller.generation() == generation);
@@ -635,7 +635,7 @@ TEST_CASE("A tap that a held tile gave a draft says so, and its undo gives the d
     CHECK(rig.deleted(1));
     CHECK_FALSE(rig.controller.active());
     REQUIRE(returned.size() == 1);
-    CHECK(returned[0] == "The robot paused twice");
+    CHECK(returned[0] == "The device paused twice");
 }
 
 TEST_CASE("A draft attached to another entry than the toast's is not the toast's to give back", "[viewmodel][undo]")
@@ -646,7 +646,7 @@ TEST_CASE("A draft attached to another entry than the toast's is not the toast's
     rig.commit(tap(1, melbourne(10, 20)));
     rig.commit(tap(2, melbourne(10, 21), 2));
 
-    rig.controller.note_attached(entry_id(1), "The robot paused twice");
+    rig.controller.note_attached(entry_id(1), "The device paused twice");
     CHECK(rig.text().find("with note") == std::string::npos);
     REQUIRE(rig.controller.undo());
     rig.gateway().run_all();
@@ -654,7 +654,7 @@ TEST_CASE("A draft attached to another entry than the toast's is not the toast's
     CHECK(returned.empty());
 
     // No toast at all: nothing happens.
-    rig.controller.note_attached(entry_id(1), "The robot paused twice");
+    rig.controller.note_attached(entry_id(1), "The device paused twice");
     CHECK_FALSE(rig.controller.active());
 }
 
@@ -664,7 +664,7 @@ TEST_CASE("A tap with a draft whose undo commit fails keeps the draft for the re
     std::vector<std::string> returned;
     rig.controller.set_note_undo_target([&returned](const std::string& text) { returned.push_back(text); });
     rig.commit(tap(1, melbourne(10, 20)));
-    rig.controller.note_attached(entry_id(1), "The robot paused twice");
+    rig.controller.note_attached(entry_id(1), "The device paused twice");
     rig.storage().repository().fail_next(RepositoryOp::SET_ENTRY_DELETED);
 
     REQUIRE(rig.controller.undo());
@@ -684,7 +684,7 @@ TEST_CASE("A later tap replaces a toast that has a draft, and its undo takes not
     int calls = 0;
     rig.controller.set_note_undo_target([&calls](const std::string&) { ++calls; });
     rig.commit(tap(1, melbourne(10, 20)));
-    rig.controller.note_attached(entry_id(1), "The robot paused twice");
+    rig.controller.note_attached(entry_id(1), "The device paused twice");
     rig.commit(tap(2, melbourne(10, 21), 2));
 
     REQUIRE(rig.controller.undo());
@@ -732,7 +732,7 @@ TEST_CASE("A delete replaces a tap toast, which can then no longer be undone", "
 {
     UndoRig rig;
     rig.commit(tap(1, melbourne(10, 20)));
-    rig.commit(tap(2, melbourne(10, 21), 2, "Mute Delay"));
+    rig.commit(tap(2, melbourne(10, 21), 2, "Stopped Responding"));
     REQUIRE(rig.document->set_deleted(entry_id(1), true, Origin::USER, rig.count(rig.m_Done)));
     rig.gateway().run_all();
 
@@ -740,7 +740,7 @@ TEST_CASE("A delete replaces a tap toast, which can then no longer be undone", "
     REQUIRE(rig.controller.undo());
     rig.gateway().run_all();
     CHECK_FALSE(rig.deleted(1)); // restored
-    CHECK_FALSE(rig.deleted(2)); // Mute Delay stays
+    CHECK_FALSE(rig.deleted(2)); // Stopped Responding stays
 }
 
 // ------------------------------------------------------------------------------------------- new log and archive
@@ -869,7 +869,7 @@ TEST_CASE("A tap on the Interactions board opens a toast with its label, and its
     UndoRig rig;
     rig.commit(sample_interaction_entry(1, melbourne(10, 20)));
     REQUIRE(rig.controller.active());
-    CHECK(rig.text() == "Spoke with logged at 10:20");
+    CHECK(rig.text() == "Paired with logged at 10:20");
     CHECK(rig.toasts_opened() == 1);
 
     REQUIRE(rig.controller.undo());
@@ -886,7 +886,7 @@ TEST_CASE("A second tap on the Interactions board does not count as a repeat, an
     rig.advance(1s);
     rig.commit(sample_interaction_entry(2, melbourne(10, 21)));
     REQUIRE(rig.controller.active());
-    CHECK(rig.text() == "Spoke with logged at 10:21");
+    CHECK(rig.text() == "Paired with logged at 10:21");
 
     rig.advance(1s);
     rig.commit(tap(3, melbourne(10, 22)));

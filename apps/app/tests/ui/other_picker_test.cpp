@@ -54,9 +54,9 @@ namespace
 const QString OFF_GROUP = QStringLiteral("Not on your board");
 const QString ON_GROUP = QStringLiteral("On your board");
 const QString ECHO = QString::fromUtf8("\xC3\x89"
-                                       "cho Delay");
+                                       "cho Timeout");
 
-/// The sample configuration with Navigation Failure taken off the board, "Écho Delay" added to the master list without
+/// The sample configuration with Unexpected Stop taken off the board, "Écho Timeout" added to the master list without
 /// a place on it, and a retired type that no sheet lists.
 Configuration picker_configuration()
 {
@@ -66,7 +66,7 @@ Configuration picker_configuration()
     ErrorType echo;
     echo.m_Id = sample_id<ErrorTypeId>(600);
     echo.m_Name = "\xC3\x89"
-                  "cho Delay";
+                  "cho Timeout";
     configuration.m_ErrorTypes.push_back(std::move(echo));
 
     ErrorType retired;
@@ -329,18 +329,18 @@ TEST_CASE("other.sections: the types by section, the counts, the swatches and th
 {
     Fixture f;
     f.record(QStringLiteral("Wrong Response"), 2);
-    f.record(QStringLiteral("Mute Delay"));
+    f.record(QStringLiteral("Stopped Responding"));
     f.open();
 
     const std::vector<Row> all = rows(f);
     REQUIRE(all.size() == 12);
 
     // Not on your board first, then on your board, each in master-list order; the retired type is not listed.
-    CHECK(labels_in(all, OFF_GROUP) == QStringList{QStringLiteral("Navigation Failure"), ECHO});
+    CHECK(labels_in(all, OFF_GROUP) == QStringList{QStringLiteral("Unexpected Stop"), ECHO});
     const QStringList on = labels_in(all, ON_GROUP);
     REQUIRE(on.size() == 10);
     CHECK(on.first() == QStringLiteral("Wrong Response"));
-    CHECK(on.last() == QStringLiteral("Track Delay"));
+    CHECK(on.last() == QStringLiteral("Slow Response"));
     CHECK_FALSE(row_for(all, QStringLiteral("Retired Type")) != nullptr);
     CHECK(all.front().m_Group == OFF_GROUP);
     CHECK(all.back().m_Group == ON_GROUP);
@@ -348,12 +348,12 @@ TEST_CASE("other.sections: the types by section, the counts, the swatches and th
 
     // A count shows as "n today" and a type with none shows nothing.
     CHECK(value_of(all, QStringLiteral("Wrong Response")) == QStringLiteral("2 today"));
-    CHECK(value_of(all, QStringLiteral("Mute Delay")) == QStringLiteral("1 today"));
-    CHECK(value_of(all, QStringLiteral("Track Delay")).isEmpty());
-    CHECK(value_of(all, QStringLiteral("Navigation Failure")).isEmpty());
+    CHECK(value_of(all, QStringLiteral("Stopped Responding")) == QStringLiteral("1 today"));
+    CHECK(value_of(all, QStringLiteral("Slow Response")).isEmpty());
+    CHECK(value_of(all, QStringLiteral("Unexpected Stop")).isEmpty());
 
     // The swatch is the colour of the tile on the board and neutral off it.
-    CHECK(swatch_colour(*row_for(all, QStringLiteral("Navigation Failure"))) == theme_colour(f.m_Rig, "swatch"));
+    CHECK(swatch_colour(*row_for(all, QStringLiteral("Unexpected Stop"))) == theme_colour(f.m_Rig, "swatch"));
     CHECK(swatch_colour(*row_for(all, ECHO)) == theme_colour(f.m_Rig, "swatch"));
     const Row* wrong_response = row_for(all, QStringLiteral("Wrong Response"));
     REQUIRE(wrong_response != nullptr);
@@ -372,10 +372,10 @@ TEST_CASE("other.sections: the types by section, the counts, the swatches and th
     }
 
     // The counts follow a commit while the sheet is open.
-    f.record(QStringLiteral("Navigation Failure"));
-    CHECK(value_of(rows(f), QStringLiteral("Navigation Failure")) == QStringLiteral("1 today"));
-    f.record(QStringLiteral("Mute Delay"));
-    CHECK(value_of(rows(f), QStringLiteral("Mute Delay")) == QStringLiteral("2 today"));
+    f.record(QStringLiteral("Unexpected Stop"));
+    CHECK(value_of(rows(f), QStringLiteral("Unexpected Stop")) == QStringLiteral("1 today"));
+    f.record(QStringLiteral("Stopped Responding"));
+    CHECK(value_of(rows(f), QStringLiteral("Stopped Responding")) == QStringLiteral("2 today"));
 }
 
 TEST_CASE("other.sections: a board with nothing off it shows no empty section", "[ui][other]")
@@ -400,16 +400,16 @@ TEST_CASE("other.filter: typing narrows both sections with one reset for each ch
     QSignalSpy resets(f.m_Picker.get(), &QAbstractItemModel::modelReset);
 
     input->forceActiveFocus();
-    f.m_Rig.type(QStringLiteral("MUTE"));
+    f.m_Rig.type(QStringLiteral("DING"));
     CHECK(resets.count() == 4);
-    CHECK(f.m_Picker->filter() == QStringLiteral("MUTE"));
+    CHECK(f.m_Picker->filter() == QStringLiteral("DING"));
     CHECK(input->property("activeFocus").toBool());
-    CHECK(input->property("text").toString() == QStringLiteral("MUTE"));
+    CHECK(input->property("text").toString() == QStringLiteral("DING"));
 
     // Case does not matter; the one type that matches is on the board, so the other section is not shown at all.
     std::vector<Row> all = rows(f);
     REQUIRE(all.size() == 1);
-    CHECK(all.front().m_Text == QStringLiteral("Mute Delay"));
+    CHECK(all.front().m_Text == QStringLiteral("Stopped Responding"));
     CHECK(all.front().m_Group == ON_GROUP);
 
     // A filter that matches only a type off the board.
@@ -417,10 +417,10 @@ TEST_CASE("other.filter: typing narrows both sections with one reset for each ch
     {
         f.m_Rig.key(Qt::Key_Backspace);
     }
-    f.m_Rig.type(QStringLiteral("navig"));
+    f.m_Rig.type(QStringLiteral("unexp"));
     all = rows(f);
     REQUIRE(all.size() == 1);
-    CHECK(all.front().m_Text == QStringLiteral("Navigation Failure"));
+    CHECK(all.front().m_Text == QStringLiteral("Unexpected Stop"));
     CHECK(all.front().m_Group == OFF_GROUP);
     CHECK(input->property("activeFocus").toBool());
 
@@ -429,10 +429,10 @@ TEST_CASE("other.filter: typing narrows both sections with one reset for each ch
     {
         f.m_Rig.key(Qt::Key_Backspace);
     }
-    f.m_Rig.type(QStringLiteral("delay"));
+    f.m_Rig.type(QStringLiteral("out"));
     all = rows(f);
     CHECK(labels_in(all, OFF_GROUP) == QStringList{ECHO});
-    CHECK(labels_in(all, ON_GROUP).size() == 3); // Mute Delay, Speech Delay, Track Delay
+    CHECK(labels_in(all, ON_GROUP).size() == 3); // Sequence Out of Order, Audio Dropout, Timed Out
 }
 
 TEST_CASE("other.filter: no match shows the message, and the clear button brings every type back", "[ui][other]")
@@ -471,7 +471,7 @@ TEST_CASE("other.pick: a tap fires the impact, records once with that id, and cl
     REQUIRE(f.is_open());
 
     const std::vector<Row> all = rows(f);
-    const Row* mute = row_for(all, QStringLiteral("Mute Delay"));
+    const Row* mute = row_for(all, QStringLiteral("Stopped Responding"));
     REQUIRE(mute != nullptr);
     f.m_Rig.tap(mute->m_Item);
 
@@ -482,10 +482,10 @@ TEST_CASE("other.pick: a tap fires the impact, records once with that id, and cl
 
     // The count changes only after the commit.
     CHECK(f.m_Session->live_entry_count() == entries_before);
-    CHECK(f.model_count(QStringLiteral("Mute Delay")) == 0);
+    CHECK(f.model_count(QStringLiteral("Stopped Responding")) == 0);
     f.commit();
     CHECK(f.m_Session->live_entry_count() == entries_before + 1);
-    CHECK(f.model_count(QStringLiteral("Mute Delay")) == 1);
+    CHECK(f.model_count(QStringLiteral("Stopped Responding")) == 1);
     CHECK(f.model_count(QStringLiteral("Wrong Response")) == 1);
 
     // The sheet closes and its owner is told once.
@@ -500,13 +500,13 @@ TEST_CASE("other.pick: a type that is not on the board is recorded like any othe
     Fixture f;
     f.open();
     const std::vector<Row> listed = rows(f);
-    const Row* navigation = row_for(listed, QStringLiteral("Navigation Failure"));
+    const Row* navigation = row_for(listed, QStringLiteral("Unexpected Stop"));
     REQUIRE(navigation != nullptr);
     f.m_Rig.tap(navigation->m_Item);
     f.commit();
 
     CHECK(f.m_Bridge->m_Impacts == 1);
-    CHECK(f.model_count(QStringLiteral("Navigation Failure")) == 1);
+    CHECK(f.model_count(QStringLiteral("Unexpected Stop")) == 1);
     CHECK(f.model_count(QStringLiteral("Wrong Response")) == 0);
 }
 
@@ -517,8 +517,8 @@ TEST_CASE("other.pick: Cancel closes the sheet and records nothing, and the filt
     f.open();
     QQuickItem* input = f.find(QStringLiteral("searchInput"));
     input->forceActiveFocus();
-    f.m_Rig.type(QStringLiteral("mute"));
-    REQUIRE(f.m_Picker->filter() == QStringLiteral("mute"));
+    f.m_Rig.type(QStringLiteral("ding"));
+    REQUIRE(f.m_Picker->filter() == QStringLiteral("ding"));
 
     f.m_Rig.tap(f.find(QStringLiteral("navLeading")));
     f.play(500ms);
@@ -546,7 +546,7 @@ TEST_CASE("other.add: a valid name is added, nothing is recorded, and the type i
     f.open();
     QQuickItem* input = f.find(QStringLiteral("searchInput"));
     input->forceActiveFocus();
-    f.m_Rig.type(QStringLiteral("mute"));
+    f.m_Rig.type(QStringLiteral("ding"));
     f.scroll_to_add();
 
     QQuickItem* name = f.find(QStringLiteral("pickerNewName"));
@@ -669,16 +669,16 @@ TEST_CASE("other.voiceover: rows read \"label, n today\" and a screen reader's a
     }
     REQUIRE(names.size() == 12);
     CHECK(names.contains(QStringLiteral("Wrong Response, 2 today")));
-    CHECK(names.contains(QStringLiteral("Navigation Failure")));
+    CHECK(names.contains(QStringLiteral("Unexpected Stop")));
 
     const std::vector<Row> listed = rows(f);
-    const Row* track = row_for(listed, QStringLiteral("Track Skipped"));
+    const Row* track = row_for(listed, QStringLiteral("Step Skipped"));
     REQUIRE(track != nullptr);
     CHECK(accessible_press(track->m_Item));
     CHECK(f.m_Bridge->m_Impacts == 1);
     CHECK(f.m_Bridge->m_PendingAtImpact == 0);
     f.commit();
-    CHECK(f.model_count(QStringLiteral("Track Skipped")) == 1);
+    CHECK(f.model_count(QStringLiteral("Step Skipped")) == 1);
 
     // The sheet is a dialog with a name, its search field is a search edit, and the swatches are not read.
     f.play(500ms);
@@ -713,7 +713,7 @@ TEST_CASE("other.checks: names, targets, reading order and text scale, in light 
     SECTION("with the add form open")
     {
         // A short list, so that no row is scrolled out of its frame: the reading-order check knows nothing of clipping.
-        f.m_Picker->set_filter(QStringLiteral("mute"));
+        f.m_Picker->set_filter(QStringLiteral("ding"));
         f.m_Rig.layout();
         f.scroll_to_add();
         f.m_Rig.tap(f.find(QStringLiteral("pickerAdd")));
@@ -739,7 +739,7 @@ TEST_CASE("other.safe_area: nothing interactive enters an inset, at 59 and 34 an
 {
     Fixture f;
     // A short list, so that nothing scrolls out of the window.
-    f.m_Picker->set_filter(QStringLiteral("mute"));
+    f.m_Picker->set_filter(QStringLiteral("ding"));
 
     SECTION("59 and 34")
     {
@@ -803,6 +803,6 @@ TEST_CASE("other.add_row: adding a type is the first row, above the lists, and a
     // A search that finds something keeps the plain label.
     f.m_Rig.tap(f.find(QStringLiteral("clearButton")));
     input->forceActiveFocus();
-    f.m_Rig.type(QStringLiteral("mute"));
+    f.m_Rig.type(QStringLiteral("ding"));
     CHECK(add->property("text").toString() == QStringLiteral("Add a new error type"));
 }

@@ -10,7 +10,7 @@ import ErrorJournalingApp
 // binds the five properties below to `undo` and connects undoRequested() to `undo.undo()`.
 //
 //   active       the toast is showing (undo.active)
-//   text         the line, such as "Mute Delay logged at 10:20", or the same with the repeat count (undo.text)
+//   text         the line, such as "Stopped Responding logged at 10:20", or the same with the repeat count (undo.text)
 //   undoing      the undo is being committed: the button is disabled until the toast closes (undo.undoing)
 //   generation   goes up whenever the window restarts (undo.generation): the line is announced again
 //   windowMs     the length of the window (undo.windowMs, 5000); the controller times it, the toast only shows it

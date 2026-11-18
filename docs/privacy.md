@@ -1,3 +1,10 @@
+---
+template: marketing.html
+title: Privacy
+title_tag: "Privacy: Field Test"
+description: "Field Test collects no data about you. What the app stores, where it is kept and what leaves your device."
+layout: prose
+---
 # Privacy
 
 Last changed: 18 November 2026.
@@ -5,9 +12,14 @@ Last changed: 18 November 2026.
 **Field Test collects no data about you.** It has no accounts, no analytics, no advertising and no crash reporting,
 and it does not send anything over the internet. This page says what that means in practice.
 
+<div class="icl-callout"><p><strong>In one minute</strong>
+Field Test collects no data about you. It has no account, no analytics, no advertising and no crash reporting, and it does not send anything over the internet. Your logs and setup stay on your device. They leave only when you share them, to the place you pick. The App Store lists the app as Data Not Collected.</p>
+<p><strong>Check it yourself</strong>
+The source code is public under the GNU General Public License, version 3 or later.</p></div>
+
 ## What the app stores
 
-- **Your logs.** Each day's entries, the notes you type and the day's details (unit, place, software versions (the robot's and any others you add), date and
+- **Your logs.** Each day's entries, the notes you type and the day's details (unit, place, software versions (the main one and any others you add), date and
   your name as the tester).
 - **People you add.** Only if you turn on the second board and choose to type a name (see below).
 - **Your setup.** The error types, places and note templates you set up, and your preferences, such as the time format.
@@ -71,10 +83,6 @@ it. If you do not want your log in a backup, switch the backup off for the devic
 - **A day's log:** delete it in the app (History, then the log).
 - **Everything:** delete the app. Its logs, setup and settings are deleted with it. A copy of the data that is in a device
   backup stays there until that backup is replaced or deleted.
-
-## Children
-
-The app is for people who run robot sessions at work. It is not aimed at children and asks for no personal details.
 
 ## Questions
 
