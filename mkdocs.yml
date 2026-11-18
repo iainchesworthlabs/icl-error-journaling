@@ -15,6 +15,7 @@ exclude_docs: |
   ci.md
   testing.md
   releasing.md
+  accessibility-labels.md
   licensing.md
   design/
   plan/

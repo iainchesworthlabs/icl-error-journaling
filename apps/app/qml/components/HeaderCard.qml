@@ -36,13 +36,17 @@ Item {
     property string versionPrompt: qsTr("v —")
     property string testerPrompt: qsTr("Tester not set")
 
-    // What a screen reader says: the whole card, which changes as fields are filled. A screen may replace it.
+    // The second line of the card as it is drawn, "North Site · v1.4.2". The accessible name has it word for word, so that
+    // Voice Control's "Tap North Site" finds the card.
+    readonly property string siteLine: qsTr("%1 · %2").arg(locationText.length > 0 ? locationText : locationPrompt).arg(versionText.length > 0 ? qsTr("v%1").arg(versionText) : versionPrompt)
+
+    // What a screen reader says: the whole card, which changes as fields are filled. A screen may replace it. It has every
+    // word the card draws, with the label of each field before its value.
     property string accessibleName: {
         if (skeleton)
             return "";
-        const unset = qsTr("not set");
-        const values = [unitText.length > 0 ? unitText : unset, locationText.length > 0 ? locationText : unset, versionText.length > 0 ? versionText : unset, dateText, testerText.length > 0 ? testerText : unset];
-        const spoken = qsTr("Today's details. Unit %1. Location %2. Version %3. Date %4. Tester %5.").arg(values[0]).arg(values[1]).arg(values[2]).arg(values[3]).arg(values[4]);
+        const unitName = unitText.length > 0 ? qsTr("Unit %1").arg(unitText) : qsTr("%1 not set").arg(unitPrompt.replace(/\s*—\s*$/, ""));
+        const spoken = qsTr("Today's details. %1. %2. Date %3. Tester %4.").arg(unitName).arg(siteLine).arg(dateText).arg(testerText.length > 0 ? testerText : testerPrompt);
         const open = qsTr("Opens today's details.");
         return missingCount > 0 ? qsTr("%1 Not filled in yet: %2. %3").arg(spoken).arg(missingText).arg(open) : qsTr("%1 %2").arg(spoken).arg(open);
     }
@@ -139,7 +143,7 @@ Item {
                 opacity: root.skeleton ? 0 : 1
                 color: Theme.colour.headerCardTextSecondary
                 font: Theme.font.caption.font
-                text: qsTr("%1 · %2").arg(root.locationText.length > 0 ? root.locationText : root.locationPrompt).arg(root.versionText.length > 0 ? qsTr("v%1").arg(root.versionText) : root.versionPrompt)
+                text: root.siteLine
                 wrapMode: Text.WordWrap
                 maximumLineCount: root.reduced ? 1 : 100
                 elide: root.reduced ? Text.ElideRight : Text.ElideNone

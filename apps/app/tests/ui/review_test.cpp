@@ -546,7 +546,7 @@ TEST_CASE("review.discoverable: the copy button says Copy log, and a log with en
         CHECK(label->isVisible());
         CHECK(label->property("text").toString() == QStringLiteral("Copy log"));
         // The name for a screen reader is unchanged.
-        CHECK(input::require_interface(s.item("reviewCopyAll"))->text(QAccessible::Name) == QStringLiteral("Copy whole log"));
+        CHECK(input::require_interface(s.item("reviewCopyAll"))->text(QAccessible::Name) == QStringLiteral("Copy log"));
 
         QQuickItem* hint = s.item("reviewHint");
         REQUIRE(hint != nullptr);

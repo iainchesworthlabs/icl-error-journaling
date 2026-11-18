@@ -42,7 +42,7 @@ Item {
     implicitHeight: Math.max(Theme.size.minTouchTarget, content.implicitHeight + Theme.space.tileGap)
 
     Accessible.role: root.skeleton ? Accessible.NoRole : Accessible.Button
-    Accessible.name: root.hasEntries ? qsTr("Last entry: %1, %n today", "", root.entryCount).arg(root.lastLine) : qsTr("Last entry: none yet")
+    Accessible.name: root.hasEntries ? qsTr("Last entry: %1, %n today", "", root.entryCount).arg(root.lastLine) : qsTr("Last entry: no entries yet, %n today", "", root.entryCount)
     Accessible.description: qsTr("Opens Review")
     Accessible.ignored: root.skeleton
     Accessible.focusable: !root.skeleton

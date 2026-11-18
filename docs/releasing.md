@@ -41,7 +41,8 @@ release workflow has put the build in TestFlight (and, with Stage 9, the bundle 
    for later versions (decision D10).
 2. Run it with `-f store=play` for the Play listing text and graphics. It needs the secret `PLAY_SERVICE_ACCOUNT_JSON`.
 3. The owner checks both consoles, answers what the upload cannot (App Privacy, age rating, Data safety, content rating,
-   price and countries), then submits for review and, after approval, releases. The workflow never does these.
+   the Accessibility Nutrition Labels, price and countries; the labels are declared from `docs/accessibility-labels.md`, which
+   says what each one rests on, what needs a device pass and what is not applicable), then submits for review and, after approval, releases. The workflow never does these.
 
 ## Verifying a download
 

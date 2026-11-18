@@ -89,7 +89,7 @@ TEST_CASE("last_bar.line: with no entry it says so", "[ui][last_bar]")
         if (node.m_Item == bar)
         {
             named = true;
-            CHECK(node.m_Name == QStringLiteral("Last entry: none yet"));
+            CHECK(node.m_Name == QStringLiteral("Last entry: no entries yet, 0 today"));
         }
     }
     CHECK(named);

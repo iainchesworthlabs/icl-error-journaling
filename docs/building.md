@@ -5,7 +5,8 @@
 CMake 4.0 or later, Ninja, and a C++23 compiler with `std::expected` and the C++23 library. CI builds with the
 floor compilers, installed from the pins in `.github/toolchain-versions.json`: GCC 16, Clang 23 (with GCC 16's
 libstdc++), MSVC 14.51 (a newer toolset passes) and the newest Apple Clang the macOS runners offer (Xcode 26.6 on
-`macos-26`, with Xcode 27 tried in a leg that cannot fail the run). Older compilers may work but are not tested.
+`macos-26` for the desktop builds, and Xcode 27 on the `xcode-27` runner, which builds the iPhone and iPad
+application with the iOS 27 SDK and also runs a desktop leg that cannot fail the run). Older compilers may work but are not tested.
 
 ## Dependencies
 

@@ -16,13 +16,13 @@ Location: North Site
 Software Version: v1.4.2
 
 10:05 T| Wrong Response
-10:20 T| Mute Delay – caller said wait
-10:30 (Free Text) Played Morning Medley
-11:02 T| Wrong Track Played – asked for Evening Song
+10:20 T| Stopped Responding – caller said wait
+10:30 (Free Text) Device restarted
+11:02 T| Slow Response – asked about the schedule
 13:15 Software Version changed: v1.4.2 → v1.5.0
-13:40 T| Speech Delay
+13:40 T| Connection Lost
 
-Totals: Wrong Response 1, Mute Delay 1, Wrong Track Played 1, Speech Delay 1
+Totals: Wrong Response 1, Stopped Responding 1, Slow Response 1, Connection Lost 1
 ```
 
 A log is three parts: the **header**, a blank line, and the **timeline**. A **totals** line follows after another blank
@@ -75,7 +75,7 @@ zone the entry was logged in.
 
 ```
 10:05 T| Wrong Response
-10:20 T| Mute Delay – caller said wait
+10:20 T| Stopped Responding – caller said wait
 ```
 
 - The **prefix** is `T|` unless you change it in Settings, or `error_prefix` in a setup file. It is up to 12 characters.
@@ -88,7 +88,7 @@ zone the entry was logged in.
 An entry with a note and no error is marked `(Free Text)`:
 
 ```
-10:30 (Free Text) Played Morning Medley
+10:30 (Free Text) Device restarted
 ```
 
 A note made from a note template is a note like any other: the template writes the words, and the log shows them.
@@ -112,10 +112,10 @@ With the second board on, an observation is a line marked `(Observation)`, with 
 does not read it:
 
 ```
-10:12 (Observation) Spoke with A.S.
-10:40 (Observation) Spoke with A.S., J.P. and P.S.I.
-11:10 (Observation) Spoke with someone
-11:20 (Observation) Spoke with (person not set)
+10:12 (Observation) Paired with A.S.
+10:40 (Observation) Paired with A.S., J.P. and P.S.I.
+11:10 (Observation) Paired with someone
+11:20 (Observation) Paired with (person not set)
 ```
 
 - The marker is `(Observation)` by default. The app keeps it as a preference (`observation_marker`); an empty value drops
@@ -130,7 +130,7 @@ does not read it:
 If **Include a totals line** is on and the log has at least one error, a blank line and this line close the log:
 
 ```
-Totals: Wrong Response 3, Mute Delay 1, Wrong Track Played 2, Echo Delay 1
+Totals: Wrong Response 3, Stopped Responding 1, Slow Response 2, Connection Lost 1
 ```
 
 - It counts errors only, not notes, header changes or observations.

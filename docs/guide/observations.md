@@ -1,7 +1,7 @@
 # Observations
 
 Observations is an optional second board. Use it for what you did around the unit, as well as what went wrong: who you
-spoke with, which song you played, who visited. It is **off** until you turn it on, and while it is off the app works as it
+paired with, which task you began, which room you entered. It is **off** until you turn it on, and while it is off the app works as it
 always has.
 
 This page is the overview. The steps are in the pages it links to.
@@ -13,7 +13,7 @@ This page is the overview. The steps are in the pages it links to.
 | What it logs | What went wrong | What you did or saw |
 | Tile types | Error types | Observation types, which you make yourself |
 | After a double-tap | Logged at once | Logged at once, or asks who or for an answer if the type's line has a place for one |
-| Line in the shared log | `10:05 T| Wrong Response` | `10:12 (Observation) Spoke with A.S.` |
+| Line in the shared log | `10:05 T| Wrong Response` | `10:12 (Observation) Paired with A.S.` |
 | Read by the ticket indexer | Yes, by the `T|` marker | No: the line has no `T|` |
 | In the totals line | Counted | Not counted |
 
@@ -33,8 +33,8 @@ empty.
 
 Each type has a name and, if you want, a **line in the log**:
 
-- `[person]` in the line asks who you spoke with, after you double-tap. “Spoke with [person]” writes “Spoke with Alex Sample”.
-- `[answer]` in the line asks for a word or two. “Played [answer]” writes “Played Morning Medley”.
+- `[person]` in the line asks who it was, after you double-tap. “Paired with [person]” writes “Paired with Alex Sample”.
+- `[answer]` in the line asks for a word or two. “Began task [answer]” writes “Began task 1”.
 - A line with neither never asks anything. With no line, the log shows the name of the type.
 
 [Setting up the Observations board](setup.md#setting-up-the-observations-board) has the editor. A setup file can bring
