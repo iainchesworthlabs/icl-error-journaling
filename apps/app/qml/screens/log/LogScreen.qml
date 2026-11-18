@@ -168,7 +168,7 @@ Item {
     required property var settings
     required property var bridge
     property var picker: null
-    // The bridge's dictation (PRD NOTE-07): `dictationAvailable`, `dictating`, `startDictation()`, `stopDictation()` and the
+    // The bridge's dictation (PRD NOTE-07): `dictationAvailable`, `dictating`, `startDictation()`, `stopDictation()`, `cancelDictation()` and the
     // signals `dictationSegment`, `dictationText(text)` and `dictationEnded(reason)`. Null shows no microphone (a test of
     // the screen alone).
     property var dictation: null
@@ -561,7 +561,14 @@ Item {
                 }
             }
             onTextEdited: text => root.session.draft = text
-            onSubmit: text => root.session.addNote(text)
+            // The note is what the box holds now: dictation ends first and its late words are dropped, and with the note
+            // recorded the box gives up focus (the keyboard goes down off the board) and has been cleared by the session.
+            onSubmit: text => {
+                if (root.dictation !== null)
+                    root.dictation.cancelDictation();
+                if (root.session.addNote(text))
+                    composer.releaseFocus();
+            }
             onChipChosen: templateId => root.chooseTemplate(templateId)
         }
 

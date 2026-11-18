@@ -143,6 +143,18 @@ public:
         emit dictationEnded(QStringLiteral("finished"));
     }
 
+    Q_INVOKABLE void cancelDictation()
+    {
+        ++m_Cancels;
+        if (!m_Dictating)
+        {
+            return;
+        }
+        m_Dictating = false;
+        emit dictatingChanged();
+        emit dictationEnded(QStringLiteral("finished"));
+    }
+
     void end(const QString& reason)
     {
         m_Dictating = false;
@@ -152,6 +164,7 @@ public:
 
     int m_Starts = 0;
     int m_Stops = 0;
+    int m_Cancels = 0;
 
 signals:
     void dictatingChanged();
@@ -1009,6 +1022,37 @@ TEST_CASE("log.dictation: the microphone starts and stops it, the words go into 
     screen.rig.tap(mic);
     CHECK_FALSE(message->isVisible());
     CHECK(dictation.m_Starts == 3);
+}
+
+TEST_CASE("log.note_add: Add ends dictation first, and the box gives up focus once the note is recorded",
+          "[ui][log][dictation]")
+{
+    LogRig sim(Options().existing());
+    sim.load();
+    Screen screen(sim);
+    FakeDictationBridge dictation;
+    screen.item->setProperty("dictation", QVariant::fromValue(static_cast<QObject*>(&dictation)));
+    screen.rig.layout();
+    QQuickItem* input = screen.named(QStringLiteral("noteInput"));
+
+    // Add with nothing to add: nothing is recorded, so the box keeps focus and the keyboard.
+    QMetaObject::invokeMethod(screen.named(QStringLiteral("logComposer")), "focusField");
+    CHECK(input->property("activeFocus").toBool());
+    screen.rig.tap(screen.named(QStringLiteral("addButton")));
+    CHECK(input->property("activeFocus").toBool());
+
+    screen.rig.tap(screen.named(QStringLiteral("micButton")));
+    CHECK(dictation.dictating());
+    emit dictation.dictationText(QStringLiteral("The robot paused twice"));
+    screen.rig.tap(screen.named(QStringLiteral("addButton")));
+    // Dictation is ended before the note is taken, and the box lets go of focus.
+    CHECK(dictation.m_Cancels == 1);
+    CHECK_FALSE(dictation.dictating());
+    CHECK_FALSE(input->property("activeFocus").toBool());
+    sim.gateway.run_all();
+    screen.rig.settle();
+    CHECK(sim.entries().size() == 1);
+    CHECK(input->property("text").toString().isEmpty());
 }
 
 TEST_CASE("log.note: Add adds the note, Return only starts a new line, and an empty note does nothing", "[ui][log]")

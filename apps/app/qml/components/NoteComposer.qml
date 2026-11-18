@@ -107,6 +107,12 @@ Item {
         dictationToggled();
     }
 
+    // After a note was recorded: the box gives up focus, so that it folds back and the keyboard goes down.
+    function releaseFocus(): void {
+        field.focus = false;
+        Qt.inputMethod.hide();
+    }
+
     function focusField(): void {
         field.forceActiveFocus();
     }
@@ -222,6 +228,11 @@ Item {
 
                 readonly property real openLimit: Math.min(root.restHeight + (root.maxLines - 1) * lineMetrics.height, root.Window.height > 0 ? root.Window.height / 2 : Number.MAX_VALUE)
 
+                // The text is taller than the box. Not `flick.contentHeight > flick.height`: the field is as high as the box
+                // and the flickable is the box less its border, so that is true for a one-line note with focus, and the mark
+                // showed as a second edge beside the microphone (for instance when focus came back after the permission prompts).
+                readonly property bool overflowing: field.implicitHeight > height + Theme.border.hairline / 2
+
                 width: parent.width - root.buttonWidth - parent.spacing
                 height: field.activeFocus ? Math.max(root.restHeight, Math.min(field.implicitHeight, openLimit)) : root.restHeight
                 radius: Theme.radius.field
@@ -236,7 +247,7 @@ Item {
                     anchors.margins: box.border.width
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
-                    interactive: field.activeFocus && contentHeight > height
+                    interactive: field.activeFocus && box.overflowing
 
                     TextArea.flickable: TextArea {
                         id: field
@@ -327,9 +338,11 @@ Item {
 
                 // Shows that there is more text than the box holds. It is a drawing: it takes no touch and has no name.
                 Rectangle {
+                    objectName: "overflowMark"
+
                     readonly property real room: box.height - 4 * Theme.border.hairline
 
-                    visible: field.activeFocus && flick.contentHeight > flick.height
+                    visible: field.activeFocus && box.overflowing
                     x: box.width - width - 2 * Theme.border.hairline
                     y: 2 * Theme.border.hairline + flick.visibleArea.yPosition * room
                     width: Theme.border.otherWidth
@@ -345,6 +358,8 @@ Item {
                 objectName: "addButton"
                 height: root.restHeight
                 compact: true
+                // A tap on Add does not take focus from the box, as on the phone, so that the screen decides what happens to it.
+                focusPolicy: Qt.TabFocus
                 text: root.addText
                 visible: !root.skeleton
                 onClicked: {

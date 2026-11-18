@@ -193,6 +193,21 @@ void QmlBridge::stopDictation()
     m_Services.m_Dictation->stop();
 }
 
+void QmlBridge::cancelDictation()
+{
+    if (!m_Dictating)
+    {
+        return;
+    }
+    const bool stop_recogniser = m_Services.m_Dictation != nullptr;
+    // The run counter moves on here, so the text and the end that the recogniser still sends are ignored.
+    end_dictation(QStringLiteral("finished"));
+    if (stop_recogniser)
+    {
+        m_Services.m_Dictation->stop();
+    }
+}
+
 void QmlBridge::end_dictation(const QString& reason)
 {
     if (!m_Dictating)
