@@ -61,7 +61,7 @@ iOS compile, `gh workflow run ios-build.yml --ref <branch>`; label the pull requ
 
 ## The kill harness tiers
 
-The Stage 2 kill harness (`libs/storage/tests/kill`, `docs/testing.md`) runs at four sizes (`docs/plan/stage-2.md`, section 4.4).
+The Stage 2 kill harness (`libs/storage/tests/kill`, `docs/testing.md`) runs at four sizes.
 Every run uses one master seed, printed first, so any failure is repeated with it.
 
 | Tier | Where | Random kills | Also |
@@ -94,7 +94,7 @@ What to look at after a run:
   of shards, not the number of iterations.
 
 Run the exit gate with `gh workflow run kill-gate.yml -f seed=0x... [-f iterations=10000] [-f shards=10] [-f systems=both]`. The
-workflow runs from the default branch; its result and seed are recorded in `docs/plan/stage-2.md`, section 8.
+workflow runs from the default branch; its result and seed are recorded in the pull request that ran it.
 
 ## Where the time goes, and the limits
 
@@ -202,7 +202,7 @@ feed would not change the budget, which is dominated by ccache and Qt.
 
 ## QML checks
 
-`tools/ci/check_qml_*.py` keep the QML honest (`docs/plan/stage-4.md`, package 4.1). They read the text of `apps/app/qml/`
+`tools/ci/check_qml_*.py` keep the QML honest. They read the text of `apps/app/qml/`
 and are CTest tests with the label `unit`, so they run in the unit phase of every build; a QML file that fails one fails
 the pull request. `python tools/ci/precheck.py` runs these (all but `qml.format` and `qml.lint`) after the shared checks.
 
@@ -314,7 +314,7 @@ that file, so `tools/tests/test_play_graphics.py` checks the sizes, the colours 
 
 The **Plan** job of `ci.yml` runs `tools/ci/check_store_text.py` on `store/` (Stage 11, task 11.1). The upload sends each
 text file whole, so the check fails when a file is not UTF-8 with LF line ends and one final newline, has a blank first
-or last line or trailing spaces, is over its store's limit (the tables in `docs/plan/stage-11.md`; the App Store keywords
+or last line or trailing spaces, is over its store's limit (the App Store keywords
 in bytes, the rest in characters), or is missing when the store requires it. It also fails when a keyword is empty,
 repeated, 2 characters or fewer, next to a space, or a word of the app's name; when a URL file is not https under the documentation site; when a
 category is not an App Store identifier; when the Play title differs from the App Store name; and when there are more than

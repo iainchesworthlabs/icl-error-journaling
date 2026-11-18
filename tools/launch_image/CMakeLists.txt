@@ -21,7 +21,7 @@ target_link_libraries(ej_launch_image PRIVATE Qt6::Quick Qt6::Gui icl::warnings 
 icl_relax_generated_warnings(ej_launch_image)
 
 # The tests of the launch image (label ui): the PNGs in the asset catalogue are what the skeleton draws now, light and dark
-# (docs/plan/stage-5.md, launch.image_current), and the comparison can fail (launch.image_compare). On Windows the programs
+#, and the comparison can fail (launch.image_compare). On Windows the programs
 # need the Qt DLLs on PATH (cmake/EjQtTestEnvironment.cmake).
 add_test(NAME launch.image_current COMMAND ej_launch_image --check)
 add_test(NAME launch.image_compare COMMAND ej_launch_image --self-test)

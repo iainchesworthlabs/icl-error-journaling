@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// FirstLaunchManual (docs/plan/stage-4.md, 4.13): setup.first_launch (the tester and the UNIT prefix, then
+// FirstLaunchManual: setup.first_launch (the tester and the UNIT prefix, then
 // Continue; held in memory until both are set), setup.voiceover and the cross-cutting checks.
 #include "editors_support.hpp"
 

@@ -1,9 +1,9 @@
 name: Stage 2 exit gate
 
-# The run that decides the Stage 2 exit gate (docs/plan/stage-2.md, section 8): 10,000 random-kill iterations from one
+# The run that decides the Stage 2 exit gate: 10,000 random-kill iterations from one
 # recorded master seed on Linux (release) and on macOS, 10 shards of 1,000 each, with zero lost acknowledged entries. Run it by
 # hand (Actions, Stage 2 exit gate, Run workflow) with a seed; the seed, the commit and the run's link are what the gate's
-# record in docs/plan/stage-2.md names. If a macOS shard is too slow for the time allowed, raise the number of shards, not
+# record in the Stage 2 plan names. If a macOS shard is too slow for the time allowed, raise the number of shards, not
 # the number of iterations.
 
 on:

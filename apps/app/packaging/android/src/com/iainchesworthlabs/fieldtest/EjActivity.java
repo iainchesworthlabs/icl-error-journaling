@@ -9,7 +9,7 @@ import org.qtproject.qt.android.bindings.QtActivity;
 
 /**
  * The application's activity. It forwards what Android delivers to Java and C++ cannot see to the classes that handle it
- * (docs/plan/stage-9.md, "Scope and conventions"): when the activity is covered and uncovered (EjShare, which learns that
+ * (the Stage 9 plan, "Scope and conventions"): when the activity is covered and uncovered (EjShare, which learns that
  * a chooser was dismissed), the result of the document picker, and a setup file another app opens or sends (EjDocuments),
  * and a configuration change, of which the text size is the one the interface follows (EjAccessibility).
  */

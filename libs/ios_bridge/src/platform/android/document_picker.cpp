@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The Android document picker and "Open with" (docs/plan/stage-9.md, "File picker and open-with"). EjDocuments.java shows
+// The Android document picker and "Open with". EjDocuments.java shows
 // the picker, receives a file from another app and copies it into a private directory; this file passes the request over
 // and brings the result back to the main thread. A file another app sends is posted as a QFileOpenEvent, the event Qt's
 // iOS plugin posts for AirDrop, so OpenFileFilter and the importer take it from there unchanged. The decisions are in

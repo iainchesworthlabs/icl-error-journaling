@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Locations and its rename sheet (docs/plan/stage-4.md, 4.13): editor.locations, editor.voiceover and the cross-cutting
+// Locations and its rename sheet: editor.locations, editor.voiceover and the cross-cutting
 // checks.
 #include "editors_sheet_support.hpp"
 

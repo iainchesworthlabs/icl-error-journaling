@@ -43,7 +43,7 @@
 namespace ej::test
 {
 
-/// Which store a `Rig` runs on (docs/plan/stage-3.md, "The exit-gate test").
+/// Which store a `Rig` runs on.
 enum class RigStore
 {
     /// `unit`: the in-memory repository, a fake configuration store, `ManualStorageGateway`, the fixed-offset zone

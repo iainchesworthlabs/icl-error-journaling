@@ -7,7 +7,7 @@ namespace ej::bridge
 {
 
 /// The `android.view.HapticFeedbackConstants` value for a HapticKind on a given Android API level, in portable C++ so
-/// that a test covers the table on the desktop (docs/plan/stage-9.md, "Haptics"). The numbers are Android's own:
+/// that a test covers the table on the desktop. The numbers are Android's own:
 /// VIRTUAL_KEY is 1, and CONFIRM (16) exists from API 30.
 ///
 /// - IMPACT, a touch landing on a tile: VIRTUAL_KEY.

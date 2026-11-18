@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-/// The workload the kill harness runs (section 4.2 of docs/plan/stage-2.md). The worker process and the driver both
+/// The workload the kill harness runs. The worker process and the driver both
 /// build it from `(master seed, iteration)` alone, so the driver can work out what the store must hold after any number
 /// of acknowledged operations without asking the worker. All text is synthetic (Sam Example, UNIT, North Site, Wrong
 /// Response).

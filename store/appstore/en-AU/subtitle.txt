@@ -1,1 +1,1 @@
-One-tap session error log
+Session error log

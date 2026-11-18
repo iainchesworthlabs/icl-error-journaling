@@ -81,7 +81,7 @@ Item {
     id: root
 
     // The margin on each side of the content: the phone's screen margin, or wider so that the content stays in the
-    // log column of a larger window (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    // log column of a larger window.
     readonly property real side: WindowLayout.sideMargin(width, Theme.layout.logColumn)
     // Two panes side by side (Stage 8, 8.5): the board on the left, the header card and the log on the right.
     readonly property bool wide: WindowLayout.wide

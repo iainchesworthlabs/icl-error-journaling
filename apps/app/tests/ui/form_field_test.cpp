@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// FormField (docs/plan/stage-4.md, 4.6): form_field.validation, and the field states.
+// FormField: form_field.validation, and the field states.
 #include "input_components_support.hpp"
 #include "rig/color_math.hpp"
 #include "rig/ui_checks.hpp"

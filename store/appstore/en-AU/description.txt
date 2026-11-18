@@ -1,6 +1,6 @@
-Field Test is a one-tap error log for people who run sessions with a robot.
+Field Test is an error log for people who run sessions with a robot.
 
-Each common error has its own tile on the board. Tap the tile and the error goes into the day's log with the local time. Notes, templated notes and changes to the day's header, such as a new software version, go into the same journal, in time order.
+Each common error has its own tile on the board. Double-tap the tile and the error goes into the day's log with the local time. Notes, templated notes and changes to the day's header, such as a new software version, go into the same journal, in time order.
 
 At the end of the day, share the log as plain text through the share sheet: to a chat app, Mail, Files or the clipboard.
 
@@ -8,10 +8,10 @@ ON THE BOARD
 • Up to 11 error tiles plus Other, each with its own colour and a running count
 • Undo for a mis-tap
 • Free-text notes, and note templates for the things you write every day
-• Dictate a note: tap the microphone and speak. Recognition happens on the phone, so no sound or text leaves it
+• Dictate a note: tap the microphone and speak, where the phone can recognise speech without the internet. Recognition happens on the phone, so no sound or text leaves it
 
-A SECOND BOARD, IF YOU WANT ONE
-Turn on a second board for what you did around the unit, not only what went wrong. Make your own tile types, such as "Spoke with [person]", and pick the people from a short list you keep on the device. Names are kept in their own store, never in the log or a setup file, and a shared log writes them as initials unless you choose otherwise.
+OBSERVATIONS, IF YOU WANT THEM
+Observations is an optional second board. It is off until you switch it on in Settings. Use it for what you did around the unit as well as what went wrong. Make your own tile types, such as "Spoke with [person]", and pick the people from a short list you keep on the device. Names are kept in their own store, never in the log or a setup file, and a shared log writes them as initials unless you choose otherwise.
 
 THE DAY'S LOG
 • A header with the tester, date, unit, number suffix (such as UNIT-27-prod), location and robot software version

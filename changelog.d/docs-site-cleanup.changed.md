@@ -1,0 +1,1 @@
+**Help: the User guide row opens the guide's contents page.** It used to open the site's home page. The site no longer publishes the developer and planning pages, and the support and privacy pages say the app is for iPhone and iPad and that support is through GitHub issues.

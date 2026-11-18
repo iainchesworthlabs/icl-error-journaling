@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The Log screen (docs/plan/stage-4.md, 4.7), against the real Stage 3 view models: LogSession, BoardModel,
+// The Log screen, against the real Stage 3 view models: LogSession, BoardModel,
 // UndoController and TimelineModel over the in-memory store and the manual gateway, so a case can look between
 // "submitted" and "committed". The bridge is a small QObject with the names of the QmlBridge, which writes the haptics
 // it is asked for into the same EventLog as the store, the observers and the confirmation, so the order of the feedback

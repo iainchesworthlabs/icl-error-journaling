@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Tests for tools/docs/demo_setup_hook.py (label: unit). T11-4 of docs/plan/stage-11.md.
+"""Tests for tools/docs/demo_setup_hook.py (label: unit). T11-4 of the Stage 11 plan.
 
 Run with: python3 -m unittest discover -s tools/tests -v
 That the sample itself imports cleanly is tested by the core and bridge tests, which read the same file (EJ_SAMPLE_CONFIG).

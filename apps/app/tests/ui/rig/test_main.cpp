@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The tests of the QML run a Qt Quick window without a screen: the offscreen platform and the software renderer, as
-// `app.smoke` does (docs/plan/stage-4.md, decision 1). The variables are set here as well as by CTest, because
+// `app.smoke` does. The variables are set here as well as by CTest, because
 // `catch_discover_tests` starts the program once at build time to list the cases and that run has no CTest environment.
 #include <catch2/catch_session.hpp>
 

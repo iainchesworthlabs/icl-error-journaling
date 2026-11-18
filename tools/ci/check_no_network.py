@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Fail when the application's own code could use the network (docs/plan/stage-11.md, 11.2; PRD NFR-09).
+"""Fail when the application's own code could use the network.
 
     python3 tools/ci/check_no_network.py [--root .]
 

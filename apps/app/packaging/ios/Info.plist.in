@@ -129,7 +129,7 @@
 
     <!-- Orientations. The phone is portrait only: the board is three across and four down in portrait (docs/design). The
          iPad turns to all four, and has no UIRequiresFullScreen, so that the system may run the application in Split View,
-         Slide Over and Stage Manager windows (docs/plan/stage-8.md, "Multitasking"). Apple asks for all four orientations
+         Slide Over and Stage Manager windows. Apple asks for all four orientations
          of an iPad application that is not full screen only (ITMS-90474), and the layout follows the window's size, not
          the device (apps/app/qml/theme/WindowLayout.qml). UIApplicationSupportsMultipleScenes is left out on purpose: the
          application has one window, and two windows would open the same log twice. tools/ci/check_ios_plist.py and
@@ -147,7 +147,7 @@
     </array>
 
     <!-- ProMotion phones run an application at 60 Hz unless this is true. With it the render loop follows the display,
-         up to 120 Hz, and the animations are animators so that they hold the rate (docs/plan/stage-4.md, U7 and 4.14;
+         up to 120 Hz, and the animations are animators so that they hold the rate (the Stage 4 plan, U7 and 4.14;
          tools/ci/check_ios_plist.py and packaging/ios/verify_app.sh fail without it). -->
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>

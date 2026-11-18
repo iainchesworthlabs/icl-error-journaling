@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Make the Android launcher icon (docs/plan/stage-9.md, package 9.7) from the drawing in make_app_icon.py.
+"""Make the Android launcher icon from the drawing in make_app_icon.py.
 
     python3 tools/store/make_android_icon.py [--res apps/app/packaging/android/res] [--preview icon-preview.png]
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// OtherPicker (docs/plan/stage-4.md, 4.8): other.sections, other.filter, other.pick, other.add, other.voiceover and the
+// OtherPicker: other.sections, other.filter, other.pick, other.add, other.voiceover and the
 // cross-cutting checks, against the real ErrorPickerModel and LogSession over the in-memory store and the manual
 // gateway. The bridge is a spy that notes what the session had accepted when the haptic fired, and the configuration
 // editor is the fake of the Stage 3 tests, which adds a type when the test commits.

@@ -10,7 +10,7 @@ import android.provider.Settings;
 import android.view.accessibility.AccessibilityManager;
 
 /**
- * What the person has asked of the system that the interface follows (docs/plan/stage-9.md, "Accessibility settings"): the
+ * What the person has asked of the system that the interface follows (the Stage 9 plan, "Accessibility settings"): the
  * text size (Configuration.fontScale), Remove animations (Settings.Global.ANIMATOR_DURATION_SCALE) and TalkBack (touch
  * exploration), and a notice when one changes. Java only reads the three numbers; what they mean (the clamp of the text
  * scale, what counts as Reduce Motion) is decided in C++ (android_system_plan.cpp).

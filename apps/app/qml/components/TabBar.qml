@@ -101,7 +101,7 @@ Item {
     }
 
     // How far in from each side of the bar the tabs start. On a phone they share the whole width; in a larger window they
-    // share the log column, so that four tabs are not 200 pt apart (Stage 8, docs/plan/stage-8.md, "Layout rules").
+    // share the log column, so that four tabs are not 200 pt apart.
     readonly property real tabsInset: WindowLayout.compact ? 0 : WindowLayout.sideMargin(width, Theme.layout.logColumn)
     readonly property real tabWidth: (width - 2 * tabsInset) / tabs.length
 

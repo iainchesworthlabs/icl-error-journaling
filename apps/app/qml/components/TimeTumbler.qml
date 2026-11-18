@@ -4,7 +4,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import ErrorJournalingApp
 
-// The time input of the Edit entry and Software version sheets (decision 11 of docs/plan/stage-4.md): a column for the
+// The time input of the Edit entry and Software version sheets: a column for the
 // hours and one for the minutes, with a column for the seconds and one for AM or PM when the time format has them. Each
 // column is a Basic Tumbler with its look replaced. A text field would invite a typo that the model must refuse.
 //

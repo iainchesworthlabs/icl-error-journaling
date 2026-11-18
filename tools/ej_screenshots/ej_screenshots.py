@@ -5,7 +5,7 @@
     python tools/ej_screenshots/ej_screenshots.py [--out screenshots/screens] [--exe PATH] [--qt DIR] [--only Main Review ...]
                                                   [--no-fonts] [--index-only]
 
-Stage 7, package 7.1 (docs/plan/stage-7.md). The screens are the states of `tools/ej_screenshots/screens.json`, grouped by
+Stage 7, package 7.1. The screens are the states of `tools/ej_screenshots/screens.json`, grouped by
 flow; the modes are the ones that file names (light, dark, and large: text scale 3.1, the largest iOS size). The pictures
 come from the `ui` test `screenshots.render` of `ej_ui_tests` (apps/app/tests/ui/visual_capture_test.cpp), which writes
 `<State>.<mode>.png` and `screenshots.json` into `EJ_SCREENSHOT_DIR`. This script runs it with the folder set, then writes

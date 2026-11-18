@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Tests for tools/store/make_play_graphics.py (label: unit). Task 11.5 of docs/plan/stage-11.md.
+"""Tests for tools/store/make_play_graphics.py (label: unit). Task 11.5 of the Stage 11 plan.
 
 Run with: python3 -m unittest discover -s tools/tests -v
 Needs Pillow (requirements/store.txt); skipped without it.

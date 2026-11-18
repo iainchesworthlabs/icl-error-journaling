@@ -5,11 +5,21 @@ repo_url: https://github.com/iainchesworthlabs/icl-error-journaling
 # that cannot read this line (the store URL files) to it. A custom domain is a change here (docs/ci.md, "The site address").
 site_url: https://iainchesworthlabs.com/field-test/
 docs_dir: docs
-# The list of the guide's pictures is data for tools/docs/guide_screenshots.py, not a page of the site.
+# Not published. The guide's list of pictures is data for tools/docs/guide_screenshots.py. The other files are for the
+# people who work on the app and stay in the repository only.
 exclude_docs: |
   guide/screenshots.json
+  developers.md
+  architecture.md
+  building.md
+  ci.md
+  testing.md
+  releasing.md
+  licensing.md
+  design/
+  signing-key.asc
 strict: true
-# Publishes config/sample-config.json as demo/demo-setup.ejconfig for App Review and new users (docs/plan/stage-11.md).
+# Publishes config/sample-config.json as demo/demo-setup.ejconfig for App Review and new users.
 hooks:
   - tools/docs/demo_setup_hook.py
   - tools/docs/site_address_hook.py
@@ -23,6 +33,7 @@ theme:
 nav:
   - Home: index.md
   - User guide:
+      - Guide contents: guide/index.md
       - Getting started: guide/getting-started.md
       - Setting up the board: guide/setup.md
       - A day of logging: guide/logging.md
@@ -34,27 +45,3 @@ nav:
       - Troubleshooting: guide/troubleshooting.md
   - Support: support.md
   - Privacy: privacy.md
-  - For developers: developers.md
-  - Requirements (PRD): prd.md
-  - Implementation plan: implementation-plan.md
-  - Plan:
-      - Bootstrap: design/bootstrap-plan.md
-      - Stage 0: plan/stage-0.md
-      - Stage 0 spikes: plan/spikes.md
-      - Stage 4: plan/stage-4.md
-      - Stage 7: plan/stage-7.md
-      - Stage 10 (documentation): plan/stage-10.md
-      - Stage 8 (iPad): plan/stage-8.md
-      - Stage 9: plan/stage-9.md
-      - Stage 12 (desktop, v2): plan/stage-12.md
-      - Stage 13 (foldables): plan/stage-13.md
-      - Stage 14 (interactions board): plan/stage-14.md
-      - Renaming Interactions to Observations: plan/observations-rename.md
-      - About page: plan/about-page.md
-  - Design: design/README.md
-  - Building: building.md
-  - Architecture: architecture.md
-  - Licences and the About page: licensing.md
-  - Testing: testing.md
-  - Continuous integration: ci.md
-  - Releasing: releasing.md

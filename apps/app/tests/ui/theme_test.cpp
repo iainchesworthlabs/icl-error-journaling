@@ -585,7 +585,7 @@ TEST_CASE("theme.motion: Reduce Motion makes every presentation a fade of at mos
 namespace
 {
 
-/// The tuning of package 4.14 as recorded in docs/plan/stage-4.md ("Recorded motion values"): the desktop defaults, to
+/// The tuning of package 4.14 as recorded in the Stage 4 plan ("Recorded motion values"): the desktop defaults, to
 /// be confirmed on the iPhone in 4.18. A change to a value is made here, in tokens.json, in Theme.qml and in that table
 /// together, which is what this test holds.
 struct RecordedMotion

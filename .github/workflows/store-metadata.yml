@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Uploads the store listing in store/ to App Store Connect or to the Play Console (docs/plan/stage-11.md, task 11.7).
+# Uploads the store listing in store/ to App Store Connect or to the Play Console.
 #
 # Started by hand only, from develop or from a release tag. It uploads text, graphics and screenshots, never a build:
 # builds come only from release.yml. It never submits for review and never releases or starts a rollout; the owner does

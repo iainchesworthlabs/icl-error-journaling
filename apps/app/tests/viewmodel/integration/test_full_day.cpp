@@ -2,7 +2,7 @@
 //
 // The exit-gate test of Stage 3 against the real store: the SQLite repository over the file journal and the
 // configuration file in a temporary folder, on a real storage thread, with recovery at every start
-// (docs/plan/stage-3.md, "The exit-gate test: a full day, headless"). It is the same day as test_full_day.cpp.
+//. It is the same day as test_full_day.cpp.
 #include "support/full_day.hpp"
 #include "support/rig.hpp"
 

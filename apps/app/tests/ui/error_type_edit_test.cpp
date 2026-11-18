@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// ErrorTypeEdit (docs/plan/stage-4.md, 4.13): editor.error_types, the sheet on its own, and the cross-cutting checks.
+// ErrorTypeEdit: editor.error_types, the sheet on its own, and the cross-cutting checks.
 #include "editors_sheet_support.hpp"
 
 #include <catch2/catch_test_macros.hpp>

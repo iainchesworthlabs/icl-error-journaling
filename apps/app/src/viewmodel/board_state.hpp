@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
-// Which boards the app has and which one it reopens on (Stage 14, package I-5; docs/plan/stage-14.md, 4.1).
+// Which boards the app has and which one it reopens on.
 //
 // `interactionsEnabled` is the optional second board, off until the person turns it on in Settings. `lastBoard` is the
 // board in use when the app was left, "errors" or "interactions", so that the app reopens on it. Like HelpState this is

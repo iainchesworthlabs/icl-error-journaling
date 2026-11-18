@@ -88,7 +88,7 @@ struct MigrationReport
     std::vector<std::string> m_QuarantinedPaths; // what a restore set aside, relative to the store
 };
 
-/// Schema migrations (DS-06, section 2.9 of docs/plan/stage-2.md). The procedure:
+/// Schema migrations. The procedure:
 ///
 ///  1. Compare `user_version` with the version asked for. Equal: nothing happens. Higher: `NEWER_SCHEMA`, and nothing
 ///     is touched (a newer app wrote this; it is not downgraded or "recovered"). Lower: every step from the one to the

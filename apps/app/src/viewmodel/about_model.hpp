@@ -31,7 +31,7 @@ struct AboutFacts
     QString m_SourceUrl;   ///< Where the source code is.
 };
 
-/// The model of the About pages (docs/prd.md PRF-12): the facts of the build, the licence of the app, the link to its
+/// The model of the About pages: the facts of the build, the licence of the app, the link to its
 /// source, and the list of the third-party components that the iPhone binary links, each with its licence text.
 ///
 /// The components come from the notices that the build generates from the real link line

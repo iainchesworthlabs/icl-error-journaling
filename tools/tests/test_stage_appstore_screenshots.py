@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Tests for stage_appstore_screenshots.py (label: unit). Task 11.7 of docs/plan/stage-11.md.
+"""Tests for stage_appstore_screenshots.py (label: unit). Task 11.7 of the Stage 11 plan.
 
 Run with: python3 -m unittest discover -s tools/tests -v
 """

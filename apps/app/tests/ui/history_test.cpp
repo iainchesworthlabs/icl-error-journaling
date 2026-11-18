@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// History (docs/plan/stage-4.md, 4.11): history.sections, history.refresh, history.open, history.reshare,
+// History: history.sections, history.refresh, history.open, history.reshare,
 // history.delete, history.empty, history.leave and the cross-cutting checks. The New day prompt has its own file,
 // new_day_test.cpp.
 #include "history_test_support.hpp"

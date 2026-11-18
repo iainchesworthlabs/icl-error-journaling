@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Alert (docs/plan/stage-4.md, 4.4): alert.modal (blocks input below it, default and destructive roles named), focus,
+// Alert: alert.modal (blocks input below it, default and destructive roles named), focus,
 // contrast, Reduce Motion and the cross-cutting checks.
 #include "container_support.hpp"
 #include "rig/color_math.hpp"

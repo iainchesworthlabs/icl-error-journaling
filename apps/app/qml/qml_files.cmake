@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# The QML files of the module ErrorJournalingApp (docs/plan/stage-4.md, "Scope and conventions"). The application and the
+# The QML files of the module ErrorJournalingApp. The application and the
 # UI tests each build the module from the same files, because an executable's resources cannot be linked into another
 # executable. A work package adds its .qml files under qml/ and neither CMakeLists.txt changes: CONFIGURE_DEPENDS runs the
 # glob again at build time.

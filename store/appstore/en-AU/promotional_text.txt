@@ -1,1 +1,1 @@
-Log a robot error in one tap, dictate a note, keep the day's journal in order and share it as plain text. No account, no network, no tracking.
+Log a robot error with a double-tap, dictate a note, keep the day's journal in order and share it as plain text. No account, no network, no tracking.

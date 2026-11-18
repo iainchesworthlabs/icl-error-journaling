@@ -2,7 +2,7 @@
 import QtQuick
 import ErrorJournalingApp
 
-// The time of an entry (design `TimeTumbler.dc.html` and `TimeTumbler12.dc.html`, decision 11 of docs/plan/stage-4.md): a
+// The time of an entry: a
 // second, shorter sheet over the Edit entry sheet, with Cancel, "Time" and Done, the hours and minutes (and seconds, and AM or
 // PM, when the time format has them), a "Now" chip and the time as the log will show it. It is declared in the same SheetHost,
 // after the Edit entry sheet, so it stacks over it with a scrim of its own.

@@ -4,7 +4,7 @@
 
     python3 tools/ci/check_qml_strings.py [--root .]
 
-docs/plan/stage-4.md, "Strings" (NFR-11): every visible string is `qsTr("...")` with `%1` placeholders and no
+the Stage 4 plan, "Strings" (NFR-11): every visible string is `qsTr("...")` with `%1` placeholders and no
 concatenation. This finds, in the properties that show or speak text (`text`, `placeholderText`, `title`, `label`,
 `displayText`, `Accessible.name`, `Accessible.description`, `ToolTip.text`) and in an assignment to one of them:
 

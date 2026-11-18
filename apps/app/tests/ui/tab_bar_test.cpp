@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// TabBar (docs/plan/stage-4.md, 4.4): tab_bar.selection, tab_bar.geometry, the skeleton, contrast, Reduce Motion and
+// TabBar: tab_bar.selection, tab_bar.geometry, the skeleton, contrast, Reduce Motion and
 // the cross-cutting checks.
 #include "container_support.hpp"
 #include "rig/color_math.hpp"
@@ -469,7 +469,7 @@ TEST_CASE("tab_bar.stacking: a page built after the bar draws nothing over it on
     CHECK(red_pixels(top, image.height()) == 0);
 }
 
-// T-I5-3 (docs/plan/stage-14.md): five tabs on the narrowest window.
+// T-I5-3: five tabs on the narrowest window.
 TEST_CASE("shell.tab_label_cap: at the largest text scale the five labels do not truncate at 375 pt", "[ui][tab_bar]")
 {
     UiRig rig;

@@ -54,7 +54,7 @@ You retire a type. It leaves the board and Other, and stays on the entries alrea
 
 **How do I move my setup to another phone?**
 On the first phone, **Settings**, **Import or export**, **Export this setup…**. Send the file to the other phone, open it
-in CS Bingo Board and confirm. A setup file has no logs, so logs do not move. See
+in Field Test and confirm. A setup file has no logs, so logs do not move. See
 [Setting up the board](setup.md#importing-and-exporting-a-setup-file).
 
 **Can I change `T|`?**

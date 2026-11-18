@@ -37,7 +37,7 @@ struct Event
 };
 
 /// The order in which things happened, for the tests of the order of feedback: the touch-down haptic, the commit, the
-/// confirmation, the toast (docs/plan/stage-3.md, "The exit-gate test"). The fakes write into one log and the test
+/// confirmation, the toast. The fakes write into one log and the test
 /// reads it. Safe to write from the storage thread, because `RecordingRepository` does.
 class EventLog
 {

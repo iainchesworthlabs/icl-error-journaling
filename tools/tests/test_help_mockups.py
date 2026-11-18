@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Tests for tools/visual/help_mockups.py (label: unit). The in-app help mock-ups of Stage 10 (docs/plan/stage-10.md, 10.5).
+"""Tests for tools/visual/help_mockups.py (label: unit). The in-app help mock-ups of Stage 10.
 
 Run with: python3 -m unittest discover -s tools/tests -v
 The mock-ups are generated pages, so the tests read what the script would write and compare it with the files on disk.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The WindowLayout singleton (Stage 8, package 8.1; docs/plan/stage-8.md, "Layout approach" and T8-1): the layout class
+// The WindowLayout singleton: the layout class
 // from the window's size, and the sizes that follow from it. The shell's binding of the singleton to its size is
 // app.window_layout in app_flow_test.cpp.
 #include "rig/ui_rig.hpp"

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// NavBar (docs/plan/stage-4.md, 4.4): the compact and the large shape, the actions, the title that moves to its own
+// NavBar: the compact and the large shape, the actions, the title that moves to its own
 // line, accessibility and the cross-cutting checks.
 #include "container_support.hpp"
 #include "rig/ui_checks.hpp"

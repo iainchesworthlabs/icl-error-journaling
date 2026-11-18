@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Sheet (docs/plan/stage-4.md, 4.4): sheet.present_dismiss, sheet.keyboard, sheet.focus, the safe area, Reduce Motion
+// Sheet: sheet.present_dismiss, sheet.keyboard, sheet.focus, the safe area, Reduce Motion
 // and the cross-cutting checks.
 #include "container_support.hpp"
 #include "rig/ui_checks.hpp"

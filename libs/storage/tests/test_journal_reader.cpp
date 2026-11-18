@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The journal cases J1 to J12 of docs/plan/stage-2.md (section 5.2), at the level of the reader: bytes in, what is a
+// The journal cases J1 to J12 of the Stage 2 plan (section 5.2), at the level of the reader: bytes in, what is a
 // record out. Recovery (a later work package) decides what to do with the answer.
 #include "error_journaling/journal_reader.hpp"
 #include "storage_samples.hpp"

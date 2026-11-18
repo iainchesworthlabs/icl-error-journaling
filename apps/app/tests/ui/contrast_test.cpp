@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// a11y.contrast (docs/plan/stage-4.md, "Tests"): every pair of Theme.contrastPairs in both schemes, the 11 tile colours
+// a11y.contrast: every pair of Theme.contrastPairs in both schemes, the 11 tile colours
 // under the tile text, and the rules for colour that is not a contrast ratio: no red or green tile hue, and tiles that
 // stay apart for a person with deuteranopia.
 #include "rig/color_math.hpp"
@@ -190,7 +190,7 @@ QColor interaction_tile(QObject* theme, int slot)
 
 } // namespace
 
-// T-I5-4 (docs/plan/stage-14.md): the second hue family of the Interactions board.
+// T-I5-4: the second hue family of the Interactions board.
 TEST_CASE("theme.interaction_hues: the interaction tiles and the strip pass the contrast test in light and in dark",
           "[ui][a11y][contrast]")
 {

@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import ErrorJournalingApp
 
-// The People screen of Settings (Stage 14, package I-7; docs/plan/stage-14.md, 4.5): the people the Interactions board can
+// The People screen of Settings: the people the Interactions board can
 // name. The names stay on the device, in a list of their own, and an entry refers to a person by id.
 //
 //   New person    a name, and optionally the location the person belongs to. "Everyone" in the picker ticks the people of the

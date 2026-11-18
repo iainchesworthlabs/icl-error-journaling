@@ -4,7 +4,7 @@
 
     python3 tools/ci/check_qml_literals.py [--root .]
 
-docs/plan/stage-4.md, "Tokens, not numbers": outside `qml/theme/` no colour, size, radius, spacing or duration appears
+the Stage 4 plan, "Tokens, not numbers": outside `qml/theme/` no colour, size, radius, spacing or duration appears
 except as a `Theme.*` value. This finds
 
   * a string that is a hex colour (`"#1E5B7A"`), `Qt.rgba(`, `Qt.hsla(`, `Qt.tint(` and the like, and a named colour

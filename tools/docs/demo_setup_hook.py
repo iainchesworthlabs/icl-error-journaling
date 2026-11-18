@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""MkDocs hook: publish the demo setup file at <site>/demo/demo-setup.ejconfig (docs/plan/stage-11.md, 11.3).
+"""MkDocs hook: publish the demo setup file at <site>/demo/demo-setup.ejconfig.
 
 App Review and new users open this address in Safari, and the phone offers to open the file in Field Test. The
 .ejconfig extension is what makes that work: Pages serves it as a download rather than showing JSON text, and the app

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Recovery on a populated store (work package 2.4 of docs/plan/stage-2.md): the corruption cases C1 to C16, the journal
+// Recovery on a populated store: the corruption cases C1 to C16, the journal
 // cases J1 to J12, the combined cases X1 to X3, idempotence, and that nothing is ever deleted. Every case damages a
 // copy of the same store: one open log of 300 entries and two archived logs, built through the production code.
 #include "platform/unreadable_file.hpp"
