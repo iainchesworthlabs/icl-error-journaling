@@ -10,3 +10,4 @@ Facts the listing and the answers in this folder rely on. The owner confirms eac
 | Price | 6.99 USD base price, paid, no in-app purchase | Decided by the owner on 12 November 2026. Set in App Store Connect, not in a file here |
 | Devices | iPhone and iPad | Android is not released |
 | Support | GitHub issues only, no email address | `docs/support.md` |
+| Accessibility Nutrition Labels | None declared yet. Captions and Audio Descriptions are not applicable (no video, no audio) and are never claimed. The others wait for a device pass | `docs/accessibility-labels.md` |

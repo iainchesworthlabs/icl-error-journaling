@@ -253,7 +253,7 @@ TEST_CASE("history.sections: newest first, one heading for two logs of a date, t
 
     // The rows are one button each, named with the date, the place, the entries and the state.
     CHECK(s.required("historySwipe", s.row(1))->property("accessibleName").toString() ==
-          QStringLiteral("Sat 7 Nov, UNIT-27 · North Site, 6 entries, Shared 17:42"));
+          QStringLiteral("Sat 7 Nov, UNIT-27 · North Site, 6 entries · v1.4.2, Shared 17:42"));
 }
 
 TEST_CASE("history.sections: the shared time is in the user's time format", "[ui][history]")
@@ -493,9 +493,9 @@ TEST_CASE("history.open: the buttons under a row can be pressed by a screen read
     QQuickItem* share = s.required("copyAction", row);
     QQuickItem* del = s.required("deleteAction", row);
     CHECK(input::require_interface(share)->text(QAccessible::Name) ==
-          QStringLiteral("Share, Sat 7 Nov, UNIT-27 · North Site, 1 entry, Not shared"));
+          QStringLiteral("Share, Sat 7 Nov, UNIT-27 · North Site, 1 entry · v1.4.2, Not shared"));
     CHECK(input::require_interface(del)->text(QAccessible::Name) ==
-          QStringLiteral("Delete, Sat 7 Nov, UNIT-27 · North Site, 1 entry, Not shared"));
+          QStringLiteral("Delete, Sat 7 Nov, UNIT-27 · North Site, 1 entry · v1.4.2, Not shared"));
 
     input::press_action(share);
     s.m_Rig.settle();

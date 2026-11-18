@@ -130,8 +130,8 @@ TEST_CASE("choice_card.voiceover: a radio button with its explanation as the des
     REQUIRE(first != nullptr);
     REQUIRE(second != nullptr);
     CHECK(first->role() == QAccessible::RadioButton);
-    CHECK(first->text(QAccessible::Name) == QStringLiteral("It changed during the day"));
-    CHECK(first->text(QAccessible::Description).contains(QStringLiteral("timed entry")));
+    CHECK(first->text(QAccessible::Name).startsWith(QStringLiteral("It changed during the day")));
+    CHECK(first->text(QAccessible::Name).contains(QStringLiteral("timed entry")));
     CHECK(first->state().checkable);
     CHECK(first->state().checked);
     CHECK_FALSE(second->state().checked);

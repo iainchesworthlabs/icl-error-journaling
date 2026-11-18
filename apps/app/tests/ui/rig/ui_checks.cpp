@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QRegularExpression>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -71,6 +72,75 @@ QRectF hit_rect(const Node& node)
     return node.m_Rect.adjusted(-margin, -margin, margin, margin);
 }
 
+/// The words in a string, as a person would say them: lower case, with every run of anything that is not a letter or a digit
+/// (a space, a middle dot, an ellipsis, a dash) made one space, and a space at each end so that a word is not found inside
+/// another ("an" is not in "pant").
+QString words_of(const QString& value)
+{
+    QString out = QStringLiteral(" ");
+    bool gap = true;
+    for (const QChar c : value.toCaseFolded())
+    {
+        if (c.isLetterOrNumber())
+        {
+            out += c;
+            gap = false;
+        }
+        else if (!gap)
+        {
+            out += QLatin1Char(' ');
+            gap = true;
+        }
+    }
+    return gap ? out : out + QLatin1Char(' ');
+}
+
+/// What a `Text` shows, with markup removed when the text is styled or rich.
+QString shown_text(const QQuickItem* text)
+{
+    QString value = text->property("text").toString();
+    constexpr int PLAIN_TEXT = 0; // Text.PlainText is Qt::PlainText
+    if (text->property("textFormat").toInt() != PLAIN_TEXT)
+    {
+        static const QRegularExpression MARKUP(QStringLiteral("<[^>]*>"));
+        value.remove(MARKUP);
+    }
+    return value;
+}
+
+/// A text field's placeholder: a hint that goes when typing starts. It is not the label of the field, which is its name.
+bool is_placeholder(const QQuickItem* text)
+{
+    return is_class(text, "QQuickPlaceholderText");
+}
+
+/// A role that groups or contains controls and is not said as a name of its own: its texts belong to the controls in it. A
+/// container takes a press only when it watches the finger for a drag or eats the touch behind it.
+bool is_container_role(int role)
+{
+    switch (role)
+    {
+        case QAccessible::Grouping:
+        case QAccessible::Pane:
+        case QAccessible::List:
+        case QAccessible::Table:
+        case QAccessible::Tree:
+        case QAccessible::Dialog:
+        case QAccessible::Document:
+        case QAccessible::Client:
+        case QAccessible::Window:
+        case QAccessible::Section:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool has_letter(const QString& value)
+{
+    return std::any_of(value.cbegin(), value.cend(), [](QChar c) { return c.isLetter(); });
+}
+
 } // namespace
 
 Violations check_names(UiRig& rig)
@@ -114,6 +184,59 @@ Violations check_names(UiRig& rig)
                                       .arg(key.second, label(*group[i]), label(*group[j])));
                 }
             }
+        }
+    }
+    return out;
+}
+
+Violations check_label_in_name(UiRig& rig)
+{
+    Violations out;
+    const std::vector<Node> nodes = rig.tree();
+    // The controls a screen reader reaches: a text that lies in one of them is the label of the nearest.
+    std::vector<const Node*> controls;
+    for (const Node& node : nodes)
+    {
+        if (node.m_Interactive && node.m_Visible && node.m_InAccessibleTree && !node.m_Name.trimmed().isEmpty() &&
+            !is_container_role(node.m_Role))
+        {
+            controls.push_back(&node);
+        }
+    }
+    for (const Node* control : controls)
+    {
+        const QString name = words_of(control->m_Name);
+        for (const Node& text : nodes)
+        {
+            if (!is_text(text) || !text.m_Visible || is_placeholder(text.m_Item))
+            {
+                continue;
+            }
+            const bool inside = text.m_Item == control->m_Item || control->m_Item->isAncestorOf(text.m_Item);
+            if (!inside)
+            {
+                continue;
+            }
+            // The nearest control that a screen reader reaches owns the text.
+            const bool owned_by_nested =
+                std::ranges::any_of(controls,
+                                    [&](const Node* other)
+                                    {
+                                        return other != control && control->m_Item->isAncestorOf(other->m_Item) &&
+                                               (other->m_Item == text.m_Item || other->m_Item->isAncestorOf(text.m_Item));
+                                    });
+            if (owned_by_nested)
+            {
+                continue;
+            }
+            const QString shown = shown_text(text.m_Item);
+            const QString shown_words = words_of(shown);
+            if (!has_letter(shown) || name.contains(shown_words))
+            {
+                continue;
+            }
+            out.push_back(QStringLiteral("label \"%1\" is not in the name \"%2\": %3")
+                              .arg(shown.simplified(), control->m_Name, label(*control)));
         }
     }
     return out;
@@ -328,6 +451,7 @@ Violations check_everything(UiRig& rig, const std::function<double(const Node&)>
             out.push_back(when + line);
         }
     };
+    add(check_label_in_name(rig), {});
     add(check_targets(rig, minimum), {});
     add(check_reading_order(rig), {});
     for (const double scale : {1.0, 1.3, 3.1})

@@ -16,6 +16,8 @@ description: "What is in place in Field Test and on this site to make them usabl
 <li><strong>Light and dark.</strong> The app follows your device's appearance.</li>
 <li><strong>Touch targets.</strong> Buttons and rows are at least 44 points high.</li>
 <li><strong>Not colour alone.</strong> Each tile carries a label as well as a colour.</li>
+<li><strong>VoiceOver.</strong> Every button, row and tile has a name that VoiceOver reads.</li>
+<li><strong>Voice Control.</strong> The name of a control contains the words that it shows, so you can say &ldquo;Tap&rdquo; and those words. The app's tests check this on every screen.</li>
 </ul>
 <h2>This site</h2>
 <ul>

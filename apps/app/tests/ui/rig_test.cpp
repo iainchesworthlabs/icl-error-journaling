@@ -292,6 +292,34 @@ TEST_CASE("a11y.names: found on a button without a name and on two buttons with 
     CHECK(any_line_has(found, QStringLiteral("silent")));
 }
 
+TEST_CASE("a11y.label_in_name: found on a name that is another word, a name that drops a line and a tab named otherwise, "
+          "passed on the shapes the app uses",
+          "[ui][a11y]")
+{
+    {
+        UiRig rig;
+        REQUIRE(load_good(rig) != nullptr);
+        expect_clean(check_label_in_name(rig));
+    }
+    {
+        UiRig rig;
+        REQUIRE(rig.load(QStringLiteral("UiStubLabels")) != nullptr);
+        expect_clean(check_label_in_name(rig));
+    }
+    UiRig rig;
+    REQUIRE(rig.load(QStringLiteral("UiStubBadLabel")) != nullptr);
+    const Violations found = check_label_in_name(rig);
+    INFO(describe(found).toStdString());
+    CHECK(any_line_has(found, QStringLiteral("label \"Add\" is not in the name \"Plus\"")));
+    CHECK(any_line_has(found, QStringLiteral("label \"Wrong Response on UNIT\" is not in the name \"Sam Example\"")));
+    CHECK(any_line_has(found, QStringLiteral("label \"Review\" is not in the name \"Third\"")));
+    CHECK(found.size() == 3);
+    // Every screen and component test runs it through check_everything.
+    UiRig everything;
+    REQUIRE(everything.load(QStringLiteral("UiStubBadLabel")) != nullptr);
+    CHECK(any_line_has(check_everything(everything), QStringLiteral("is not in the name")));
+}
+
 TEST_CASE("a11y.targets: found on a 30 pt button, passed with a handler margin that makes 44 pt", "[ui][a11y]")
 {
     {

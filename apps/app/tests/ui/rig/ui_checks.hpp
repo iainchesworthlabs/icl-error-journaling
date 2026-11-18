@@ -28,6 +28,17 @@ using Violations = std::vector<QString>;
 /// controls under one parent share a name unless their values differ. An item that is not interactive is ignored.
 [[nodiscard]] Violations check_names(UiRig& rig);
 
+/// `a11y.label_in_name` (WCAG 2.5.3, label in name; what makes Voice Control's "Tap <label>" work): every interactive item that
+/// is shown and that a screen reader reaches has every word it shows in its `Accessible.name`, in the order it shows them,
+/// ignoring case and anything that is not a letter or a digit (spaces, a middle dot, an ellipsis, a dash). The words it shows
+/// are the `Text` items inside it, apart from
+///  - those in a nested control that a screen reader reaches (that control owns them),
+///  - text with no letter in it (a count, a glyph),
+///  - a text field's placeholder, which is a hint that goes when typing starts and not the label of the field, and
+///  - the texts of an item whose role is a container (a group, a list, a pane, a dialog) that only watches the finger.
+/// An icon-only control has no label and is held to `a11y.names` alone.
+[[nodiscard]] Violations check_label_in_name(UiRig& rig);
+
 /// `a11y.targets`: every interactive item that is shown is `minimum(node)` points square or more, counting the margin
 /// of its pointer handlers as hit area. The minimum is 44 pt unless the test says otherwise (a tile: 88).
 [[nodiscard]] Violations check_targets(UiRig& rig, const std::function<double(const Node&)>& minimum = {});
@@ -49,7 +60,7 @@ using Violations = std::vector<QString>;
 /// none slides.
 [[nodiscard]] Violations check_motion_reduced(UiRig& rig);
 
-/// The names, targets, order and text scale checks, with the text scale at 1.0, 1.3 and 3.1, restoring 1.0.
+/// The names, label in name, targets, order and text scale checks, with the text scale at 1.0, 1.3 and 3.1, restoring 1.0.
 [[nodiscard]] Violations check_everything(UiRig& rig, const std::function<double(const Node&)>& minimum = {});
 
 /// The faults, one to a line.
