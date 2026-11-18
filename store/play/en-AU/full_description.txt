@@ -11,7 +11,7 @@ ON THE BOARD
 • Dictate a note on Android 13 and later: recognition happens on the phone, so no sound or text leaves it
 
 A SECOND BOARD, IF YOU WANT ONE
-Turn on a second board for what you did around the unit, not only what went wrong. Make your own tile types, such as "Spoke with [person]", and pick the people from a short list you keep on the device. Names are kept in their own store, never in the log or a setup file, and a shared log writes them as initials unless you choose otherwise.
+Turn on a second board for what you did around the unit, not only what went wrong. Make your own tile types, such as "Paired with [person]", and pick the people from a short list you keep on the device. Names are kept in their own store, never in the log or a setup file, and a shared log writes them as initials unless you choose otherwise.
 
 THE DAY'S LOG
 • A header with the tester, date, unit, number suffix (such as UNIT-27-prod), location and software version

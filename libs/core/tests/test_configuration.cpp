@@ -88,8 +88,8 @@ TEST_CASE("Import of an export equals the original, with unicode, retired types 
     c.m_ErrorTypes.push_back({ej::ErrorTypeId{ej::Uuid::from_random(3, 3)}, "Off the board", false, std::nullopt});
     c.m_Locations.push_back({ej::LocationId{ej::Uuid::from_random(4, 4)}, "North Site – ünïcode", 2, false});
     c.m_Locations.push_back({ej::LocationId{ej::Uuid::from_random(5, 5)}, "Gone", -1, true});
-    c.m_Templates.push_back({ej::NoteTemplateId{ej::Uuid::from_random(6, 6)}, "Played song", "Which song?",
-                             "Played {value} {{twice}}", 1, ""});
+    c.m_Templates.push_back({ej::NoteTemplateId{ej::Uuid::from_random(6, 6)}, "Began task", "Which task?",
+                             "Began task {value} {{twice}}", 1, ""});
 
     for (const bool twelve : {false, true})
     {
@@ -189,7 +189,7 @@ TEST_CASE("Duplicate ids and names are rejected", "[config]")
     {
         CHECK(has(errors_of(edited(sample(), "\"South Site\"", "\"north site\"")), Code::DUPLICATE,
                   "/locations/1/name"));
-        CHECK(has(errors_of(edited(sample(), "\"Visitor interaction\"", "\"Played song\"")), Code::DUPLICATE,
+        CHECK(has(errors_of(edited(sample(), "\"Entered room 1\"", "\"Began task\"")), Code::DUPLICATE,
                   "/note_templates/1/name"));
     }
 }
@@ -222,11 +222,11 @@ TEST_CASE("Ids must be UUIDs", "[config]")
 
 TEST_CASE("Patterns, tester and prefix are validated", "[config]")
 {
-    CHECK(has(errors_of(edited(sample(), "Played {value}", "Played")), Code::BAD_PATTERN,
+    CHECK(has(errors_of(edited(sample(), "Began task {value}", "Played")), Code::BAD_PATTERN,
               "/note_templates/0/output_pattern"));
-    CHECK(has(errors_of(edited(sample(), "Played {value}", "Played {value")), Code::BAD_PATTERN,
+    CHECK(has(errors_of(edited(sample(), "Began task {value}", "Played {value")), Code::BAD_PATTERN,
               "/note_templates/0/output_pattern"));
-    CHECK(has(errors_of(edited(sample(), "Played {value}", "Played {name}")), Code::BAD_PATTERN,
+    CHECK(has(errors_of(edited(sample(), "Began task {value}", "Began task {name}")), Code::BAD_PATTERN,
               "/note_templates/0/output_pattern"));
     CHECK(has(errors_of(edited(sample(), "\"Sam Example\"", "\"\"")), Code::OUT_OF_RANGE, "/preferences/facilitator"));
     CHECK(has(errors_of(edited(sample(), "\"Sam Example\"", "\"   \"")), Code::OUT_OF_RANGE,
@@ -243,7 +243,7 @@ TEST_CASE("Several faults are all reported, in file order", "[config]")
     auto text = edited(sample(), "\"Sam Example\"", "\"\"");
     text = edited(text, "\"Sequence Out of Order\"", "\"Wrong Response\"");
     text = edited(text, "00000000-0000-4000-8000-0000000000b2", "oops");
-    text = edited(text, "Visitor: {value}", "Visitor");
+    text = edited(text, "Entered {value}", "Visitor");
 
     const auto errors = errors_of(text);
     std::vector<std::string> paths;
@@ -401,7 +401,7 @@ TEST_CASE("An error says what it is about as data, as well as in words", "[confi
     }
     SECTION("a missing key")
     {
-        const auto errors = errors_of(edited(base, "      \"value_prompt\": \"Which song?\",\n", ""));
+        const auto errors = errors_of(edited(base, "      \"value_prompt\": \"Which task?\",\n", ""));
         REQUIRE(errors.size() == 1);
         CHECK(errors[0].m_Code == Code::MISSING_FIELD);
         CHECK(errors[0].m_Problem == Problem::EMPTY);
@@ -437,9 +437,9 @@ TEST_CASE("An error says what it is about as data, as well as in words", "[confi
     }
     SECTION("the three faults of a pattern")
     {
-        CHECK(errors_of(edited(base, "Played {value}", "Played"))[0].m_Problem == Problem::NO_PLACEHOLDER);
-        CHECK(errors_of(edited(base, "Played {value}", "Played {value"))[0].m_Problem == Problem::STRAY_BRACE);
-        CHECK(errors_of(edited(base, "Played {value}", "Played {name}"))[0].m_Problem == Problem::UNKNOWN_PLACEHOLDER);
+        CHECK(errors_of(edited(base, "Began task {value}", "Played"))[0].m_Problem == Problem::NO_PLACEHOLDER);
+        CHECK(errors_of(edited(base, "Began task {value}", "Played {value"))[0].m_Problem == Problem::STRAY_BRACE);
+        CHECK(errors_of(edited(base, "Began task {value}", "Began task {name}"))[0].m_Problem == Problem::UNKNOWN_PLACEHOLDER);
     }
     SECTION("a preference and the whole file")
     {
@@ -686,14 +686,14 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
 {
     const auto config = imported(sample());
     REQUIRE(config.m_InteractionTypes.size() == 6);
-    CHECK(config.m_InteractionTypes[0].m_Name == "Spoke with");
+    CHECK(config.m_InteractionTypes[0].m_Name == "Paired with");
     CHECK(config.m_InteractionTypes[0].m_BoardPosition == 1);
-    CHECK(config.m_InteractionTypes[0].m_LinePattern == "Spoke with {person}");
+    CHECK(config.m_InteractionTypes[0].m_LinePattern == "Paired with {person}");
     CHECK(config.m_InteractionTypes[0].m_Asks == ej::InteractionAsks::PERSON);
     CHECK(config.m_InteractionTypes[1].m_Asks == ej::InteractionAsks::TEXT);
     CHECK_FALSE(config.m_InteractionTypes[2].m_LinePattern.has_value());
     CHECK(config.m_InteractionTypes[2].m_Asks == ej::InteractionAsks::NOTHING);
-    CHECK(config.m_InteractionTypes[3].m_LinePattern == "Gave {person} {value}");
+    CHECK(config.m_InteractionTypes[3].m_LinePattern == "Assigned {person} {value}");
 
     SECTION("a written file reads back the same")
     {
@@ -728,7 +728,7 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
     }
     SECTION("a duplicate name is refused, ignoring case")
     {
-        const auto errors = errors_of(edited(sample(), "\"Gave item\"", "\"spoke WITH\""));
+        const auto errors = errors_of(edited(sample(), "\"Assigned\"", "\"spoke WITH\""));
         REQUIRE(errors.size() == 1);
         CHECK(errors[0].m_Code == Code::DUPLICATE);
         CHECK(errors[0].m_Path == "/interaction_types/3/name");
@@ -739,9 +739,9 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
     }
     SECTION("positions are 1 to 11 and used once")
     {
-        const std::string from = "\"board_position\": 4,\n      \"line_pattern\": \"Gave";
+        const std::string from = "\"board_position\": 4,\n      \"line_pattern\": \"Assigned";
         const auto position = [&](const std::string& value)
-        { return errors_of(edited(sample(), from, "\"board_position\": " + value + ",\n      \"line_pattern\": \"Gave")); };
+        { return errors_of(edited(sample(), from, "\"board_position\": " + value + ",\n      \"line_pattern\": \"Assigned")); };
         const auto taken = position("3");
         REQUIRE(taken.size() == 1);
         CHECK(taken[0].m_Problem == ConfigError::Problem::POSITION_TAKEN);
@@ -759,7 +759,7 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
     SECTION("a bad line is refused")
     {
         using Problem = ConfigError::Problem;
-        const std::string from = "\"Spoke with {person}\"";
+        const std::string from = "\"Paired with {person}\"";
         const auto problem_of = [&](const std::string& pattern)
         {
             const auto errors = errors_of(edited(sample(), from, pattern));
@@ -767,16 +767,16 @@ TEST_CASE("config.interaction_types: read, write and refuse", "[config][interact
             CHECK(errors[0].m_Path == "/interaction_types/0/line_pattern");
             return errors[0].m_Problem;
         };
-        CHECK(problem_of("\"Spoke with {person\"") == Problem::STRAY_BRACE);
-        CHECK(problem_of("\"Spoke with {name}\"") == Problem::UNKNOWN_PLACEHOLDER);
+        CHECK(problem_of("\"Paired with {person\"") == Problem::STRAY_BRACE);
+        CHECK(problem_of("\"Paired with {name}\"") == Problem::UNKNOWN_PLACEHOLDER);
         CHECK(problem_of("\"{person} and {person}\"") == Problem::REPEATED_PLACEHOLDER);
         CHECK(problem_of("\"{value} {value}\"") == Problem::REPEATED_PLACEHOLDER);
         CHECK(problem_of("\"  \"") == Problem::EMPTY);
     }
     SECTION("an unknown key and a list that is not a list are refused")
     {
-        CHECK(has(errors_of(edited(sample(), "\"line_pattern\": \"Spoke with {person}\"",
-                                   "\"line_pattern\": \"Spoke with {person}\", \"asks\": \"person\"")),
+        CHECK(has(errors_of(edited(sample(), "\"line_pattern\": \"Paired with {person}\"",
+                                   "\"line_pattern\": \"Paired with {person}\", \"asks\": \"person\"")),
                   Code::UNKNOWN_FIELD, "/interaction_types/0/asks"));
         CHECK(has(errors_of(edited(sample(), "\"interaction_types\": [", "\"interaction_types\": {}, \"x\": [")),
                   Code::WRONG_TYPE, "/interaction_types"));

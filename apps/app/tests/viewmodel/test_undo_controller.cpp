@@ -340,7 +340,7 @@ TEST_CASE("A note between two taps of one tile resets the count", "[viewmodel][u
     rig.commit(tap(2, melbourne(10, 21)));
     REQUIRE(rig.controller.repeat_count() == 2);
 
-    rig.commit(sample_note(3, melbourne(10, 22), "Played Morning Medley"));
+    rig.commit(sample_note(3, melbourne(10, 22), "Began task 1"));
     CHECK(rig.text() == "Note added at 10:22");
     rig.commit(tap(4, melbourne(10, 23)));
     CHECK(rig.text() == "Wrong Response logged at 10:23");
@@ -566,7 +566,7 @@ TEST_CASE("A note gets a toast, and its undo returns the text to the composer", 
     std::vector<std::string> returned;
     rig.controller.set_note_undo_target([&returned](const std::string& text) { returned.push_back(text); });
 
-    REQUIRE(rig.document->add_entry(sample_note(1, melbourne(10, 30), "Played Morning Medley"), Origin::USER,
+    REQUIRE(rig.document->add_entry(sample_note(1, melbourne(10, 30), "Began task 1"), Origin::USER,
                                     rig.count(rig.m_Done)));
     CHECK_FALSE(rig.controller.active());
     rig.gateway().run_all();
@@ -582,7 +582,7 @@ TEST_CASE("A note gets a toast, and its undo returns the text to the composer", 
     CHECK(rig.deleted_in_store(1));
     CHECK_FALSE(rig.controller.active());
     REQUIRE(returned.size() == 1);
-    CHECK(returned[0] == "Played Morning Medley");
+    CHECK(returned[0] == "Began task 1");
 }
 
 TEST_CASE("A note whose undo commit fails keeps its text for the retry", "[viewmodel][undo]")
@@ -590,7 +590,7 @@ TEST_CASE("A note whose undo commit fails keeps its text for the retry", "[viewm
     UndoRig rig;
     std::vector<std::string> returned;
     rig.controller.set_note_undo_target([&returned](const std::string& text) { returned.push_back(text); });
-    rig.commit(sample_note(1, melbourne(10, 30), "Played Morning Medley"));
+    rig.commit(sample_note(1, melbourne(10, 30), "Began task 1"));
     rig.storage().repository().fail_next(RepositoryOp::SET_ENTRY_DELETED);
 
     REQUIRE(rig.controller.undo());
@@ -601,7 +601,7 @@ TEST_CASE("A note whose undo commit fails keeps its text for the retry", "[viewm
     REQUIRE(rig.controller.undo());
     rig.gateway().run_all();
     REQUIRE(returned.size() == 1);
-    CHECK(returned[0] == "Played Morning Medley");
+    CHECK(returned[0] == "Began task 1");
 }
 
 TEST_CASE("The undo of a tap does not touch the composer", "[viewmodel][undo]")
@@ -869,7 +869,7 @@ TEST_CASE("A tap on the Interactions board opens a toast with its label, and its
     UndoRig rig;
     rig.commit(sample_interaction_entry(1, melbourne(10, 20)));
     REQUIRE(rig.controller.active());
-    CHECK(rig.text() == "Spoke with logged at 10:20");
+    CHECK(rig.text() == "Paired with logged at 10:20");
     CHECK(rig.toasts_opened() == 1);
 
     REQUIRE(rig.controller.undo());
@@ -886,7 +886,7 @@ TEST_CASE("A second tap on the Interactions board does not count as a repeat, an
     rig.advance(1s);
     rig.commit(sample_interaction_entry(2, melbourne(10, 21)));
     REQUIRE(rig.controller.active());
-    CHECK(rig.text() == "Spoke with logged at 10:21");
+    CHECK(rig.text() == "Paired with logged at 10:21");
 
     rig.advance(1s);
     rig.commit(tap(3, melbourne(10, 22)));

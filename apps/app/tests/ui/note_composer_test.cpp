@@ -44,8 +44,8 @@ public:
     Templates()
     {
         m_Model.setItemRoleNames({{Qt::UserRole + 1, "templateId"}, {Qt::UserRole + 2, "name"}});
-        add(QStringLiteral("played-song"), QStringLiteral("Played song"));
-        add(QStringLiteral("visitor"), QStringLiteral("Visitor interaction"));
+        add(QStringLiteral("played-song"), QStringLiteral("Began task"));
+        add(QStringLiteral("visitor"), QStringLiteral("Entered room 1"));
     }
 
     void add(const QString& id, const QString& name)
@@ -163,19 +163,19 @@ TEST_CASE("composer.draft_binding: a draft set from outside replaces the text wi
     Fixture f;
     QSignalSpy edited(f.composer, SIGNAL(textEdited(QString)));
 
-    f.host->setProperty("draft", QStringLiteral("Played Evening Song"));
-    CHECK(f.text() == QStringLiteral("Played Evening Song"));
+    f.host->setProperty("draft", QStringLiteral("Began task 2"));
+    CHECK(f.text() == QStringLiteral("Began task 2"));
     CHECK(f.cursor() == 19);
     CHECK(edited.count() == 0);
 
-    f.host->setProperty("draft", QStringLiteral("Played Evening Song again"));
-    CHECK(f.text() == QStringLiteral("Played Evening Song again"));
+    f.host->setProperty("draft", QStringLiteral("Began task 2 again"));
+    CHECK(f.text() == QStringLiteral("Began task 2 again"));
     CHECK(f.cursor() == f.text().length());
     CHECK(edited.count() == 0);
 
     // The same text again is not a change: the cursor stays.
     f.field->setProperty("cursorPosition", 4);
-    f.host->setProperty("draft", QStringLiteral("Played Evening Song again"));
+    f.host->setProperty("draft", QStringLiteral("Began task 2 again"));
     CHECK(f.cursor() == 4);
 }
 
@@ -239,8 +239,8 @@ TEST_CASE("composer.chips: a chip emits chipChosen with its template id, and a l
         }
     }
     REQUIRE(chips.size() == 3);
-    CHECK(chips[0].m_Name == QStringLiteral("Played song"));
-    CHECK(chips[1].m_Name == QStringLiteral("Visitor interaction"));
+    CHECK(chips[0].m_Name == QStringLiteral("Began task"));
+    CHECK(chips[1].m_Name == QStringLiteral("Entered room 1"));
     CHECK(chips[2].m_Name == QStringLiteral("A visitor asked about the Wrong Response at North Site"));
     for (const Node& chip : chips)
     {

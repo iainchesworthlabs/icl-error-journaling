@@ -62,10 +62,10 @@ ENTRIES = [
     ("09:42", "T|", "Wrong Response"),
     ("10:05", "T|", "Wrong Response"),
     ("10:20", "T|", "Stopped Responding"),
-    ("10:30", "(Free Text)", "Played Morning Medley"),
-    ("11:02", "T|", "Wrong Output – asked for Evening Song"),
+    ("10:30", "(Free Text)", "Began task 1"),
+    ("11:02", "T|", "Wrong Output – asked for task 2"),
     ("11:40", "T|", "Timed Out"),
-    ("12:10", "(Free Text)", "Played Evening Song"),
+    ("12:10", "(Free Text)", "Began task 2"),
 ]
 
 ICON = {
@@ -171,7 +171,7 @@ class Page:
         return (
             f'<div style="background: {c["surface"]}; border-radius: 16px; padding: 12px; height: {COMPOSER}px; box-sizing: border-box; '
             f'display: flex; flex-direction: column; gap: 10px; box-shadow: {self.shadow()}">'
-            f'<div style="display: flex; gap: 8px">{chip("song", "Played song")}{chip("note", "Visitor interaction")}</div>'
+            f'<div style="display: flex; gap: 8px">{chip("song", "Began task")}{chip("note", "Entered room 1")}</div>'
             f'<div style="display: flex; gap: 8px; align-items: center">'
             f'<div style="flex-grow: 1; height: 44px; box-sizing: border-box; border-radius: 12px; border: 1px solid {c["border"]}; '
             f'background: {c["fieldBackground"]}; padding: 0 12px; display: flex; align-items: center; font-size: 15px; '
@@ -542,10 +542,10 @@ def edit_entry_screen(p: Page) -> str:
         f'font-variant-numeric: tabular-nums">11:02</span></div></div>'
         f'{p.section_label("Note")}'
         f'<div style="background: {c["surfaceRaised"]}; border-radius: 14px; padding: 14px; font-size: 17px; min-height: 72px; box-sizing: border-box">'
-        f"asked for Evening Song</div>"
+        f"asked for task 2</div>"
         f'{p.section_label("In the shared log")}'
         f'<div style="background: {c["surfaceRaised"]}; border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.45">'
-        f'11:02 T| Wrong Output – asked for Evening Song<div style="margin-top: 6px; font-size: 13px; color: {c["textSecondary"]}">'
+        f'11:02 T| Wrong Output – asked for task 2<div style="margin-top: 6px; font-size: 13px; color: {c["textSecondary"]}">'
         f"Logged at 11:02 on UNIT-27, version 1.4.2 (a1b2c3d).</div></div>"
         f'<div style="height: 52px; display: flex; align-items: center; justify-content: center; background: {c["surfaceRaised"]}; '
         f'border-radius: 14px; color: {c["destructive"]}; font-size: 16px; font-weight: 600">Delete entry</div></div>'

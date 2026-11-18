@@ -603,7 +603,7 @@ TEST_CASE("Signal counts: one per commit, one for a new log, one for a configura
 
     SECTION("a note, a header correction and a share change no tile")
     {
-        Entry note = sample_note(900, 20, "Played Morning Medley");
+        Entry note = sample_note(900, 20, "Began task 1");
         REQUIRE(
             fixture.m_Rig.document->add_entry(std::move(note), Origin::USER, fixture.m_Rig.keep(fixture.m_Results)));
         REQUIRE(fixture.m_Rig.document->correct_header(HeaderField::UNIT_NUMBER, "28",

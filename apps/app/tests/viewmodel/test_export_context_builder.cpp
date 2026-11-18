@@ -106,7 +106,7 @@ TEST_CASE("The context resolves live, retired and renamed types, locations and t
     CHECK(context.m_LocationName(location_named(configuration, "South Site")) == "South Site"); // retired
     const NoteTemplate* played = context.m_Template(configuration.m_Templates[0].m_Id);
     REQUIRE(played != nullptr);
-    CHECK(played->m_OutputPattern == "Played {value}");
+    CHECK(played->m_OutputPattern == "Began task {value}");
     CHECK(context.m_Template(configuration.m_Templates[1].m_Id) != nullptr);
     CHECK(context.m_Zones == &sample.m_Zones);
 }
@@ -147,7 +147,7 @@ TEST_CASE("An unknown id gives the empty answer the renderer reports as an error
         Entry entry;
         entry.m_Id = sample_id<EntryId>(1);
         entry.m_Captured = on_day(10, 5);
-        entry.m_Body = NoteEntry{sample_id<NoteTemplateId>(9999), "Morning Medley"};
+        entry.m_Body = NoteEntry{sample_id<NoteTemplateId>(9999), "task 1"};
         REQUIRE(log.add(entry));
         const auto text = export_text(log, context);
         REQUIRE_FALSE(text.has_value());
@@ -255,12 +255,12 @@ TEST_CASE("export_text of a log built by commands is the PRD example, byte for b
     Entry note;
     note.m_Id = sample_id<EntryId>(3);
     note.m_Captured = on_day(10, 30);
-    note.m_Body = NoteEntry{std::nullopt, "Played Morning Medley"};
+    note.m_Body = NoteEntry{std::nullopt, "Began task 1"};
 
     REQUIRE(rig.document->add_entry(error_at(1, 10, 5, wrong_response, "Wrong Response"), Origin::USER, {}));
     REQUIRE(rig.document->add_entry(error_at(2, 10, 20, stopped_responding, "Stopped Responding"), Origin::USER, {}));
     REQUIRE(rig.document->add_entry(std::move(note), Origin::USER, {}));
-    REQUIRE(rig.document->add_entry(error_at(4, 11, 2, wrong_track, "Wrong Output", "asked for Evening Song"),
+    REQUIRE(rig.document->add_entry(error_at(4, 11, 2, wrong_track, "Wrong Output", "asked for task 2"),
                                     Origin::USER, {}));
     REQUIRE(
         rig.document->change_header(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(13, 15), sample_id<EntryId>(5), {}));

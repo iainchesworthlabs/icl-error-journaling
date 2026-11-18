@@ -70,9 +70,9 @@ Configuration configuration_with_odd_types()
 {
     Configuration configuration = sample_configuration();
     configuration.m_InteractionTypes = {
-        make_type(T_SPOKE, "Spoke with", "Spoke with {person}", InteractionAsks::PERSON, 1),
-        make_type(T_GAVE, "Gave", "Gave {value}", InteractionAsks::TEXT, 2),
-        make_type(T_GREETED, "Greeted", std::nullopt, InteractionAsks::NOTHING, 3),
+        make_type(T_SPOKE, "Paired with", "Paired with {person}", InteractionAsks::PERSON, 1),
+        make_type(T_GAVE, "Assigned", "Assigned {value}", InteractionAsks::TEXT, 2),
+        make_type(T_GREETED, "Start task", std::nullopt, InteractionAsks::NOTHING, 3),
         make_type(T_RETIRED, "Visitor", std::nullopt, InteractionAsks::NOTHING, 4, true),
         make_type(T_OFF_BOARD, "Waved", std::nullopt, InteractionAsks::NOTHING, std::nullopt),
         make_type(T_POSITION_ZERO, "Zero", std::nullopt, InteractionAsks::NOTHING, 0),
@@ -158,14 +158,14 @@ TEST_CASE("board.rows: a tile with a type, an empty tile and Other each answer e
     CHECK(f.m_Board.roleNames().size() == 8);
 
     CHECK(f.value(0, InteractionBoardModel::TYPE_ID).toString() == type_text(T_SPOKE));
-    CHECK(f.value(0, InteractionBoardModel::LABEL).toString() == "Spoke with");
-    CHECK(f.value(0, Qt::DisplayRole).toString() == "Spoke with");
+    CHECK(f.value(0, InteractionBoardModel::LABEL).toString() == "Paired with");
+    CHECK(f.value(0, Qt::DisplayRole).toString() == "Paired with");
     CHECK(f.value(0, InteractionBoardModel::COLOUR_SLOT).toInt() >= 1);
     CHECK(f.value(0, InteractionBoardModel::COUNT).toInt() == 0);
     CHECK_FALSE(f.value(0, InteractionBoardModel::HAS_COUNT).toBool());
     CHECK_FALSE(f.value(0, InteractionBoardModel::IS_OTHER).toBool());
     CHECK_FALSE(f.value(0, InteractionBoardModel::IS_EMPTY).toBool());
-    CHECK(f.value(0, InteractionBoardModel::ACCESSIBLE_NAME).toString() == "Spoke with");
+    CHECK(f.value(0, InteractionBoardModel::ACCESSIBLE_NAME).toString() == "Paired with");
 
     // The retired type and the ones with no usable position are on no tile: tile 4 and tile 5 are empty.
     CHECK(f.value(3, InteractionBoardModel::IS_EMPTY).toBool());
@@ -198,7 +198,7 @@ TEST_CASE(
 
     CHECK(f.value(0, InteractionBoardModel::COUNT).toInt() == 2);
     CHECK(f.value(0, InteractionBoardModel::HAS_COUNT).toBool());
-    CHECK(f.value(0, InteractionBoardModel::ACCESSIBLE_NAME).toString() == "Spoke with, 2 today");
+    CHECK(f.value(0, InteractionBoardModel::ACCESSIBLE_NAME).toString() == "Paired with, 2 today");
     CHECK(f.value(1, InteractionBoardModel::ACCESSIBLE_NAME).toString() == "Gave, 1 today");
     CHECK(f.value(2, InteractionBoardModel::COUNT).toInt() == 0);
     // The unknown, the retired and the off-board types all count in Other.
@@ -231,7 +231,7 @@ TEST_CASE("board.counts: an event that does not change a count tells nobody, and
     // With no open log the board is built from the setup alone.
     f.m_Open.set(nullptr);
     CHECK(f.value(0, InteractionBoardModel::COUNT).toInt() == 0);
-    CHECK(f.value(0, InteractionBoardModel::LABEL).toString() == "Spoke with");
+    CHECK(f.value(0, InteractionBoardModel::LABEL).toString() == "Paired with");
 }
 
 TEST_CASE("board.other_types: the live types that are on no tile are listed for the Other sheet",
@@ -264,12 +264,12 @@ TEST_CASE("board.asks: what a type asks for, whether its line has a place for an
     CHECK_FALSE(f.m_Board.hasValueSlot(type_text(T_GREETED))); // no line at all
     CHECK_FALSE(f.m_Board.hasValueSlot(type_text(T_UNKNOWN)));
 
-    CHECK(f.m_Board.typeName(type_text(T_GAVE)) == "Gave");
+    CHECK(f.m_Board.typeName(type_text(T_GAVE)) == "Assigned");
     CHECK(f.m_Board.typeName(type_text(T_UNKNOWN)).isEmpty());
 
-    CHECK(f.m_Board.previewLine(type_text(T_GAVE), "a toy") == "Gave a toy");
+    CHECK(f.m_Board.previewLine(type_text(T_GAVE), "a toy") == "Assigned a task");
     CHECK_FALSE(f.m_Board.previewLine(type_text(T_GAVE), "   ").isEmpty());
-    CHECK(f.m_Board.previewLine(type_text(T_GREETED), "ignored") == "Greeted");
+    CHECK(f.m_Board.previewLine(type_text(T_GREETED), "ignored") == "Start task");
     CHECK(f.m_Board.previewLine(type_text(T_UNKNOWN), "a toy").isEmpty());
 }
 
@@ -328,10 +328,10 @@ TEST_CASE("settings.mini_board: the Interactions miniature shows live types on t
     CHECK(model.rowCount(model.index(0)) == 0);
     CHECK(model.roleNames().size() == 7);
     CHECK(model.data(model.index(0), BoardLayoutModel::TYPE_ID).toString() == type_text(T_SPOKE));
-    CHECK(model.data(model.index(0), BoardLayoutModel::LABEL).toString() == "Spoke with");
-    CHECK(model.data(model.index(0), Qt::DisplayRole).toString() == "Spoke with");
+    CHECK(model.data(model.index(0), BoardLayoutModel::LABEL).toString() == "Paired with");
+    CHECK(model.data(model.index(0), Qt::DisplayRole).toString() == "Paired with");
     CHECK(model.data(model.index(0), BoardLayoutModel::POSITION).toInt() == 1);
-    CHECK(model.data(model.index(0), BoardLayoutModel::ACCESSIBLE_NAME).toString() == "Spoke with");
+    CHECK(model.data(model.index(0), BoardLayoutModel::ACCESSIBLE_NAME).toString() == "Paired with");
     CHECK_FALSE(model.data(model.index(0), BoardLayoutModel::IS_EMPTY).toBool());
     CHECK_FALSE(model.data(model.index(0), BoardLayoutModel::IS_OTHER).toBool());
     CHECK(model.data(model.index(0), BoardLayoutModel::COLOUR_SLOT).toInt() >= 1);

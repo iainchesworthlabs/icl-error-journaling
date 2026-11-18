@@ -59,9 +59,9 @@ std::unique_ptr<World> make_world(bool real_zones)
     world->m_LocationNames[test_id<LocationId>(LOCATION_SOUTH_SITE)] = "South Site";
 
     const std::tuple<std::uint64_t, const char*, const char*> templates[] = {
-        {TEMPLATE_PLAYED, "Played song", "Played {value}"},
-        {TEMPLATE_VISITOR, "Visitor", "Visitor interaction: {value}"},
-        {TEMPLATE_REQUESTED, "Requested song", "Song {value} requested twice"}};
+        {TEMPLATE_PLAYED, "Began task", "Began task {value}"},
+        {TEMPLATE_VISITOR, "Visitor", "Entered room 1: {value}"},
+        {TEMPLATE_REQUESTED, "Requested song", "Task {value} requested twice"}};
     for (const auto& [number, name, pattern] : templates)
     {
         NoteTemplate t;
@@ -72,11 +72,11 @@ std::unique_ptr<World> make_world(bool real_zones)
         world->m_Templates[t.m_Id] = t;
     }
     const std::tuple<std::uint64_t, const char*, const char*> interactions[] = {
-        {INTERACTION_GREETED, "Greeted", ""},
-        {INTERACTION_SPOKE_WITH, "Spoke with", "Spoke with {person}"},
-        {INTERACTION_PLAYED_SONG, "Played song", "Played {value}"},
-        {INTERACTION_VISITOR, "Visitor interaction", ""},
-        {INTERACTION_GAVE, "Gave", "Gave {person} {value}"}};
+        {INTERACTION_GREETED, "Start task", ""},
+        {INTERACTION_SPOKE_WITH, "Paired with", "Paired with {person}"},
+        {INTERACTION_PLAYED_SONG, "Began task", "Began task {value}"},
+        {INTERACTION_VISITOR, "Entered room 1", ""},
+        {INTERACTION_GAVE, "Assigned", "Assigned {person} {value}"}};
     for (const auto& [number, name, pattern] : interactions)
     {
         const auto id = test_id<InteractionTypeId>(number);
@@ -248,9 +248,9 @@ void busy_day(Builder& b)
     b.error(on_day(9, 0), ERROR_WRONG_RESPONSE);
     b.error(on_day(9, 10), ERROR_STOPPED_RESPONDING);
     b.error(on_day(9, 20), ERROR_WRONG_RESPONSE);
-    b.templated(on_day(9, 30), TEMPLATE_PLAYED, "Morning Medley");
+    b.templated(on_day(9, 30), TEMPLATE_PLAYED, "task 1");
     b.error(on_day(9, 45), ERROR_WRONG_RESPONSE);
-    b.error(on_day(10, 0), ERROR_WRONG_TRACK_PLAYED, "asked for Evening Song");
+    b.error(on_day(10, 0), ERROR_WRONG_TRACK_PLAYED, "asked for task 2");
     b.error(on_day(10, 15), ERROR_ECHO_DELAY_RETIRED);
     b.error(on_day(10, 30), ERROR_WRONG_TRACK_PLAYED);
     b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(10, 40));
@@ -263,7 +263,7 @@ void interaction_day(Builder& b)
     b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);                                       // 1
     b.interaction(on_day(10, 12), INTERACTION_SPOKE_WITH, {PERSON_ALEX});               // 2
     b.error(on_day(10, 20), ERROR_STOPPED_RESPONDING);                                          // 3
-    b.interaction(on_day(10, 31), INTERACTION_PLAYED_SONG, {}, "Morning Medley");       // 4
+    b.interaction(on_day(10, 31), INTERACTION_PLAYED_SONG, {}, "task 1");       // 4
     b.interaction(on_day(10, 40), INTERACTION_SPOKE_WITH, {PERSON_ALEX, PERSON_JORDAN, PERSON_PAT});  // 5
     b.note(on_day(10, 45), "Device restarted");                                          // 6
     b.interaction(on_day(10, 48), INTERACTION_VISITOR, {}, std::nullopt, "asked about the schedule");  // 7
@@ -289,8 +289,8 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
              Builder b;
              b.error(on_day(10, 5), ERROR_WRONG_RESPONSE);
              b.error(on_day(10, 20), ERROR_STOPPED_RESPONDING);
-             b.templated(on_day(10, 30), TEMPLATE_PLAYED, "Morning Medley");
-             b.error(on_day(11, 2), ERROR_WRONG_TRACK_PLAYED, "asked for Evening Song");
+             b.templated(on_day(10, 30), TEMPLATE_PLAYED, "task 1");
+             b.error(on_day(11, 2), ERROR_WRONG_TRACK_PLAYED, "asked for task 2");
              b.change(HeaderField::SOFTWARE_VERSION, "1.5.0", on_day(13, 15));
              b.error(on_day(13, 40), ERROR_SPEECH_DELAY);
              return b.finish();
@@ -352,7 +352,7 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
          []
          {
              Builder b;
-             b.error(on_day(10, 5), ERROR_WRONG_RESPONSE, "asked for Evening Song");
+             b.error(on_day(10, 5), ERROR_WRONG_RESPONSE, "asked for task 2");
              b.error(on_day(10, 20), ERROR_STOPPED_RESPONDING, "caller said wait");
              b.note(on_day(10, 20, 30), "Restarted the device");
              b.error(on_day(10, 40), ERROR_WRONG_TRACK_PLAYED, "went from side A \xE2\x86\x92 side B \xE2\x80\x93 twice");
@@ -362,9 +362,9 @@ const std::vector<std::pair<std::string_view, Factory>>& factories()
          []
          {
              Builder b;
-             b.templated(on_day(9, 0), TEMPLATE_PLAYED, "Morning Medley");
+             b.templated(on_day(9, 0), TEMPLATE_PLAYED, "task 1");
              b.templated(on_day(9, 30), TEMPLATE_VISITOR, "Sam Example waved");
-             b.templated(on_day(10, 0), TEMPLATE_REQUESTED, "Evening Song");
+             b.templated(on_day(10, 0), TEMPLATE_REQUESTED, "task 2");
              b.templated(on_day(10, 15), TEMPLATE_PLAYED, "  Spaced Song  ");
              b.note(on_day(10, 30), "Calibration done");
              return b.finish();
@@ -680,11 +680,11 @@ Entry interaction_entry(std::uint64_t id, Timestamp when, std::uint64_t type, st
     // The snapshot of the type's name, as the app writes it at the tap.
     switch (type)
     {
-    case INTERACTION_GREETED: body.m_TypeLabel = "Greeted"; break;
-    case INTERACTION_SPOKE_WITH: body.m_TypeLabel = "Spoke with"; break;
-    case INTERACTION_PLAYED_SONG: body.m_TypeLabel = "Played song"; break;
-    case INTERACTION_VISITOR: body.m_TypeLabel = "Visitor interaction"; break;
-    default: body.m_TypeLabel = "Gave"; break;
+    case INTERACTION_GREETED: body.m_TypeLabel = "Start task"; break;
+    case INTERACTION_SPOKE_WITH: body.m_TypeLabel = "Paired with"; break;
+    case INTERACTION_PLAYED_SONG: body.m_TypeLabel = "Began task"; break;
+    case INTERACTION_VISITOR: body.m_TypeLabel = "Entered room 1"; break;
+    default: body.m_TypeLabel = "Assigned"; break;
     }
     for (const auto person : people)
     {

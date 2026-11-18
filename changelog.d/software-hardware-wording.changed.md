@@ -1,2 +1,2 @@
 **The app now speaks of software and hardware testing, not robots.** Today's details calls the first version "Software version" (it was "Robot software version"), the summary row and the log start with "Software" for it, and "Software" (not "Robot") is the name that another version cannot use. The privacy page no longer has a Children section.
-The sample error tiles are now generic, such as Stopped Unexpectedly, Stopped Responding and Timed Out.
+The sample error tiles are now generic, such as Stopped Unexpectedly, Stopped Responding and Timed Out. The sample observation tiles are generic too: Entered room 1, Began task, Start task and End task.

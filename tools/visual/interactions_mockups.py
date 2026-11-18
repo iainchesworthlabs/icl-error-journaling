@@ -41,10 +41,10 @@ IPAD_LANDSCAPE = Frame("ipad-landscape", "iPad landscape", 1180, 820, 24, 20)
 
 # name, count today, asks a person
 TILES = [
-    ("Greeted", 1, False),
-    ("Spoke with", 2, True),
-    ("Played song", 1, False),
-    ("Visitor interaction", 0, False),
+    ("Start task", 1, False),
+    ("Paired with", 2, True),
+    ("Began task", 1, False),
+    ("Entered room 1", 0, False),
     ("Handed over", 0, False),
     ("Asked a question", 1, False),
     ("Gave help", 0, False),
@@ -58,11 +58,11 @@ TILES = [
 MIXED = [
     ("09:42", "T|", "Wrong Response"),
     ("10:05", "T|", "Wrong Response"),
-    ("10:20", "(Interaction)", "Spoke with Alex Sample"),
+    ("10:20", "(Interaction)", "Paired with Alex Sample"),
     ("10:30", "T|", "Stopped Responding"),
-    ("10:48", "(Interaction)", "Played Morning Medley"),
-    ("11:02", "T|", "Wrong Output – asked for Evening Song"),
-    ("11:15", "(Interaction)", "Greeted"),
+    ("10:48", "(Interaction)", "Began task 1"),
+    ("11:02", "T|", "Wrong Output – asked for task 2"),
+    ("11:15", "(Interaction)", "Start task"),
 ]
 
 PERSON = '<circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0"></path>'
@@ -124,7 +124,7 @@ class Page(fold.Page):
         return mixed(lambda: fold.Page.log_strip(self, rows))
 
     def last_bar(self) -> str:
-        return super().last_bar().replace("10:20  T| Stopped Responding", "11:15  (Interaction) Greeted")
+        return super().last_bar().replace("10:20  T| Stopped Responding", "11:15  (Interaction) Start task")
 
     # ---- the board ----
 
@@ -305,7 +305,7 @@ def picker_inner(p: Page) -> str:
 
     rows = "".join(row(n, s, t, i == len(people) - 1) for i, (n, s, t) in enumerate(people))
     return (
-        base.sheet_nav(p, "Skip", "Spoke with …", "Done (2)")
+        base.sheet_nav(p, "Skip", "Paired with …", "Done (2)")
         + f'<div style="padding: 0 16px 12px; flex-shrink: 0"><div style="display: flex; align-items: center; gap: 8px; height: 40px; '
         f'border-radius: 10px; background: {c["searchBackground"]}; padding: 0 10px; font-size: 16px; color: {c["textPlaceholder"]}">'
         f"{icon('search', c['textSecondary'], 18)}Search or type a name</div></div>"

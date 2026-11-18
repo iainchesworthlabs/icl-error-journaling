@@ -98,7 +98,7 @@ TEST_CASE("settings.interaction_types: a name must be given and differ, ignoring
     CHECK(rig.store().saves() == saves);
 
     CHECK(rig.m_Settings.validateInteractionLine("").isEmpty());
-    CHECK(rig.m_Settings.validateInteractionLine("Spoke with [person] about [answer]").isEmpty());
+    CHECK(rig.m_Settings.validateInteractionLine("Paired with [person] about [answer]").isEmpty());
     CHECK_FALSE(rig.m_Settings.validateInteractionLine("[answer] [answer]").isEmpty());
 }
 
@@ -113,7 +113,7 @@ TEST_CASE("settings.interaction_types: a type is edited, and a type with no [per
     const int row = types.rowCount() - 1;
     const QString id = id_at(types, row);
 
-    CHECK(rig.m_Settings.updateInteractionType(id, "Chatted", "Played [answer]").isEmpty());
+    CHECK(rig.m_Settings.updateInteractionType(id, "Chatted", "Began task [answer]").isEmpty());
     rig.commit();
     CHECK(text_of_role(types, row, "name") == "Chatted");
     CHECK(text_of_role(types, row, "asks") == "text");
@@ -195,8 +195,8 @@ TEST_CASE("settings.interaction_types: the example line shows a sample person an
 {
     SettingsRig rig;
     rig.load_sample();
-    CHECK(rig.m_Settings.previewInteractionLine("Spoke with", "Spoke with [person]") == "Spoke with Alex Sample");
-    CHECK(rig.m_Settings.previewInteractionLine("Played song", "Played [answer]") == "Played Morning Medley");
+    CHECK(rig.m_Settings.previewInteractionLine("Paired with", "Paired with [person]") == "Paired with Alex Sample");
+    CHECK(rig.m_Settings.previewInteractionLine("Began task", "Began task [answer]") == "Began task 1");
     CHECK(rig.m_Settings.previewInteractionLine("Waved", "") == "Waved");
     CHECK(rig.m_Settings.previewInteractionLine("X", "{") == "Fix the line to see an example.");
 }
@@ -226,7 +226,7 @@ TEST_CASE("settings.interaction_types: with no types in the file the editor list
     CHECK(position_at(types, 0) == 1);
 
     // The next goes to the first empty tile.
-    CHECK(rig.m_Settings.addInteractionType("Greeted", "").isEmpty());
+    CHECK(rig.m_Settings.addInteractionType("Start task", "").isEmpty());
     rig.commit();
     REQUIRE(types.rowCount() == 2);
     CHECK(position_at(types, 1) == 2);
@@ -239,12 +239,12 @@ TEST_CASE("settings.interaction_types: the miniature layout has the 11 tiles and
     rig.load_sample();
     const QAbstractItemModel& layout = *rig.m_Settings.interaction_layout();
     REQUIRE(layout.rowCount() == 12);
-    CHECK(text_of_role(layout, 0, "label") == QStringLiteral("Spoke with"));
+    CHECK(text_of_role(layout, 0, "label") == QStringLiteral("Paired with"));
     CHECK(text_of_role(layout, 6, "typeId").isEmpty());
     CHECK(layout.data(layout.index(11, 0), role_named(layout, "isOther")).toBool());
 
     CHECK(rig.m_Settings.moveInteractionTile(1, 7).isEmpty());
     rig.commit();
-    CHECK(text_of_role(layout, 6, "label") == QStringLiteral("Spoke with"));
-    CHECK(text_of_role(layout, 0, "label") != QStringLiteral("Spoke with"));
+    CHECK(text_of_role(layout, 6, "label") == QStringLiteral("Paired with"));
+    CHECK(text_of_role(layout, 0, "label") != QStringLiteral("Paired with"));
 }

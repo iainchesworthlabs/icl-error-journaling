@@ -253,8 +253,8 @@ namespace
 NoteTemplate make_template(std::string pattern)
 {
     NoteTemplate t;
-    t.m_Name = "Played song";
-    t.m_ValuePrompt = "Which song?";
+    t.m_Name = "Began task";
+    t.m_ValuePrompt = "Which task?";
     t.m_OutputPattern = std::move(pattern);
     return t;
 }
@@ -263,9 +263,9 @@ NoteTemplate make_template(std::string pattern)
 
 TEST_CASE("render_note substitutes the value", "[note-template]")
 {
-    CHECK(ej::render_note(make_template("Played {value}"), "Morning Medley") == "Played Morning Medley");
-    CHECK(ej::render_note(make_template("Visitor: {value}"), "Sam Example") == "Visitor: Sam Example");
-    CHECK(ej::render_note(make_template("{value} played twice"), "Evening Song") == "Evening Song played twice");
+    CHECK(ej::render_note(make_template("Began task {value}"), "task 1") == "Began task 1");
+    CHECK(ej::render_note(make_template("Entered {value}"), "Sam Example") == "Visitor: Sam Example");
+    CHECK(ej::render_note(make_template("{value} played twice"), "task 2") == "task 2 played twice");
 }
 
 TEST_CASE("render_note handles repeated placeholders and escaped braces", "[note-template]")
@@ -277,7 +277,7 @@ TEST_CASE("render_note handles repeated placeholders and escaped braces", "[note
 
 TEST_CASE("validate_pattern rejects bad patterns", "[note-template]")
 {
-    CHECK(ej::validate_pattern("Played {value}").has_value());
+    CHECK(ej::validate_pattern("Began task {value}").has_value());
     CHECK(ej::validate_pattern("no placeholder").error() == PatternError::MISSING_PLACEHOLDER);
     CHECK(ej::validate_pattern("").error() == PatternError::MISSING_PLACEHOLDER);
     CHECK(ej::validate_pattern("{{value}}").error() == PatternError::MISSING_PLACEHOLDER);
@@ -290,11 +290,11 @@ TEST_CASE("validate_pattern rejects bad patterns", "[note-template]")
 
 TEST_CASE("render_note inserts the value verbatim, trimmed", "[note-template]")
 {
-    CHECK(ej::render_note(make_template("Played {value}"), "{value}") == "Played {value}");
-    CHECK(ej::render_note(make_template("Played {value}"), "a { b }") == "Played a { b }");
-    CHECK(ej::render_note(make_template("Played {value}"), "  Morning Medley \t\n") == "Played Morning Medley");
-    CHECK(ej::render_note(make_template("Played {value}"), "   ") == "Played ");
-    CHECK(ej::render_note(make_template("Played {value}"), "") == "Played ");
+    CHECK(ej::render_note(make_template("Began task {value}"), "{value}") == "Began task {value}");
+    CHECK(ej::render_note(make_template("Began task {value}"), "a { b }") == "Played a { b }");
+    CHECK(ej::render_note(make_template("Began task {value}"), "  task 1 \t\n") == "Began task 1");
+    CHECK(ej::render_note(make_template("Began task {value}"), "   ") == "Played ");
+    CHECK(ej::render_note(make_template("Began task {value}"), "") == "Played ");
 }
 
 TEST_CASE("render_note is total on an invalid pattern", "[note-template]")

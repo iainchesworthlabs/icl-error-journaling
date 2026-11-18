@@ -83,7 +83,7 @@ constexpr const char* V3_SCHEMA[] = {
     " 'Wrong Response', 'the device paused')",
     "INSERT INTO error_entry VALUES ('00000000-0000-4000-8000-0000000000e4', '00000000-0000-4000-8000-0000000000a1',"
     " 'Other', NULL)",
-    "INSERT INTO note_entry VALUES ('00000000-0000-4000-8000-0000000000e1', NULL, 'Played a song')",
+    "INSERT INTO note_entry VALUES ('00000000-0000-4000-8000-0000000000e1', NULL, 'Began a task')",
     "INSERT INTO header_change_entry VALUES ('00000000-0000-4000-8000-0000000000e2', 'unit_number', '27', '28')",
     "INSERT INTO draft VALUES (1, 'half a note', 1700)",
 };
@@ -414,10 +414,10 @@ struct InteractionStore
                     .has_value());
         REQUIRE((*people)->touch_person(person(2)).has_value());
         REQUIRE(store.repo()
-                    .add_entry(log_id(1), sample_interaction_entry(3, 30, {person(1)}, "Morning Medley"))
+                    .add_entry(log_id(1), sample_interaction_entry(3, 30, {person(1)}, "task 1"))
                     .has_value());
         REQUIRE(store.repo().add_entry(log_id(1), sample_interaction_entry(4, 40)).has_value());
-        REQUIRE(store.repo().add_entry(log_id(1), sample_note(5, 50, "Played a song")).has_value());
+        REQUIRE(store.repo().add_entry(log_id(1), sample_note(5, 50, "Began a task")).has_value());
         m_Digest = digest_of(store.repo().load_log(log_id(1)).value());
     }
 
@@ -702,7 +702,7 @@ TEST_CASE("After adding, renaming and forgetting people, no log journal and no e
                     .edit_entry(log_id(1), sample_interaction_entry(1, 10, {person(1), person(2)}), sample_time(11))
                     .has_value());
         REQUIRE(store.repo()
-                    .add_entry(log_id(1), sample_interaction_entry(2, 20, {person(3)}, "Played a song"))
+                    .add_entry(log_id(1), sample_interaction_entry(2, 20, {person(3)}, "Began a task"))
                     .has_value());
         REQUIRE((*people)->rename_person(person(2), PAT).has_value());
         REQUIRE((*people)->rename_person(person(3), "Jordan Placeholder Junior").has_value());

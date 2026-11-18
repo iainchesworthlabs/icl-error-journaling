@@ -676,11 +676,11 @@ def edit_entry_screen(p: Page) -> str:
         f'font-variant-numeric: tabular-nums">11:02</span></div></div>'
         f"{p.section_label('Note')}"
         f'<div style="background: {c["surfaceRaised"]}; border: 2px solid {c["primaryText"]}; border-radius: 14px; padding: 12px 14px; font-size: 17px; '
-        f'min-height: 64px; box-sizing: border-box; flex-shrink: 0">asked for Evening Song<span style="display: inline-block; width: 2px; height: 20px; '
+        f'min-height: 64px; box-sizing: border-box; flex-shrink: 0">asked for task 2<span style="display: inline-block; width: 2px; height: 20px; '
         f'margin-left: 1px; vertical-align: -3px; background: {c["primaryText"]}"></span></div>'
         f"{p.section_label('In the shared log')}"
         f'<div style="background: {c["surfaceRaised"]}; border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.45">'
-        f"11:02 T| Wrong Output – asked for Evening Song</div></div>"
+        f"11:02 T| Wrong Output – asked for task 2</div></div>"
     )
     fold = int(p.f.fold_at)
     left, right = p.content()

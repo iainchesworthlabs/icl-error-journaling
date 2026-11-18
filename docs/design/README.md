@@ -231,6 +231,6 @@ The owner drew it on paper: an "f" and a "t" (for Field Test) sharing a board of
 ## Decisions taken during design review
 
 - Board is 3 columns × 4 rows in portrait (the original concept was 4 × 3 landscape); 4 columns would break the 88 pt minimum and truncate labels.
-- Template chip names: "Played song" and a second template (the real name is in the private configuration).
+- Template chip names: "Began task" and a second template (the real name is in the private configuration).
 - Editing uses a separate sheet (screen 6), not in-place editing.
 - The log and review text is black and white; only the tiles are coloured.

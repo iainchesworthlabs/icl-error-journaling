@@ -15,9 +15,9 @@ name here and is shared at the level you choose (see below). It shows the header
 ### Observations in Review
 
 If you use the second board, an observation shows on its own line in the same words as the export, for example
-`Spoke with Alex Sample`, with the full name.
+`Paired with Alex Sample`, with the full name.
 
-![Review with an error and four observations; one reads Spoke with (person not set).](img/review-observations.png){ width="270" }
+![Review with an error and four observations; one reads Paired with (person not set).](img/review-observations.png){ width="270" }
 
 On the screen the name is always in full; what **Copy log** and **Share log** carry follows the name setting in Settings
 (initials by default). A person you have forgotten reads as **someone**. An observation that asks for a person but has
@@ -41,7 +41,7 @@ The log has a header (tester, date, unit, location, software version) and one li
 
 ```
 10:20 T| Stopped Responding
-11:02 T| Wrong Output – asked for Evening Song
+11:02 T| Wrong Output – asked for task 2
 ```
 
 An error line is the time, the error prefix `T|`, the error type, and then the note after a dash. The downstream ticket
@@ -52,8 +52,8 @@ If you use the second board, an observation is a line of its own, marked `(Inter
 indexer does not read it:
 
 ```
-10:12 (Interaction) Spoke with A.S.
-10:31 (Interaction) Played Morning Medley
+10:12 (Interaction) Paired with A.S.
+10:31 (Interaction) Began task 1
 ```
 
 A person's name is written in a shared or copied log at the level you choose in Settings: initials (the default, `A.S.`),

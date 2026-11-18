@@ -38,16 +38,16 @@ the board in the order shown. The rest are found under **Other** on the Log scre
 A template is a quick note you log often. Tap its chip above the note field on the Log screen, answer its one question,
 and the line goes in the log.
 
-![The list of note templates: Played song, which asks Which song and logs Played answer, and Visitor interaction.](img/templates.png){ width="270" }
+![The list of note templates: Began task, which asks Which song and logs Played answer, and Entered room 1.](img/templates.png){ width="270" }
 
 Each template has three parts:
 
 - **Name:** what the chip on the Log screen says.
-- **Question to ask:** what you are asked when you tap the chip, for example "Which song?".
+- **Question to ask:** what you are asked when you tap the chip, for example "Which task?".
 - **Line in the log:** what gets written. Tap **Insert answer** to put `[answer]` where your answer goes, for example
-  "Played [answer]". The **Example** at the bottom of the screen shows the line as it will appear.
+  "Began task [answer]". The **Example** at the bottom of the screen shows the line as it will appear.
 
-![The template editor for Played song, with Name, Question to ask, Line in the log, an Insert answer button and an example of the line.](img/template-edit.png){ width="270" }
+![The template editor for Began task, with Name, Question to ask, Line in the log, an Insert answer button and an example of the line.](img/template-edit.png){ width="270" }
 
 ## Your name, prefix and totals
 
@@ -107,14 +107,14 @@ editor at once, and turning the switch on with nothing set up opens it for you.
 **Observation types** works like **Error types**. Tap **Add an observation type**, give it a name and, if you want, a
 **Line in the log**:
 
-- Tap **Insert person** to put **[person]** in the line, for example “Spoke with [person]”. A type with **[person]** asks who
-  after you log it. A type without it never asks, so a tile such as “Played song” logs at once.
-- Tap **Insert answer** to put **[answer]** in the line, for example “Played [answer]”. You are asked for the answer after you
+- Tap **Insert person** to put **[person]** in the line, for example “Paired with [person]”. A type with **[person]** asks who
+  after you log it. A type without it never asks, so a tile such as “Began task” logs at once.
+- Tap **Insert answer** to put **[answer]** in the line, for example “Began task [answer]”. You are asked for the answer after you
   log it.
 - With no line, the log shows the name of the type.
 
-The line is the template of the type: there is no separate list of observation templates. “Spoke with [person]” with the
-name “Spoke with” writes “Spoke with Alex Sample” when you pick Alex Sample.
+The line is the template of the type: there is no separate list of observation templates. “Paired with [person]” with the
+name “Paired with” writes “Paired with Alex Sample” when you pick Alex Sample.
 
 The miniature board at the top shows the 11 tiles. Tap a tile to move it earlier or later or to change its type, tap an empty
 tile to add one, or hold and drag a tile. In the list below, the first 11 types fill the board in the order shown; drag the

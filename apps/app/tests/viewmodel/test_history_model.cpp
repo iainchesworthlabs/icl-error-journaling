@@ -716,16 +716,16 @@ TEST_CASE("Editing and deleting an entry of a past log persists and re-renders",
     const QString first = review.data(review.index(0), TimelineModel::ENTRY_ID).toString();
     QVariantMap edit = review.entryForEdit(first);
     REQUIRE_FALSE(edit.isEmpty());
-    edit.insert("attachedNote", "asked for Evening Song");
+    edit.insert("attachedNote", "asked for task 2");
     REQUIRE(review.saveEntry(first, edit));
     fixture.settle();
 
-    CHECK(timeline_line(review, 0) == "10:05 T| Wrong Response \xE2\x80\x93 asked for Evening Song");
+    CHECK(timeline_line(review, 0) == "10:05 T| Wrong Response \xE2\x80\x93 asked for task 2");
     const auto edited = fixture.storage().memory().load_log(sample_id<LogId>(MORNING));
     REQUIRE(edited.has_value());
     const Entry* stored_entry = edited->m_Log.find(sample_id<EntryId>(31));
     REQUIRE(stored_entry != nullptr);
-    CHECK(std::get<ErrorEntry>(stored_entry->m_Body).m_AttachedNote == "asked for Evening Song");
+    CHECK(std::get<ErrorEntry>(stored_entry->m_Body).m_AttachedNote == "asked for task 2");
     CHECK(changed.count() == 1); // an edit does not change the row
 }
 

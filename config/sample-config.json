@@ -95,17 +95,17 @@
   "note_templates": [
     {
       "id": "00000000-0000-4000-8000-0000000000c1",
-      "name": "Played song",
-      "value_prompt": "Which song?",
-      "output_pattern": "Played {value}",
+      "name": "Began task",
+      "value_prompt": "Which task?",
+      "output_pattern": "Began task {value}",
       "icon": "music",
       "sort_order": 1
     },
     {
       "id": "00000000-0000-4000-8000-0000000000c2",
-      "name": "Visitor interaction",
-      "value_prompt": "Who visited?",
-      "output_pattern": "Visitor: {value}",
+      "name": "Entered room",
+      "value_prompt": "Which room?",
+      "output_pattern": "Entered {value}",
       "icon": "speech",
       "sort_order": 2
     }
@@ -113,43 +113,42 @@
   "interaction_types": [
     {
       "id": "00000000-0000-4000-8000-0000000000d1",
-      "name": "Spoke with",
+      "name": "Paired with",
       "retired": false,
       "board_position": 1,
-      "line_pattern": "Spoke with {person}"
+      "line_pattern": "Paired with {person}"
     },
     {
       "id": "00000000-0000-4000-8000-0000000000d2",
-      "name": "Played song",
+      "name": "Began task",
       "retired": false,
       "board_position": 2,
-      "line_pattern": "Played {value}"
+      "line_pattern": "Began task {value}"
     },
     {
       "id": "00000000-0000-4000-8000-0000000000d3",
-      "name": "Visitor interaction",
+      "name": "Entered room 1",
       "retired": false,
       "board_position": 3
     },
     {
       "id": "00000000-0000-4000-8000-0000000000d4",
-      "name": "Gave item",
+      "name": "Assigned",
       "retired": false,
       "board_position": 4,
-      "line_pattern": "Gave {person} {value}"
+      "line_pattern": "Assigned {person} {value}"
     },
     {
       "id": "00000000-0000-4000-8000-0000000000d5",
-      "name": "Greeted",
+      "name": "Start task",
       "retired": false,
       "board_position": 5
     },
     {
       "id": "00000000-0000-4000-8000-0000000000d6",
-      "name": "Helped",
+      "name": "End task",
       "retired": false,
-      "board_position": 6,
-      "line_pattern": "Helped {person}"
+      "board_position": 6
     }
   ]
 }

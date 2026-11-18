@@ -114,17 +114,17 @@ The file below is the sample setup that the app's tests use. All the names in it
   "note_templates": [
     {
       "id": "00000000-0000-4000-8000-0000000000c1",
-      "name": "Played song",
-      "value_prompt": "Which song?",
-      "output_pattern": "Played {value}",
+      "name": "Began task",
+      "value_prompt": "Which task?",
+      "output_pattern": "Began task {value}",
       "icon": "music",
       "sort_order": 1
     },
     {
       "id": "00000000-0000-4000-8000-0000000000c2",
-      "name": "Visitor interaction",
-      "value_prompt": "Who visited?",
-      "output_pattern": "Visitor: {value}",
+      "name": "Entered room",
+      "value_prompt": "Which room?",
+      "output_pattern": "Entered {value}",
       "icon": "speech",
       "sort_order": 2
     }
@@ -132,43 +132,42 @@ The file below is the sample setup that the app's tests use. All the names in it
   "interaction_types": [
     {
       "id": "00000000-0000-4000-8000-0000000000d1",
-      "name": "Spoke with",
+      "name": "Paired with",
       "retired": false,
       "board_position": 1,
-      "line_pattern": "Spoke with {person}"
+      "line_pattern": "Paired with {person}"
     },
     {
       "id": "00000000-0000-4000-8000-0000000000d2",
-      "name": "Played song",
+      "name": "Began task",
       "retired": false,
       "board_position": 2,
-      "line_pattern": "Played {value}"
+      "line_pattern": "Began task {value}"
     },
     {
       "id": "00000000-0000-4000-8000-0000000000d3",
-      "name": "Visitor interaction",
+      "name": "Entered room 1",
       "retired": false,
       "board_position": 3
     },
     {
       "id": "00000000-0000-4000-8000-0000000000d4",
-      "name": "Gave item",
+      "name": "Assigned",
       "retired": false,
       "board_position": 4,
-      "line_pattern": "Gave {person} {value}"
+      "line_pattern": "Assigned {person} {value}"
     },
     {
       "id": "00000000-0000-4000-8000-0000000000d5",
-      "name": "Greeted",
+      "name": "Start task",
       "retired": false,
       "board_position": 5
     },
     {
       "id": "00000000-0000-4000-8000-0000000000d6",
-      "name": "Helped",
+      "name": "End task",
       "retired": false,
-      "board_position": 6,
-      "line_pattern": "Helped {person}"
+      "board_position": 6
     }
   ]
 }
@@ -292,7 +291,7 @@ works out from the line whether to ask for a person, for text or for nothing aft
 | `name` | Required | What the tile and the shared log call it. | Text, up to 200 characters. |
 | `retired` | Optional | A retired type is one you no longer use. It has no tile on the board. | `true` or `false`. Without it: `false`. |
 | `board_position` | Optional | Which of the 11 tiles on the board this type has. | A whole number from 1 to 11. Each position is used by one type that is not retired. A retired type keeps its number and is left out of the board. |
-| `line_pattern` | Optional | The line that goes in the log, for example `Spoke with {person}` or `Played {value}`. | Text, up to 500 characters, with `{person}` at most once and `{value}` at most once. Write `{{` or `}}` for a brace that is part of the line. No other placeholder is allowed. |
+| `line_pattern` | Optional | The line that goes in the log, for example `Paired with {person}` or `Began task {value}`. | Text, up to 500 characters, with `{person}` at most once and `{value}` at most once. Write `{{` or `}}` for a brace that is part of the line. No other placeholder is allowed. |
 
 ## When the app refuses a file
 
@@ -322,7 +321,7 @@ Some of these problems the app also says in its own words, with the entry's numb
 | <!-- problem:TOO_LONG --> Too long | A text is longer than its limit. | Shorten it to the limit in the tables. |
 | <!-- problem:NAME_TAKEN --> Name used twice | Another entry has the same name. | Rename one, or retire one. |
 | <!-- problem:POSITION_TAKEN --> Position used twice | Two types that are not retired have the same board position. | Give each its own position from 1 to 11. |
-| <!-- problem:NO_PLACEHOLDER --> No answer in the line | A template's line has no `{value}`. | Put `{value}` where the answer should go, for example `Played {value}`. |
+| <!-- problem:NO_PLACEHOLDER --> No answer in the line | A template's line has no `{value}`. | Put `{value}` where the answer should go, for example `Began task {value}`. |
 | <!-- problem:STRAY_BRACE --> A stray brace | A `{` or `}` is not closed or doubled. | Write `{{` or `}}` for a brace that is part of the line, and close every `{value}`. |
 | <!-- problem:UNKNOWN_PLACEHOLDER --> An unknown placeholder | The line has a placeholder the app does not know. | In a template use only `{value}`; in an interaction type use only `{person}` and `{value}`. |
 | <!-- problem:REPEATED_PLACEHOLDER --> A placeholder twice | An interaction type's line has `{person}` or `{value}` more than once. | Use each at most once. |

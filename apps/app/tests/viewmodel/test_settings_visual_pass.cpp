@@ -70,10 +70,10 @@ TEST_CASE("A name in use is refused in the words of the designs, for each kind o
           "There is already a location called " + curly("North Site") + ". Names must be different.");
 
     const QString note_template =
-        "There is already a note template called " + curly("Visitor interaction") + ". Names must be different.";
-    CHECK(rig.m_Settings.addTemplate("Visitor interaction", "Who?", "Seen {value}") == note_template);
-    CHECK(rig.m_Settings.renameTemplate(PLAYED_SONG, "Visitor interaction") == note_template);
-    CHECK(rig.m_Settings.updateTemplate(PLAYED_SONG, "Visitor interaction", "Who?", "Seen {value}") == note_template);
+        "There is already a note template called " + curly("Entered room 1") + ". Names must be different.";
+    CHECK(rig.m_Settings.addTemplate("Entered room 1", "Who?", "Seen {value}") == note_template);
+    CHECK(rig.m_Settings.renameTemplate(PLAYED_SONG, "Entered room 1") == note_template);
+    CHECK(rig.m_Settings.updateTemplate(PLAYED_SONG, "Entered room 1", "Who?", "Seen {value}") == note_template);
     CHECK(rig.m_Gateway.pending() == 0);
 }
 
@@ -83,12 +83,12 @@ TEST_CASE("A line without the answer is refused in the words of the designs", "[
     rig.load_sample();
     const QString expected =
         "The line needs the answer in it. Tap Insert answer to put it where it goes, for example " +
-        curly("Played [answer]") + ".";
+        curly("Began task [answer]") + ".";
 
     CHECK(rig.m_Settings.validatePattern("Played") == expected);
     CHECK(rig.m_Settings.validatePattern("") == expected);
     CHECK(rig.m_Settings.addTemplate("Seen", "Who?", "Seen") == expected);
-    CHECK(rig.m_Settings.updateTemplate(PLAYED_SONG, "Played song", "Which song?", "Played") == expected);
+    CHECK(rig.m_Settings.updateTemplate(PLAYED_SONG, "Began task", "Which task?", "Played") == expected);
     CHECK(rig.m_Gateway.pending() == 0);
 }
 
@@ -139,32 +139,32 @@ TEST_CASE("A template value is previewed as the log line it would make", "[viewm
 
     SECTION("at a time the caller names")
     {
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "Morning Medley", 10 * 3600 + 30 * 60) ==
-              "10:30 Played Morning Medley");
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 0) == "00:00 Played x");
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 24 * 3600 - 1) == "23:59 Played x");
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "task 1", 10 * 3600 + 30 * 60) ==
+              "10:30 Began task 1");
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "x", 0) == "00:00 Played x");
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "x", 24 * 3600 - 1) == "23:59 Played x");
     }
     SECTION("now, in the zone of the device")
     {
         // The clock of the rig is 08:55 in Melbourne.
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "Morning Medley") ==
-              "08:55 Played Morning Medley");
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "task 1") ==
+              "08:55 Began task 1");
         rig.m_World.m_DeviceZone.set("Australia/Perth");
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "Morning Medley", -1) ==
-              "05:55 Played Morning Medley");
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "task 1", -1) ==
+              "05:55 Began task 1");
     }
     SECTION("a blank value is the designs' sample, and the value is trimmed")
     {
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "  ", 37800) ==
-              "10:30 Played Morning Medley");
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "  Evening Song \n", 37800) ==
-              "10:30 Played Evening Song");
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "  ", 37800) ==
+              "10:30 Began task 1");
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "  task 2 \n", 37800) ==
+              "10:30 Began task 2");
     }
     SECTION("the time follows the time format")
     {
         REQUIRE(rig.m_Settings.setTimeFormat("12h", false, "upper").isEmpty());
         rig.commit();
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 15 * 3600 + 5 * 60) ==
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "x", 15 * 3600 + 5 * 60) ==
               "03:05 PM Played x");
     }
     SECTION("a line that is not valid has no example")
@@ -172,24 +172,24 @@ TEST_CASE("A template value is previewed as the log line it would make", "[viewm
         const QString fix = "Fix the line to see an example.";
         CHECK(rig.m_Settings.previewTemplateLine("Played", "x", 37800) == fix);
         CHECK(rig.m_Settings.previewTemplateLine("", "x") == fix);
-        CHECK(rig.m_Settings.previewTemplateLine("Played {name}", "x") == fix);
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {name}", "x") == fix);
         CHECK(rig.m_Settings.previewTemplateLine("Played {value", "x") == fix);
     }
     SECTION("a time of day that does not exist")
     {
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 24 * 3600).isEmpty());
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 100000).isEmpty());
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "x", 24 * 3600).isEmpty());
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "x", 100000).isEmpty());
     }
     SECTION("a zone the provider does not know")
     {
         rig.m_World.m_DeviceZone.set("Nowhere/Land");
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x", 37800).isEmpty());
-        CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "x").isEmpty());
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "x", 37800).isEmpty());
+        CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "x").isEmpty());
     }
     SECTION("nothing is saved")
     {
         const std::size_t saves = rig.store().saves().size();
-        (void)rig.m_Settings.previewTemplateLine("Played {value}", "x", 37800);
+        (void)rig.m_Settings.previewTemplateLine("Began task {value}", "x", 37800);
         CHECK(rig.store().saves().size() == saves);
         CHECK(rig.m_Gateway.pending() == 0);
     }
@@ -201,8 +201,8 @@ TEST_CASE("The preview works at first launch, before any setup is saved", "[view
     rig.load();
     REQUIRE_FALSE(rig.m_Settings.configured());
 
-    CHECK(rig.m_Settings.previewTemplateLine("Played {value}", "Morning Medley", 37800) ==
-          "10:30 Played Morning Medley");
+    CHECK(rig.m_Settings.previewTemplateLine("Began task {value}", "task 1", 37800) ==
+          "10:30 Began task 1");
 }
 
 // ----------------------------------------------------------------------------------------------------- template icon
@@ -216,7 +216,7 @@ TEST_CASE("A template has the icon its setup file names, or the default one", "[
     rig.load_configuration(configuration);
     const QAbstractItemModel& templates = *rig.m_Settings.templates();
 
-    CHECK(text_at(templates, 0, "name") == "Played song");
+    CHECK(text_at(templates, 0, "name") == "Began task");
     CHECK(text_at(templates, 0, "icon") == "music");
     CHECK(text_at(templates, 1, "icon") == "note");
 
@@ -231,9 +231,9 @@ TEST_CASE("A template has the icon its setup file names, or the default one", "[
     }
     SECTION("editing a template keeps its icon")
     {
-        REQUIRE(rig.m_Settings.updateTemplate(PLAYED_SONG, "Song played", "Which track?", "Track {value}").isEmpty());
+        REQUIRE(rig.m_Settings.updateTemplate(PLAYED_SONG, "Task started", "Which track?", "Track {value}").isEmpty());
         rig.commit();
-        CHECK(text_at(templates, 0, "name") == "Song played");
+        CHECK(text_at(templates, 0, "name") == "Task started");
         CHECK(text_at(templates, 0, "icon") == "music");
         REQUIRE(rig.m_Settings.renameTemplate(PLAYED_SONG, "Song heard").isEmpty());
         rig.commit();
@@ -241,16 +241,16 @@ TEST_CASE("A template has the icon its setup file names, or the default one", "[
     }
 }
 
-TEST_CASE("The sample setup gives Played song a music note and Visitor interaction a speech bubble",
+TEST_CASE("The sample setup gives Began task a music note and Entered room 1 a speech bubble",
           "[viewmodel][settings][templates]")
 {
     SettingsRig rig;
     rig.load_sample();
     const QAbstractItemModel& templates = *rig.m_Settings.templates();
 
-    CHECK(text_at(templates, 0, "name") == "Played song");
+    CHECK(text_at(templates, 0, "name") == "Began task");
     CHECK(text_at(templates, 0, "icon") == "music");
-    CHECK(text_at(templates, 1, "name") == "Visitor interaction");
+    CHECK(text_at(templates, 1, "name") == "Entered room 1");
     CHECK(text_at(templates, 1, "icon") == "speech");
 }
 

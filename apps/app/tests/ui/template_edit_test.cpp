@@ -72,16 +72,16 @@ TEST_CASE("editor.templates: an existing template shows its name, question and l
     World world;
     QQuickItem* page = load_edit(world, 0);
 
-    CHECK(page->property("title").toString() == QStringLiteral("Played song"));
-    CHECK(field_text(world, QStringLiteral("nameField")) == QStringLiteral("Played song"));
-    CHECK(field_text(world, QStringLiteral("promptField")) == QStringLiteral("Which song?"));
+    CHECK(page->property("title").toString() == QStringLiteral("Began task"));
+    CHECK(field_text(world, QStringLiteral("nameField")) == QStringLiteral("Began task"));
+    CHECK(field_text(world, QStringLiteral("promptField")) == QStringLiteral("Which task?"));
     // The field shows the answer as [answer]; the stored pattern is still {value}.
-    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played [answer]"));
+    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Began task [answer]"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
     // The model builds the note line as the Log screen shows it, with its own sample time and answer.
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Played Morning Medley"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Began task 1"));
     CHECK(preview(world) == QStringLiteral("In the log: ") +
-                                world.model().previewTemplateLine(QStringLiteral("Played {value}"), QString(), 37800));
+                                world.model().previewTemplateLine(QStringLiteral("Began task {value}"), QString(), 37800));
     CHECK(save_enabled(page));
 
     // One sentence says what a template is for, and each field says what it is.
@@ -135,9 +135,9 @@ TEST_CASE("editor.templates: a line the model refuses shows its message, no exam
     CHECK(world.m_Rig.store().saves().empty());
 
     // {name} is refused too, and so is a line over 500 characters.
-    enter_text(world, QStringLiteral("patternField"), QStringLiteral("Played {name}"));
+    enter_text(world, QStringLiteral("patternField"), QStringLiteral("Began task {name}"));
     CHECK(field_error(world, QStringLiteral("patternField")) ==
-          world.model().validatePattern(QStringLiteral("Played {name}")));
+          world.model().validatePattern(QStringLiteral("Began task {name}")));
     CHECK_FALSE(field_error(world, QStringLiteral("patternField")).isEmpty());
     CHECK_FALSE(save_enabled(page));
 
@@ -151,13 +151,13 @@ TEST_CASE("editor.templates: a line the model refuses shows its message, no exam
     // A good line brings the example back, while the person types: with the token the button writes ...
     enter_text(world, QStringLiteral("patternField"), QStringLiteral("Heard [answer] twice"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Heard Morning Medley twice"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Heard task 1 twice"));
     CHECK(save_enabled(page));
 
     // ... and with {value} typed by hand, which still works.
     enter_text(world, QStringLiteral("patternField"), QStringLiteral("Heard {value} twice"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Heard Morning Medley twice"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Heard task 1 twice"));
     CHECK(save_enabled(page));
 }
 
@@ -167,7 +167,7 @@ TEST_CASE("editor.templates: Save updates the template and closes the page", "[u
     QQuickItem* page = load_edit(world, 0);
     QSignalSpy closed(page, SIGNAL(closeRequested()));
 
-    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Song played"));
+    enter_text(world, QStringLiteral("nameField"), QStringLiteral("Task started"));
     enter_text(world, QStringLiteral("promptField"), QStringLiteral("Which tune?"));
     enter_text(world, QStringLiteral("patternField"), QStringLiteral("Tune [answer]"));
     tap_save(world, page);
@@ -175,7 +175,7 @@ TEST_CASE("editor.templates: Save updates the template and closes the page", "[u
     CHECK(closed.count() == 1);
     const auto& templates = world.model().configuration().m_Templates;
     REQUIRE(templates.size() == 2);
-    CHECK(templates.front().m_Name == "Song played");
+    CHECK(templates.front().m_Name == "Task started");
     CHECK(templates.front().m_ValuePrompt == "Which tune?");
     // The file format is unchanged: the stored pattern says {value}.
     CHECK(templates.front().m_OutputPattern == "Tune {value}");
@@ -192,22 +192,22 @@ TEST_CASE("editor.templates: Insert answer puts [answer] at the cursor, over a s
     // In the middle of the line.
     put_cursor(world, QStringLiteral("patternField"), 7);
     tap(world, QStringLiteral("insertAnswerButton"));
-    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played [answer][answer]"));
+    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Began task [answer][answer]"));
     CHECK(input->property("cursorPosition").toInt() == 15);
     CHECK(input->property("activeFocus").toBool());
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Played Morning MedleyMorning Medley"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Began task 1task 1"));
 
     // At the start.
     put_cursor(world, QStringLiteral("patternField"), 0);
     tap(world, QStringLiteral("insertAnswerButton"));
-    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("[answer]Played [answer][answer]"));
+    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("[answer]Began task [answer][answer]"));
     CHECK(input->property("cursorPosition").toInt() == 8);
 
     // In place of the selected text, and the same field says where the cursor is next.
     enter_text(world, QStringLiteral("patternField"), QStringLiteral("Played x"));
     QMetaObject::invokeMethod(input, "select", Q_ARG(int, 7), Q_ARG(int, 8));
     tap(world, QStringLiteral("insertAnswerButton"));
-    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played [answer]"));
+    CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Began task [answer]"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
     CHECK(save_enabled(page));
 
@@ -215,7 +215,7 @@ TEST_CASE("editor.templates: Insert answer puts [answer] at the cursor, over a s
     QSignalSpy closed(page, SIGNAL(closeRequested()));
     tap_save(world, page);
     CHECK(closed.count() == 1);
-    CHECK(world.model().configuration().m_Templates.front().m_OutputPattern == "Played {value}");
+    CHECK(world.model().configuration().m_Templates.front().m_OutputPattern == "Began task {value}");
 }
 
 TEST_CASE("editor.templates: Insert answer makes a refused line good", "[ui][editor]")
@@ -231,7 +231,7 @@ TEST_CASE("editor.templates: Insert answer makes a refused line good", "[ui][edi
     tap(world, QStringLiteral("insertAnswerButton"));
     CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Heard [answer]"));
     CHECK(field_error(world, QStringLiteral("patternField")).isEmpty());
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Heard Morning Medley"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Heard task 1"));
     CHECK(save_enabled(page));
 }
 
@@ -249,7 +249,7 @@ TEST_CASE("editor.templates: a new template starts with a question and a line ma
     enter_text(world, QStringLiteral("nameField"), QStringLiteral("Visitor note"));
     CHECK(field_text(world, QStringLiteral("promptField")) == QStringLiteral("Visitor note?"));
     CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Visitor note: [answer]"));
-    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Visitor note: Morning Medley"));
+    CHECK(preview(world) == QStringLiteral("In the log: 10:30 Visitor note: task 1"));
     CHECK(save_enabled(page));
 
     // They follow the name while they are untouched ...
@@ -291,9 +291,9 @@ TEST_CASE("editor.templates: the defaults are saved as they are shown, and an ex
         // Renaming a template that exists leaves its question and line alone.
         World world;
         QQuickItem* page = load_edit(world, 0);
-        enter_text(world, QStringLiteral("nameField"), QStringLiteral("Song played"));
-        CHECK(field_text(world, QStringLiteral("promptField")) == QStringLiteral("Which song?"));
-        CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Played [answer]"));
+        enter_text(world, QStringLiteral("nameField"), QStringLiteral("Task started"));
+        CHECK(field_text(world, QStringLiteral("promptField")) == QStringLiteral("Which task?"));
+        CHECK(field_text(world, QStringLiteral("patternField")) == QStringLiteral("Began task [answer]"));
         CHECK(page != nullptr);
     }
 }
@@ -366,7 +366,7 @@ TEST_CASE("editor.templates: Back closes without saving", "[ui][editor]")
 
     CHECK(closed.count() == 1);
     CHECK(world.m_Rig.store().saves().empty());
-    CHECK(world.model().configuration().m_Templates.front().m_Name == "Played song");
+    CHECK(world.model().configuration().m_Templates.front().m_Name == "Began task");
 }
 
 TEST_CASE("editor.voiceover: the template fields are named, the invalid state is read, and the page passes the checks",

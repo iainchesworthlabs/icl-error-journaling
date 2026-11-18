@@ -15,7 +15,7 @@ Option 1, by hand:
 4. Add a note, or use a note template.
 5. Open Review to see the day's entries in time order. Edit or delete one.
 6. Share the log: the share sheet opens with the plain-text log.
-7. Optional second board: in Settings turn on "Second board" and add an interaction type, for example "Spoke with [person]". A new tab appears. Double-tap its tile, then add a person such as "Alex Sample". The person's name is stored on the device only, and a shared log shows initials ("A.S.") by default.
+7. Optional second board: in Settings turn on "Second board" and add an interaction type, for example "Paired with [person]". A new tab appears. Double-tap its tile, then add a person such as "Alex Sample". The person's name is stored on the device only, and a shared log shows initials ("A.S.") by default.
 
 Option 2, with the demo setup file:
 1. In Safari on the review device, open https://iainchesworthlabs.com/field-test/demo/demo-setup.ejconfig

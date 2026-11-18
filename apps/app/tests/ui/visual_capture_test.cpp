@@ -493,12 +493,12 @@ void note(Phone& phone, const QString& text, int day, int hour, int minute)
     phone.services.settle();
 }
 
-/// A note through the template chip "Played song", as the chip's value prompt makes it.
+/// A note through the template chip "Began task", as the chip's value prompt makes it.
 void played_song(Phone& phone, const QString& value, int day, int hour, int minute)
 {
     phone.services.go_to(day, hour, minute, 30);
     auto& templates = *phone.services.root().settings()->templates();
-    const int row = row_with_label(templates, QStringLiteral("Played song"), "name");
+    const int row = row_with_label(templates, QStringLiteral("Began task"), "name");
     REQUIRE(row >= 0);
     REQUIRE(phone.services.session().addTemplatedNote(role_of(templates, row, "templateId").toString(), value));
     phone.services.settle();
@@ -524,9 +524,9 @@ void log_day(Phone& phone)
     record(phone, QStringLiteral("Wrong Response"), 7, 9, 0);
     record(phone, QStringLiteral("Wrong Response"), 7, 9, 15);
     record(phone, QStringLiteral("Wrong Output"), 7, 9, 40);
-    played_song(phone, QStringLiteral("Morning Medley"), 7, 9, 50);
+    played_song(phone, QStringLiteral("task 1"), 7, 9, 50);
     record(phone, QStringLiteral("Timed Out"), 7, 9, 58);
-    note(phone, QStringLiteral("Played Evening Song"), 7, 10, 5);
+    note(phone, QStringLiteral("Began task 2"), 7, 10, 5);
     record(phone, QStringLiteral("Stopped Responding"), 7, 10, 20);
 }
 
@@ -536,11 +536,11 @@ void review_day(Phone& phone)
     record(phone, QStringLiteral("Wrong Response"), 7, 9, 42);
     record(phone, QStringLiteral("Wrong Response"), 7, 10, 5);
     record(phone, QStringLiteral("Stopped Responding"), 7, 10, 20);
-    played_song(phone, QStringLiteral("Morning Medley"), 7, 10, 30);
+    played_song(phone, QStringLiteral("task 1"), 7, 10, 30);
     record(phone, QStringLiteral("Wrong Output"), 7, 11, 2);
-    attach_note(phone, 4, QStringLiteral("asked for Evening Song"));
+    attach_note(phone, 4, QStringLiteral("asked for task 2"));
     record(phone, QStringLiteral("Timed Out"), 7, 11, 40);
-    note(phone, QStringLiteral("Played Evening Song"), 7, 12, 10);
+    note(phone, QStringLiteral("Began task 2"), 7, 12, 10);
 }
 
 // ---- the second board in Review (Stage 14, I-9) ----
@@ -598,7 +598,7 @@ void interaction_day(Phone& phone)
     const QString jordan = person_named(phone, QStringLiteral("Jordan Placeholder"));
     record(phone, QStringLiteral("Wrong Response"), 7, 9, 42);
     interaction(phone, SPOKE_WITH, {alex}, 10, 10);
-    interaction(phone, PLAYED_SONG, {}, 10, 30, QStringLiteral("Morning Medley"));
+    interaction(phone, PLAYED_SONG, {}, 10, 30, QStringLiteral("task 1"));
     interaction(phone, SPOKE_WITH, {}, 11, 2);
     interaction(phone, HELPED, {jordan, alex}, 11, 40);
     phone.services.advance(6s);
@@ -623,8 +623,8 @@ void label_day(Phone& phone)
     record(phone, QStringLiteral("Sequence Out of Order"), 7, 9, 0);
     record(phone, QStringLiteral("Sequence Out of Order"), 7, 9, 20);
     record(phone, QStringLiteral("Sequence Out of Order"), 7, 9, 40);
-    note(phone, QStringLiteral("Played Morning Medley"), 7, 9, 50);
-    note(phone, QStringLiteral("Played Evening Song"), 7, 10, 0);
+    note(phone, QStringLiteral("Began task 1"), 7, 9, 50);
+    note(phone, QStringLiteral("Began task 2"), 7, 10, 0);
     note(phone, QStringLiteral("Visitor: Sam Example"), 7, 10, 10);
     record(phone, QStringLiteral("Stopped Responding"), 7, 10, 20);
 }
@@ -675,17 +675,17 @@ void history_day(Phone& phone)
     // 13:20 Wrong Output, 15:44 Timed Out.
     record(phone, QStringLiteral("Wrong Response"), 5, 9, 15);
     record(phone, QStringLiteral("Step Skipped"), 5, 9, 48);
-    played_song(phone, QStringLiteral("Morning Medley"), 5, 10, 30);
+    played_song(phone, QStringLiteral("task 1"), 5, 10, 30);
     record(phone, QStringLiteral("Stopped Responding"), 5, 11, 2);
     record(phone, QStringLiteral("Wrong Output"), 5, 13, 20);
-    attach_note(phone, 4, QStringLiteral("asked for Evening Song"));
+    attach_note(phone, 4, QStringLiteral("asked for task 2"));
     record(phone, QStringLiteral("Timed Out"), 5, 15, 44);
     record(phone, QStringLiteral("File Not Found"), 5, 15, 50);
     record(phone, QStringLiteral("Connection Lost"), 5, 16, 5);
     record(phone, QStringLiteral("Value Out of Range"), 5, 16, 20);
     record(phone, QStringLiteral("Slow Response"), 5, 16, 35);
     record(phone, QStringLiteral("Stopped Unexpectedly"), 5, 16, 40);
-    note(phone, QStringLiteral("Played Evening Song"), 5, 16, 45);
+    note(phone, QStringLiteral("Began task 2"), 5, 16, 45);
     close_log(phone, 5, 16, 58, true, 6);
 
     fill_header(phone, QStringLiteral("27"), QStringLiteral("North Site"), QStringLiteral("1.4.1"));
@@ -789,7 +789,7 @@ void scene_template_value(Phone& phone)
     phone.ui.advance(300ms);
     phone.tap_item(phone.nth(QStringLiteral("chip"), 0));
     phone.play();
-    phone.type_into(QStringLiteral("templateValueField"), QStringLiteral("Morning Medley"));
+    phone.type_into(QStringLiteral("templateValueField"), QStringLiteral("task 1"));
     phone.play();
 }
 
@@ -1260,7 +1260,7 @@ std::vector<Scene> phone_scenes()
          QStringLiteral("Header fields empty, seven entries logged before it was filled (HDR-06).")},
         {QStringLiteral("TemplateValue"), TODAY, scene_template_value,
          QStringLiteral(
-             "The \"Played song\" prompt with \"Morning Medley\" typed; there is no keyboard in the capture.")},
+             "The \"Began task\" prompt with \"task 1\" typed; there is no keyboard in the capture.")},
         {QStringLiteral("WriteFailed"), TODAY, scene_write_failed,
          QStringLiteral("A real failed commit of the next Stopped Responding tap (the store is told to fail it).")},
         {QStringLiteral("Recovery"), TODAY, scene_recovery,

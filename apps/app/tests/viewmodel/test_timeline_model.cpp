@@ -751,9 +751,9 @@ TEST_CASE("Edit: the error type, the attached note and the note text each re-ren
 
     SECTION("the attached note is set, changed and cleared")
     {
-        REQUIRE(rig.model().saveEntry(text_of(1), QVariantMap{{"attachedNote", "asked for Evening Song"}}));
+        REQUIRE(rig.model().saveEntry(text_of(1), QVariantMap{{"attachedNote", "asked for task 2"}}));
         rig.commit();
-        CHECK(full_line(rig.model(), 0) == "11:10 T| Wrong Response \xE2\x80\x93 asked for Evening Song");
+        CHECK(full_line(rig.model(), 0) == "11:10 T| Wrong Response \xE2\x80\x93 asked for task 2");
 
         REQUIRE(rig.model().saveEntry(text_of(2), QVariantMap{{"attachedNote", "second note"}}));
         rig.commit();
@@ -773,11 +773,11 @@ TEST_CASE("Edit: the error type, the attached note and the note text each re-ren
         CHECK(full_line(rig.model(), 2) == "11:30 Device rebooted");
 
         const QString played = QString::fromStdString(configuration.m_Templates[0].m_Id.format());
-        REQUIRE(rig.model().saveEntry(text_of(3), QVariantMap{{"noteText", "Morning Medley"}, {"templateId", played}}));
+        REQUIRE(rig.model().saveEntry(text_of(3), QVariantMap{{"noteText", "task 1"}, {"templateId", played}}));
         rig.commit();
-        CHECK(full_line(rig.model(), 2) == "11:30 Played Morning Medley");
+        CHECK(full_line(rig.model(), 2) == "11:30 Began task 1");
         CHECK(rig.model().entryForEdit(text_of(3)).value("templateId") == played);
-        CHECK(rig.model().entryForEdit(text_of(3)).value("noteText") == "Morning Medley");
+        CHECK(rig.model().entryForEdit(text_of(3)).value("noteText") == "task 1");
     }
 
     SECTION("an edit keeps the id and the deleted flag, and takes its edit time from the clock")
@@ -878,7 +878,7 @@ TEST_CASE("Edit: previewLine is the saved line, and writes nothing", "[viewmodel
 
     const std::vector<std::pair<std::uint64_t, QVariantMap>> edits = {
         {1, QVariantMap{{"errorTypeId", QString::fromStdString(type_named(configuration, "Stopped Responding").format())}}},
-        {2, QVariantMap{{"attachedNote", "asked for Evening Song"}, {"localSeconds", seconds_of(11, 45)}}},
+        {2, QVariantMap{{"attachedNote", "asked for task 2"}, {"localSeconds", seconds_of(11, 45)}}},
         {1, QVariantMap{{"localSeconds", seconds_of(11, 5)}}}};
     for (const auto& [entry, edit] : edits)
     {
@@ -1743,8 +1743,8 @@ TEST_CASE("A row splits its line into the marker and the rest", "[viewmodel][tim
     Rig rig;
     Entry unshowable = error_at(5, 12, 0);
     unshowable.m_Captured.m_Zone = "Nowhere/Land";
-    rig.start(list_of(error_at(1, 9, 42), error_at(2, 10, 5, "Wrong Output", "asked for Evening Song"),
-                      note_at(3, 10, 30, "Played Morning Medley"),
+    rig.start(list_of(error_at(1, 9, 42), error_at(2, 10, 5, "Wrong Output", "asked for task 2"),
+                      note_at(3, 10, 30, "Began task 1"),
                       change_at(4, 11, 0, HeaderField::SOFTWARE_VERSION, "1.5.0"), unshowable));
 
     CHECK(row_text(rig.model(), 0, TimelineModel::LINE_TEXT) == "T| Wrong Response");
@@ -1753,11 +1753,11 @@ TEST_CASE("A row splits its line into the marker and the rest", "[viewmodel][tim
 
     CHECK(row_text(rig.model(), 1, TimelineModel::PREFIX_TEXT) == "T|");
     CHECK(row_text(rig.model(), 1, TimelineModel::REST_TEXT) ==
-          "Wrong Output \xE2\x80\x93 asked for Evening Song");
+          "Wrong Output \xE2\x80\x93 asked for task 2");
 
     CHECK(row_text(rig.model(), 2, TimelineModel::PREFIX_TEXT).isEmpty()); // a note has no marker on the screen
-    CHECK(row_text(rig.model(), 2, TimelineModel::REST_TEXT) == "Played Morning Medley");
-    CHECK(full_line(rig.model(), 2) == "10:30 Played Morning Medley");
+    CHECK(row_text(rig.model(), 2, TimelineModel::REST_TEXT) == "Began task 1");
+    CHECK(full_line(rig.model(), 2) == "10:30 Began task 1");
 
     // A change of the header has no marker: the rest is the whole line.
     CHECK(row_text(rig.model(), 3, TimelineModel::PREFIX_TEXT).isEmpty());
@@ -1772,7 +1772,7 @@ TEST_CASE("A row splits its line into the marker and the rest", "[viewmodel][tim
 TEST_CASE("The marker and the rest make the line again", "[viewmodel][timeline]")
 {
     Rig rig;
-    rig.start(list_of(error_at(1, 9, 42), note_at(2, 10, 30, "Played Morning Medley")));
+    rig.start(list_of(error_at(1, 9, 42), note_at(2, 10, 30, "Began task 1")));
 
     for (int row = 0; row < rig.model().rowCount(); ++row)
     {

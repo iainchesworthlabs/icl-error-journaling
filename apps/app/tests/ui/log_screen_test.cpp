@@ -178,7 +178,7 @@ private:
 
 /// The part of the settings model the screen calls, with the names of `SettingsModel`: the templates for the chips, the
 /// unit prefix of the card, `patternToField` and `previewTemplateLine`, which writes the line as the renderer does for a value (the sample
-/// "Morning Medley" while it is blank, at the sample time 10:30).
+/// "task 1" while it is blank, at the sample time 10:30).
 class FakeSettings : public QObject
 {
     Q_OBJECT
@@ -199,7 +199,7 @@ public:
     Q_INVOKABLE QString previewTemplateLine(const QString& pattern, const QString& value, int /*localSeconds*/ = -1) const
     {
         QString line = pattern;
-        line.replace(QStringLiteral("{value}"), value.trimmed().isEmpty() ? QStringLiteral("Morning Medley") : value.trimmed());
+        line.replace(QStringLiteral("{value}"), value.trimmed().isEmpty() ? QStringLiteral("task 1") : value.trimmed());
         return QStringLiteral("10:30 ") + line;
     }
 
@@ -1065,12 +1065,12 @@ TEST_CASE("log.note: Add adds the note, Return only starts a new line, and an em
     CHECK(sim.gateway.pending() == 0);
 
     QMetaObject::invokeMethod(screen.named(QStringLiteral("logComposer")), "focusField");
-    screen.rig.type(QStringLiteral("Visitor asked about the device"));
+    screen.rig.type(QStringLiteral("Tester asked about the device"));
     screen.rig.key(Qt::Key_Return);
     sim.gateway.run_all();
     screen.rig.settle();
     CHECK(sim.entries().empty());
-    CHECK(sim.session.draft() == QStringLiteral("Visitor asked about the device\n"));
+    CHECK(sim.session.draft() == QStringLiteral("Tester asked about the device\n"));
     screen.rig.tap(screen.named(QStringLiteral("addButton")));
     sim.gateway.run_all();
     screen.rig.settle();
@@ -1088,7 +1088,7 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     std::vector<QQuickItem*> chips;
     collect(screen.item, QStringLiteral("chip"), chips);
     REQUIRE(chips.size() == 2);
-    CHECK(chips[0]->property("text").toString() == QStringLiteral("Played song"));
+    CHECK(chips[0]->property("text").toString() == QStringLiteral("Began task"));
     // The icons of the chips come from the templates' `icon` role.
     CHECK(chips[0]->property("iconKind").toString() == QStringLiteral("music"));
     CHECK(chips[1]->property("iconKind").toString() == QStringLiteral("speech"));
@@ -1101,14 +1101,14 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
 
     // The prompt of the template.
     QQuickItem* field = screen.named(QStringLiteral("templateValueField"));
-    CHECK(field->property("label").toString() == QStringLiteral("Which song?"));
-    CHECK(sheet->property("accessibleName").toString() == QStringLiteral("Played song"));
+    CHECK(field->property("label").toString() == QStringLiteral("Which task?"));
+    CHECK(sheet->property("accessibleName").toString() == QStringLiteral("Began task"));
     // The line the note will have, as the settings model writes it, with the sample value while the field is blank.
     CHECK(screen.text_of(QStringLiteral("templateValuePreviewText")) ==
-          QStringLiteral("10:30 Played Morning Medley"));
+          QStringLiteral("10:30 Began task 1"));
     // The footnote names the line as the template editor writes it: [answer], not the stored {value}.
     CHECK(screen.named(QStringLiteral("templateValuePreview"))->property("footer").toString() ==
-          QStringLiteral("Saved with the template “Played song”, as “Played [answer]”."));
+          QStringLiteral("Saved with the template “Began task”, as “Began task [answer]”."));
 
     // Add with nothing typed: refused, the sheet stays, nothing is recorded.
     screen.rig.tap(screen.named(QStringLiteral("navTrailing")));
@@ -1118,11 +1118,11 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     CHECK(sim.entries().empty());
 
     // Typing clears the message; Add records the template id and the value, and the sheet closes.
-    screen.rig.type(QStringLiteral("Morning Medley"));
-    CHECK(field->property("text").toString() == QStringLiteral("Morning Medley"));
+    screen.rig.type(QStringLiteral("task 1"));
+    CHECK(field->property("text").toString() == QStringLiteral("task 1"));
     CHECK(field->property("errorText").toString().isEmpty());
     CHECK(screen.text_of(QStringLiteral("templateValuePreviewText")) ==
-          QStringLiteral("10:30 Played Morning Medley"));
+          QStringLiteral("10:30 Began task 1"));
     screen.rig.tap(screen.named(QStringLiteral("navTrailing")));
     sim.gateway.run_all();
     screen.rig.settle();
@@ -1133,7 +1133,7 @@ TEST_CASE("log.template: a chip opens the value prompt, Add records the template
     REQUIRE(note != nullptr);
     REQUIRE(note->m_Template.has_value());
     CHECK(QString::fromStdString(note->m_Template->format()) == PLAYED_SONG);
-    CHECK(note->m_Value == "Morning Medley");
+    CHECK(note->m_Value == "task 1");
     CHECK_FALSE(sheet->property("isOpen").toBool());
     CHECK(screen.toast_text() == QStringLiteral("Note added at 08:55"));
     // The free-text draft was not touched.
@@ -1154,7 +1154,7 @@ TEST_CASE("log.template: Cancel leaves everything as it was", "[ui][log]")
     QQuickItem* sheet = screen.named(QStringLiteral("logTemplateSheet"));
     REQUIRE(sheet->property("isOpen").toBool());
     CHECK(screen.named(QStringLiteral("templateValueField"))->property("label").toString() ==
-          QStringLiteral("Who visited?"));
+          QStringLiteral("Which room?"));
     screen.rig.tap(screen.named(QStringLiteral("navLeading")));
     screen.rig.advance(400ms);
     CHECK_FALSE(sheet->property("isOpen").toBool());
@@ -2621,7 +2621,7 @@ TEST_CASE("board.log_first: a double-tap logs the interaction before the picker 
     LogRig sim(Options().existing());
     sim.load();
     InteractionScreen screen(sim);
-    REQUIRE(screen.itile(SPOKE_WITH_ROW)->property("label").toString() == QStringLiteral("Spoke with"));
+    REQUIRE(screen.itile(SPOKE_WITH_ROW)->property("label").toString() == QStringLiteral("Paired with"));
 
     // One tap logs nothing.
     screen.rig.tap(screen.itile(SPOKE_WITH_ROW));
@@ -2640,11 +2640,11 @@ TEST_CASE("board.log_first: a double-tap logs the interaction before the picker 
     REQUIRE(sim.entries().size() == 1);
     const std::optional<InteractionEntry> logged = first_interaction(sim);
     REQUIRE(logged.has_value());
-    CHECK(logged->m_TypeLabel == "Spoke with");
+    CHECK(logged->m_TypeLabel == "Paired with");
     CHECK(logged->m_People.empty());
     CHECK(screen.open(QStringLiteral("logPersonPicker")));
     CHECK(sim.events.count(EventKind::HAPTIC, "impact") >= 1);
-    CHECK(screen.toast_text() == QStringLiteral("Spoke with logged at 08:55"));
+    CHECK(screen.toast_text() == QStringLiteral("Paired with logged at 08:55"));
 
     // Skip: the entry stays as logged.
     screen.close_sheet(QStringLiteral("logPersonPicker"));
@@ -2757,11 +2757,11 @@ TEST_CASE("board.log_first: a type with an answer asks for it in a sheet, and Ca
     CHECK(screen.inside(screen.sheet(QStringLiteral("logInteractionAnswerSheet")), QStringLiteral("templateValuePreviewText"))->property("text").toString().contains(QStringLiteral("Played")));
 
     QMetaObject::invokeMethod(screen.sheet(QStringLiteral("logInteractionAnswerSheet")), "addRequested",
-                              Q_ARG(QString, QStringLiteral("Morning Medley")));
+                              Q_ARG(QString, QStringLiteral("task 1")));
     sim.gateway.run_all();
     screen.rig.advance(600ms);
     screen.rig.settle();
-    CHECK(first_interaction(sim)->m_Value == std::optional<std::string>("Morning Medley"));
+    CHECK(first_interaction(sim)->m_Value == std::optional<std::string>("task 1"));
     CHECK_FALSE(screen.open(QStringLiteral("logInteractionAnswerSheet")));
 
     // Cancel on the next one leaves it as logged.
@@ -2797,12 +2797,12 @@ TEST_CASE("board.voiceover: tiles are named, a screen reader activation logs onc
     LogRig sim(Options().existing());
     sim.load();
     InteractionScreen screen(sim);
-    CHECK(screen.itile(SPOKE_WITH_ROW)->property("accessibleName").toString() == QStringLiteral("Spoke with"));
+    CHECK(screen.itile(SPOKE_WITH_ROW)->property("accessibleName").toString() == QStringLiteral("Paired with"));
     REQUIRE(accessible_press(screen.itile(VISITOR_ROW)));
     sim.gateway.run_all();
     screen.rig.settle();
     CHECK(sim.entries().size() == 1);
-    CHECK(screen.itile(VISITOR_ROW)->property("accessibleName").toString() == QStringLiteral("Visitor interaction, 1 today"));
+    CHECK(screen.itile(VISITOR_ROW)->property("accessibleName").toString() == QStringLiteral("Entered room 1, 1 today"));
 
     sim.undo.dismiss();
     screen.rig.layout();
@@ -2827,7 +2827,7 @@ TEST_CASE("picker.edit_mode: the people of an entry are ticked, a retired one is
     UiRig rig;
     QQuickItem* picker = rig.load(QStringLiteral("PersonPicker"),
                                   {{QStringLiteral("people"), QVariant::fromValue(static_cast<QObject*>(&people))},
-                                   {QStringLiteral("typeName"), QStringLiteral("Spoke with")}});
+                                   {QStringLiteral("typeName"), QStringLiteral("Paired with")}});
     REQUIRE(picker != nullptr);
     QSignalSpy done(picker, SIGNAL(doneRequested(QVariant)));
     QSignalSpy skipped(picker, SIGNAL(skipped()));
@@ -2876,7 +2876,7 @@ TEST_CASE("picker.recent: the people used last are chips above the list, a tap t
     QQuickItem* picker = rig.load(QStringLiteral("PersonPicker"),
                                   {{QStringLiteral("people"), QVariant::fromValue(static_cast<QObject*>(&people))},
                                    {QStringLiteral("locationId"), NORTH_SITE_ID},
-                                   {QStringLiteral("typeName"), QStringLiteral("Spoke with")}});
+                                   {QStringLiteral("typeName"), QStringLiteral("Paired with")}});
     REQUIRE(picker != nullptr);
     QMetaObject::invokeMethod(picker, "begin", Q_ARG(QVariant, QVariant()));
     rig.advance(600ms);
@@ -2902,7 +2902,7 @@ TEST_CASE("picker.voiceover: the bar, the search field, the add row, the rows an
     UiRig rig;
     QQuickItem* picker = rig.load(QStringLiteral("PersonPicker"),
                                   {{QStringLiteral("people"), QVariant::fromValue(static_cast<QObject*>(&people))},
-                                   {QStringLiteral("typeName"), QStringLiteral("Spoke with")}});
+                                   {QStringLiteral("typeName"), QStringLiteral("Paired with")}});
     REQUIRE(picker != nullptr);
     QMetaObject::invokeMethod(picker, "begin", Q_ARG(QVariant, QVariant()));
     rig.advance(600ms);

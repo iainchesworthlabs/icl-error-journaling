@@ -192,7 +192,7 @@ public:
     Q_INVOKABLE QString retireErrorType(const QString& id);
 
     // ---- Interaction types (Stage 14, 4.5; the tiles of the second board) ----
-    // `line` is what the "Line in the log" field shows: "Spoke with [person]", "Played [answer]", or empty (the line is
+    // `line` is what the "Line in the log" field shows: "Paired with [person]", "Began task [answer]", or empty (the line is
     // then the type's name). A type with [person] asks who after it is logged, one with [answer] asks a question, and
     // the others log at once. Each call returns "" on success or the refusal in plain words. A new type goes to the first
     // empty tile of the second board in the same save, or is in Other when the board is full.
@@ -207,7 +207,7 @@ public:
     Q_INVOKABLE QString removeInteractionTile(const QString& interactionTypeId);
     /// "" for a line that is valid (an empty one is), or the words to show while the person types.
     Q_INVOKABLE QString validateInteractionLine(const QString& line) const;
-    /// The line the log would show, with a sample person and answer: "Spoke with Alex Sample".
+    /// The line the log would show, with a sample person and answer: "Paired with Alex Sample".
     Q_INVOKABLE QString previewInteractionLine(const QString& name, const QString& line) const;
 
     /// Positions are the board positions 1 to 11 (the `position` role of `boardLayout`). A drag takes the tile at
@@ -229,9 +229,9 @@ public:
     Q_INVOKABLE QString validatePattern(const QString& pattern) const;
 
     /// The log line a note made from `pattern` and `value` would have, made by the renderer that makes the review
-    /// screen's lines: "10:30 Played Morning Medley". The time is `localSeconds` (seconds since local
+    /// screen's lines: "10:30 Began task 1". The time is `localSeconds` (seconds since local
     /// midnight, 0 to 86399) on today's date in the device zone, in the user's time format; a negative value means
-    /// now. A blank `value` is shown as "Morning Medley", the designs' sample. For a pattern that is not valid it
+    /// now. A blank `value` is shown as "task 1", the designs' sample. For a pattern that is not valid it
     /// returns "Fix the line to see an example." (check `validatePattern` to style it differently), and for a
     /// `localSeconds` above 86399 an empty string. Nothing is written.
     Q_INVOKABLE QString previewTemplateLine(const QString& pattern, const QString& value, int localSeconds = -1) const;
@@ -243,10 +243,10 @@ public:
     /// The stored pattern for what the field shows: each "[answer]" is {value} again. Text the person typed as
     /// {value} stays as it is.
     Q_INVOKABLE QString patternFromField(const QString& field) const;
-    /// The question a new template starts with, made from its name: "Played song" gives "Played song?". Empty for a
+    /// The question a new template starts with, made from its name: "Began task" gives "Began task?". Empty for a
     /// blank name.
     Q_INVOKABLE QString defaultTemplateQuestion(const QString& name) const;
-    /// The line a new template starts with, as the field shows it: "Played song: [answer]". Empty for a blank name.
+    /// The line a new template starts with, as the field shows it: "Began task: [answer]". Empty for a blank name.
     Q_INVOKABLE QString defaultTemplateLine(const QString& name) const;
 
     /// The name of a tile colour slot: "Periwinkle" for 8. Empty for 0 and for a slot above 11. The `colourSlot` of the

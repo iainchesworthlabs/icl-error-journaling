@@ -11,7 +11,7 @@ ON THE BOARD
 • Dictate a note: tap the microphone and speak, where the phone can recognise speech without the internet. Recognition happens on the phone, so no sound or text leaves it
 
 OBSERVATIONS, IF YOU WANT THEM
-Observations is an optional second board. It is off until you switch it on in Settings. Use it for what you did around the unit as well as what went wrong. Make your own tile types, such as "Spoke with [person]", and pick the people from a short list you keep on the device. Names are kept in their own store, never in the log or a setup file, and a shared log writes them as initials unless you choose otherwise.
+Observations is an optional second board. It is off until you switch it on in Settings. Use it for what you did around the unit as well as what went wrong. Make your own tile types, such as "Paired with [person]", and pick the people from a short list you keep on the device. Names are kept in their own store, never in the log or a setup file, and a shared log writes them as initials unless you choose otherwise.
 
 THE DAY'S LOG
 • A header with the tester, date, unit, number suffix (such as UNIT-27-prod), location and software version

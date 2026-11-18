@@ -89,11 +89,11 @@ class HelpLinksCheck(unittest.TestCase):
             '"paragraphs": [',
         )
         self.topics(
-            'qsTr("<b>Name</b> is what the chip says. <b>Question to ask</b> is what you are asked when you tap it, for example “Which song?”."), ',
+            'qsTr("<b>Name</b> is what the chip says. <b>Question to ask</b> is what you are asked when you tap it, for example “Which task?”."), ',
             "",
         )
         self.topics(
-            'qsTr("<b>Line in the log</b> is what gets written. Tap <b>Insert answer</b> to put the answer where you want it, for example “Played [answer]”."), ',
+            'qsTr("<b>Line in the log</b> is what gets written. Tap <b>Insert answer</b> to put the answer where you want it, for example “Began task [answer]”."), ',
             "",
         )
         self.assertTrue(any("'templates' has 1 paragraphs" in p for p in self.problems()))

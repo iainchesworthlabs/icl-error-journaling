@@ -172,8 +172,8 @@ TEST_CASE("Two items with one name are named by their places in the list, smalle
     }
     SECTION("note templates")
     {
-        set_item(root, "note_templates", 1, "name", "Played song");
-        CHECK(messages_of(root) == QStringList{"Note templates 1 and 2 are both called Played song."});
+        set_item(root, "note_templates", 1, "name", "Began task");
+        CHECK(messages_of(root) == QStringList{"Note templates 1 and 2 are both called Began task."});
     }
     SECTION("the case does not matter")
     {
@@ -209,7 +209,7 @@ TEST_CASE("A pattern is refused in a sentence for each of its three faults", "[v
     }
     SECTION("a placeholder the app does not know")
     {
-        set_item(root, "note_templates", 0, "output_pattern", "Played {name}");
+        set_item(root, "note_templates", 0, "output_pattern", "Began task {name}");
         CHECK(messages_of(root) ==
               QStringList{"Note template 1: the line in the log has a word in curly brackets the app does not "
                           "know. Only {value} is allowed."});

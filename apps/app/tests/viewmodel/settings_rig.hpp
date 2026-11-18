@@ -114,9 +114,9 @@ struct SettingsRig
     }
     order = 1;
     for (const auto& [number, name, pattern] :
-         {std::tuple<std::uint64_t, const char*, const char*>{TEMPLATE_PLAYED, "Played song", "Played {value}"},
-          {TEMPLATE_VISITOR, "Visitor", "Visitor interaction: {value}"},
-          {TEMPLATE_REQUESTED, "Requested song", "Song {value} requested twice"}})
+         {std::tuple<std::uint64_t, const char*, const char*>{TEMPLATE_PLAYED, "Began task", "Began task {value}"},
+          {TEMPLATE_VISITOR, "Visitor", "Entered room 1: {value}"},
+          {TEMPLATE_REQUESTED, "Requested song", "Task {value} requested twice"}})
     {
         NoteTemplate note_template;
         note_template.m_Id = test_id<NoteTemplateId>(number);

@@ -22,7 +22,7 @@ constexpr auto CHIP = R"(
         x: Theme.space.screenMargin
         y: 100
         maxWidth: host.width - 2 * Theme.space.screenMargin
-        text: "Played song"
+        text: "Began task"
     })";
 
 } // namespace
@@ -71,7 +71,7 @@ TEST_CASE("chip.wrap: a name wider than maxWidth wraps and grows the chip, and t
             x: Theme.space.screenMargin
             y: 100
             maxWidth: 140
-            text: "Visitor interaction at the North Site gate"
+            text: "Entered room 1 at the North Site gate"
         })")) != nullptr);
     QQuickItem* chip = rig.find(QStringLiteral("chip"));
     REQUIRE(chip != nullptr);
@@ -83,7 +83,7 @@ TEST_CASE("chip.wrap: a name wider than maxWidth wraps and grows the chip, and t
     {
         if (node.m_Item == chip)
         {
-            CHECK(node.m_Name == QStringLiteral("Visitor interaction at the North Site gate"));
+            CHECK(node.m_Name == QStringLiteral("Entered room 1 at the North Site gate"));
             CHECK(node.m_Role == QAccessible::Button);
         }
     }

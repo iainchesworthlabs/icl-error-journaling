@@ -661,9 +661,9 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     events.clear();
     app.services.go_to(7, 10, 30, 5);
     app.ui.tap(app.need(QStringLiteral("noteInput")));
-    app.ui.type(QStringLiteral("Caller asked for the next song"));
+    app.ui.type(QStringLiteral("Caller asked for the next step"));
     app.ui.advance(16ms);
-    CHECK(session.draft() == QStringLiteral("Caller asked for the next song"));
+    CHECK(session.draft() == QStringLiteral("Caller asked for the next step"));
     app.tap(QStringLiteral("addButton"));
     app.ui.settle();
     CHECK(events.count(EventKind::HAPTIC, "success") == 1);
@@ -674,7 +674,7 @@ TEST_CASE("app.flow: log taps with the haptic first, a note, undo, Review, Edit,
     app.tap(QStringLiteral("toastUndo"));
     app.ui.settle();
     app.play();
-    CHECK(session.draft() == QStringLiteral("Caller asked for the next song"));
+    CHECK(session.draft() == QStringLiteral("Caller asked for the next step"));
     app.services.go_to(7, 10, 31, 0);
     app.tap(QStringLiteral("addButton"));
     app.ui.settle();
@@ -1899,7 +1899,7 @@ TEST_CASE("ipad.rotation_keeps_state: a draft, the focus, a toast with Undo and 
 
     // A draft in the composer, with the focus there, and a toast with Undo.
     app.ui.tap(app.need(QStringLiteral("noteInput")));
-    app.ui.type(QStringLiteral("Caller asked for the next song"));
+    app.ui.type(QStringLiteral("Caller asked for the next step"));
     app.ui.advance(16ms);
     QQuickItem* input = app.ui.focused_input();
     REQUIRE(input != nullptr);
@@ -1915,7 +1915,7 @@ TEST_CASE("ipad.rotation_keeps_state: a draft, the focus, a toast with Undo and 
         app.ui.set_window_size(size);
         app.ui.set_safe_area(size.width() > 600 ? IPAD_TOP : 59.0, size.width() > 600 ? IPAD_BOTTOM : 34.0);
         app.ui.layout();
-        CHECK(app.services.session().draft() == QStringLiteral("Caller asked for the next song"));
+        CHECK(app.services.session().draft() == QStringLiteral("Caller asked for the next step"));
         CHECK(app.ui.focused_input() == input);
         CHECK(app.need(QStringLiteral("logToast"))->property("present").toBool());
         CHECK(app.services.root().timeline()->rowCount() == entries);
@@ -3518,7 +3518,7 @@ TEST_CASE("fold.state_kept: a fold or unfold on the Interactions board loses no 
     app.ui.layout();
 
     app.ui.tap(app.need(QStringLiteral("noteInput")));
-    app.ui.type(QStringLiteral("Visitor asked about the next song"));
+    app.ui.type(QStringLiteral("Tester asked about the next step"));
     app.ui.advance(16ms);
     QQuickItem* input = app.ui.focused_input();
     REQUIRE(input != nullptr);
@@ -3531,7 +3531,7 @@ TEST_CASE("fold.state_kept: a fold or unfold on the Interactions board loses no 
         app.ui.set_window_size(size);
         app.ui.set_safe_area(size.width() > 600 ? IPAD_TOP : 40.0, IPAD_BOTTOM);
         app.ui.layout();
-        CHECK(app.services.session().draft() == QStringLiteral("Visitor asked about the next song"));
+        CHECK(app.services.session().draft() == QStringLiteral("Tester asked about the next step"));
         CHECK(app.ui.focused_input() == input);
         CHECK(app.need(QStringLiteral("logScreen"))->property("onInteractions").toBool());
         CHECK(app.boards->property("lastBoard").toString() == QStringLiteral("interactions"));

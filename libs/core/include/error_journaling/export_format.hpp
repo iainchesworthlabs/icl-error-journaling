@@ -41,7 +41,7 @@ inline constexpr std::string_view NOTE_MARKER = "(Free Text)";
 /// After the time on an interaction line (preference `interaction_marker`); never the error prefix.
 inline constexpr std::string_view DEFAULT_INTERACTION_MARKER = "(Interaction)";
 
-/// A note line as the screens show it: the line without the marker ("10:30 Played Morning Medley"). The export keeps
+/// A note line as the screens show it: the line without the marker ("10:30 Began task 1"). The export keeps
 /// the marker (PRD, Export rules, rule 4); only what the person reads on the screen drops it. `line` must be the line of
 /// a note, whose first marker is the one the renderer wrote after the time.
 [[nodiscard]] inline std::string without_note_marker(std::string line)

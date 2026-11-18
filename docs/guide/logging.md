@@ -50,7 +50,7 @@ and did not add is kept if you leave the app.
 **Note templates** are the chips above the field. Tap one, answer its question and tap **Add**. The line in the log is
 written for you, and the sheet shows how it will look.
 
-![The Played song sheet with the answer Morning Medley typed and the line in the log below it.](img/log-template-value.png){ width="270" }
+![The Began task sheet with the answer task 1 typed and the line in the log below it.](img/log-template-value.png){ width="270" }
 
 ## The Last bar
 
@@ -70,7 +70,7 @@ or that a setup file brings (see [the setup file](setup-file.md)). Until you mak
 **Add observation type**.
 
 **The entry is logged first, and the question comes second.** If the type has a line with a person in it (for example
-“Spoke with [person]”), a list of **People** opens at once:
+“Paired with [person]”), a list of **People** opens at once:
 
 - The people you used last are chips under the heading **Recent**: tap one to tick it. People saved for the place in force today come first in the list.
 - Type a name in the search field. If nobody matches, tap **Add "name" as a new person**. You type a name once; next time you
@@ -79,7 +79,7 @@ or that a setup file brings (see [the setup file](setup-file.md)). Until you mak
   place that is in force today.
 - Tap **Done** to put the ticked people on the entry. **Skip** leaves it as it was logged; it shows as "person not set".
 
-If the type has an answer in its line (Played song, Gave item), a small sheet asks for it. **Cancel** leaves the entry as logged.
+If the type has an answer in its line (Began task, Assigned), a small sheet asks for it. **Cancel** leaves the entry as logged.
 
 Because the entry is saved before either sheet opens, closing a sheet or putting the phone away never loses it. **Undo** removes
 the entry and closes the sheet. Names stay on the phone. They are not in the setup file, and the text you share shows them as

@@ -1041,7 +1041,7 @@ Item {
         parent: root.sheetLayer
         templateName: root.activeTemplate ? root.activeTemplate.name : ""
         valuePrompt: root.activeTemplate ? root.activeTemplate.valuePrompt : ""
-        // The line as the editor shows it ("Played [answer]"); the stored pattern's {value} is not for people.
+        // The line as the editor shows it ("Began task [answer]"); the stored pattern's {value} is not for people.
         outputPattern: root.activeTemplate ? root.settings.patternToField(root.activeTemplate.outputPattern) : ""
         previewText: root.activeTemplate ? root.settings.previewTemplateLine(root.activeTemplate.outputPattern, templateSheet.value) : ""
         onAddRequested: value => root.addTemplated(value)
@@ -1072,7 +1072,7 @@ Item {
         }
     }
 
-    // The answer of an interaction that has a {value} slot ("Played [answer]"): the question sheet of the note templates.
+    // The answer of an interaction that has a {value} slot ("Began task [answer]"): the question sheet of the note templates.
     Loader {
         id: answerSheetLoader
 

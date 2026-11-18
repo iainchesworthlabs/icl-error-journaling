@@ -169,7 +169,7 @@ Operation Workload::next()
         base.m_Log = m_Logs.back();
         const EntryId id = next_entry_id();
         base.m_Entry = sample_note(0, minute_of(base.m_Number),
-                                   "Played a song for Sam Example, take " + std::to_string(base.m_Number));
+                                   "Began a task for Sam Example, take " + std::to_string(base.m_Number));
         base.m_Entry.m_Id = id;
         // A note is captured when it is committed, which is after every draft typed before it: a note replayed from the
         // journal takes out a draft written no later than that.

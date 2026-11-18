@@ -460,7 +460,7 @@ void Day::step_9_restart()
     const QString header_before = rig.timeline().header_text();
     REQUIRE(lines_before.size() == 5);
 
-    rig.session().set_draft(QStringLiteral("Visitor from head office"));
+    rig.session().set_draft(QStringLiteral("Reviewer from head office"));
     rig.session().flushDraft();
     rig.settle();
     rig.restart();
@@ -473,7 +473,7 @@ void Day::step_9_restart()
     CHECK(rig.timeline().header_text() == header_before);
     CHECK(timeline_lines() == lines_before);
     CHECK(board_counts() == counts_before);
-    CHECK(rig.session().draft() == QStringLiteral("Visitor from head office")); // DS-03, NOTE-03
+    CHECK(rig.session().draft() == QStringLiteral("Reviewer from head office")); // DS-03, NOTE-03
     CHECK_FALSE(rig.undo().active());
     CHECK(rig.session().recovery_notice().isEmpty());
 
@@ -535,20 +535,20 @@ void Day::step_12_review_edits()
     {
         const QString note = entry_starting(QStringLiteral("10:30 "));
         QVariantMap edit;
-        edit.insert(QStringLiteral("noteText"), QStringLiteral("Played Morning Medley"));
+        edit.insert(QStringLiteral("noteText"), QStringLiteral("Began task 1"));
         CHECK(rig.timeline().validateEdit(note, edit).isEmpty());
         CHECK(rig.timeline().saveEntry(note, edit));
         rig.settle();
-        CHECK(line_of(note) == QStringLiteral("10:30 Played Morning Medley"));
+        CHECK(line_of(note) == QStringLiteral("10:30 Began task 1"));
     }
     // b) An attached note on the 11:02 error; the preview is the line that is then saved.
     {
         const QString entry = entry_starting(QStringLiteral("11:02 "));
         QVariantMap edit;
-        edit.insert(QStringLiteral("attachedNote"), QStringLiteral("asked for Evening Song"));
+        edit.insert(QStringLiteral("attachedNote"), QStringLiteral("asked for task 2"));
         const QString preview = rig.timeline().previewLine(entry, edit);
         CHECK(preview ==
-              QStringLiteral("11:02 T| Wrong Output ") + DASH + QStringLiteral(" asked for Evening Song"));
+              QStringLiteral("11:02 T| Wrong Output ") + DASH + QStringLiteral(" asked for task 2"));
         CHECK(rig.timeline().saveEntry(entry, edit));
         rig.settle();
         CHECK(line_of(entry) == preview);

@@ -172,7 +172,7 @@ SheetHost {
                     wrapMode: Text.WordWrap
                     color: Theme.colour.textSecondary
                     font: Theme.font.bodySmall.font
-                    text: boardRepeater.count + otherRepeater.count === 0 ? qsTr("These are the tiles of the Observations board: what you did around the unit. Add one, for example “Spoke with [person]”. A type with [person] asks who after you log it.") : qsTr("Types with a position are on the Observations board. The rest are in Other. A type with [person] asks who after you log it.")
+                    text: boardRepeater.count + otherRepeater.count === 0 ? qsTr("These are the tiles of the Observations board: what you did around the unit. Add one, for example “Paired with [person]”. A type with [person] asks who after you log it.") : qsTr("Types with a position are on the Observations board. The rest are in Other. A type with [person] asks who after you log it.")
                 }
 
                 Item {

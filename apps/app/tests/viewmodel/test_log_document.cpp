@@ -543,7 +543,7 @@ TEST_CASE("An edit takes the time of the call, not of the commit, and keeps the 
     const UtcMillis asked = rig.world().m_Clock.now();
 
     REQUIRE(
-        rig.document->edit_entry(entry_id(1), sample_error(77, 10, "Wrong Response", "asked for Evening Song"), {}));
+        rig.document->edit_entry(entry_id(1), sample_error(77, 10, "Wrong Response", "asked for task 2"), {}));
     rig.world().m_Clock.advance(std::chrono::seconds(30)); // the commit is late
     rig.gateway().run_all();
 
@@ -552,7 +552,7 @@ TEST_CASE("An edit takes the time of the call, not of the commit, and keeps the 
     CHECK(edited->m_EditedUtc == asked);
     const auto* body = std::get_if<ErrorEntry>(&edited->m_Body);
     REQUIRE(body != nullptr);
-    CHECK(body->m_AttachedNote == std::optional<std::string>("asked for Evening Song"));
+    CHECK(body->m_AttachedNote == std::optional<std::string>("asked for task 2"));
     CHECK(rig.document->log().find(entry_id(77)) == nullptr); // the id of the argument is ignored
     CHECK(rig.document->log().entries().size() == 1);
     REQUIRE(rig.observer.changes().size() == 2);
@@ -663,7 +663,7 @@ TEST_CASE("Edits, deletes and shares of an archived log are journalled; new entr
 
     const UtcMillis asked = rig.world().m_Clock.now();
     const UtcMillis shared = asked + std::chrono::minutes(5);
-    REQUIRE(rig.document->edit_entry(entry_id(1), sample_error(1, 10, "Wrong Response", "asked for Evening Song"), {}));
+    REQUIRE(rig.document->edit_entry(entry_id(1), sample_error(1, 10, "Wrong Response", "asked for task 2"), {}));
     REQUIRE(rig.document->set_deleted(entry_id(2), true, Origin::USER, {}));
     REQUIRE(rig.document->mark_shared(shared, {}));
     rig.gateway().run_all();

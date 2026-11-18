@@ -178,14 +178,14 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
 
     CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Output"));
     CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("11:02"));
-    CHECK(e.in("editSheet", "editNote")->property("text").toString() == QStringLiteral("asked for Evening Song"));
+    CHECK(e.in("editSheet", "editNote")->property("text").toString() == QStringLiteral("asked for task 2"));
     CHECK(e.preview() == before);
     CHECK(e.can_save());
 
     SECTION("the note")
     {
-        e.set_note(QStringLiteral("asked for Morning Medley"));
-        CHECK(e.preview() == QStringLiteral("11:02 T| Wrong Output – asked for Morning Medley"));
+        e.set_note(QStringLiteral("asked for task 1"));
+        CHECK(e.preview() == QStringLiteral("11:02 T| Wrong Output – asked for task 1"));
         CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Wrong Output"));
         CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("11:02"));
     }
@@ -202,8 +202,8 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
         CHECK_FALSE((e.page() == QStringLiteral("type")));
         CHECK(e.is_open());
         CHECK(e.in("editSheet", "editType")->property("value").toString() == QStringLiteral("Stopped Responding"));
-        CHECK(e.preview() == QStringLiteral("11:02 T| Stopped Responding – asked for Evening Song"));
-        CHECK(e.in("editSheet", "editNote")->property("text").toString() == QStringLiteral("asked for Evening Song"));
+        CHECK(e.preview() == QStringLiteral("11:02 T| Stopped Responding – asked for task 2"));
+        CHECK(e.in("editSheet", "editNote")->property("text").toString() == QStringLiteral("asked for task 2"));
     }
 
     SECTION("the type sheet marks the current type and Cancel changes nothing")
@@ -236,7 +236,7 @@ TEST_CASE("edit.fields: the sheet shows the entry and each field edits on its ow
         e.set_time(9, 30);
         e.done_time();
         CHECK(e.in("editSheet", "editTime")->property("value").toString() == QStringLiteral("09:30"));
-        CHECK(e.preview() == QStringLiteral("09:30 T| Wrong Output – asked for Evening Song"));
+        CHECK(e.preview() == QStringLiteral("09:30 T| Wrong Output – asked for task 2"));
     }
 }
 
@@ -317,12 +317,12 @@ TEST_CASE("edit.save_cancel: Cancel writes nothing, Save saves once, and an unch
     {
         e.open(3);
         CHECK(e.in("editSheet", "editType")->isVisible() == false);
-        CHECK(e.in("editSheet", "editNote")->property("text").toString() == QStringLiteral("Played Morning Medley"));
-        e.set_note(QStringLiteral("Played Evening Song"));
-        CHECK(e.preview() == QStringLiteral("10:30 Played Evening Song"));
+        CHECK(e.in("editSheet", "editNote")->property("text").toString() == QStringLiteral("Began task 1"));
+        e.set_note(QStringLiteral("Began task 2"));
+        CHECK(e.preview() == QStringLiteral("10:30 Began task 2"));
         e.save();
         e.commit();
-        CHECK(e.lines()[2] == QStringLiteral("10:30 Played Evening Song"));
+        CHECK(e.lines()[2] == QStringLiteral("10:30 Began task 2"));
     }
 }
 
@@ -356,7 +356,7 @@ TEST_CASE("edit.time_order: an earlier time moves the row", "[ui][edit]")
     e.commit();
     const std::vector<QString> lines = e.lines();
     REQUIRE(lines.size() == 6);
-    CHECK(lines[0] == QStringLiteral("09:00 T| Wrong Output – asked for Evening Song"));
+    CHECK(lines[0] == QStringLiteral("09:00 T| Wrong Output – asked for task 2"));
     CHECK(lines[1] == prd_example_lines()[0]);
     CHECK(e.m_World.timeline().rowOf(id_text(4)) == 0);
 }
@@ -417,7 +417,7 @@ TEST_CASE("edit.validation: an empty note is refused by the model and Save is of
     CHECK(e.is_open());
     CHECK(e.m_World.gateway().posted() == posted);
 
-    e.set_note(QStringLiteral("Played Morning Medley again"));
+    e.set_note(QStringLiteral("Began task 1 again"));
     CHECK(e.text("editRefusal").isEmpty());
     CHECK(e.can_save());
 }

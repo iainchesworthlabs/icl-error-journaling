@@ -65,22 +65,22 @@ TEST_CASE("Rule 3: an error line, with an attached note after an en dash", "[exp
 {
     auto scenario = blank_scenario();
     must_add(scenario.m_Log, error_entry(1, on_day(10, 5), ERROR_WRONG_RESPONSE));
-    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_STOPPED_RESPONDING, "asked for Evening Song"));
+    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_STOPPED_RESPONDING, "asked for task 2"));
     must_add(scenario.m_Log, error_entry(3, on_day(10, 7), ERROR_SPEECH_DELAY, "   "));  // blank note: no dash
     CHECK(render(scenario)
           == std::string(HEADER) + "\n\n10:05 T| Wrong Response\n10:06 T| Stopped Responding " + DASH
-                 + " asked for Evening Song\n10:07 T| Timed Out");
+                 + " asked for task 2\n10:07 T| Timed Out");
 }
 
 TEST_CASE("Rule 4: a note line is (Free Text) and the rendered template or the free text", "[export][rule4]")
 {
     auto scenario = blank_scenario();
-    must_add(scenario.m_Log, template_note_entry(1, on_day(10, 5), TEMPLATE_PLAYED, "Morning Medley"));
+    must_add(scenario.m_Log, template_note_entry(1, on_day(10, 5), TEMPLATE_PLAYED, "task 1"));
     must_add(scenario.m_Log, free_note_entry(2, on_day(10, 6), "Device restarted"));
     must_add(scenario.m_Log, free_note_entry(3, on_day(10, 7), ""));
     CHECK(render(scenario)
           == std::string(HEADER)
-                 + "\n\n10:05 (Free Text) Played Morning Medley\n10:06 (Free Text) Device restarted\n10:07 (Free Text)");
+                 + "\n\n10:05 (Free Text) Began task 1\n10:06 (Free Text) Device restarted\n10:07 (Free Text)");
 }
 
 TEST_CASE("Rule 5: a header-change line names the field with its old and new value", "[export][rule5]")
@@ -324,24 +324,24 @@ TEST_CASE("PRF-13: the error prefix is in front of the error name; empty means n
 {
     auto scenario = blank_scenario();
     must_add(scenario.m_Log, error_entry(1, on_day(10, 5), ERROR_WRONG_RESPONSE));
-    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_STOPPED_RESPONDING, "asked for Evening Song"));
+    must_add(scenario.m_Log, error_entry(2, on_day(10, 6), ERROR_STOPPED_RESPONDING, "asked for task 2"));
     const std::string header = std::string(HEADER) + "\n\n";
 
     // The default is T|.
     CHECK(scenario.m_Context.m_ErrorPrefix == "T|");
-    CHECK(render(scenario) == header + "10:05 T| Wrong Response\n10:06 T| Stopped Responding " + DASH + " asked for Evening Song");
+    CHECK(render(scenario) == header + "10:05 T| Wrong Response\n10:06 T| Stopped Responding " + DASH + " asked for task 2");
 
     scenario.m_Context.m_ErrorPrefix = "ERR:";
-    CHECK(render(scenario) == header + "10:05 ERR: Wrong Response\n10:06 ERR: Stopped Responding " + DASH + " asked for Evening Song");
+    CHECK(render(scenario) == header + "10:05 ERR: Wrong Response\n10:06 ERR: Stopped Responding " + DASH + " asked for task 2");
 
     scenario.m_Context.m_ErrorPrefix = "";
-    CHECK(render(scenario) == header + "10:05 Wrong Response\n10:06 Stopped Responding " + DASH + " asked for Evening Song");
+    CHECK(render(scenario) == header + "10:05 Wrong Response\n10:06 Stopped Responding " + DASH + " asked for task 2");
 }
 
 TEST_CASE("without_note_marker drops the marker of a note line for the screens and leaves the export alone",
           "[export][rule4]")
 {
-    CHECK(export_format::without_note_marker("10:30 (Free Text) Played Morning Medley") == "10:30 Played Morning Medley");
+    CHECK(export_format::without_note_marker("10:30 (Free Text) Began task 1") == "10:30 Began task 1");
     CHECK(export_format::without_note_marker("03:05 PM (Free Text) Played x") == "03:05 PM Played x");
     CHECK(export_format::without_note_marker("10:07 (Free Text)") == "10:07");
     CHECK(export_format::without_note_marker("10:30 (Free Text) said (Free Text) twice") == "10:30 said (Free Text) twice");

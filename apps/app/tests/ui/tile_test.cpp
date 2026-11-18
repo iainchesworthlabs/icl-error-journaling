@@ -644,11 +644,11 @@ TEST_CASE("tile.label_whole_words: no label breaks inside a word, at a phone wid
 
 TEST_CASE("tile.label_whole_words: the twelve tiles of the Interactions board keep each word whole", "[ui][tile]")
 {
-    // The four default interaction types ("Spoke with", "Played song", "Visitor interaction", "Gave item"), the longest
+    // The four default interaction types ("Paired with", "Began task", "Entered room 1", "Assigned"), the longest
     // words of the Errors board, and the tile that Other is, as the board draws them: a BoardGrid that names its tiles
     // interactionTile0 to interactionTile11, 96 pt high, in a phone and in a Regular window.
-    const QStringList labels{QStringLiteral("Spoke with"),     QStringLiteral("Played song"),
-                             QStringLiteral("Visitor interaction"), QStringLiteral("Gave item"),
+    const QStringList labels{QStringLiteral("Paired with"),     QStringLiteral("Began task"),
+                             QStringLiteral("Entered room 1"), QStringLiteral("Assigned"),
                              QStringLiteral("Disconnection"),  QStringLiteral("Stopped Unexpectedly"),
                              QStringLiteral("Sequence Out of Order"), QStringLiteral("Interaction"),
                              QStringLiteral("Visitor Disconnection"), QStringLiteral("Navigation"),
