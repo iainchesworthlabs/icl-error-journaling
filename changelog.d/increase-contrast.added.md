@@ -1,1 +1,0 @@
-**The app follows Increase Contrast.** With Increase Contrast on (iPhone) or High contrast text (Android), text reaches 7 to 1 and borders, dividers and outlines 4.5 to 1, in the light and the dark appearance, and the change shows at once with no restart. Not yet run on a device.
