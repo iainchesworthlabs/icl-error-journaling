@@ -97,6 +97,12 @@ fragments in `changelog.d/`.
 
 - **A software version can carry the commit of the build.** Today’s details has an optional Commit field under the software version, and the Software version sheet has the same field, so a change during the day can take the commit too. A commit is 7 to 12 letters and numbers (a to f): it is lower-cased, a pasted full 40-character hash is shortened to 7, and anything else gets a plain message; empty is fine. The log shows it after the version in brackets, “Software Version: 1.4.2 (a1b2c3d)”, in the version change lines and in the entry footnote; with no commit nothing changes. While it is empty the Log card’s “Not filled in yet” strip lists it as a reminder that never blocks logging or sharing. The commit travels with the version, as the version does: a new log starts without either. Logs from earlier versions read as before, with no commit. An older build cannot read a log that has a commit. Not yet run on a device.
 
+- **The app follows Bold Text.** With Bold Text on (iPhone) or Bold text (Android 12 and later), every font in the app is one weight heavier, at any text size, and the change shows at once with no restart. Not yet run on a device.
+
+- **The app follows Increase Contrast.** With Increase Contrast on (iPhone) or High contrast text (Android), text reaches 7 to 1 and borders, dividers and outlines 4.5 to 1, in the light and the dark appearance, and the change shows at once with no restart. Not yet run on a device.
+
+- **Filter the entries of a log.** Review, and a past log in History, has a Filter row under the header. Pick Errors, Notes, Observations or Changes, type words, or both, to see only those entries; Clear brings every entry back. It only changes what the screen shows: Copy log, Share log and the entry count always use the whole log, and nothing is saved, so it clears when you leave the log. Not yet run on a device.
+
 ### Changed
 
 - **The "f" of the app icon is made of tiles.** It was one solid white shape; it is now six white tiles like the dark "t", on iOS and Android. Not yet run on a device.
@@ -191,6 +197,14 @@ The music icon is gone. A setup file that names the icon `music` now gets the de
 
 - **Polish: Settings and its editors now match the approved designs.** The Settings list has six rows of 44 pt with the thin chevron and no counts, and the board, hint and list are spaced as drawn. The error types, locations and note templates editors have the designs' handle, cross, chevron, 56 and 64 pt rows, full-width separators, fields, buttons and wording ("Settings" and "Note templates" in the back button), and the error type sheet shows the colour's name, a centred Retire button and covers the tab bar. The note template preview shows the whole note line. Import or export has the file and share icons, link-coloured rows and the "Exported to Files" message with the file name. Reordering a location, and an error type, works by the handle (a drag, or the swipe up and down of VoiceOver) as well as by the arrows the design draws on Error types. The unit prefix and the totals switch moved to the Tester page, under "In the shared log". Not yet checked on a device.
 
+- **The light colours of the Other tile border and of the placeholder text are a little darker.** The dashed border of the Other tile, the outline of a switch and of a choice card and the hint text in a field now reach the contrast the design asks for (3 to 1 and 4.5 to 1); they looked a little faint. Not yet seen on a device.
+
+- **Observations are called Observations in what the app stores and shares.** The setup file uses `observation_types` and `observations_board_enabled`, the logs and the database use the new names, and a shared log marks these lines `(Observation)` where it said `(Interaction)`. Setup files, logs and databases made before this update keep working: the app reads the old names for ever, nothing is lost or rewritten, and what it saves from now on uses the new ones. If your own word is set for these lines in Settings, it is kept. Not yet run on a device.
+
+- **The website now describes Field Test as for software and hardware testing.** The home, press, features and how-to-use pages, the page description for search engines, and the sample log lines on them no longer mention robots or songs.
+
+- **Voice Control can say the words on the screen.** The name of every control that shows text now contains those words, so “Tap Copy log”, “Tap North Site” and the like find the control. What VoiceOver reads changes a little in five places: a card on the version sheet reads its title and then its line of explanation, the card at the top of the Log screen reads its two lines as they are drawn, a row of History reads the entries and the software version as the row shows them, the Review and Log copy button is “Copy log”, and the Last bar with no entries reads “Last entry: no entries yet, 0 today”. Not yet run on a device.
+
 ### Removed
 
 - **The version line at the foot of Settings is gone.** The “About Field Test” row, the last row of Settings, already opens the page with the version, build, platform and storage, so the same text is no longer repeated under it. Not yet run on a device.
@@ -247,3 +261,6 @@ The music icon is gone. A setup file that names the icon `music` now gets the de
 
 - **Edit entry and its time sheet no longer move their bars to make up for the sheet's offset.** The sheet now places its content where the design's bars start, so both sheets sit where the design has them without a correction of their own.
 
+- **A setup file sent by AirDrop opens in the app.** The setup file type no longer claims to be JSON, so the phone no longer shows the file as a page of text first; Field Test opens on the import. A plain `.json` file still offers the app. Not yet run on a device.
+
+- **The review list lets go of a log only after it has stopped listening to it.** When a screen bound a log that nothing else held and then unbound it or bound another, the list took itself off the log after the log was freed. No screen is known to do this today, because History holds the logs it opens, so the app looks the same. Found by the Linux sanitizer build. Not run on a device.
