@@ -1,0 +1,1 @@
+**A setup file sent by AirDrop opens in the app.** The setup file type no longer claims to be JSON, so the phone no longer shows the file as a page of text first; Field Test opens on the import. A plain `.json` file still offers the app. Not yet run on a device.
