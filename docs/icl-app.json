@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "name": "Field Test",
+  "family": "test-equipment",
+  "summary": "Log software and hardware test errors as they happen.",
+  "tags": ["iPhone", "iPad"],
+  "status": "available",
+  "icon": "assets/img/icon-256.png",
+  "order": 10
+}
