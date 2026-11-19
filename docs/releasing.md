@@ -36,9 +36,11 @@ The App Store and Google Play listings are text in `store/`. After the
 release workflow has put the build in TestFlight (and, with Stage 9, the bundle in Play internal testing):
 
 1. Run **Store metadata** (`gh workflow run store-metadata.yml --ref v1.0.0 -f store=appstore -f version=1.0.0 -f
-   build=<run number> -f first_release=true`). It puts the listing text, the review notes and the screenshots on that
-   version in App Store Connect and attaches the build. Leave `first_release` false after 1.0.0, and set `phased` true
-   for later versions (decision D10).
+   build=<run number> -f first_release=true`). It puts the listing text and the review notes on that version in App
+   Store Connect (and the screenshots, with `-f screenshots_run=<ci run>`), then attaches the build and reads it back.
+   The build must be in TestFlight and processed: the run says so and fails when it is not, and can be run again. Run
+   it with `-f inspect=true` to see which build each version holds. Leave `first_release` false after 1.0.0, and set
+   `phased` true for later versions (decision D10).
 2. Run it with `-f store=play` for the Play listing text and graphics. It needs the secret `PLAY_SERVICE_ACCOUNT_JSON`.
 3. The owner checks both consoles, answers what the upload cannot (App Privacy, age rating, Data safety, content rating,
    the Accessibility Nutrition Labels, price and countries; the labels are declared from `docs/accessibility-labels.md`, which
