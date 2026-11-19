@@ -5,11 +5,17 @@ shared. Today's log is on the Review tab.
 
 ![History: logs grouped by date. Each row shows the unit and place, the number of entries and Shared with a time, or Not shared.](img/history.png){ width="270" }
 
+| To do this | Do this |
+|---|---|
+| Read a past log | Tap it. |
+| Share a past log again | Open it and tap **Share log again**, or swipe it left in the list and tap **Share**. |
+| Delete a past log | Swipe it left and tap **Delete**. |
+
 ## Open a past log
 
-Tap a log to read it, in the same words as it was shared (a person's name in an observation shows in full here, and is
-written at the level you chose in Settings when you share again). You can edit an entry, copy the log, or tap **Share log again**.
-A log changed after its last share shows **Changed since sharing** until you share it again.
+Tap a log to read it, in the same words as it was shared. A person's name in an observation shows in full here, and is
+written at the level you chose in Settings when you share again. You can edit an entry, copy the log, or tap
+**Share log again**. A log changed after its last share shows **Changed since sharing** until you share it again.
 
 ![A past log: its date, the number of entries, when it was shared, the header and the entries, with a Share log again button.](img/past-log.png){ width="270" }
 
@@ -17,11 +23,12 @@ A log changed after its last share shows **Changed since sharing** until you sha
 
 Swipe a log left in History for **Share** and **Delete**.
 
-**Delete** asks first. A deleted log is removed from this phone and can't be brought back.
+!!! warning "Delete cannot be undone"
+    **Delete** asks first. A deleted log is removed from this phone and can't be brought back.
 
 ![The Delete this log question: the date, the place and the number of entries, and that it can't be brought back, with Delete log and Cancel.](img/delete-log.png){ width="270" }
 
 ## What is kept
 
 Past logs stay on the phone until you delete them. They are not sent anywhere ([Privacy](../privacy.md)). Importing a new
-setup does not touch them.
+setup does not touch them. [Where your data is kept](your-data.md) says how a log is stored and recovered.
