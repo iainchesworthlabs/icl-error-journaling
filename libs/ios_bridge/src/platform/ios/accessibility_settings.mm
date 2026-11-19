@@ -23,9 +23,11 @@ public:
     IosAccessibilitySettings()
         : m_Handler(std::make_shared<std::function<void()>>())
     {
-        // Content size category, Reduce Motion and VoiceOver. Delivered on the main queue, the thread of the Qt loop.
+        // Content size category, Reduce Motion, Increase Contrast, Bold Text and VoiceOver. Delivered on the main queue, the thread of the Qt loop.
         NSNotificationName const names[] = {UIContentSizeCategoryDidChangeNotification,
                                             UIAccessibilityReduceMotionStatusDidChangeNotification,
+                                            UIAccessibilityDarkerSystemColorsStatusDidChangeNotification,
+                                            UIAccessibilityBoldTextStatusDidChangeNotification,
                                             UIAccessibilityVoiceOverStatusDidChangeNotification};
         for (NSNotificationName name : names)
         {
@@ -63,6 +65,9 @@ public:
         }
         state.m_ReduceMotion = UIAccessibilityIsReduceMotionEnabled();
         state.m_VoiceOverRunning = UIAccessibilityIsVoiceOverRunning();
+        // Settings > Accessibility > Display & Text Size: Increase Contrast (darker system colours) and Bold Text.
+        state.m_IncreaseContrast = UIAccessibilityDarkerSystemColorsEnabled();
+        state.m_BoldText = UIAccessibilityIsBoldTextEnabled();
         return state;
     }
 

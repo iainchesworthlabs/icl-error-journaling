@@ -362,7 +362,7 @@ Item {
                             color: tile.isOther ? Theme.colour.textSecondary : tile.isEmpty ? Theme.colour.primaryText : Theme.colour.tileText
                             font.pointSize: root.labelPoints
                             font.hintingPreference: Font.PreferNoHinting
-                            font.weight: Theme.font.tileLabel.weight
+                            font.weight: Theme.font.tileLabel.effectiveWeight
                             // The font's own line, 1.2 of the size for the system font; a ratio of it would not be
                             // allowed for when the label shrinks to fit the 48 pt box.
                             wrapMode: Text.Wrap
@@ -619,7 +619,7 @@ Item {
             color: Theme.colour.tileText
             font.pointSize: root.labelPoints
             font.hintingPreference: Font.PreferNoHinting
-            font.weight: Theme.font.tileLabel.weight
+            font.weight: Theme.font.tileLabel.effectiveWeight
             wrapMode: Text.Wrap
             verticalAlignment: Text.AlignBottom
             Accessible.ignored: true

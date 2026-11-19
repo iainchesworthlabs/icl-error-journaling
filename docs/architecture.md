@@ -82,13 +82,15 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
                                      retains shared files, as on Android) and purge_directory for the launch purge
     android_haptics_plan.hpp         the HapticFeedbackConstants value of each HapticKind by API level, portable and tested
     android_system_plan.hpp          the names of the timing marks, the process start time from /proc/self/stat, the text scale
-                                     of Android's fontScale (the iOS range) and what counts as Reduce Motion, portable and tested
+                                     of Android's fontScale (the iOS range), what counts as Reduce Motion, High contrast text
+                                     (Increase Contrast) and Bold text, portable and tested
     android_import_plan.hpp          the Android setup-file decisions (the private copy directory `ej-import`, the copy cap one
                                      byte above the importer's limit, the picker's types, the picker's result codes)
     android_share_plan.hpp           the Android share decisions (inline text or a file above 256 KB, how the chooser's end
                                      maps to a ShareOutcome), portable and tested on the desktop
     accessibility_settings.hpp       AccessibilitySettings (Stage 4, 4.3): text scale from the content size category,
-                                     Reduce Motion, VoiceOver, and a change notice; the category-to-scale table is portable
+                                     Reduce Motion, Increase Contrast, Bold Text, VoiceOver, and a change notice; the
+                                     category-to-scale table is portable
     document_types.hpp               the setup file's type identifier, extension, description and size limit, one
                                      constant each; tools/ci/check_ios_plist.py compares Info.plist.in with them
     document_picker.hpp              DocumentPicker (UIDocumentPickerViewController as copy; UNAVAILABLE on the desktop)
@@ -115,7 +117,7 @@ libs/ios_bridge/      ej_ios_bridge: what Qt does not cover on an iPhone, one sm
   src/platform/android/  C++ with JNI (QJniObject) and the Java in apps/app/packaging/android/src: share.cpp, haptics.cpp,
                          document_picker.cpp (the picker, and a file another app opens or sends, posted as a QFileOpenEvent),
                          perf_marks.cpp (ATrace and logcat), accessibility_settings.cpp (font size, Remove animations,
-                         TalkBack), and background_tasks.cpp, which is the desktop implementation on purpose: Android has
+                         TalkBack, High contrast text, Bold text), and background_tasks.cpp, which is the desktop implementation on purpose: Android has
                          no grace period to ask for, and the portable LifecycleCoordinator flushes on going inactive
   src/platform/desktop/  stubs with the same file stems, built everywhere else
 apps/app/             ej_app: the Qt Quick application (executable error-journaling)
@@ -247,8 +249,9 @@ another after `import ErrorJournalingApp`, which a file of the module may do.
 
 The view models reach a screen as `required property` values passed down from the root window, never as context
 properties or singletons, so a test creates a screen with whatever it wants to inject and `qmllint` checks the types.
-`Theme` takes three inputs from outside, `colourScheme`, `textScale` and `reduceMotion`, which the shell sets from the
-bridge; nothing else in QML reads the platform (`tools/ci/check_qml_platform.py`).
+`Theme` takes five inputs from outside, `colourScheme`, `textScale`, `reduceMotion`, `increaseContrast` and `boldText`,
+which the shell sets from the bridge (`increaseContrast` swaps in the colours of `colourIncreasedContrast` in
+`docs/design/tokens.json`; `boldText` makes every `FontRole` take the next weight up); nothing else in QML reads the platform (`tools/ci/check_qml_platform.py`).
 
 An executable's resources cannot be linked into another executable, so the module is built twice from the same files:
 into `ej_app`, and into `ej_ui_tests` together with the stubs. `qml/qml_files.cmake` is the one place that lists the files
@@ -261,8 +264,8 @@ the editors), and a tab is made when it is first chosen. History is a placeholde
 `SheetHost` for the window carries the Other picker (and, with 4.11, the new-day alert), so it covers the tab bar; the Log screen's template prompt and
 Review's edit sheet are put in its layer. The first-launch screen covers the tabs while `settings.configured` is false, and
 `ImportFlow` covers everything. `AppRoot.writeFailed` is one banner at the top (the Log screen shows the failures of its
-own models itself), and the Undo toast is the Log screen's, and the shell's for Review. `Theme.textScale` and
-`Theme.reduceMotion` follow the bridge.
+own models itself), and the Undo toast is the Log screen's, and the shell's for Review. `Theme.textScale`,
+`Theme.reduceMotion`, `Theme.increaseContrast` and `Theme.boldText` follow the bridge.
 
 **What differs by platform.** `qml/platform/desktop/FileChooser.qml` (Qt's file dialogs, the one place they are used) and
 `qml/platform/ios/FileChooser.qml` (nothing, until Stage 5's document picker, 5.7, replaces it; the C++ side exists as `ConfigImporter` and `ConfigExporter`) have the same type name; the

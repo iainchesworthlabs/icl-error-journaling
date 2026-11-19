@@ -12,6 +12,9 @@ import QtQuick
 //   colourScheme  follows the system appearance until it is set (Application.styleHints.colorScheme, assumption U6)
 //   textScale     the Dynamic Type multiplier, 1.0 where there is no bridge
 //   reduceMotion  the Reduce Motion setting
+//   increaseContrast  the Increase Contrast setting (iOS) or High contrast text (Android): the stronger colours of
+//                 `colourIncreasedContrast` in tokens.json replace the ones they name
+//   boldText      the Bold Text setting: every font role takes the next weight up
 QtObject {
     id: root
 
@@ -26,6 +29,10 @@ QtObject {
     // The Dynamic Type multiplier from the bridge. It is clamped to the range of the iOS content size categories.
     property real textScale: 1.0
     property bool reduceMotion: false
+    // Increase Contrast: text at 7 to 1 and borders at 4.5 to 1 (docs/design/contrast.md).
+    property bool increaseContrast: false
+    // Bold Text: each role's weight is raised one step (FontRole.boldened).
+    property bool boldText: false
     // Test inputs: the safe area of the window that the rig simulates, offscreen, where the platform has none. SafeFrame
     // takes the part of it that its own item touches, as the platform's SafeArea does. The iPhone 17 under the full-screen
     // window has 62 at the top and 34 at the bottom. The app never sets them.
@@ -81,62 +88,65 @@ QtObject {
 
     component Colour: QtObject {
         required property bool dark
+        // Increase Contrast is on: the colours of `colourIncreasedContrast` in tokens.json replace the ones they name.
+        property bool increased: false
         readonly property color background: dark ? "#0E141A" : "#F2F4F7"
         readonly property color surface: dark ? "#18212A" : "#FFFFFF"
-        readonly property color textPrimary: dark ? "#EEF2F6" : "#14212B"
-        readonly property color textSecondary: dark ? "#A7B6C3" : "#5A6B78"
-        readonly property color textPlaceholder: dark ? "#93A3B0" : "#6B7A86"
-        readonly property color textBody: dark ? "#C7D3DD" : "#3D4C58"
-        readonly property color primary: dark ? "#2A6F96" : "#1E5B7A"
-        readonly property color primaryPressed: dark ? "#1E5B7A" : "#15435A"
+        readonly property color textPrimary: increased ? (dark ? "#FFFFFF" : "#14212B") : (dark ? "#EEF2F6" : "#14212B")
+        readonly property color textSecondary: increased ? (dark ? "#C2CDD6" : "#3C4A56") : (dark ? "#A7B6C3" : "#5A6B78")
+        readonly property color textPlaceholder: increased ? (dark ? "#BAC6D0" : "#3A4955") : (dark ? "#93A3B0" : "#637380")
+        readonly property color textBody: increased ? (dark ? "#D8E1E8" : "#2E3C47") : (dark ? "#C7D3DD" : "#3D4C58")
+        readonly property color primary: increased ? (dark ? "#8FC6E6" : "#1E5B7A") : (dark ? "#2A6F96" : "#1E5B7A")
+        readonly property color primaryPressed: increased ? (dark ? "#6FB3DB" : "#15435A") : (dark ? "#1E5B7A" : "#15435A")
         readonly property color primaryTint: dark ? "#1B2F3D" : "#EAF1F5"
         readonly property color headerCard: dark ? "#5B2A63" : "#5B2A63"
         readonly property color headerCardTextSecondary: dark ? "#EBDDF0" : "#EBDDF0"
-        readonly property color border: dark ? "#34434F" : "#C9D3DC"
-        readonly property color borderStrong: dark ? "#74869A" : "#9AA8B4"
-        readonly property color divider: dark ? "#27333E" : "#E8ECF0"
-        readonly property color tabBarBorder: dark ? "#27333E" : "#E1E6EB"
+        readonly property color border: increased ? (dark ? "#8A9CAE" : "#5C6B77") : (dark ? "#34434F" : "#C9D3DC")
+        readonly property color borderStrong: increased ? (dark ? "#8A9CAE" : "#5C6B77") : (dark ? "#74869A" : "#7C8B98")
+        readonly property color divider: increased ? (dark ? "#8A9CAE" : "#5F6E7A") : (dark ? "#27333E" : "#E8ECF0")
+        readonly property color tabBarBorder: increased ? (dark ? "#8A9CAE" : "#5F6E7A") : (dark ? "#27333E" : "#E1E6EB")
         readonly property color fieldBackground: dark ? "#121A21" : "#F7F9FB"
         readonly property color searchBackground: dark ? "#26323D" : "#E3E8ED"
         readonly property color timeChipBackground: dark ? "#2B3844" : "#E8EEF3"
-        readonly property color destructive: dark ? "#FF8F85" : "#B42318"
+        readonly property color destructive: increased ? (dark ? "#FFA79F" : "#9A1B12") : (dark ? "#FF8F85" : "#B42318")
         readonly property color toastBackground: dark ? "#33444F" : "#14212B"
-        readonly property color toastAccent: dark ? "#9FD3E8" : "#9FD3E8"
-        readonly property color toastButton: dark ? "#3C4D5C" : "#2C3B47"
+        readonly property color toastAccent: increased ? (dark ? "#BFE3F2" : "#BFE3F2") : (dark ? "#9FD3E8" : "#9FD3E8")
+        readonly property color toastButton: increased ? (dark ? "#2C3B47" : "#2C3B47") : (dark ? "#3C4D5C" : "#2C3B47")
         readonly property color badgeBackground: dark ? "#F2F4F7" : "#14212B"
         readonly property color badgeText: dark ? "#14212B" : "#FFFFFF"
         readonly property color sheetScrim: dark ? "#05080B" : "#3A4650"
         readonly property color alertScrim: dark ? "#05080B" : "#2E3943"
         readonly property color surfaceRaised: dark ? "#212C37" : "#FFFFFF"
         readonly property color sheetBackground: dark ? "#141C24" : "#F2F4F7"
-        readonly property color primaryText: dark ? "#8FC6E6" : "#1E5B7A"
-        readonly property color destructiveFill: dark ? "#8C2A22" : "#B42318"
+        readonly property color primaryText: increased ? (dark ? "#A9D6EE" : "#174A66") : (dark ? "#8FC6E6" : "#1E5B7A")
+        readonly property color destructiveFill: increased ? (dark ? "#8C2A22" : "#9A1B12") : (dark ? "#8C2A22" : "#B42318")
         readonly property color bannerWarning: dark ? "#2F2815" : "#FFF4D6"
-        readonly property color bannerWarningBorder: dark ? "#D2A23A" : "#946B0C"
+        readonly property color bannerWarningBorder: increased ? (dark ? "#E3B94F" : "#7A5508") : (dark ? "#D2A23A" : "#946B0C")
         readonly property color bannerError: dark ? "#3A1B18" : "#FDECEA"
-        readonly property color bannerErrorBorder: dark ? "#FF8F85" : "#B42318"
+        readonly property color bannerErrorBorder: increased ? (dark ? "#FF8F85" : "#9A1B12") : (dark ? "#FF8F85" : "#B42318")
         readonly property color reviewBackground: dark ? "#000000" : "#F2F4F7"
         readonly property color reviewSurface: dark ? "#000000" : "#FFFFFF"
         readonly property color reviewText: dark ? "#FFFFFF" : "#14212B"
-        readonly property color reviewTextSecondary: dark ? "#B4C0CA" : "#5A6B78"
-        readonly property color reviewDivider: dark ? "#2A2F34" : "#E8ECF0"
+        readonly property color reviewTextSecondary: increased ? (dark ? "#C9D3DB" : "#3C4A56") : (dark ? "#B4C0CA" : "#5A6B78")
+        readonly property color reviewDivider: increased ? (dark ? "#8A9CAE" : "#5F6E7A") : (dark ? "#2A2F34" : "#E8ECF0")
         readonly property color swatch: dark ? "#2B3844" : "#E5E9EE"
-        readonly property color textOnPrimary: dark ? "#FFFFFF" : "#FFFFFF"
+        readonly property color textOnPrimary: increased ? (dark ? "#0E141A" : "#FFFFFF") : (dark ? "#FFFFFF" : "#FFFFFF")
         readonly property color textOnHeaderCard: dark ? "#FFFFFF" : "#FFFFFF"
         readonly property color textOnDestructive: dark ? "#FFFFFF" : "#FFFFFF"
         readonly property color toastText: dark ? "#FFFFFF" : "#FFFFFF"
         // The strip and the tab of the Interactions board (tokens.json, interactionPaletteRules).
-        readonly property color interactionAccent: dark ? "#7FD1D2" : "#0F6F73"
+        readonly property color interactionAccent: increased ? (dark ? "#7FD1D2" : "#0B5A5E") : (dark ? "#7FD1D2" : "#0F6F73")
 
         // Other: a neutral tile with a dashed border (tokens.json, tile slot 12).
         readonly property color otherTileFill: dark ? "#18212A" : "#FFFFFF"
-        readonly property color otherTileBorder: dark ? "#74869A" : "#9AA8B4"
+        readonly property color otherTileBorder: increased ? (dark ? "#8A9CAE" : "#5C6B77") : (dark ? "#74869A" : "#7C8B98")
         // Tile text is always textPrimary on the tile colour (tilePaletteRules).
         readonly property color tileText: textPrimary
     }
 
     readonly property Colour colour: Colour {
         dark: root.dark
+        increased: root.increaseContrast
     }
 
     // ---- sizes, radii, spacing ----
@@ -416,6 +426,13 @@ QtObject {
         // The same pitch as a multiple of the font's own line, for Text.ProportionalHeight. A text that shrinks to fit
         // (fontSizeMode) uses it: the ratio shrinks with the text, and Fit allows for it, where a fixed pitch is not.
         readonly property real lineRatio: metrics.height > 0 ? linePitch / metrics.height : 1
+        // The weight that the person sees: one step above the role's own while Bold Text is on, as iOS does (400 to 500, 600
+        // to 700, up to 900, the heaviest weight Qt knows). A font that has no such weight is drawn at the nearest it has.
+        function boldened(fontWeight: int): int {
+            return root.boldText ? Math.min(fontWeight + 100, 900) : fontWeight;
+        }
+        readonly property int effectiveWeight: boldened(weight)
+        readonly property int effectiveSelectedWeight: boldened(selectedWeight)
         readonly property font font: role.make(weight, false)
         readonly property font selectedFont: role.make(selectedWeight, false)
         // The selected weight, underlined: a text link (a banner's action).
@@ -436,7 +453,7 @@ QtObject {
 
         function makeAt(fontWeight: int, underline: bool, share: real): font {
             const spec = {
-                "weight": fontWeight,
+                "weight": boldened(fontWeight),
                 "letterSpacing": effectiveLetterSpacing,
                 "underline": underline,
                 "hintingPreference": Font.PreferNoHinting
@@ -782,20 +799,21 @@ QtObject {
 
     // ---- contrast ----
 
-    // Every pair of colours that a component puts one on the other, resolved for the current scheme, with the ratio
-    // it has to reach: 4.5 for text and 3 for a non-text indicator (a border, the badge, the selected tab). The
-    // contrast test walks this list in both schemes. An entry with an `exception` is a pair of an approved light value
-    // that falls short: its `minimum` is the ratio it has today, so that it cannot get worse, and the note says what
-    // would fix it.
+    // Every pair of colours that a component puts one on the other, resolved for the current scheme and for Increase
+    // Contrast, with the ratio it has to reach: 4.5 for text and 3 for a non-text indicator (a border, the badge, the
+    // selected tab), and 7 and 4.5 while Increase Contrast is on. The contrast test walks this list in all four modes, and
+    // no pair is excused: a pair that falls short is a defect.
     readonly property var contrastPairs: {
         const c = colour;
         const pairs = [];
+        const textMinimum = increaseContrast ? 7.0 : 4.5;
+        const indicatorMinimum = increaseContrast ? 4.5 : 3.0;
         function text(label, foreground, background) {
             pairs.push({
                 "label": label,
                 "foreground": foreground,
                 "background": background,
-                "minimum": 4.5
+                "minimum": textMinimum
             });
         }
         function indicator(label, foreground, background) {
@@ -803,16 +821,7 @@ QtObject {
                 "label": label,
                 "foreground": foreground,
                 "background": background,
-                "minimum": 3.0
-            });
-        }
-        function exception(label, foreground, background, minimum, note) {
-            pairs.push({
-                "label": label,
-                "foreground": foreground,
-                "background": background,
-                "minimum": minimum,
-                "exception": note
+                "minimum": indicatorMinimum
             });
         }
         text("Title on the screen", c.textPrimary, c.background);
@@ -867,18 +876,27 @@ QtObject {
             indicator("Count badge on tile, slot " + slot, c.badgeBackground, tileColour(slot));
         for (let slot = 1; slot <= interactionFillsLight.length; ++slot)
             indicator("Count badge on interaction tile, slot " + slot, c.badgeBackground, interactionTileColour(slot));
-        if (dark) {
-            indicator("Other tile border on the screen", c.otherTileBorder, c.background);
-            indicator("Other tile border on a card", c.otherTileBorder, c.surface);
-            text("Placeholder in a field", c.textPlaceholder, c.fieldBackground);
-            text("Placeholder on a card", c.textPlaceholder, c.surface);
-        } else {
-            // The approved light values fall short here (docs/design/contrast.md covers dark only). The label carries
-            // the meaning of the Other tile and a placeholder is a hint, but both want a darker value.
-            exception("Other tile border on the screen", c.otherTileBorder, c.background, 2.2, "the approved light border is about 2.2 to 1; 3 to 1 needs a darker border");
-            exception("Other tile border on a card", c.otherTileBorder, c.surface, 2.4, "the approved light border is about 2.4 to 1; 3 to 1 needs a darker border");
-            exception("Placeholder in a field", c.textPlaceholder, c.fieldBackground, 4.1, "the approved light placeholder is about 4.2 to 1; 4.5 to 1 needs a darker placeholder");
-            exception("Placeholder on a card", c.textPlaceholder, c.surface, 4.4, "the approved light placeholder is about 4.4 to 1; 4.5 to 1 needs a darker placeholder");
+        indicator("Other tile border on the screen", c.otherTileBorder, c.background);
+        indicator("Other tile border on a card", c.otherTileBorder, c.surface);
+        indicator("Outline of a switch or a choice card on the screen", c.borderStrong, c.background);
+        indicator("Outline of a switch or a choice card on a card", c.borderStrong, c.surface);
+        text("Placeholder in a field", c.textPlaceholder, c.fieldBackground);
+        text("Placeholder on a card", c.textPlaceholder, c.surface);
+        if (increaseContrast) {
+            // Lines that are only decoration while it is off become part of the picture while it is on.
+            text("Placeholder in the search field", c.textPlaceholder, c.searchBackground);
+            text("Caption in the search field", c.textSecondary, c.searchBackground);
+            indicator("Border on the screen", c.border, c.background);
+            indicator("Border on a card", c.border, c.surface);
+            indicator("Border on a sheet", c.border, c.sheetBackground);
+            indicator("Border of a field", c.border, c.fieldBackground);
+            indicator("Divider on the screen", c.divider, c.background);
+            indicator("Divider on a card", c.divider, c.surface);
+            indicator("Divider on a sheet", c.divider, c.sheetBackground);
+            indicator("Edge of the tab bar", c.tabBarBorder, c.surface);
+            indicator("Divider of the review", c.reviewDivider, c.reviewBackground);
+            indicator("Divider on a review card", c.reviewDivider, c.reviewSurface);
+            indicator("Primary button fill on a sheet", c.primary, c.sheetBackground);
         }
         return pairs;
     }

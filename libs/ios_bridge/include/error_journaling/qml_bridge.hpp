@@ -33,6 +33,10 @@ class QmlBridge : public QObject
     Q_PROPERTY(bool reduceMotion READ reduce_motion NOTIFY reduceMotionChanged)
     /// VoiceOver is running. For tests and diagnostics.
     Q_PROPERTY(bool voiceOverRunning READ voice_over_running NOTIFY voiceOverRunningChanged)
+    /// Increase Contrast is on: `Theme` takes the stronger colours of tokens.json.
+    Q_PROPERTY(bool increaseContrast READ increase_contrast NOTIFY increaseContrastChanged)
+    /// Bold Text is on: `Theme` raises each font weight one step.
+    Q_PROPERTY(bool boldText READ bold_text NOTIFY boldTextChanged)
     /// The device can turn speech into text on the device itself (Dictation::available). False where it cannot, and QML
     /// then shows no microphone.
     Q_PROPERTY(bool dictationAvailable READ dictation_available CONSTANT)
@@ -53,6 +57,8 @@ public:
     [[nodiscard]] double text_scale() const noexcept;
     [[nodiscard]] bool reduce_motion() const noexcept;
     [[nodiscard]] bool voice_over_running() const noexcept;
+    [[nodiscard]] bool increase_contrast() const noexcept;
+    [[nodiscard]] bool bold_text() const noexcept;
     [[nodiscard]] QString timing_summary() const;
 
     /// The board became usable `milliseconds` after the process was created (M1). Called by main through the launch
@@ -121,6 +127,8 @@ signals:
     /// One signal for each setting that changed, and none when the value is the same.
     void textScaleChanged();
     void reduceMotionChanged();
+    void increaseContrastChanged();
+    void boldTextChanged();
     void voiceOverRunningChanged();
     /// The timing summary changed. Emitted on a queued call, never inside the press handler.
     void timingChanged();

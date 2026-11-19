@@ -8,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <QColor>
+#include <QMap>
 #include <QMetaObject>
 #include <QObject>
 #include <QStringList>
@@ -77,41 +78,109 @@ TEST_CASE("a11y.contrast: the formula is WCAG's", "[ui][a11y][contrast]")
     CHECK(contrast_ratio(QColor("#1E5B7A"), QColor("#F2F4F7")) == contrast_ratio(QColor("#F2F4F7"), QColor("#1E5B7A")));
 }
 
-TEST_CASE("a11y.contrast: every pair of Theme.contrastPairs reaches its ratio, in light and in dark",
+TEST_CASE("a11y.contrast: every pair of Theme.contrastPairs reaches its ratio, in light and in dark, with and without "
+          "Increase Contrast",
           "[ui][a11y][contrast]")
 {
     UiRig rig;
     QObject* theme = rig.theme();
+    for (const bool increased : {false, true})
+    {
+        rig.set_increase_contrast(increased);
+        // 4.5 to 1 for text and 3 to 1 for a non-text indicator, or 7 to 1 and 4.5 to 1 with Increase Contrast.
+        const double text_minimum = increased ? 7.0 : 4.5;
+        const double indicator_minimum = increased ? 4.5 : 3.0;
+        for (const bool dark : {false, true})
+        {
+            rig.set_dark(dark);
+            const QVariantList list = pairs(theme);
+            REQUIRE(list.size() > 60);
+            for (const QVariant& entry : list)
+            {
+                const QVariantMap pair = entry.toMap();
+                const double minimum = pair.value("minimum").toDouble();
+                const double ratio =
+                    contrast_ratio(pair.value("foreground").value<QColor>(), pair.value("background").value<QColor>());
+                INFO((dark ? "dark" : "light")
+                     << (increased ? " with Increase Contrast: " : ": ") << pair.value("label").toString().toStdString()
+                     << " is " << ratio << " to 1, needs " << minimum);
+                CHECK(ratio >= minimum);
+                CHECK((minimum == text_minimum || minimum == indicator_minimum));
+                // No pair is excused: a value that falls short is a defect, not an exception.
+                CHECK_FALSE(pair.contains("exception"));
+            }
+        }
+    }
+    rig.set_increase_contrast(false);
+}
+
+TEST_CASE(
+    "a11y.contrast: Increase Contrast adds the lines and the search field to the list and never takes a pair away",
+    "[ui][a11y][contrast]")
+{
+    UiRig rig;
+    QObject* theme = rig.theme();
+    const auto labels = [&]
+    {
+        QStringList names;
+        for (const QVariant& entry : pairs(theme))
+        {
+            names << entry.toMap().value("label").toString();
+        }
+        return names;
+    };
     for (const bool dark : {false, true})
     {
         rig.set_dark(dark);
-        const QVariantList list = pairs(theme);
-        REQUIRE(list.size() > 60);
-        int exceptions = 0;
-        for (const QVariant& entry : list)
+        rig.set_increase_contrast(false);
+        const QStringList plain = labels();
+        rig.set_increase_contrast(true);
+        const QStringList strong = labels();
+        INFO((dark ? "dark" : "light"));
+        for (const QString& label : plain)
+        {
+            CHECK(strong.contains(label));
+        }
+        CHECK(strong.size() > plain.size());
+        CHECK(strong.contains(QStringLiteral("Divider on a card")));
+        CHECK(strong.contains(QStringLiteral("Border of a field")));
+        CHECK(strong.contains(QStringLiteral("Placeholder in the search field")));
+        CHECK_FALSE(plain.contains(QStringLiteral("Divider on a card")));
+    }
+}
+
+TEST_CASE("a11y.contrast: Increase Contrast only strengthens, in both schemes: no text or line gets weaker",
+          "[ui][a11y][contrast]")
+{
+    UiRig rig;
+    QObject* theme = rig.theme();
+    // The colour pairs that exist in both modes, by label, so the ratio of one can be compared with the other.
+    const auto ratios = [&]
+    {
+        QMap<QString, double> result;
+        for (const QVariant& entry : pairs(theme))
         {
             const QVariantMap pair = entry.toMap();
-            const double minimum = pair.value("minimum").toDouble();
-            const double ratio =
-                contrast_ratio(pair.value("foreground").value<QColor>(), pair.value("background").value<QColor>());
-            INFO((dark ? "dark: " : "light: ")
-                 << pair.value("label").toString().toStdString() << " is " << ratio << " to 1, needs " << minimum);
-            CHECK(ratio >= minimum);
-            if (pair.contains("exception"))
-            {
-                ++exceptions;
-                // An exception is a value that falls short of the rule; it may be this low and no lower.
-                CHECK(minimum < (pair.value("label").toString().contains("border") ? 3.0 : 4.5));
-            }
-            else
-            {
-                CHECK((minimum == 4.5 || minimum == 3.0));
-            }
+            result.insert(pair.value("label").toString(), contrast_ratio(pair.value("foreground").value<QColor>(),
+                                                                         pair.value("background").value<QColor>()));
         }
-        // The approved light palette has four pairs under the rule (the Other border and the placeholder, each on two
-        // backgrounds), recorded in the singleton and reported to the owner. Dark has none. A fifth is a regression.
-        CHECK(exceptions == (dark ? 0 : 4));
+        return result;
+    };
+    for (const bool dark : {false, true})
+    {
+        rig.set_dark(dark);
+        rig.set_increase_contrast(false);
+        const auto plain = ratios();
+        rig.set_increase_contrast(true);
+        const auto strong = ratios();
+        for (auto it = plain.begin(); it != plain.end(); ++it)
+        {
+            INFO((dark ? "dark: " : "light: ") << it.key().toStdString());
+            REQUIRE(strong.contains(it.key()));
+            CHECK(strong.value(it.key()) >= it.value() - 0.005);
+        }
     }
+    rig.set_increase_contrast(false);
 }
 
 TEST_CASE("a11y.contrast: the list holds the text of each of the 11 tiles and of Other, and the count badge on each",

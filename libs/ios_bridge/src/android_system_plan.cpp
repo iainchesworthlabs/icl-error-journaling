@@ -90,4 +90,14 @@ bool android_reduce_motion(double animator_scale) noexcept
     return !(animator_scale > 0.0); // 0, a negative number or not a number: no animation
 }
 
+bool android_increase_contrast(int high_text_contrast) noexcept
+{
+    return high_text_contrast == 1;
+}
+
+bool android_bold_text(int font_weight_adjustment) noexcept
+{
+    return font_weight_adjustment > 0;
+}
+
 } // namespace ej::bridge

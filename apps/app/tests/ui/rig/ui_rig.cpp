@@ -144,6 +144,18 @@ void UiRig::set_reduce_motion(bool reduce)
     layout();
 }
 
+void UiRig::set_increase_contrast(bool on)
+{
+    theme()->setProperty("increaseContrast", on);
+    layout();
+}
+
+void UiRig::set_bold_text(bool on)
+{
+    theme()->setProperty("boldText", on);
+    layout();
+}
+
 void UiRig::set_safe_area(double top, double bottom)
 {
     theme()->setProperty("overrideSafeArea", true);

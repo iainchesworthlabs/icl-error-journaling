@@ -1,6 +1,6 @@
 # Contrast checks for the dark palette
 
-Recorded by hand for Stage 4 package 4.2, with the WCAG 2.x relative-luminance formula, until `Theme.contrastPairs` (package 4.1) runs the same pairs as a test. Text needs 4.5 to 1; borders, icons, the badge and the selected tab need 3 to 1. Every pair below passes. Colour names are the keys in `tokens.json`; the hex values are the dark ones.
+Recorded by hand for Stage 4 package 4.2, with the WCAG 2.x relative-luminance formula, until `Theme.contrastPairs` (package 4.1) runs the same pairs as a test. Text needs 4.5 to 1; borders, icons, the badge and the selected tab need 3 to 1. Every pair below passes. Colour names are the keys in `tokens.json`; the hex values are the dark ones. The test (`a11y.contrast`) is the authority now: it walks every pair in four modes (light and dark, each with and without Increase Contrast), and the sections at the end of this page record the light values it led to and the Increase Contrast set.
 
 ## Text on its background (dark)
 
@@ -96,6 +96,42 @@ The 11 tile colours are not held to 3 to 1 against the screen: they are large fi
 | Swipe Delete label | `#FFFFFF` | `#B42318` | 6.57 | 4.5 | pass |
 
 The approved light tokens are unchanged and were not re-measured.
+
+## Light tokens darkened by the accessibility work
+
+The light Other tile border and the light placeholder fell short of the rules (they were recorded as exceptions in `Theme.contrastPairs`). They are darker now, in the same blue-grey hue, and no exception is left. `borderStrong` (the outline of a switch and of a choice card, and the chevrons) takes the Other border's value, so that the outline of a switch is a 3 to 1 indicator as well.
+
+| Pair | Before | Now | Ratio now | Needs | Result |
+|---|---|---|---|---|---|
+| Other tile border on the screen (`#F2F4F7`) | `#9AA8B4` (2.21) | `#7C8B98` | 3.17 | 3.0 | pass |
+| Other tile border on a card (`#FFFFFF`) | `#9AA8B4` (2.43) | `#7C8B98` | 3.50 | 3.0 | pass |
+| Outline of a switch or a choice card on the screen | `#9AA8B4` (2.21) | `#7C8B98` | 3.17 | 3.0 | pass |
+| Outline of a switch or a choice card on a card | `#9AA8B4` (2.43) | `#7C8B98` | 3.50 | 3.0 | pass |
+| Placeholder in a field (`#F7F9FB`) | `#6B7A86` (4.19) | `#637380` | 4.63 | 4.5 | pass |
+| Placeholder on a card | `#6B7A86` (4.42) | `#637380` | 4.89 | 4.5 | pass |
+
+**Not in the list, found on the way.** The placeholder of the search field sits on `searchBackground` (`#E3E8ED`), where `#637380` is about 4.0 to 1 and the old value about 3.6 to 1. It is not a pair of `Theme.contrastPairs` in the ordinary mode, because adding it would need an exception; with Increase Contrast on it is a pair and passes. It is open for the owner (a lighter search background, or a darker placeholder for that field).
+
+## Increase Contrast (`colourIncreasedContrast` in `tokens.json`)
+
+With the system's Increase Contrast (iOS) or High contrast text (Android) on, `Theme.increaseContrast` replaces the colours listed in `colourIncreasedContrast`; a key that is not listed keeps its value. Text on every background it is used on reaches **7 to 1**; borders, dividers, outlines, the Other tile border and the selected indicators reach **4.5 to 1**, and the pairs of the lines and of the search field join the list. `a11y.contrast` walks all of it in both schemes.
+
+| Key | Light | Dark |
+|---|---|---|
+| `textPrimary` | unchanged | `#FFFFFF` |
+| `textSecondary`, `reviewTextSecondary` | `#3C4A56` | `#C2CDD6`, `#C9D3DB` |
+| `textPlaceholder` | `#3A4955` | `#BAC6D0` |
+| `textBody` | `#2E3C47` | `#D8E1E8` |
+| `primaryText` (links, selected tab) | `#174A66` | `#A9D6EE` |
+| `destructive` | `#9A1B12` (the swipe Delete fill follows) | `#FFA79F` |
+| `primary`, `primaryPressed`, `textOnPrimary` | unchanged | `#8FC6E6`, `#6FB3DB`, `#0E141A` |
+| `bannerWarningBorder`, `bannerErrorBorder` | `#7A5508`, `#9A1B12` | `#E3B94F`, unchanged |
+| `border`, `borderStrong`, Other tile border | `#5C6B77` | `#8A9CAE` |
+| `divider`, `tabBarBorder`, `reviewDivider` | `#5F6E7A` | `#8A9CAE` |
+| `toastAccent`, `toastButton` | `#BFE3F2`, unchanged | `#BFE3F2`, `#2C3B47` |
+| `interactionAccent` | `#0B5A5E` | unchanged |
+
+**The dark primary button turns light.** A dark fill that holds the white label at 7 to 1 cannot also stand 4.5 to 1 from the dark screen, so with Increase Contrast on the dark primary fill is `#8FC6E6` with a `#0E141A` label (about 10 to 1 both ways). The light primary button keeps `#1E5B7A` with a white label (7.41 to 1; 6.7 to 1 from the screen). The tile fills do not change; the label on a tile is `textPrimary`, which is white in dark, and so reaches 7 to 1 on every tile of both boards.
 
 ## Tile hues in dark
 

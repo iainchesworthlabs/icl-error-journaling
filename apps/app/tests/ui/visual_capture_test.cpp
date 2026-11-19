@@ -156,6 +156,8 @@ class CaptureBridge : public QObject
     Q_OBJECT
     Q_PROPERTY(double textScale READ text_scale WRITE set_text_scale NOTIFY textScaleChanged)
     Q_PROPERTY(bool reduceMotion READ reduce_motion WRITE set_reduce_motion NOTIFY reduceMotionChanged)
+    Q_PROPERTY(bool increaseContrast READ increase_contrast WRITE set_increase_contrast NOTIFY increaseContrastChanged)
+    Q_PROPERTY(bool boldText READ bold_text WRITE set_bold_text NOTIFY boldTextChanged)
     Q_PROPERTY(QString timingSummary READ timing_summary NOTIFY timingChanged)
 
 public:
@@ -179,6 +181,25 @@ public:
         m_ReduceMotion = reduce;
         emit reduceMotionChanged();
     }
+    [[nodiscard]] bool increase_contrast() const
+    {
+        return m_IncreaseContrast;
+    }
+    void set_increase_contrast(bool on)
+    {
+        m_IncreaseContrast = on;
+        emit increaseContrastChanged();
+    }
+    [[nodiscard]] bool bold_text() const
+    {
+        return m_BoldText;
+    }
+    void set_bold_text(bool on)
+    {
+        m_BoldText = on;
+        emit boldTextChanged();
+    }
+
     [[nodiscard]] QString timing_summary() const
     {
         return {};
@@ -202,12 +223,16 @@ public:
 signals:
     void textScaleChanged();
     void reduceMotionChanged();
+    void increaseContrastChanged();
+    void boldTextChanged();
     void timingChanged();
 
 private:
     FakePlatform& m_Platform;
     double m_TextScale = 1.0;
     bool m_ReduceMotion = false;
+    bool m_IncreaseContrast = false;
+    bool m_BoldText = false;
 };
 
 QVariant role_of(const QAbstractItemModel& model, int row, const char* role)

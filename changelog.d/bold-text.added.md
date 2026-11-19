@@ -1,0 +1,1 @@
+**The app follows Bold Text.** With Bold Text on (iPhone) or Bold text (Android 12 and later), every font in the app is one weight heavier, at any text size, and the change shows at once with no restart. Not yet run on a device.

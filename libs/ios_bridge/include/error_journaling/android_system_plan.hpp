@@ -31,4 +31,14 @@ namespace ej::bridge
 /// to 0. Any other scale, however short, is motion.
 [[nodiscard]] bool android_reduce_motion(double animator_scale) noexcept;
 
+/// Whether Increase Contrast is on: the hidden `Settings.Secure` key `high_text_contrast_enabled` ("High contrast
+/// text") is
+/// 1. Any other value, and a device without the key (which reads 0), is off.
+[[nodiscard]] bool android_increase_contrast(int high_text_contrast) noexcept;
+
+/// Whether Bold Text is on: "Bold text" sets `Configuration.fontWeightAdjustment` to 300 (Android 12 and later; the
+/// Java side reads 0 before that). Any adjustment above 0 counts, because a maker may use another step; a negative one
+/// (a lighter text) is not bold.
+[[nodiscard]] bool android_bold_text(int font_weight_adjustment) noexcept;
+
 } // namespace ej::bridge

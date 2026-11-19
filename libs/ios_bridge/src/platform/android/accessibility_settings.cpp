@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Android accessibility settings: the text size, Remove animations and
-// TalkBack, read through EjAccessibility.java, and a notice when one changes. What a number means is decided in
+// Android accessibility settings: the text size, Remove animations, TalkBack, High contrast text and Bold text, read
+// through EjAccessibility.java, and a notice when one changes. What a number means is decided in
 // src/android_system_plan.cpp, which a test covers on the desktop.
 #include "error_journaling/accessibility_settings.hpp"
 #include "error_journaling/android_system_plan.hpp"
@@ -111,6 +111,10 @@ public:
                                                                          "(Landroid/app/Activity;)D", activity.object());
         const jdouble animator_scale = QJniObject::callStaticMethod<jdouble>(
             java_class, "animatorScale", "(Landroid/app/Activity;)D", activity.object());
+        const jint high_text_contrast = QJniObject::callStaticMethod<jint>(
+            java_class, "highTextContrast", "(Landroid/app/Activity;)I", activity.object());
+        const jint weight_adjustment = QJniObject::callStaticMethod<jint>(
+            java_class, "fontWeightAdjustment", "(Landroid/app/Activity;)I", activity.object());
         const jboolean touch_exploration = QJniObject::callStaticMethod<jboolean>(
             java_class, "touchExploration", "(Landroid/app/Activity;)Z", activity.object());
         if (env.checkAndClearExceptions())
@@ -120,6 +124,8 @@ public:
         state.m_TextScale = android_text_scale(font_scale);
         state.m_ReduceMotion = android_reduce_motion(animator_scale);
         state.m_VoiceOverRunning = touch_exploration != JNI_FALSE; // TalkBack is what VoiceOver is on iOS
+        state.m_IncreaseContrast = android_increase_contrast(high_text_contrast);
+        state.m_BoldText = android_bold_text(weight_adjustment);
         return state;
     }
 
