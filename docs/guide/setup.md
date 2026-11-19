@@ -3,6 +3,16 @@
 Everything that makes the app yours is in **Settings**: the tiles on the board, your error types, places and note
 templates, and your name and unit prefix.
 
+| To change | Go to |
+|---|---|
+| Which tiles are on the board, and where | [Your board](#your-board) |
+| What you can log | [Error types](#error-types) |
+| The places and unit suffixes you pick from | [Locations and number suffixes](#locations-and-number-suffixes) |
+| Quick notes you log often | [Note templates](#note-templates) |
+| Your name, the prefix, the totals line | [Your name, prefix and totals](#your-name-prefix-and-totals) |
+| Everything at once, for a team | [Importing and exporting a setup file](#importing-and-exporting-a-setup-file) |
+| The optional second board | [The second board: Observations](#the-second-board-observations-optional) |
+
 ![The Settings screen. At the top is Your board, a miniature of the tiles. Below are Error types, Note templates, Locations, Number suffixes, Tester, Unit prefix and a switch for a totals line.](img/board-settings.png){ width="270" }
 
 ## Your board
@@ -67,8 +77,9 @@ Each template has three parts:
 
 ![The Import this setup screen: counts of error types, locations and note templates, and a warning that this replaces your current setup, with a Replace my setup button.](img/import-confirm.png){ width="270" }
 
-Importing **replaces your setup** (board, locations, templates and preferences). Past logs are not touched, and a setup file
-has no logs in it.
+!!! warning "Importing replaces your setup"
+    Importing replaces your board, locations, templates and preferences. Past logs are not touched, and a setup file has
+    no logs in it.
 
 If the file has problems, the app lists every one, in the order they appear in the file, and changes nothing.
 
@@ -94,9 +105,9 @@ setup rows). A fifth tab, **Observations**, appears at once, and the first tab i
 - The app opens on the board you used last.
 - The board has no observation types to start with: every type is one you made, as the error types are. Until there is one, the board is empty and offers **Add observation types**. A setup file with `interaction_types` brings its own.
 
-Turning the switch off hides the tab and the board. **Nothing is deleted:** the entries stay in the log and in Review and
-History, and what you set up is kept for the next time. If you were on the Observations board, the app goes to the Errors board.
-
+!!! note "Turning it off deletes nothing"
+    Turning the switch off hides the tab and the board. The entries stay in the log and in Review and History, and what you
+    set up is kept for the next time. If you were on the Observations board, the app goes to the Errors board.
 
 ### Setting up the Observations board
 

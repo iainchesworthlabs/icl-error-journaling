@@ -29,6 +29,7 @@ hooks:
 markdown_extensions:
   - attr_list  # sets the width of the guide's pictures: ![alt](img/x.png){ width="270" }
   - def_list  # the questions and answers of the FAQ page
+  - admonition  # the Note, Tip and Warning boxes of the guide: !!! note "Title"
 theme:
   name: material
   custom_dir: tools/docs/theme  # the Field Test pages (marketing.html) and the guide's colours; see tools/docs/site_shell_hook.py

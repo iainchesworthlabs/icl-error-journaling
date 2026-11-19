@@ -1,5 +1,9 @@
 # Questions and answers
 
+Short answers, grouped by what you are doing: [Logging](#logging), [Sharing](#sharing), [Setup](#setup) and
+[Your data](#your-data). For the gestures and timings in one table, see the [Quick reference](quick-reference.md). For
+terms, see the [Glossary](glossary.md).
+
 ## Logging
 
 **Why does one tap do nothing?**
@@ -67,6 +71,13 @@ There is a sample setup file on the [home page](../index.md), with made-up names
 
 **Where are my logs?**
 Only on this device, until you share one. Nothing is sent by the app itself ([Privacy](../privacy.md)).
+
+**What if the app closes in the middle of logging?**
+Entries are saved as you log them. If the app did not close properly, it checks today's log when it opens and tells you if
+it rebuilt it. See [Where your data is kept](your-data.md) and [“Your log was repaired”](troubleshooting.md#your-log-was-repaired).
+
+**What do the settings do?**
+See [Settings](settings.md): every setting, its default and its effect.
 
 **How do I delete a log?**
 In **History**, swipe the log left and tap **Delete**, then confirm. A deleted log can't be brought back.

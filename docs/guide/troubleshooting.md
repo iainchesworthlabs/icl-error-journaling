@@ -3,12 +3,22 @@
 Each problem below says what you see, what it means, and what to do. If yours is not here, see [Support](../support.md) and
 say what the app said, word for word.
 
+| You see | Go to |
+|---|---|
+| A red message: an entry "wasn't saved" | [“… wasn't saved”](#wasnt-saved) |
+| A yellow message: "Your log was repaired" | [“Your log was repaired”](#your-log-was-repaired) |
+| "This file can't be imported" | [“This file can't be imported”](#this-file-cant-be-imported) |
+| The log did not share | [“The log was not shared”](#the-log-was-not-shared) |
+| An empty board, or a tile missing | [The board is empty](#the-board-is-empty), [A tile is missing](#a-tile-is-missing-from-the-board) |
+| A wrong time, or a new day prompt problem | [An entry has the wrong time](#an-entry-has-the-wrong-time), [The new day prompt](#the-new-day-prompt-did-not-appear-or-came-back) |
+| A setup replaced by mistake | [I replaced my setup by mistake](#i-replaced-my-setup-by-mistake) |
+
 ## "… wasn't saved"
 
 ![A red message at the top of the Log screen: Stopped Responding wasn't saved. Nothing was added to the log. Tap Stopped Responding again to log it.](img/write-failed.png){ width="270" }
 
 **What it means:** the app could not write that entry, so it did not add it. The app never shows an entry as logged before
-it is saved.
+it is saved. [Where your data is kept](your-data.md) says how entries are saved.
 
 **What to do:** tap the same tile again (double-tap). One possible cause is a phone that is out of free storage: make room, then
 log it again. If it keeps happening, restart the app and tell Support what the message said. Entries logged before the
@@ -65,5 +75,7 @@ log stays open and you carry on in it. To start a new log at any time, open Toda
 ## I replaced my setup by mistake
 
 Importing replaces the board, locations, templates and preferences, and there is no undo. Your logs are not touched. Import
-the earlier setup file again if you have one. This is a reason to export your setup, from **Settings**, **Import or export**,
-before you try a new file.
+the earlier setup file again if you have one.
+
+!!! tip "Export before you try a new file"
+    Open **Settings**, **Import or export**, and export your setup first. Then you can always go back.
