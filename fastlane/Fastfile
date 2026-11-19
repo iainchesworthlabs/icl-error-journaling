@@ -2,9 +2,11 @@
 # The store metadata upload (the Stage 11 plan, task 11.7), run only by .github/workflows/store-metadata.yml.
 #
 # It uploads the listing text in store/ (and the graphics and screenshots the tools made) to App Store Connect and to the
-# Play Console. It never uploads a build: builds come only from release.yml. It never submits for review, and never
-# releases or rolls out: those are the owner's actions in the consoles. tools/tests/test_store_upload_guard.py fails if
-# this file ever asks for any of them.
+# Play Console. It never uploads a build: builds come only from release.yml. When it is given the number of a build that
+# is already in TestFlight it attaches that build to the App Store version (the "Build" field of the version page); deliver
+# would do that only when it submits, which this file never does. It never submits for review, and never releases or rolls
+# out: those are the owner's actions in the consoles. tools/tests/test_store_upload_guard.py fails if this file ever asks
+# for any of them.
 
 require "fileutils"
 require "tmpdir"
@@ -21,6 +23,34 @@ PLAY_METADATA = File.join(REPOSITORY, "store", "play")
 
 def flag(value)
   value.to_s == "true"
+end
+
+# Connects Spaceship to App Store Connect and finds the app record of this repository.
+def connect_app(api_key)
+  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**api_key)
+  app = Spaceship::ConnectAPI::App.find(ENV.fetch("BUNDLE_ID"))
+  UI.user_error!("no app record for #{ENV.fetch('BUNDLE_ID')}") if app.nil?
+  app
+end
+
+# Sets the build of the editable App Store version, and reads it back. It touches nothing else.
+def attach_build(app, version, build_number)
+  platform = Spaceship::ConnectAPI::Platform::IOS
+  editing = app.get_edit_app_store_version(platform: platform)
+  UI.user_error!("App Store Connect has no version that can take build #{build_number}") if editing.nil?
+  UI.user_error!("the editable version is #{editing.version_string}, not #{version}") unless editing.version_string == version
+
+  build = Spaceship::ConnectAPI::Build.all(app_id: app.id, version: version, build_number: build_number, platform: platform).first
+  UI.user_error!("build #{build_number} of #{version} is not in App Store Connect") if build.nil?
+  state = build.processing_state
+  unless state == Spaceship::ConnectAPI::Build::ProcessingState::VALID
+    UI.user_error!("build #{build_number} is #{state}, not VALID. Apple takes a few minutes to process an upload: run this again")
+  end
+
+  editing.select_build(build_id: build.id)
+  attached = app.get_edit_app_store_version(platform: platform).build
+  UI.user_error!("build #{build_number} was not attached to #{version}") unless attached && attached.version == build_number.to_s
+  UI.success("Attached build #{build_number} to version #{version}")
 end
 
 platform :ios do
@@ -51,7 +81,6 @@ platform :ios do
         api_key: api_key,
         app_identifier: ENV.fetch("BUNDLE_ID"),
         app_version: version,
-        build_number: options[:build],
         metadata_path: metadata,
         screenshots_path: screenshots ? APPSTORE_SCREENSHOTS : nil,
         skip_screenshots: !screenshots,
@@ -65,9 +94,12 @@ platform :ios do
         force: true
       )
     end
+
+    # deliver selects a build only when it submits for review, so the build is attached here.
+    attach_build(connect_app(api_key), version, options[:build]) unless options[:build].to_s.empty?
   end
   # bundle exec fastlane ios inspect
-  desc "Print what App Store Connect holds for the app: name, languages, versions. Read only."
+  desc "Print what App Store Connect holds for the app: name, languages, versions, their builds, recent builds. Read only."
   lane :inspect do
     api_key = app_store_connect_api_key(
       key_id: ENV.fetch("ASC_KEY_ID"),
@@ -75,11 +107,9 @@ platform :ios do
       key_content: ENV.fetch("ASC_KEY_CONTENT"),
       in_house: false
     )
-    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**api_key)
-    app = Spaceship::ConnectAPI::App.find(ENV.fetch("BUNDLE_ID"))
-    UI.user_error!("no app record for #{ENV.fetch('BUNDLE_ID')}") if app.nil?
+    app = connect_app(api_key)
     UI.message("app: id=#{app.id} name=#{app.name.inspect} primary_locale=#{app.primary_locale} bundle_id=#{app.bundle_id}")
-    { "edit" => :get_edit_app_info, "live" => :get_live_app_info }.each do |label, getter|
+    { "edit" => :fetch_edit_app_info, "live" => :fetch_live_app_info }.each do |label, getter|
       begin
         info = app.public_send(getter)
         if info.nil?
@@ -93,8 +123,12 @@ platform :ios do
       end
     end
     app.get_app_store_versions.each do |version|
-      UI.message("version #{version.version_string} state=#{version.app_store_state} id=#{version.id}")
+      build = version.build
+      UI.message("version #{version.version_string} state=#{version.app_store_state} id=#{version.id} build=#{build ? build.version : 'none'}")
       version.get_app_store_version_localizations.each { |l| UI.message("  locale #{l.locale}") }
+    end
+    Spaceship::ConnectAPI::Build.all(app_id: app.id, limit: 6).each do |b|
+      UI.message("build #{b.app_version} (#{b.version}) #{b.processing_state} uploaded=#{b.uploaded_date}")
     end
   end
 end

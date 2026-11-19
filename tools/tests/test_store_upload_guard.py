@@ -43,6 +43,13 @@ class StoreUploadGuardTest(unittest.TestCase):
         self.assertRegex(fastfile, r"skip_upload_aab:\s*true")
         self.assertNotRegex(fastfile, r"\b(ipa|pkg|aab|apk):")
 
+    def test_fastfile_attaches_the_build_it_is_given(self) -> None:
+        # deliver selects a build only when it submits for review, which this file never does, so it passes none to
+        # deliver and attaches the build itself.
+        fastfile = code(FASTFILE)
+        self.assertIn("select_build(build_id:", fastfile)
+        self.assertNotRegex(fastfile, r"build_number:\s*options")
+
     def test_fastfile_reads_the_store_folder(self) -> None:
         fastfile = FASTFILE.read_text(encoding="utf-8")
         for folder in ('"store", "appstore"', '"store", "play"'):
