@@ -137,7 +137,8 @@ void split_path(const std::string& path, ConfigError& error)
     error.m_Section = parts[0];
     std::size_t next = 1;
     const bool is_list = error.m_Section == "error_types" || error.m_Section == "locations" ||
-                         error.m_Section == "note_templates" || error.m_Section == "interaction_types";
+                         error.m_Section == "note_templates" || error.m_Section == "observation_types" ||
+                         error.m_Section == "interaction_types"; // legacy spelling
     if (is_list && parts.size() > 1 && !parts[1].empty() &&
         parts[1].find_first_not_of("0123456789") == std::string::npos && parts[1].size() < 9)
     {
@@ -209,6 +210,23 @@ public:
                     "this app does not use " + shown(it.key()) + ". Remove it, or check the spelling.");
             }
         }
+    }
+
+    /// True when `object` holds both spellings of one key (the current one and the `legacy` one from before the rename
+    /// of Interactions to Observations); reports it naming the two keys, as an editing mistake not to guess at.
+    bool both_spellings(const QJsonObject& object, const char* current, const char* legacy, const std::string& path)
+    {
+        const auto has = [&object](const char* key)
+        { return object.contains(QLatin1StringView(key)) && !object.value(QLatin1StringView(key)).isNull(); };
+        if (!has(current) || !has(legacy))
+        {
+            return false;
+        }
+        add(Code::DUPLICATE, child(path, legacy),
+            std::string("this file has both ") + shown(QString::fromLatin1(current)) + " and " +
+                shown(QString::fromLatin1(legacy)) + ". They are the same setting; keep " +
+                shown(QString::fromLatin1(current)) + " and remove " + shown(QString::fromLatin1(legacy)) + ".");
+        return true;
     }
 
     /// The value at `key`; reports MISSING_FIELD when `required` and absent. Null counts as absent.
@@ -613,13 +631,23 @@ void read_preferences(Reader& r, const QJsonObject& root, Configuration& out)
         out.m_IncludeTotals = *totals;
     }
     read_error_prefix(r, object, out);
-    if (const auto enabled = r.boolean(object, "interactions_board_enabled", path))
+    // `interactions_board_enabled` is the legacy spelling of `observations_board_enabled` (read for ever, never
+    // written).
+    const bool both_board_keys =
+        r.both_spellings(object, "observations_board_enabled", "interactions_board_enabled", path);
+    if (!both_board_keys)
     {
-        out.m_InteractionsBoardEnabled = *enabled;
+        const char* board_key = object.contains(QLatin1StringView("observations_board_enabled"))
+                                    ? "observations_board_enabled"
+                                    : "interactions_board_enabled";
+        if (const auto enabled = r.boolean(object, board_key, path))
+        {
+            out.m_InteractionsBoardEnabled = *enabled;
+        }
     }
     r.reject_unknown(object, path,
-                     {"facilitator", "unit_prefix", "unit_environments", "time_format", "include_totals", "error_prefix",
-                      "interactions_board_enabled"});
+                     {"facilitator", "unit_prefix", "unit_environments", "time_format", "include_totals",
+                      "error_prefix", "observations_board_enabled", "interactions_board_enabled"});
 }
 
 void read_error_types(Reader& r, const QJsonObject& root, Configuration& out)
@@ -803,21 +831,29 @@ void report_interaction_pattern(Reader& r, const std::string& path, const QStrin
     }
 }
 
-/// The optional `interaction_types` list: the tiles of the second board. Without the key the list stays empty.
+/// The optional `observation_types` list: the tiles of the second board. Without the key the list stays empty. The
+/// legacy spelling `interaction_types` (files written before the rename) is read the same way, for ever.
 void read_interaction_types(Reader& r, const QJsonObject& root, Configuration& out)
 {
-    const auto array = r.list(root, "interaction_types", false);
+    if (r.both_spellings(root, "observation_types", "interaction_types", ""))
+    {
+        return;
+    }
+    const bool is_current = root.contains(QLatin1StringView("observation_types"));
+    const char* list_key = is_current ? "observation_types" : "interaction_types";
+    const auto array = r.list(root, list_key, false);
     if (!array)
     {
         return;
     }
+    const std::string list_path = std::string("/") + list_key;
     std::unordered_set<InteractionTypeId> ids;
     std::unordered_map<std::string, std::size_t> names;
     std::unordered_map<int, std::size_t> positions;
     for (int i = 0; i < array->size(); ++i)
     {
         const auto index = static_cast<std::size_t>(i);
-        const auto path = child("/interaction_types", index);
+        const auto path = child(list_path, index);
         const auto object = r.item(*array, i, path);
         if (!object)
         {
@@ -867,7 +903,7 @@ void read_interaction_types(Reader& r, const QJsonObject& root, Configuration& o
         }
         if (name)
         {
-            r.check_name_unique(names, *name, entry.m_Retired, path, index, "interaction type");
+            r.check_name_unique(names, *name, entry.m_Retired, path, index, "observation type");
         }
         if (position && !entry.m_Retired)
         {
@@ -878,7 +914,7 @@ void read_interaction_types(Reader& r, const QJsonObject& root, Configuration& o
                 detail.m_Other = it->second + 1;
                 detail.m_Value = std::to_string(*position);
                 r.add(Code::DUPLICATE, child(path, "board_position"),
-                      "board position " + std::to_string(*position) + " is already used by interaction type number " +
+                      "board position " + std::to_string(*position) + " is already used by observation type number " +
                           std::to_string(it->second + 1) + ". Give each type on the board its own position.",
                       std::move(detail));
             }
@@ -1109,7 +1145,8 @@ Result<Configuration, std::vector<ConfigError>> import_configuration(std::string
     read_templates(r, root, configuration);
     read_interaction_types(r, root, configuration);
     r.reject_unknown(root, "",
-                     {"schema_version", "preferences", "error_types", "locations", "note_templates", "interaction_types"});
+                     {"schema_version", "preferences", "error_types", "locations", "note_templates",
+                      "observation_types", "interaction_types"});
 
     if (!r.m_Errors.empty())
     {
@@ -1144,7 +1181,7 @@ std::string export_configuration(const Configuration& configuration)
     }
     if (configuration.m_InteractionsBoardEnabled)
     {
-        out += std::string(",\n    \"interactions_board_enabled\": ") +
+        out += std::string(",\n    \"observations_board_enabled\": ") +
                boolean_text(*configuration.m_InteractionsBoardEnabled);
     }
     out += ",\n    \"time_format\": {\n";
@@ -1211,7 +1248,7 @@ std::string export_configuration(const Configuration& configuration)
 
     if (!configuration.m_InteractionTypes.empty())
     {
-        out += ",\n  \"interaction_types\": [";
+        out += ",\n  \"observation_types\": [";
         for (std::size_t i = 0; i < configuration.m_InteractionTypes.size(); ++i)
         {
             const auto& t = configuration.m_InteractionTypes[i];

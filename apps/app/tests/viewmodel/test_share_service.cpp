@@ -236,7 +236,7 @@ TEST_CASE("The text on the sheet writes a name at the chosen level, and the re-s
 
     REQUIRE(fixture.service->shareOpenLog());
     REQUIRE(fixture.m_Platform.sheets_presented() == 1);
-    CHECK(fixture.m_Platform.shared_texts()[0].find("\n14:03 (Interaction) Paired with A.S.") != std::string::npos);
+    CHECK(fixture.m_Platform.shared_texts()[0].find("\n14:03 (Observation) Paired with A.S.") != std::string::npos);
     CHECK(fixture.m_Platform.shared_texts()[0].find("Alex") == std::string::npos);
     CHECK(fixture.m_Platform.shared_texts()[0].find("\n10:05 T| Wrong Response\n") != std::string::npos);
 
@@ -244,7 +244,7 @@ TEST_CASE("The text on the sheet writes a name at the chosen level, and the re-s
     preferences.set_name_export("full");
     REQUIRE(fixture.service->shareOpenLog());
     REQUIRE(fixture.m_Platform.sheets_presented() == 2);
-    CHECK(fixture.m_Platform.shared_texts()[1].find("\n14:03 (Interaction) Paired with Alex Sample") !=
+    CHECK(fixture.m_Platform.shared_texts()[1].find("\n14:03 (Observation) Paired with Alex Sample") !=
           std::string::npos);
 }
 

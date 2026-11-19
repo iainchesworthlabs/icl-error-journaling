@@ -24,9 +24,9 @@ inline constexpr std::int32_t SQLITE_APPLICATION_ID = 0x454A4C47;
 /// The schema this build writes: `PRAGMA user_version`. A database with a higher value was written by a newer build and
 /// is refused untouched (C16, M5). Version 2 adds `day_log.changed_since_share`, version 3 `day_log.extra_versions`,
 /// version 4 the interaction entries and the `person` cache (`entry` is rebuilt so that its kind may be `interaction`);
-/// an older database is migrated
-/// (`product_migration_steps`) before it is opened.
-inline constexpr std::int32_t SQLITE_SCHEMA_VERSION = 4;
+/// version 5 the new names of the second board (Interactions became Observations: kind `observation`, the tables
+/// `observation_*`); an older database is migrated (`product_migration_steps`) before it is opened.
+inline constexpr std::int32_t SQLITE_SCHEMA_VERSION = 5;
 
 /// The answer of a SQLite check: `ok`, or SQLite's own description of what is wrong (pages and tables, never row
 /// content).

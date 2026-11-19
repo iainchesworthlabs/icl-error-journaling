@@ -12,6 +12,8 @@ The reader (libs/core/src/configuration.cpp) is the truth. The page must:
   placeholder of the template line;
 - show the limits of the whole file (CONFIG_* in configuration.hpp);
 - have a row for every ConfigError::Code and ConfigError::Problem;
+- list the earlier spellings the reader still accepts (`interaction_types`, `interactions_board_enabled`) in the same
+  tables, as rows of their own;
 - carry, as its example, exactly config/sample-config.json.
 
 Tables are introduced by `<!-- fields: <object> -->`, limit rows carry `<!-- limit:NAME -->` and message rows carry
@@ -40,9 +42,9 @@ SECTIONS = {
     "error_types": "read_error_types",
     "locations": "read_locations",
     "note_templates": "read_templates",
-    "interaction_types": "read_interaction_types",
+    "observation_types": "read_interaction_types",
 }
-LIST_KEYS = {"error_types": "error_types", "locations": "locations", "note_templates": "note_templates", "interaction_types": "interaction_types"}
+LIST_KEYS = {"error_types": "error_types", "locations": "locations", "note_templates": "note_templates", "observation_types": "observation_types"}
 
 
 def constants(*texts: str) -> dict[str, int]:

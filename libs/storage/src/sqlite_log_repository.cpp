@@ -6,7 +6,7 @@
 #include "error_journaling/iso_date.hpp"
 #include "error_journaling/utf8.hpp"
 #include "protect.hpp"
-#include "schema_v4.hpp"
+#include "schema_v5.hpp"
 
 #include <QByteArray>
 #include <QCoreApplication>
@@ -222,7 +222,8 @@ Result<FileIdentity, StorageError> probe_file(const std::filesystem::path& path,
 // ---------------------------------------------------------------------------------------------------------------------
 // The schema (section 2.3): version 1, version 2 which adds `day_log.changed_since_share`, version 3 which adds
 // `day_log.extra_versions` and version 4 which adds the interaction tables and lets `entry.kind` be `interaction`
-// (`schema_v4.hpp`). A new database is made at the current version in one go; an older database gets its steps from
+// (renamed to observation in version 5)
+// (`schema_v5.hpp`). A new database is made at the current version in one go; an older database gets its steps from
 // `migrator.cpp`.
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -538,7 +539,7 @@ Result<void, StorageError> SqliteLogRepository::Impl::initialise_schema() const
             break;
         }
     }
-    for (const char* statement : ej::schema::INTERACTION_TABLES)
+    for (const char* statement : ej::schema::OBSERVATION_TABLES)
     {
         if (!done)
         {
@@ -660,7 +661,7 @@ std::string_view kind_name(const EntryBody& body)
     }
     if (std::holds_alternative<InteractionEntry>(body))
     {
-        return "interaction";
+        return "observation";
     }
     return std::holds_alternative<NoteEntry>(body) ? "note" : "header_change";
 }
@@ -714,7 +715,7 @@ Result<SqliteLogRepository::Impl::Loaded, StorageError> SqliteLogRepository::Imp
     // The people of the interactions of this log, by entry, in the order they were picked.
     std::map<std::string, std::vector<PersonId>> people_of;
     {
-        auto people = run(QStringLiteral("SELECT p.entry_id, p.person_id FROM interaction_entry_person p"
+        auto people = run(QStringLiteral("SELECT p.entry_id, p.person_id FROM observation_entry_person p"
                                          " JOIN entry e ON e.id = p.entry_id WHERE e.day_log_id = ?"
                                          " ORDER BY p.entry_id, p.position"),
                           {key});
@@ -736,12 +737,12 @@ Result<SqliteLogRepository::Impl::Loaded, StorageError> SqliteLogRepository::Imp
     auto entries = run(QStringLiteral("SELECT e.id, e.kind, e.captured_utc, e.captured_tz, e.edited_utc, e.deleted,"
                                       " x.error_type_id, x.error_type_label, x.attached_note,"
                                       " n.template_id, n.value_text, h.field, h.new_value,"
-                                      " i.interaction_type_id, i.interaction_type_label, i.value_text, i.attached_note "
+                                      " i.observation_type_id, i.observation_type_label, i.value_text, i.attached_note "
                                       "FROM entry e"
                                       " LEFT JOIN error_entry x ON x.entry_id = e.id"
                                       " LEFT JOIN note_entry n ON n.entry_id = e.id"
                                       " LEFT JOIN header_change_entry h ON h.entry_id = e.id"
-                                      " LEFT JOIN interaction_entry i ON i.entry_id = e.id "
+                                      " LEFT JOIN observation_entry i ON i.entry_id = e.id "
                                       "WHERE e.day_log_id = ? ORDER BY e.seq"),
                        {key});
     if (!entries)
@@ -790,7 +791,7 @@ Result<SqliteLogRepository::Impl::Loaded, StorageError> SqliteLogRepository::Imp
             note.m_Value = to_std(entries->value(10).toString());
             entry.m_Body = std::move(note);
         }
-        else if (kind == "interaction")
+        else if (kind == "observation")
         {
             const auto type = Uuid::parse(to_std(entries->value(13).toString()));
             if (!type || entries->value(14).isNull())
@@ -949,8 +950,8 @@ Result<void, StorageError> SqliteLogRepository::Impl::delete_log_rows(const QStr
         "DELETE FROM error_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
         "DELETE FROM note_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
         "DELETE FROM header_change_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
-        "DELETE FROM interaction_entry_person WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
-        "DELETE FROM interaction_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
+        "DELETE FROM observation_entry_person WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
+        "DELETE FROM observation_entry WHERE entry_id IN (SELECT id FROM entry WHERE day_log_id = ?1)",
         "DELETE FROM entry WHERE day_log_id = ?1",
         "DELETE FROM day_log WHERE id = ?1",
     };
@@ -1013,8 +1014,8 @@ Result<void, StorageError> SqliteLogRepository::Impl::insert_kind(const Entry& e
     }
     if (const auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body))
     {
-        if (auto inserted = exec(QStringLiteral("INSERT INTO interaction_entry (entry_id, interaction_type_id,"
-                                                " interaction_type_label, value_text, attached_note) "
+        if (auto inserted = exec(QStringLiteral("INSERT INTO observation_entry (entry_id, observation_type_id,"
+                                                " observation_type_label, value_text, attached_note) "
                                                 "VALUES (?, ?, ?, ?, ?)"),
                                  {id, to_qt(interaction->m_Type.format()), to_qt(interaction->m_TypeLabel),
                                   text_or_null(interaction->m_Value), text_or_null(interaction->m_AttachedNote)});
@@ -1026,7 +1027,7 @@ Result<void, StorageError> SqliteLogRepository::Impl::insert_kind(const Entry& e
         int position = 0;
         for (const PersonId person : interaction->m_People)
         {
-            if (auto linked = exec(QStringLiteral("INSERT INTO interaction_entry_person (entry_id, person_id, position)"
+            if (auto linked = exec(QStringLiteral("INSERT INTO observation_entry_person (entry_id, person_id, position)"
                                                   " VALUES (?, ?, ?)"),
                                    {id, to_qt(person.format()), position++});
                 !linked)
@@ -1110,7 +1111,7 @@ Result<void, StorageError> SqliteLogRepository::Impl::persist(const JournalRecor
                 return updated;
             }
             for (const char* table :
-                 {"interaction_entry_person", "interaction_entry", "error_entry", "note_entry", "header_change_entry"})
+                 {"observation_entry_person", "observation_entry", "error_entry", "note_entry", "header_change_entry"})
             {
                 if (auto removed = m_Impl.exec(
                         QStringLiteral("DELETE FROM %1 WHERE entry_id = ?").arg(QLatin1String(table)), {id});
@@ -1210,7 +1211,7 @@ Result<void, StorageError> SqliteLogRepository::Impl::mutate(LogId id, JournalBo
             record.m_Seq = *seq;
             record.m_Log = id;
             record.m_Body = std::move(body);
-            record.m_Version = journal_version_for(record.m_Body); // an interaction is written at version 2
+            record.m_Version = journal_version_for(record.m_Body); // an observation is written at version 3
 
             StoredLog after = before->m_Stored;
             if (auto applied = apply_record(after, record); !applied)
@@ -1709,7 +1710,7 @@ Result<CachedPeople, StorageError> SqliteLogRepository::read_people()
 
 Result<std::set<PersonId>, StorageError> SqliteLogRepository::referenced_person_ids()
 {
-    auto rows = m_Impl->run(QStringLiteral("SELECT DISTINCT person_id FROM interaction_entry_person"));
+    auto rows = m_Impl->run(QStringLiteral("SELECT DISTINCT person_id FROM observation_entry_person"));
     if (!rows)
     {
         return Failure(rows.error());

@@ -20,6 +20,9 @@ add_executable(ej_kill_driver kill_driver.cpp)
 target_link_libraries(ej_kill_driver PRIVATE ej_kill_workload Qt6::Sql Catch2::Catch2 icl::warnings icl::coverage)
 # recovery_fixture.hpp and the helpers it includes live in the parent directory.
 target_include_directories(ej_kill_driver PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/.." "${PROJECT_SOURCE_DIR}/libs/storage/src")
+# The store the build before the rename of Interactions to Observations wrote: the old-format cases of the driver.
+target_compile_definitions(ej_kill_driver
+    PRIVATE EJ_LEGACY_STORE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../fixtures/legacy-interactions/store")
 # platform/<os>/process_containment.cpp: ends the workers with the driver (a Job Object on Windows).
 icl_platform_sources(ej_kill_driver DIR "${CMAKE_CURRENT_SOURCE_DIR}/platform")
 # The driver starts the worker by file name, so the worker is built whenever the driver is.

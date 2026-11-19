@@ -148,9 +148,9 @@ std::string table_shape(RawDb& raw, const char* table)
     return raw.scalar(sql).toString().toStdString();
 }
 
-/// Whether `entry.kind` takes `interaction`: tried inside a transaction that is rolled back, so the database is left as
-/// it was.
-bool can_insert_interaction(const std::filesystem::path& database)
+/// Whether `entry.kind` takes `observation` (`interaction` with `legacy_kind`): tried inside a transaction that is
+/// rolled back, so the database is left as it was.
+bool can_insert_kind(const std::filesystem::path& database, const char* kind)
 {
     RawDb raw(database);
     if (!raw.exec(QStringLiteral("BEGIN")))
@@ -159,9 +159,15 @@ bool can_insert_interaction(const std::filesystem::path& database)
     }
     const bool inserted =
         raw.exec(QStringLiteral("INSERT INTO entry VALUES ('00000000-0000-4000-8000-0000000000f1',"
-                                " '00000000-0000-4000-8000-000000000001', 9, 'interaction', 2000, 'UTC', NULL, 0)"));
+                                " '00000000-0000-4000-8000-000000000001', 9, '%1', 2000, 'UTC', NULL, 0)")
+                     .arg(QLatin1String(kind)));
     (void)raw.exec(QStringLiteral("ROLLBACK"));
     return inserted;
+}
+
+bool can_insert_interaction(const std::filesystem::path& database)
+{
+    return can_insert_kind(database, "observation");
 }
 
 bool table_exists(const std::filesystem::path& database, const char* table)
@@ -172,7 +178,9 @@ bool table_exists(const std::filesystem::path& database, const char* table)
                .toInt() == 1;
 }
 
-constexpr const char* NEW_TABLES[] = {"interaction_entry", "interaction_entry_person", "interaction_type", "person"};
+constexpr const char* NEW_TABLES[] = {"observation_entry", "observation_entry_person", "observation_type", "person"};
+/// `legacy`: the names the second board's tables had in version 4.
+constexpr const char* LEGACY_TABLES[] = {"interaction_entry", "interaction_entry_person", "interaction_type"};
 
 void copy_tree(const std::filesystem::path& from, const std::filesystem::path& to)
 {
@@ -187,7 +195,7 @@ void copy_tree(const std::filesystem::path& from, const std::filesystem::path& t
 // T-I2-1 migrate.interaction_step
 // ---------------------------------------------------------------------------------------------------------------------
 
-TEST_CASE("M1: the step from 3 to 4 keeps every row of entry, in its order, and adds the interaction tables",
+TEST_CASE("M1: the steps from 3 keep every row of entry, in its order, and add the observation tables",
           "[migration][interaction]")
 {
     VersionThreeStore store;
@@ -202,7 +210,8 @@ TEST_CASE("M1: the step from 3 to 4 keeps every row of entry, in its order, and 
     CHECK(report->m_Outcome == MigrationOutcome::MIGRATED);
     CHECK(report->m_FromVersion == 3);
     CHECK(report->m_ToVersion == SQLITE_SCHEMA_VERSION);
-    CHECK(report->m_Steps == std::vector<std::string>{"add interaction entries and people"});
+    CHECK(report->m_Steps ==
+          std::vector<std::string>{"add interaction entries and people", "rename interactions to observations"});
 
     CHECK(user_version(store.database()) == SQLITE_SCHEMA_VERSION);
     CHECK(entry_rows(store.database()) == before);
@@ -212,6 +221,11 @@ TEST_CASE("M1: the step from 3 to 4 keeps every row of entry, in its order, and 
     }
     CHECK_FALSE(table_exists(store.database(), "entry_new"));
     CHECK(can_insert_interaction(store.database()));
+    CHECK_FALSE(can_insert_kind(store.database(), "interaction")); // the old kind is no longer written
+    for (const char* table : LEGACY_TABLES)
+    {
+        CHECK_FALSE(table_exists(store.database(), table));
+    }
 
     // The other tables are as they were, and their references find the new `entry`.
     RawDb raw(store.database());
@@ -262,8 +276,8 @@ TEST_CASE("A database migrated from 3 has the schema of a new one", "[migration]
     }
     RawDb fresh_raw(fresh_dir.path() / "ej.db");
     RawDb migrated_raw(migrated.database());
-    for (const char* table : {"entry", "error_entry", "note_entry", "header_change_entry", "interaction_entry",
-                              "interaction_entry_person", "interaction_type", "person", "day_log"})
+    for (const char* table : {"entry", "error_entry", "note_entry", "header_change_entry", "observation_entry",
+                              "observation_entry_person", "observation_type", "person", "day_log"})
     {
         INFO(table);
         const std::string expected = table_shape(fresh_raw, table);

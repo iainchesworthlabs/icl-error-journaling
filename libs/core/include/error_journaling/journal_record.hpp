@@ -23,12 +23,16 @@ namespace ej
 /// journal written by an older build still rebuilds after a schema migration.
 inline constexpr std::uint32_t JOURNAL_VERSION = 1;
 
-/// The version of a record whose entry is an interaction (feedback page, 3.2). A record of any other kind stays at
-/// `JOURNAL_VERSION`, so a journal that never saw an interaction is byte for byte what an older build wrote.
+/// The version of a record whose entry was an interaction, written before the rename to Observations (`"kind":
+/// "interaction"`). Read for ever and never written by this build; a record already on disk is never rewritten.
 inline constexpr std::uint32_t JOURNAL_VERSION_INTERACTIONS = 2;
 
+/// The version of a record whose entry is an observation (`"kind":"observation"`). A record of any other kind stays at
+/// `JOURNAL_VERSION`, so a journal that never saw an observation is byte for byte what an older build wrote.
+inline constexpr std::uint32_t JOURNAL_VERSION_OBSERVATIONS = 3;
+
 /// The newest version this build reads. A line with a higher one is `UNSUPPORTED_VERSION`.
-inline constexpr std::uint32_t JOURNAL_VERSION_NEWEST = JOURNAL_VERSION_INTERACTIONS;
+inline constexpr std::uint32_t JOURNAL_VERSION_NEWEST = JOURNAL_VERSION_OBSERVATIONS;
 
 /// A journal line, including its CRC, is never longer than this. Notes are capped at 10,000 characters (decision 7), so
 /// a torn tail can never look like a huge valid line, and the reader never buffers more than this for one record.
@@ -109,8 +113,8 @@ struct JournalRecord
 
 [[nodiscard]] JournalOp journal_op(const JournalBody& body);
 
-/// The version a record with this body is written at: `JOURNAL_VERSION_INTERACTIONS` for an `add_entry` or
-/// `edit_entry` of an interaction, else `JOURNAL_VERSION`. `encode_record` refuses any other version.
+/// The version a record with this body is written at: `JOURNAL_VERSION_OBSERVATIONS` for an `add_entry` or
+/// `edit_entry` of an observation, else `JOURNAL_VERSION`. `encode_record` refuses any other version.
 [[nodiscard]] std::uint32_t journal_version_for(const JournalBody& body);
 [[nodiscard]] std::string_view journal_op_name(JournalOp op);
 

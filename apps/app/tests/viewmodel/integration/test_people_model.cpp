@@ -168,7 +168,7 @@ TEST_CASE("export.name_levels: copy and share of a log of the real people write 
     // The default is initials.
     for (const std::string& text : {copied(), shared()})
     {
-        CHECK(count_of(text, "(Interaction) Paired with A.S. and J.P.") == 1);
+        CHECK(count_of(text, "(Observation) Paired with A.S. and J.P.") == 1);
         CHECK(text.find("Alex") == std::string::npos);
         CHECK(text.find("Jordan") == std::string::npos);
         CHECK(text.find("Pat") == std::string::npos);
@@ -188,7 +188,7 @@ TEST_CASE("export.name_levels: copy and share of a log of the real people write 
     rig.export_preferences().set_name_export("hidden");
     for (const std::string& text : {copied(), shared()})
     {
-        CHECK(count_of(text, "(Interaction) Paired with someone") == 1);
+        CHECK(count_of(text, "(Observation) Paired with someone") == 1);
         CHECK(text.find("Sample") == std::string::npos);
         CHECK(text.find("Placeholder") == std::string::npos);
         CHECK(text.find("Pat") == std::string::npos);

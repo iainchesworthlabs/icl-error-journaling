@@ -388,9 +388,10 @@ TEST_CASE("A record after an oversize line follows on", "[journal-reader]")
 TEST_CASE("A record with an unsupported version is counted and not accepted", "[journal-reader]")
 {
     std::string bytes = bytes_of(records_of(2));
-    // A version 3 record with a good checksum (version 2 is the interaction record, which this build reads).
+    // A version 4 record with a good checksum (version 2 is the legacy interaction record and 3 the observation, which
+    // this build reads).
     std::string v3 =
-        "{\"v\":3,\"seq\":3,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}";
+        "{\"v\":4,\"seq\":3,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}";
     char digits[16];
     std::snprintf(digits, sizeof digits, "%08x", crc32(v3));
     v3 = v3.substr(0, v3.size() - 1) + ",\"crc\":\"" + digits + "\"}\n";
@@ -447,7 +448,7 @@ TEST_CASE("A record of an unknown version ends the accepted run and what follows
     std::vector<JournalRecord> records = records_of(2);
     std::string bytes = bytes_of(records);
     std::string unknown =
-        "{\"v\":3,\"seq\":3,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}";
+        "{\"v\":4,\"seq\":3,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}";
     char digits[16];
     std::snprintf(digits, sizeof digits, "%08x", crc32(unknown));
     unknown = unknown.substr(0, unknown.size() - 1) + ",\"crc\":\"" + digits + "\"}\n";

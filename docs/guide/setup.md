@@ -92,7 +92,7 @@ setup rows). A fifth tab, **Observations**, appears at once, and the first tab i
 - To change board, tap the tab, or swipe along the strip that says **Observations**. A swipe anywhere else does nothing, so a
   slip over a tile never changes board.
 - The app opens on the board you used last.
-- The board has no observation types to start with: every type is one you made, as the error types are. Until there is one, the board is empty and offers **Add observation types**. A setup file with `interaction_types` brings its own.
+- The board has no observation types to start with: every type is one you made, as the error types are. Until there is one, the board is empty and offers **Add observation types**. A setup file with `observation_types` (or `interaction_types`, as older files call it) brings its own.
 
 Turning the switch off hides the tab and the board. **Nothing is deleted:** the entries stay in the log and in Review and
 History, and what you set up is kept for the next time. If you were on the Observations board, the app goes to the Errors board.

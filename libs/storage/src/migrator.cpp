@@ -5,7 +5,7 @@
 #include "platform/durable_sync.hpp"
 #include "protect.hpp"
 #include "quarantine.hpp"
-#include "schema_v4.hpp"
+#include "schema_v5.hpp"
 
 #include <QCoreApplication>
 #include <QSqlDatabase>
@@ -465,16 +465,16 @@ namespace
 /// order they were stored. Nothing else is rewritten: no log, no entry of another kind.
 Result<void, StorageError> add_interactions(MigrationConnection& sql)
 {
-    std::string create_copy = schema::ENTRY_TABLE;
-    const std::string_view prefix = schema::ENTRY_TABLE_PREFIX;
-    create_copy.replace(0, prefix.size(), schema::ENTRY_COPY_PREFIX);
+    std::string create_copy = schema::legacy_v4::ENTRY_TABLE;
+    const std::string_view prefix = schema::legacy_v4::ENTRY_TABLE_PREFIX;
+    create_copy.replace(0, prefix.size(), schema::legacy_v4::ENTRY_COPY_PREFIX);
     const std::string statements[] = {
         create_copy,
         "INSERT INTO entry_new (id, day_log_id, seq, kind, captured_utc, captured_tz, edited_utc, deleted)"
         " SELECT id, day_log_id, seq, kind, captured_utc, captured_tz, edited_utc, deleted FROM entry ORDER BY rowid",
         "DROP TABLE entry",
         "ALTER TABLE entry_new RENAME TO entry",
-        schema::ENTRY_BY_TIME,
+        schema::legacy_v4::ENTRY_BY_TIME,
     };
     for (const std::string& statement : statements)
     {
@@ -483,7 +483,58 @@ Result<void, StorageError> add_interactions(MigrationConnection& sql)
             return done;
         }
     }
-    for (const char* statement : schema::INTERACTION_TABLES)
+    for (const char* statement : schema::legacy_v4::INTERACTION_TABLES)
+    {
+        if (auto done = sql.exec(statement); !done)
+        {
+            return done;
+        }
+    }
+    return {};
+}
+
+/// 4 to 5 (the rename of Interactions to Observations): `entry.kind` `interaction` becomes `observation`, and the
+/// three tables and their columns take the new names. The CHECK on `entry.kind` cannot be altered in place, so `entry`
+/// is built again (create, copy with the kind mapped, drop, rename). Every row is copied as it is, in the order it was
+/// stored, and ids do not change. The old tables are dropped only after their rows are in the new ones; the whole
+/// step runs in the migrator's transaction, so a failure leaves (and the backup restores) the version 4 database.
+Result<void, StorageError> rename_interactions_to_observations(MigrationConnection& sql)
+{
+    std::string create_copy = schema::ENTRY_TABLE;
+    const std::string_view prefix = schema::ENTRY_TABLE_PREFIX;
+    create_copy.replace(0, prefix.size(), schema::ENTRY_COPY_PREFIX);
+    std::vector<std::string> statements = {
+        create_copy,
+        "INSERT INTO entry_new (id, day_log_id, seq, kind, captured_utc, captured_tz, edited_utc, deleted)"
+        " SELECT id, day_log_id, seq,"
+        " CASE kind WHEN 'interaction' THEN 'observation' ELSE kind END,"
+        " captured_utc, captured_tz, edited_utc, deleted FROM entry ORDER BY rowid",
+        "DROP TABLE entry",
+        "ALTER TABLE entry_new RENAME TO entry",
+        schema::ENTRY_BY_TIME,
+    };
+    // The new tables (and the unchanged `person`, which `CREATE TABLE` would find already there, so it is skipped).
+    for (const char* statement : schema::OBSERVATION_TABLES)
+    {
+        if (std::string_view(statement).starts_with("CREATE TABLE person"))
+        {
+            continue;
+        }
+        statements.emplace_back(statement);
+    }
+    for (const char* statement :
+         {"INSERT INTO observation_entry (entry_id, observation_type_id, observation_type_label, value_text,"
+          " attached_note) SELECT entry_id, interaction_type_id, interaction_type_label, value_text, attached_note"
+          " FROM interaction_entry ORDER BY rowid",
+          "INSERT INTO observation_entry_person (entry_id, person_id, position)"
+          " SELECT entry_id, person_id, position FROM interaction_entry_person ORDER BY rowid",
+          "INSERT INTO observation_type (id, name, retired, board_position, line_pattern, asks)"
+          " SELECT id, name, retired, board_position, line_pattern, asks FROM interaction_type ORDER BY rowid",
+          "DROP TABLE interaction_entry_person", "DROP TABLE interaction_entry", "DROP TABLE interaction_type"})
+    {
+        statements.emplace_back(statement);
+    }
+    for (const std::string& statement : statements)
     {
         if (auto done = sql.exec(statement); !done)
         {
@@ -503,15 +554,18 @@ std::vector<MigrationStep> product_migration_steps()
     // 2 to 3: the other software versions (HDR-10). Every log that exists gets NULL, which reads as none, so its single
     // version stays the main one and nothing is rewritten.
     // 3 to 4: the interaction entries and the person cache; `entry` is rebuilt (`add_interactions`).
-    return {MigrationStep{
-        1, "add day_log.changed_since_share", [](MigrationConnection& sql) -> Result<void, StorageError>
-        {
-            return sql.exec("ALTER TABLE day_log ADD COLUMN changed_since_share INTEGER NOT NULL DEFAULT 0"
-                            " CHECK (changed_since_share IN (0, 1))");
-        }},
+    // 4 to 5: Interactions become Observations in the stored names (`rename_interactions_to_observations`).
+    return {MigrationStep{1, "add day_log.changed_since_share",
+                          [](MigrationConnection& sql) -> Result<void, StorageError>
+                          {
+                              return sql.exec(
+                                  "ALTER TABLE day_log ADD COLUMN changed_since_share INTEGER NOT NULL DEFAULT 0"
+                                  " CHECK (changed_since_share IN (0, 1))");
+                          }},
             MigrationStep{2, "add day_log.extra_versions", [](MigrationConnection& sql) -> Result<void, StorageError>
                           { return sql.exec("ALTER TABLE day_log ADD COLUMN extra_versions TEXT"); }},
-            MigrationStep{3, "add interaction entries and people", &add_interactions}};
+            MigrationStep{3, "add interaction entries and people", &add_interactions},
+            MigrationStep{4, "rename interactions to observations", &rename_interactions_to_observations}};
 }
 
 std::string_view migration_outcome_name(MigrationOutcome outcome)

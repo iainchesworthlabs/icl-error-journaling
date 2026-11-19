@@ -38,8 +38,12 @@ inline constexpr int MAX_ERROR_PREFIX_CHARACTERS = 12;
 inline constexpr std::string_view ATTACHED_NOTE_SEPARATOR = " \xE2\x80\x93 ";
 /// After the time on a note line.
 inline constexpr std::string_view NOTE_MARKER = "(Free Text)";
-/// After the time on an interaction line (preference `interaction_marker`); never the error prefix.
-inline constexpr std::string_view DEFAULT_INTERACTION_MARKER = "(Interaction)";
+/// After the time on an observation line (preference `observation_marker`); never the error prefix.
+inline constexpr std::string_view DEFAULT_INTERACTION_MARKER = "(Observation)";
+
+/// What the default was before the rename to Observations. `legacy`: a stored marker exactly equal to this was never a
+/// choice, so it is read as `DEFAULT_INTERACTION_MARKER`; any other stored word is kept as typed.
+inline constexpr std::string_view LEGACY_DEFAULT_INTERACTION_MARKER = "(Interaction)";
 
 /// A note line as the screens show it: the line without the marker ("10:30 Began task 1"). The export keeps
 /// the marker (PRD, Export rules, rule 4); only what the person reads on the screen drops it. `line` must be the line of

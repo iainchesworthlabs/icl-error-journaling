@@ -78,7 +78,7 @@ std::uint32_t journal_version_for(const JournalBody& body)
     {
         entry = &edit->m_Entry;
     }
-    return entry != nullptr && std::holds_alternative<InteractionEntry>(entry->m_Body) ? JOURNAL_VERSION_INTERACTIONS
+    return entry != nullptr && std::holds_alternative<InteractionEntry>(entry->m_Body) ? JOURNAL_VERSION_OBSERVATIONS
                                                                                        : JOURNAL_VERSION;
 }
 
@@ -326,7 +326,7 @@ void write_header(Writer& w, const HeaderValues& header)
     w.raw("}");
 }
 
-void write_entry(Writer& w, const Entry& entry)
+void write_entry(Writer& w, const Entry& entry, bool legacy_interaction_kind)
 {
     w.raw("{");
     w.key("id");
@@ -386,7 +386,9 @@ void write_entry(Writer& w, const Entry& entry)
     else if (const auto* interaction = std::get_if<InteractionEntry>(&entry.m_Body))
     {
         w.key("kind");
-        w.string("interaction");
+        // `legacy`: version 2 records (written before the rename to Observations) say "interaction"; new ones
+        // "observation".
+        w.string(legacy_interaction_kind ? "interaction" : "observation");
         w.raw(",");
         w.key("type");
         w.uuid(interaction->m_Type.uuid());
@@ -427,11 +429,12 @@ void write_entry(Writer& w, const Entry& entry)
     w.raw("}");
 }
 
-void write_body(Writer& w, const JournalBody& body)
+void write_body(Writer& w, const JournalBody& body, bool legacy_interaction_kind)
 {
     struct Visitor
     {
         Writer& m_W;
+        bool m_Legacy;
 
         void operator()(const CreateLogBody& b) const
         {
@@ -457,14 +460,14 @@ void write_body(Writer& w, const JournalBody& body)
         {
             m_W.raw("{");
             m_W.key("entry");
-            write_entry(m_W, b.m_Entry);
+            write_entry(m_W, b.m_Entry, m_Legacy);
             m_W.raw("}");
         }
         void operator()(const EditEntryBody& b) const
         {
             m_W.raw("{");
             m_W.key("entry");
-            write_entry(m_W, b.m_Entry);
+            write_entry(m_W, b.m_Entry, m_Legacy);
             m_W.raw(",");
             m_W.key("at");
             write_millis(m_W, b.m_EditedUtc);
@@ -506,7 +509,7 @@ void write_body(Writer& w, const JournalBody& body)
             m_W.raw("}");
         }
     };
-    std::visit(Visitor{w}, body);
+    std::visit(Visitor{w, legacy_interaction_kind}, body);
 }
 
 /// The object without its `crc` key: the text the checksum covers.
@@ -531,7 +534,7 @@ Result<std::string, StorageError> encode_without_crc(const JournalRecord& record
     w.uuid(record.m_Log.uuid());
     w.raw(",");
     w.key("body");
-    write_body(w, record.m_Body);
+    write_body(w, record.m_Body, record.m_Version == JOURNAL_VERSION_INTERACTIONS);
     w.raw("}");
     if (w.failed())
     {
@@ -555,11 +558,15 @@ std::string hex8(std::uint32_t value)
 
 Result<std::string, StorageError> encode_record(const JournalRecord& record)
 {
-    if (record.m_Version != journal_version_for(record.m_Body))
+    // An observation is version 3; version 2 is the same entry as written before the rename (`interaction`), accepted
+    // so a record read from an old journal encodes to the very bytes it came from. Everything else is version 1.
+    const std::uint32_t wanted = journal_version_for(record.m_Body);
+    const bool legacy_ok = wanted == JOURNAL_VERSION_OBSERVATIONS && record.m_Version == JOURNAL_VERSION_INTERACTIONS;
+    if (record.m_Version != wanted && !legacy_ok)
     {
         return fail(make_error(StorageErrorKind::INVALID_ARGUMENT,
-                               "the journal version does not match the record: an interaction is version 2, "
-                               "everything else version 1"));
+                               "the journal version does not match the record: an observation is version 3 "
+                               "(version 2 for one written before the rename), everything else version 1"));
     }
     auto text = encode_without_crc(record);
     if (!text)
@@ -833,7 +840,7 @@ Entry read_entry(const Fields& fields)
         note.m_Value = fields.string("value");
         entry.m_Body = std::move(note);
     }
-    else if (kind == "interaction")
+    else if (kind == "observation" || kind == "interaction" /* legacy, version 2 */)
     {
         InteractionEntry interaction;
         interaction.m_Type = InteractionTypeId{fields.uuid("type")};
@@ -972,8 +979,8 @@ Result<JournalRecord, DecodeError> decode_record(std::string_view line)
     const std::int64_t version = root.integer("v");
     if (version > static_cast<std::int64_t>(JOURNAL_VERSION_NEWEST))
     {
-        // The reader understands every version ever shipped: 1, and 2 for an interaction. A newer one comes from a
-        // newer build and is not damage.
+        // The reader understands every version ever shipped: 1, 2 for an interaction (legacy) and 3 for an observation.
+        // A newer one comes from a newer build and is not damage.
         return std::unexpected(DecodeError::UNSUPPORTED_VERSION);
     }
     const std::int64_t seq = root.integer("seq");

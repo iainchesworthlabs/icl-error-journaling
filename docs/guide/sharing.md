@@ -64,12 +64,12 @@ An error line is the time, the error prefix `T|`, the error type, and then the n
 indexer reads the `T|` marker, so do not change the lines after you share. A note on its own, with no error, is marked
 `(Free Text)` instead. The prefix can be changed in Settings if your tool reads a different one.
 
-If you use the second board, an observation is a line of its own, marked `(Interaction)` and with no `T|`, so the ticket
+If you use the second board, an observation is a line of its own, marked `(Observation)` and with no `T|`, so the ticket
 indexer does not read it:
 
 ```
-10:12 (Interaction) Paired with A.S.
-10:31 (Interaction) Began task 1
+10:12 (Observation) Paired with A.S.
+10:31 (Observation) Began task 1
 ```
 
 A person's name is written in a shared or copied log at the level you choose in Settings: initials (the default, `A.S.`),

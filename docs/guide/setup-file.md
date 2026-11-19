@@ -1,7 +1,7 @@
 # The setup file
 
 A setup file holds everything about how you work that is not in a day's log: your name, the unit prefix, the error types
-and where they sit on the board, your places, your note templates, the interaction types of the second board and your time format. It is a plain text file with the
+and where they sit on the board, your places, your note templates, the observation types of the second board and your time format. It is a plain text file with the
 extension `.ejconfig`. You can export one from the app, change it in a text editor and import it again, or prepare one for
 someone else.
 
@@ -129,7 +129,7 @@ The file below is the sample setup that the app's tests use. All the names in it
       "sort_order": 2
     }
   ],
-  "interaction_types": [
+  "observation_types": [
     {
       "id": "00000000-0000-4000-8000-0000000000d1",
       "name": "Paired with",
@@ -206,7 +206,8 @@ The file below is the sample setup that the app's tests use. All the names in it
 | `error_types` | Required | The error types. | A list, below. It may be empty. |
 | `locations` | Required | The places you work in. | A list, below. It may be empty. |
 | `note_templates` | Required | The quick notes. | A list, below. It may be empty. |
-| `interaction_types` | Optional | The tiles of the second board, Observations. | A list, below. It may be empty. Without this key your interaction types are left as they are. With no types at all, the Observations board is empty: the app has no interaction types of its own. |
+| `observation_types` | Optional | The tiles of the second board, Observations. | A list, below. It may be empty. Without this key your observation types are left as they are. With no types at all, the Observations board is empty: the app has no observation types of its own. |
+| `interaction_types` | Optional | The earlier name of `observation_types`, from files made before the board was renamed. | The same list. The app still reads it. Use only one of the two keys: a file with both is refused. The app writes `observation_types`. |
 
 ## Preferences
 
@@ -220,7 +221,8 @@ The file below is the sample setup that the app's tests use. All the names in it
 | `time_format` | Optional | How times are shown and shared. | An object, below. Without it: 24-hour clock, no seconds. |
 | `include_totals` | Optional | Whether a shared log ends with a totals line, per error type. | `true` or `false`. Without it: `false`. |
 | `error_prefix` | Optional | The text before the error name on each error line of a shared log. | Text, up to 12 characters, on one line; may be empty. Without it: `T|`. |
-| `interactions_board_enabled` | Optional | Whether the second board, Observations, is on. | `true` or `false`. Without it, the app leaves its own setting as it is (it is off until someone turns it on). |
+| `observations_board_enabled` | Optional | Whether the second board, Observations, is on. | `true` or `false`. Without it, the app leaves its own setting as it is (it is off until someone turns it on). |
+| `interactions_board_enabled` | Optional | The earlier name of `observations_board_enabled`, from files made before the board was renamed. | The same. The app still reads it. Use only one of the two keys: a file with both is refused. The app writes `observations_board_enabled`. |
 
 ### Time format
 
@@ -273,9 +275,9 @@ that goes in the log, with an Insert answer button for the answer.
 | `icon` | Optional | The picture on the chip. A name the app has no picture for shows the standard one. | Up to 32 characters of lower-case letters, digits and dashes. |
 | `sort_order` | Optional | Where the chip is in the list: the lowest first. | A whole number from -1,000,000 to 1,000,000. Without it: 0. |
 
-## Interaction types
+## Observation types
 
-Each entry in `interaction_types` is one tile of the second board, Observations. It works like an error type, with one
+Each entry in `observation_types` (or in `interaction_types`, its earlier name) is one tile of the second board, Observations. It works like an error type, with one
 addition: a type can have the line that goes in the log, with `{person}` where the people go and `{value}` where a typed
 answer goes. The line takes the place of a separate template. A type with no `line_pattern` shows as its name. The app
 works out from the line whether to ask for a person, for text or for nothing after a tap.
@@ -283,7 +285,7 @@ works out from the line whether to ask for a person, for text or for nothing aft
 **People are never in a setup file.** A name list stays on the device where it was typed. A file with a `people` or
 `residents` key is refused.
 
-<!-- fields: interaction_types -->
+<!-- fields: observation_types -->
 
 | Key | Needed | What it is | Allowed |
 |---|---|---|---|
@@ -309,7 +311,7 @@ file has none. Each message names where the problem is and says how to fix it. T
 | <!-- code:UNSUPPORTED_VERSION --> A newer file | `schema_version` is higher than the app reads. | Update the app, then import the file again. |
 | <!-- code:DUPLICATE --> Used twice | Two entries have the same id or name, or two types on the board have the same position. | Give each entry its own id, name or position, or mark one as retired. |
 | <!-- code:OUT_OF_RANGE --> Outside what is allowed | A value is blank, too long, too small or large, or not one of the choices. | Use a value that the tables above allow. |
-| <!-- code:BAD_PATTERN --> A line that does not work | A template's `output_pattern` or an interaction type's `line_pattern` is wrong. | See the next table. |
+| <!-- code:BAD_PATTERN --> A line that does not work | A template's `output_pattern` or an observation type's `line_pattern` is wrong. | See the next table. |
 | <!-- code:BAD_ID --> Not an identifier | An `id` is not 8-4-4-4-12 hexadecimal digits, or is all zeros. | Make a new one. |
 
 Some of these problems the app also says in its own words, with the entry's number in its list:
@@ -323,8 +325,8 @@ Some of these problems the app also says in its own words, with the entry's numb
 | <!-- problem:POSITION_TAKEN --> Position used twice | Two types that are not retired have the same board position. | Give each its own position from 1 to 11. |
 | <!-- problem:NO_PLACEHOLDER --> No answer in the line | A template's line has no `{value}`. | Put `{value}` where the answer should go, for example `Began task {value}`. |
 | <!-- problem:STRAY_BRACE --> A stray brace | A `{` or `}` is not closed or doubled. | Write `{{` or `}}` for a brace that is part of the line, and close every `{value}`. |
-| <!-- problem:UNKNOWN_PLACEHOLDER --> An unknown placeholder | The line has a placeholder the app does not know. | In a template use only `{value}`; in an interaction type use only `{person}` and `{value}`. |
-| <!-- problem:REPEATED_PLACEHOLDER --> A placeholder twice | An interaction type's line has `{person}` or `{value}` more than once. | Use each at most once. |
+| <!-- problem:UNKNOWN_PLACEHOLDER --> An unknown placeholder | The line has a placeholder the app does not know. | In a template use only `{value}`; in an observation type use only `{person}` and `{value}`. |
+| <!-- problem:REPEATED_PLACEHOLDER --> A placeholder twice | An observation type's line has `{person}` or `{value}` more than once. | Use each at most once. |
 | <!-- problem:PEOPLE_IN_FILE --> People in the file | The file has a `people` or `residents` key. A setup file never holds people. | Remove it. Add people in the app. |
 
 ## Keeping the file out of the wrong hands

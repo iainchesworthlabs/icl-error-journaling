@@ -175,14 +175,14 @@ TEST_CASE("interaction.line_render: what a pattern asks for", "[interaction][lin
 
 TEST_CASE("interaction.line_render: the export line has the label and no ticket marker", "[interaction][line]")
 {
-    CHECK(render_interaction_export_line("10:12", "(Interaction)", "Paired with Alex Sample", std::nullopt) ==
-          "10:12 (Interaction) Paired with Alex Sample");
-    CHECK(render_interaction_export_line("10:48", "(Interaction)", "Entered room 1",
+    CHECK(render_interaction_export_line("10:12", "(Observation)", "Paired with Alex Sample", std::nullopt) ==
+          "10:12 (Observation) Paired with Alex Sample");
+    CHECK(render_interaction_export_line("10:48", "(Observation)", "Entered room 1",
                                          std::string("asked about\n the   schedule")) ==
-          "10:48 (Interaction) Entered room 1 \xE2\x80\x93 asked about the schedule");
+          "10:48 (Observation) Entered room 1 \xE2\x80\x93 asked about the schedule");
     // An empty label is dropped with its space; an empty note adds nothing.
     CHECK(render_interaction_export_line("10:12", "", "Start task", std::string("  ")) == "10:12 Start task");
-    CHECK(export_format::DEFAULT_INTERACTION_MARKER == "(Interaction)");
+    CHECK(export_format::DEFAULT_INTERACTION_MARKER == "(Observation)");
 }
 
 TEST_CASE("interaction.name_levels: full, initials and hidden", "[interaction][name]")
@@ -307,18 +307,18 @@ TEST_CASE("interaction.group_render: a stored interaction obeys the same limits"
     CHECK(stored(no_people).has_value());
 }
 
-TEST_CASE("journal.v2_roundtrip: an interaction is written at version 2 and reads back", "[interaction][journal]")
+TEST_CASE("journal.v2_roundtrip: an observation is written at version 3 and reads back", "[interaction][journal]")
 {
     const JournalRecord record = interaction_record(2, sample_interaction(1, 5));
-    CHECK(record.m_Version == 2);
+    CHECK(record.m_Version == 3);
     const auto line = encode_record(record);
     REQUIRE(line.has_value());
-    CHECK(line->starts_with("{\"v\":2,\"seq\":2,\"op\":\"add_entry\","));
-    CHECK(line->find("\"kind\":\"interaction\"") != std::string::npos);
+    CHECK(line->starts_with("{\"v\":3,\"seq\":2,\"op\":\"add_entry\","));
+    CHECK(line->find("\"kind\":\"observation\"") != std::string::npos);
 
     const auto decoded = decode_record(*line);
     REQUIRE(decoded.has_value());
-    CHECK(decoded->m_Version == 2);
+    CHECK(decoded->m_Version == 3);
     const auto& entry = std::get<AddEntryBody>(decoded->m_Body).m_Entry;
     const auto& body = std::get<InteractionEntry>(entry.m_Body);
     const auto& expected = std::get<InteractionEntry>(std::get<AddEntryBody>(record.m_Body).m_Entry.m_Body);
@@ -329,7 +329,7 @@ TEST_CASE("journal.v2_roundtrip: an interaction is written at version 2 and read
     CHECK(body.m_AttachedNote == "asked about \"the schedule\"");
     CHECK(encode_record(*decoded).value() == *line);
 
-    // An edit carries the whole entry and is version 2 as well. No people is an empty list, and null values read back.
+    // An edit carries the whole entry and is version 3 as well. No people is an empty list, and null values read back.
     Entry bare = sample_interaction(1, 5);
     auto& bare_body = std::get<InteractionEntry>(bare.m_Body);
     bare_body.m_People.clear();
@@ -339,7 +339,7 @@ TEST_CASE("journal.v2_roundtrip: an interaction is written at version 2 and read
     const JournalRecord edit_record{journal_version_for(edit), 3, sample_id<LogId>(100), edit};
     const auto edit_line = encode_record(edit_record);
     REQUIRE(edit_line.has_value());
-    CHECK(edit_line->starts_with("{\"v\":2,\"seq\":3,\"op\":\"edit_entry\","));
+    CHECK(edit_line->starts_with("{\"v\":3,\"seq\":3,\"op\":\"edit_entry\","));
     CHECK(edit_line->find("\"people\":[]") != std::string::npos);
     CHECK(edit_line->find("\"value\":null,\"note\":null") != std::string::npos);
     const auto edit_decoded = decode_record(*edit_line);
@@ -348,6 +348,34 @@ TEST_CASE("journal.v2_roundtrip: an interaction is written at version 2 and read
 
     // The person ids are the whole of a person in a log: no name appears in the line.
     CHECK(line->find("Alex") == std::string::npos);
+}
+
+TEST_CASE("journal.read_v2_interaction: a version 2 interaction record reads as an observation",
+          "[interaction][journal]")
+{
+    // `legacy`: the record as the build before the rename wrote it. It is read, and it encodes to the same bytes, so a
+    // journal that is copied, repaired or compared is never changed by being read. The writer only writes the new form.
+    JournalRecord old = interaction_record(2, sample_interaction(1, 5));
+    old.m_Version = JOURNAL_VERSION_INTERACTIONS;
+    const auto line = encode_record(old);
+    REQUIRE(line.has_value());
+    CHECK(line->starts_with("{\"v\":2,\"seq\":2,\"op\":\"add_entry\","));
+    CHECK(line->find("\"kind\":\"interaction\"") != std::string::npos);
+
+    const auto decoded = decode_record(*line);
+    REQUIRE(decoded.has_value());
+    CHECK(decoded->m_Version == 2);
+    const auto& body = std::get<InteractionEntry>(std::get<AddEntryBody>(decoded->m_Body).m_Entry.m_Body);
+    CHECK(body.m_TypeLabel == "Paired with");
+    CHECK(body.m_Value == "1");
+    CHECK(encode_record(*decoded).value() == *line);
+
+    // The same entry, edited by this build, is written new: version 3 and "observation".
+    JournalBody edit = EditEntryBody{std::get<AddEntryBody>(decoded->m_Body).m_Entry, sample_time(9)};
+    const auto edited = encode_record(JournalRecord{journal_version_for(edit), 3, sample_id<LogId>(100), edit});
+    REQUIRE(edited.has_value());
+    CHECK(edited->starts_with("{\"v\":3,"));
+    CHECK(edited->find("interaction") == std::string::npos);
 }
 
 TEST_CASE("journal.v2_roundtrip: records of every other kind stay at version 1 and decode as before",
@@ -373,12 +401,14 @@ TEST_CASE("journal.v2_roundtrip: records of every other kind stay at version 1 a
 
 TEST_CASE("journal.v2_roundtrip: the version must fit the record", "[interaction][journal]")
 {
-    // An interaction written at version 1 or another kind written at version 2 is refused on write...
+    // An observation written at version 1 or another kind written at version 2 or 3 is refused on write...
     JournalRecord wrong = interaction_record(2, sample_interaction(1, 5));
     wrong.m_Version = 1;
     CHECK(encode_record(wrong).error().m_Kind == StorageErrorKind::INVALID_ARGUMENT);
     JournalRecord other = sample_record(2, AddEntryBody{sample_error(1, 30)});
     other.m_Version = 2;
+    CHECK_FALSE(encode_record(other).has_value());
+    other.m_Version = 3;
     CHECK_FALSE(encode_record(other).has_value());
 
     // ...and a line that says so is not read as a record, though its checksum is good.
@@ -386,7 +416,7 @@ TEST_CASE("journal.v2_roundtrip: the version must fit the record", "[interaction
     REQUIRE(line.has_value());
     std::string as_v1 = line->substr(0, line->size() - CRC_SUFFIX_BYTES); // without ,"crc":"xxxxxxxx"}
     as_v1 += "}";
-    as_v1.replace(as_v1.find("\"v\":2"), 5, "\"v\":1");
+    as_v1.replace(as_v1.find("\"v\":3"), 5, "\"v\":1");
     REQUIRE(as_v1.starts_with("{\"v\":1,"));
     CHECK(decode_record(with_crc(as_v1)).error() == DecodeError::MALFORMED);
 
@@ -394,9 +424,19 @@ TEST_CASE("journal.v2_roundtrip: the version must fit the record", "[interaction
         with_crc("{\"v\":2,\"seq\":2,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}");
     CHECK_FALSE(decode_record(as_v2).has_value());
 
-    // Version 3 is from a newer build and is not damage.
+    // `legacy`: version 2 says "interaction" and version 3 says "observation"; the other pairings are damage.
+    const auto current = encode_record(interaction_record(2, sample_interaction(1, 5)));
+    REQUIRE(current.has_value());
+    std::string v2_observation = current->substr(0, current->size() - CRC_SUFFIX_BYTES) + "}";
+    v2_observation.replace(v2_observation.find("\"v\":3"), 5, "\"v\":2");
+    CHECK(decode_record(with_crc(v2_observation)).error() == DecodeError::MALFORMED);
+    std::string v3_interaction = current->substr(0, current->size() - CRC_SUFFIX_BYTES) + "}";
+    v3_interaction.replace(v3_interaction.find("observation"), 11, "interaction");
+    CHECK(decode_record(with_crc(v3_interaction)).error() == DecodeError::MALFORMED);
+
+    // Version 4 is from a newer build and is not damage.
     const std::string future =
-        with_crc("{\"v\":3,\"seq\":2,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}");
+        with_crc("{\"v\":4,\"seq\":2,\"op\":\"archive\",\"log\":\"00000000-0000-4000-8000-000000000064\",\"body\":{}}");
     CHECK(decode_record(future).error() == DecodeError::UNSUPPORTED_VERSION);
 }
 
@@ -493,12 +533,13 @@ TEST_CASE("export.interaction_lines: an interaction renders at the name level of
         return render_entry_line(log, sample_id<EntryId>(1), context);
     };
     // The note is the attached one, and there is no ticket marker.
-    CHECK(line_at(NameLevel::FULL).value() ==
-          "00:05 (Interaction) Paired with Alex Sample and Jordan Placeholder \xE2\x80\x93 asked about \"the schedule\"");
+    CHECK(
+        line_at(NameLevel::FULL).value() ==
+        "00:05 (Observation) Paired with Alex Sample and Jordan Placeholder \xE2\x80\x93 asked about \"the schedule\"");
     CHECK(line_at(NameLevel::INITIALS).value() ==
-          "00:05 (Interaction) Paired with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
+          "00:05 (Observation) Paired with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
     CHECK(line_at(NameLevel::HIDDEN).value() ==
-          "00:05 (Interaction) Paired with someone \xE2\x80\x93 asked about \"the schedule\"");
+          "00:05 (Observation) Paired with someone \xE2\x80\x93 asked about \"the schedule\"");
     // An empty label drops the label and its space.
     context.m_InteractionMarker = "";
     CHECK(line_at(NameLevel::INITIALS).value() ==
@@ -518,7 +559,7 @@ TEST_CASE("export.interaction_lines: the type is looked up only when the entry h
     context.m_InteractionTypeName = [](InteractionTypeId) -> std::string_view { return "Paired with"; };
     // No pattern and no person source: the line is the name, and a person nobody can name is not printed.
     CHECK(render_entry_line(log, sample_id<EntryId>(1), context).value() ==
-          "00:05 (Interaction) Paired with \xE2\x80\x93 asked about \"the schedule\"");
+          "00:05 (Observation) Paired with \xE2\x80\x93 asked about \"the schedule\"");
 }
 
 TEST_CASE("export.interaction_lines: error lines are byte for byte as they were without interactions",
@@ -544,7 +585,7 @@ TEST_CASE("export.interaction_lines: error lines are byte for byte as they were 
 
     for (const NameLevel level : {NameLevel::FULL, NameLevel::INITIALS, NameLevel::HIDDEN})
     {
-        for (const std::string_view marker : {"(Interaction)", "", "(Chat)"})
+        for (const std::string_view marker : {"(Observation)", "", "(Chat)"})
         {
             context.m_NameLevel = level;
             context.m_InteractionMarker = marker;
