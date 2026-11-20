@@ -19,7 +19,22 @@
    detached GPG signatures, an SPDX SBOM and build provenance, creates the GitHub Release, and for a
    final release fast-forwards `main` to the tag.
 
-`main` only ever moves by that fast-forward. The docs site does not wait for a release: it is deployed from a push to `develop` that changes the documentation (`docs/ci.md`, "The site address").
+`main` only ever moves by that fast-forward. The docs site does not wait for a release, and a merge to `develop` does not publish it either: the owner publishes it ([below](#publishing-the-documentation)).
+
+## Publishing the documentation
+
+The documentation site, at {{ site_url }}, is published from the branch `site`, not from a release, so a change to the
+pages can go up on its own and a release does not carry it. To publish what `develop` holds:
+
+```sh
+gh workflow run publish-site.yml --ref develop
+```
+
+The workflow moves `site` to the tip of `develop`, and the push starts `docs.yml`, which builds and deploys it. No other
+CI runs for it, and a pull request that changed only the site's files ran no build to get to `develop`
+([CI](ci.md#a-site-update-runs-no-build-and-publishing-it-runs-no-ci)). Build the site first (`mkdocs serve`) and read the
+pages that changed. Publish after a release too, if the pages are to describe the version that is out.
+([Publishing the site](ci.md#publishing-the-site) has the details and the one-off setup.)
 
 ## The guide's pictures
 

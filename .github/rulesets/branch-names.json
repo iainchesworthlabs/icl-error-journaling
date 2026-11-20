@@ -36,7 +36,8 @@
         "refs/heads/gh-readonly-queue/*",
         "refs/heads/gh-readonly-queue/*/*",
         "refs/heads/gh-readonly-queue/*/*/*",
-        "refs/heads/gh-readonly-queue/*/*/*/*"
+        "refs/heads/gh-readonly-queue/*/*/*/*",
+        "refs/heads/site"
       ]
     }
   },

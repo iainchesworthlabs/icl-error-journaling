@@ -1,17 +1,33 @@
 name: Docs
 
+# Builds the documentation site and puts it where readers find it (docs/ci.md, "Publishing the site").
+#
+#  - The site is the /field-test/ section of the company site. A push to the branch `site` deploys it. Nothing else moves
+#    that branch but publish-site.yml, which the owner runs by hand and which fast-forwards it to the tip of develop with
+#    the release bot's App token (a push made with an App token starts workflows, one made with GITHUB_TOKEN does not).
+#    `site` holds the source commit that is built here, not built pages. A merge to develop does not publish, and
+#    neither does a release.
+#  - A pull request that changes the documentation gets a preview at /_preview/field-test/pr-<number>/, commented on the
+#    pull request and removed when it closes.
+#
+# The deploy is the shared reusable workflow of icl-common-infra: it assumes a role by OIDC that may write this section
+# only, from repository secrets that the owner sets. A run that does not have them skips the deploy with a warning and
+# does not fail.
+
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: [develop]
     paths: ["docs/**", "mkdocs.yml", "requirements/docs.txt", ".github/workflows/docs.yml", "tools/docs/**", "config/sample-config.json"]
-  # The site publishes from develop, independently of app releases, and only when something the build reads changed
-  # (the same paths as a pull request). A push that changes only app code does not deploy the site.
+  # No path filter: only publish-site.yml moves `site`, on purpose, so every move publishes (and the first one, which
+  # creates the branch, does too).
   push:
-    branches: [develop]
-    paths: ["docs/**", "mkdocs.yml", "requirements/docs.txt", ".github/workflows/docs.yml", "tools/docs/**", "config/sample-config.json"]
-  # A manual run from develop republishes the site (for example after the deploy role's trust changed).
-  workflow_dispatch:
+    branches: [site]
+
+# Two builds of site must not publish at once. A newer push to a pull request replaces the older preview run.
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
 
@@ -27,20 +43,22 @@ jobs:
 
   publish:
     name: Build site for the domain
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push'
     permissions:
       contents: read
     uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@54f3b7ecd95fa07034f6f50a057c537ee98cd30d # v0.1.28
     with:
       site-artifact: docs-site
 
-  # Production: https://iainchesworthlabs.com/field-test/, from develop. The role, bucket and distribution come from
+  # Production: https://iainchesworthlabs.com/field-test/, from site. The role, bucket and distribution come from
   # the repository secrets DOCS_ROLE_ARN, DOCS_BUCKET and DOCS_DISTRIBUTION_ID (set by the owner). The role's trust
-  # policy must allow a push to refs/heads/develop of this repository.
+  # policy must allow a push to refs/heads/site of this repository, and nothing else (not a run by hand, not develop),
+  # so this condition keeps those runs from showing a red job. To publish the same commit again, re-run the run of that
+  # push.
   deploy:
     name: Deploy site
     needs: publish
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/site'
     permissions:
       contents: read
       id-token: write
@@ -48,7 +66,7 @@ jobs:
     uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@54f3b7ecd95fa07034f6f50a057c537ee98cd30d # v0.1.28
     with:
       prefix: field-test
-      production-ref: refs/heads/develop
+      production-ref: refs/heads/site
     secrets:
       DOCS_ROLE_ARN: ${{ secrets.DOCS_ROLE_ARN }}
       DOCS_PREVIEW_ROLE_ARN: ${{ secrets.DOCS_PREVIEW_ROLE_ARN }}
@@ -68,7 +86,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          message="The production docs deploy failed. If the step 'Assume the production role' says the web identity token cannot be assumed or the action is not authorized, the deploy role's trust policy does not allow a push to refs/heads/develop of this repository: the owner runs the site stack's deploy (icl-site, cdk deploy), then re-runs this workflow (Actions, Docs, Run workflow, from develop). If another step failed, read its log. The site stays at its last good version."
+          message="The production docs deploy failed. If the step 'Assume the production role' says the web identity token cannot be assumed or the action is not authorized, the deploy role's trust policy does not allow a push to refs/heads/site of this repository: the owner sets publishRef to site on the field-test entry of the company site's apps.ts and runs that stack's deploy (icl-site, cdk deploy), then re-runs this run (Actions, the last Docs run of the push to site, Re-run all jobs). If another step failed, read its log. The site stays at its last good version."
           echo "::error title=Docs deploy failed::$message"
           echo "$message" >> "$GITHUB_STEP_SUMMARY"
           exit 1
