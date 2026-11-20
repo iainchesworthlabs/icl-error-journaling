@@ -16,6 +16,7 @@
     "requirements/docs.txt",
     "tools/docs/**",
     ".github/workflows/docs.yml",
+    ".github/workflows/docs-stage.yml",
     ".github/workflows/publish-site.yml"
   ],
   "no_build": [

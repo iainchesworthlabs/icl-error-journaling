@@ -19,22 +19,30 @@
    detached GPG signatures, an SPDX SBOM and build provenance, creates the GitHub Release, and for a
    final release fast-forwards `main` to the tag.
 
-`main` only ever moves by that fast-forward. The docs site does not wait for a release, and a merge to `develop` does not publish it either: the owner publishes it ([below](#publishing-the-documentation)).
+`main` only ever moves by that fast-forward. The docs site does not wait for a release, and a merge to `develop` does not publish it either: the owner approves it ([below](#publishing-the-documentation)).
 
 ## Publishing the documentation
 
 The documentation site, at {{ site_url }}, is published from the branch `site`, not from a release, so a change to the
-pages can go up on its own and a release does not carry it. To publish what `develop` holds:
+pages can go up on its own and a release does not carry it. **A merge that changes the site previews itself, and your
+approval publishes it:**
+
+1. Merge the change into `develop`. The `Docs stage` run on that push builds the site and deploys it to a preview address
+   (`/_preview/field-test/stage-<commit>/` on the company site), which the run summary and the run's deployment name.
+2. Look at the preview. Open the run, choose **Review deployments**, tick `release` and **Approve**. (Reject, or do nothing,
+   and the live site stays as it is. A newer merge replaces a run that is waiting.)
+3. The approved job moves `site` to that commit, the push starts `docs.yml`, and the live site follows in a few minutes.
+
+To publish what `develop` holds at once, with no preview and no approval, run:
 
 ```sh
 gh workflow run publish-site.yml --ref develop
 ```
 
-The workflow moves `site` to the tip of `develop`, and the push starts `docs.yml`, which builds and deploys it. No other
-CI runs for it, and a pull request that changed only the site's files ran no build to get to `develop`
-([CI](ci.md#a-site-update-runs-no-build-and-publishing-it-runs-no-ci)). Build the site first (`mkdocs serve`) and read the
-pages that changed. Publish after a release too, if the pages are to describe the version that is out.
-([Publishing the site](ci.md#publishing-the-site) has the details and the one-off setup.)
+No CI runs for either, and a pull request that changed only the site's files ran no build to get to `develop`
+([CI](ci.md#a-site-update-runs-no-build-and-publishing-it-runs-no-ci)). Publish after a release too, if the pages are to
+describe the version that is out: a merge that changes no site input starts no `Docs stage` run, so use `publish-site.yml`
+for that. ([Publishing the site](ci.md#publishing-the-site) has the details and the one-off setup.)
 
 ## The guide's pictures
 

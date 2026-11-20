@@ -16,7 +16,8 @@ commit SHA. Dependabot proposes the SHA bump; the pull request also needs
 | Change to what the Android build reads, or a manual run | Android build (`android-build.yml`, not required): the unsigned APK and bundle of `android-release`, checked by `tools/ci/check_android_package.py`. A pull request runs it for the Android paths; the push to `develop` runs it for any change to `libs/`, `apps/` or the build files |
 | Push to `develop`, a manual run, or a pull request with the label `android-emulator` | Android emulator smoke test (`android-emulator.yml`, not required, below): the x86_64 build starts on an API 36 emulator and survives Home and a return |
 | Pull request that changes the documentation site (`docs/`, `mkdocs.yml`, `tools/docs/`, `config/sample-config.json`) | The site build and a preview (`docs.yml`, [Publishing the site](#publishing-the-site)). A change to the site's own files plans no build ([below](#a-site-update-runs-no-build-and-publishing-it-runs-no-ci)). The hook `tools/docs/demo_setup_hook.py` adds `demo/demo-setup.ejconfig`, a copy of the sample setup, for App Review (Stage 11, 11.3) |
-| Manual run of Publish site, on `develop` | `publish-site.yml` moves the branch `site` to the tip of `develop`. The push to `site` runs `docs.yml`, which deploys the site, and no other workflow ([Publishing the site](#publishing-the-site)). A merge to `develop` does not publish it |
+| Push to `develop` that changes the documentation site | `docs-stage.yml` builds the site and deploys it to a preview address, then waits for the owner's approval in the `release` environment. On approval it moves the branch `site` to that commit, and the push to `site` runs `docs.yml`, which deploys the live site. Nothing is published without the approval ([Publishing the site](#publishing-the-site)) |
+| Manual run of Publish site, on `develop` | `publish-site.yml` moves the branch `site` to the tip of `develop` at once, without a preview or an approval. The push to `site` runs `docs.yml`, which deploys the site, and no other workflow ([Publishing the site](#publishing-the-site)) |
 | Nightly | CodeQL; the kill harness at 1,000 random kills (`kill-nightly.yml`); the weekly CI metrics (`ci-metrics.yml`, Mondays 06:00 UTC) |
 | Hourly | The Actions cache prune (`cache-prune.yml`, below) |
 | Every 15 minutes | Cancel the runs of merge-queue entries that are gone (`cancel-orphan-queue-runs.yml`, below) |
@@ -31,8 +32,8 @@ the plan does not recognise builds everything.
 
 The `docs` list of `plan.json` holds everything that only the site reads: the pages (`docs/*.md`, which also matches the
 guide's), `docs/theme.css`, `docs/assets/`, `docs/guide/img/` (the guide's pictures), `docs/guide/screenshots.json`,
-`docs/icl-app.json`, `mkdocs.yml`, `tools/docs/`, `requirements/docs.txt`, a changelog fragment, and the two workflows that
-publish the site (`docs.yml` and `publish-site.yml`). A pull request that changes only those, and its queue entry, run the
+`docs/icl-app.json`, `mkdocs.yml`, `tools/docs/`, `requirements/docs.txt`, a changelog fragment, and the three workflows that
+publish the site (`docs.yml`, `docs-stage.yml` and `publish-site.yml`). A pull request that changes only those, and its queue entry, run the
 static checks (Policy, Plan, workflow analysis, the dependency scan) and the site build with its preview, and no build,
 no tests and no coverage. Publishing it afterwards is a push to the branch `site`, and the only workflow that a push to
 `site` starts is `docs.yml` ([Publishing the site](#publishing-the-site)): `ci.yml` runs for pull requests, the merge
@@ -342,17 +343,26 @@ tracked file. The unit tests are in `tools/tests/test_store_text.py`.
 ## Publishing the site
 
 The guide, support and privacy pages are one MkDocs site, served at `https://iainchesworthlabs.com/field-test/` from a
-private S3 bucket behind CloudFront. It is published from the branch `site`, when the owner chooses: a merge to `develop`
-does not publish it and a release does not carry it, so a change to the pages goes up on its own.
+private S3 bucket behind CloudFront. A merge to `develop` that changes it **previews itself, and the owner's approval
+publishes it**; a release of the application does not carry it, so a change to the pages goes up on its own.
 
-- **The `site` branch.** `site` holds the commit of `develop` that the site was last built from: source, not built pages
-  (it is not a `gh-pages` branch). Nothing moves it but `publish-site.yml`, and nobody opens a pull request into it. It is
-  always an ancestor of `develop`.
-- **To publish**, run `gh workflow run publish-site.yml --ref develop`, or *Run workflow* on the Actions page with
-  `develop` chosen. The workflow moves `site` to the tip of `develop` with the release bot's App token (it creates the
-  branch the first time). Nothing is forced, so `site` only moves forward along `develop`, and a run on any other branch
-  does nothing. What `develop` holds went through the merge queue; the run that a merge starts on `develop` is not waited
-  for. Build the site first (`mkdocs serve`) and read the pages that changed.
+- **Preview, then approve.** `docs-stage.yml` runs on a push to `develop` that changes the site's inputs (`docs/**`,
+  `mkdocs.yml`, `requirements/docs.txt`, `tools/docs/**`, `config/sample-config.json`, `docs.yml` or `docs-stage.yml`). It
+  builds the site once (`site-artifact: docs-site`) and deploys that build to
+  `https://iainchesworthlabs.com/_preview/field-test/stage-<commit>/` (public to anyone with the link, `noindex`, gone after
+  14 days; role `DOCS_PREVIEW_ROLE_ARN`, limited to `_preview/field-test/*`), and writes the address in the run summary and on
+  the deployment. Its last job then waits at the `release` environment, which has the owner as its required reviewer. Open the
+  run, look at the preview, and choose **Review deployments**, **Approve**: that job moves `site` (below), and the live site
+  follows in a few minutes. Reject, or leave it, and the live site stays as it is. A newer merge replaces a run that is
+  waiting, so the run that waits is the latest commit. A run that lacks a secret deploys no preview and offers no release.
+- **The `site` branch.** `site` holds the commit of `develop` that the live site was last built from: source, not built pages
+  (it is not a `gh-pages` branch). Nothing moves it but the approved `release` job of `docs-stage.yml` and
+  `publish-site.yml`, both with the release bot's App token, and nobody opens a pull request into it. It is always an ancestor
+  of `develop`. Nothing is forced, so `site` only moves forward along `develop`.
+- **To publish without a preview**, run `gh workflow run publish-site.yml --ref develop`, or *Run workflow* on the Actions
+  page with `develop` chosen. The workflow moves `site` to the tip of `develop` at once (it creates the branch the first
+  time), with no preview and no approval, and a run on any other branch does nothing. What `develop` holds went through the
+  merge queue. Build the site first (`mkdocs serve`) and read the pages that changed.
 - **The deploy.** The push to `site` starts `docs.yml`, which builds that commit once (`site-artifact: docs-site`) and calls
   `docs-deploy-aws.yml` of `icl-common-infra` (prefix `field-test`, `production-ref: refs/heads/site`). That assumes an IAM
   role by OIDC (no stored keys), syncs the prefix and invalidates it. The role, bucket and distribution come from the
@@ -363,7 +373,7 @@ does not publish it and a release does not carry it, so a change to the pages go
   `site` (*Re-run all jobs*). A run started by hand cannot deploy, because the production role trusts a push to `site` and
   nothing else, and neither can `develop` or `main`. If the trust does not allow the push, the deploy job fails and
   `Explain a failed deploy` names the cause.
-- **Previews.** A pull request from this repository that changes the site's inputs (`docs/**`, `mkdocs.yml`,
+- **Pull request previews.** A pull request from this repository that changes the site's inputs (`docs/**`, `mkdocs.yml`,
   `requirements/docs.txt`, `tools/docs/**`, `config/sample-config.json` or `docs.yml`) gets a preview at
   `https://iainchesworthlabs.com/_preview/field-test/pr-<n>/` (role `DOCS_PREVIEW_ROLE_ARN`, limited to
   `_preview/field-test/*`), removed when the pull request closes. A pull request from a fork or from Dependabot builds the
@@ -372,14 +382,18 @@ does not publish it and a release does not carry it, so a change to the pages go
   delete it. The deploy role trusts a push to that branch, so whoever could push `site` could publish. Both are files in
   `.github/rulesets/`.
 - **What the owner does before it can run** (none of it is done by the agents that work on this repository), in this order:
-    1. Merge the pull request that adds `publish-site.yml`. From then a push to `develop` no longer deploys the site.
+    1. From the merge of `publish-site.yml`, a push to `develop` no longer deploys the site.
     2. Apply the rulesets: `admin/apply.sh --repo iainchesworthlabs/icl-error-journaling --only rulesets` of
        `icl-common-infra`, run in the root of this repository with `RELEASE_BOT_APP_ID` set, as a dry run and then with
        `--apply`. It updates `branch-names` and creates `site-publish-only`.
-    3. In the company site's repository, set **`publishRef: 'site'`** on the `field-test` entry of `infra/lib/apps.ts` (its
-       default is `develop`, and the role trusts one branch only), update its comment, the README row and the tests, merge, and
-       run `cdk deploy`.
-    4. Run `gh workflow run publish-site.yml --ref develop`, and check `https://iainchesworthlabs.com/field-test/`.
+    3. In the company site's repository, set **`publishRef: 'site'`** (the live role trusts one branch only, and its default is
+       `develop`) **and `previewPushRef: 'develop'`** (the preview role also trusts a push to `develop`, and still writes
+       `_preview/field-test/*` only) on the `field-test` entry of `infra/lib/apps.ts`, update its comment, the README row and
+       the tests, merge, and deploy the stack.
+    4. Merge a change to the site into `develop`. Its `Docs stage` run deploys the preview; approve it on the run page, and
+       check `https://iainchesworthlabs.com/field-test/`. (Or run `gh workflow run publish-site.yml --ref develop` for the
+       first publication.) Before step 3 the preview job cannot assume its role: the run goes red and `Explain a failed
+       preview` says why, offers no release, and the live site stays as it is.
   Until step 3 the live site is untouched and stays as it is.
 
 ## The site address
