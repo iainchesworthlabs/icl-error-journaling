@@ -142,7 +142,8 @@ floors still decide the result.
 cache), so the old limit of 30 cancelled good jobs. The Linux legs now have 60 minutes. Coverage (45, slowest 27), the
 kill harness (90, slowest 11) and the macOS legs (30, slowest 15) keep their limits. The merge queue's own
 `check_response_timeout_minutes` is a ruleset setting; it must exceed the time a healthy entry takes under load (the
-longest successful entries took 93 and 113 minutes), so it is set to 120.
+longest successful entries took 93 and 113 minutes), so it is set to 120. The queue builds at most 3 entries at once
+(`max_entries_to_build`). `.github/rulesets/merge-queue-develop.json` holds both values, as they are set on the repository.
 
 **Package cache.** From infra v0.1.23 the GCC, LLVM and Qt runtime package installs read their `.deb` files from an Actions cache (`apt-debs-...`, one entry each for gcc, llvm and the Qt packages, saved only by a push to `develop` or a manual run) and run no `apt-get update` when it hits. A cold or failed restore uses the network with four attempts and waits of 20, 60 and 120 seconds. From infra v0.1.24 the GCC packages are downloaded with `curl` first (resuming, dropping a transfer under 200 kB/s, and rotating through the image's mirrors and the main Ubuntu mirrors), because one stalled mirror node failed the merge queue three times on 10 and 11 November 2026. A manual `gh workflow run ci.yml --ref develop` after a toolchain pin or runner image change warms it.
 
