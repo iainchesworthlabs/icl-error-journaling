@@ -51,7 +51,11 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          current="$(gh api "repos/$REPO/git/ref/heads/site" --jq .object.sha 2>/dev/null || true)"
+          # A missing branch makes gh exit non-zero but still print the error body, so the output is used only on success.
+          current=""
+          if sha="$(gh api "repos/$REPO/git/ref/heads/site" --jq .object.sha 2>/dev/null)"; then
+            current="$sha"
+          fi
           if [ "$current" = "$GITHUB_SHA" ]; then
             echo "The site branch is already at $GITHUB_SHA, so there is nothing new to publish. To publish this commit again, re-run the last Docs run of the push to site." >> "$GITHUB_STEP_SUMMARY"
             exit 0
