@@ -3,6 +3,10 @@
     "docs/*.md",
     "docs/*.asc",
     "docs/icl-app.json",
+    "docs/theme.css",
+    "docs/assets/**",
+    "docs/guide/img/**",
+    "docs/guide/screenshots.json",
     "docs/design/*.md",
     "docs/design/screens/**",
     "*.md",
@@ -10,7 +14,9 @@
     "LICENSE*",
     "changelog.d/**",
     "requirements/docs.txt",
-    "tools/docs/**"
+    "tools/docs/**",
+    ".github/workflows/docs.yml",
+    ".github/workflows/publish-site.yml"
   ],
   "no_build": [
     ".github/PULL_REQUEST_TEMPLATE*",
