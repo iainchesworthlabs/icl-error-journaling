@@ -3,6 +3,12 @@
 All notable changes are listed here. Each release section is assembled from the
 fragments in `changelog.d/`.
 
+## [1.0.1] - 2026-11-21
+
+### Fixed
+
+- **The shared log no longer writes "(Free Text)" or "(Observation)" after the time.** Share and Copy all now write a note as its time and your words ("10:30 Device restarted") and an observation as its time and its line ("10:12 Paired with A.S."), the same as the Log and Review screens show them. A line for an error still starts with its prefix, "T|" unless you changed it. A label that you set yourself for observations is kept; the "(Observation)" that older versions saved as the default is no longer written. Not yet run on a device.
+
 ## [1.0.0] - 2026-11-19
 
 ### Added
