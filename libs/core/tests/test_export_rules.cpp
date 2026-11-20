@@ -72,7 +72,7 @@ TEST_CASE("Rule 3: an error line, with an attached note after an en dash", "[exp
                  + " asked for task 2\n10:07 T| Timed Out");
 }
 
-TEST_CASE("Rule 4: a note line is (Free Text) and the rendered template or the free text", "[export][rule4]")
+TEST_CASE("Rule 4: a note line is the time and the rendered template or the free text, with no label", "[export][rule4]")
 {
     auto scenario = blank_scenario();
     must_add(scenario.m_Log, template_note_entry(1, on_day(10, 5), TEMPLATE_PLAYED, "1"));
@@ -80,7 +80,7 @@ TEST_CASE("Rule 4: a note line is (Free Text) and the rendered template or the f
     must_add(scenario.m_Log, free_note_entry(3, on_day(10, 7), ""));
     CHECK(render(scenario)
           == std::string(HEADER)
-                 + "\n\n10:05 (Free Text) Began task 1\n10:06 (Free Text) Device restarted\n10:07 (Free Text)");
+                 + "\n\n10:05 Began task 1\n10:06 Device restarted\n10:07");
 }
 
 TEST_CASE("Rule 5: a header-change line names the field with its old and new value", "[export][rule5]")
@@ -162,7 +162,7 @@ TEST_CASE("Rule 7: no totals line when there are no errors", "[export][rule7]")
     scenario.m_Context.m_IncludeTotals = true;
     CHECK(render(scenario) == HEADER);
     must_add(scenario.m_Log, free_note_entry(1, on_day(10, 5), "A note"));
-    CHECK(render(scenario) == std::string(HEADER) + "\n\n10:05 (Free Text) A note");
+    CHECK(render(scenario) == std::string(HEADER) + "\n\n10:05 A note");
 }
 
 TEST_CASE("Rule 8: header, a blank line, the timeline; LF only and no trailing newline", "[export][rule8]")
@@ -186,8 +186,8 @@ TEST_CASE("Rule 9: line breaks and runs of white space in free text collapse to 
     must_add(scenario.m_Log, free_note_entry(5, on_day(10, 5), std::string("next\xC2\x85line\xE2\x80\xA8sep")));
     CHECK(render(scenario)
           == std::string(HEADER)
-                 + "\n\n10:01 (Free Text) one two three\n10:02 (Free Text) tab here and spaces\n10:03 T| Stopped Responding " + DASH
-                 + " note with breaks\n10:04 (Free Text) Began task Two Lines\n10:05 (Free Text) next line sep");
+                 + "\n\n10:01 one two three\n10:02 tab here and spaces\n10:03 T| Stopped Responding " + DASH
+                 + " note with breaks\n10:04 Began task Two Lines\n10:05 next line sep");
 }
 
 TEST_CASE("Rule 9: the header block is one line per field too", "[export][rule9]")
@@ -336,18 +336,4 @@ TEST_CASE("PRF-13: the error prefix is in front of the error name; empty means n
 
     scenario.m_Context.m_ErrorPrefix = "";
     CHECK(render(scenario) == header + "10:05 Wrong Response\n10:06 Stopped Responding " + DASH + " asked for task 2");
-}
-
-TEST_CASE("without_note_marker drops the marker of a note line for the screens and leaves the export alone",
-          "[export][rule4]")
-{
-    CHECK(export_format::without_note_marker("10:30 (Free Text) Began task 1") == "10:30 Began task 1");
-    CHECK(export_format::without_note_marker("03:05 PM (Free Text) Played x") == "03:05 PM Played x");
-    CHECK(export_format::without_note_marker("10:07 (Free Text)") == "10:07");
-    CHECK(export_format::without_note_marker("10:30 (Free Text) said (Free Text) twice") == "10:30 said (Free Text) twice");
-
-    // The export itself still writes the marker (PRD rule 4).
-    auto scenario = blank_scenario();
-    must_add(scenario.m_Log, free_note_entry(1, on_day(10, 5), "A note"));
-    CHECK(render(scenario) == std::string(HEADER) + "\n\n10:05 (Free Text) A note");
 }

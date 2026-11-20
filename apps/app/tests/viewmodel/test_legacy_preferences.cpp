@@ -85,7 +85,17 @@ TEST_CASE("prefs.default_marker_policy: an old default marker reads as the new d
         const QString path = dir.filePath(QStringLiteral("a.ini"));
         write_old_file(path, QStringLiteral("(Interaction)"));
         const ExportPreferences preferences(path);
-        CHECK(preferences.interaction_marker() == QStringLiteral("(Observation)"));
+        CHECK(preferences.interaction_marker().isEmpty());
+    }
+    SECTION("the label that was the default until now was never a choice either")
+    {
+        const QString path = dir.filePath(QStringLiteral("a2.ini"));
+        {
+            QSettings settings(path, QSettings::IniFormat);
+            settings.setValue(QStringLiteral("export/observationMarker"), QStringLiteral("(Observation)"));
+            settings.sync();
+        }
+        CHECK(ExportPreferences(path).interaction_marker().isEmpty());
     }
     SECTION("a word the person typed is kept as typed")
     {
@@ -109,11 +119,11 @@ TEST_CASE("prefs.default_marker_policy: an old default marker reads as the new d
         }
         CHECK(ExportPreferences(path).interaction_marker().isEmpty());
     }
-    SECTION("without a stored marker the default is the new word")
+    SECTION("without a stored marker the default is no label")
     {
         CHECK(ExportPreferences(dir.filePath(QStringLiteral("d.ini"))).interaction_marker() ==
               QString::fromUtf8(export_format::DEFAULT_INTERACTION_MARKER.data()));
-        CHECK(ExportPreferences(QString()).interaction_marker() == QStringLiteral("(Observation)"));
+        CHECK(ExportPreferences(QString()).interaction_marker().isEmpty());
     }
     SECTION("the new key wins over the old one")
     {

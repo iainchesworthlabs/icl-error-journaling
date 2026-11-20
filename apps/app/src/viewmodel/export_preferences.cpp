@@ -4,6 +4,8 @@
 #include "error_journaling/export_format.hpp"
 
 #include <QSettings>
+#include <algorithm>
+#include <iterator>
 #include <utility>
 
 namespace ej::viewmodel
@@ -43,6 +45,18 @@ std::string clean_marker(const QString& typed)
         text = text.trimmed();
     }
     return text.toStdString();
+}
+
+/// An earlier default was never a choice, so it reads as the current default (no label); a word the person typed is
+/// kept as typed.
+std::string marker_as_chosen(std::string marker)
+{
+    const auto& legacy = export_format::LEGACY_DEFAULT_INTERACTION_MARKERS;
+    if (std::find(std::begin(legacy), std::end(legacy), marker) != std::end(legacy))
+    {
+        return std::string(export_format::DEFAULT_INTERACTION_MARKER);
+    }
+    return marker;
 }
 } // namespace
 
@@ -98,16 +112,11 @@ void ExportPreferences::load()
         name_level_from_key(settings.value(KEY_NAME_EXPORT).toString().toStdString()).value_or(NameLevel::INITIALS);
     if (settings.contains(KEY_MARKER))
     {
-        m_Marker = clean_marker(settings.value(KEY_MARKER).toString());
+        m_Marker = marker_as_chosen(clean_marker(settings.value(KEY_MARKER).toString()));
     }
     else if (settings.contains(LEGACY_KEY_MARKER))
     {
-        // The old default was never a choice, so it reads as the new default; a word the person typed is kept as typed.
-        m_Marker = clean_marker(settings.value(LEGACY_KEY_MARKER).toString());
-        if (m_Marker == export_format::LEGACY_DEFAULT_INTERACTION_MARKER)
-        {
-            m_Marker = std::string(export_format::DEFAULT_INTERACTION_MARKER);
-        }
+        m_Marker = marker_as_chosen(clean_marker(settings.value(LEGACY_KEY_MARKER).toString()));
     }
 }
 

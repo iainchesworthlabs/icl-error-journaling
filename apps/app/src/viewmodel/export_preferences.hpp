@@ -5,9 +5,9 @@
 // preference `name_export`) and the label of an interaction line (`interaction_marker`).
 //
 // Like BoardState this is a setting of the application and not of a log or the setup file, so it lives in its own small
-// file beside the data. A file that cannot be read or written is treated as empty: names as initials and the label
-// "(Observation)". The default is initials, so a log pasted into a chat does not carry a full name until the owner
-// turns it on. The Review screen and the board always show the full name; only Share, Copy line and Copy all use this.
+// file beside the data. A file that cannot be read or written is treated as empty: names as initials and no label
+// (a line is the time and the words). The default is initials, so a log pasted into a chat does not carry a full name
+// until the owner turns it on. The Review screen and the board always show the full name; only Share, Copy line and Copy all use this.
 
 #include "error_journaling/person.hpp"
 

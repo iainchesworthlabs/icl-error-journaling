@@ -373,11 +373,11 @@ TEST_CASE("review.rows: the prefix of a line is in the secondary colour and the 
         REQUIRE(line != nullptr);
         const QString shown = line->property("text").toString();
         const QString words = words_of(line);
-        if (line->property("textFormat").toInt() == 4) // StyledText: a line with a prefix ("T|" or "(Free Text)")
+        if (line->property("textFormat").toInt() == 4) // StyledText: a line with a prefix ("T|")
         {
             CHECK(shown.contains(QStringLiteral("<font color=\"%1\">").arg(secondary.name())));
             CHECK(line->property("color").value<QColor>() == text);
-            CHECK((words.startsWith(QStringLiteral("T|")) || words.startsWith(QStringLiteral("(Free Text)"))));
+            CHECK(words.startsWith(QStringLiteral("T|")));
         }
         else
         {
@@ -401,10 +401,10 @@ TEST_CASE("review.rows: markup in a row's words is shown as the words it is", "[
     REQUIRE(review != nullptr);
     QString styled;
     QMetaObject::invokeMethod(review, "styledLine", Q_RETURN_ARG(QString, styled),
-                              Q_ARG(QString, QStringLiteral("(Free Text)")),
+                              Q_ARG(QString, QStringLiteral("T|")),
                               Q_ARG(QString, QStringLiteral("Began <b>task</b> & more")));
     CHECK(QTextDocumentFragment::fromHtml(styled).toPlainText() ==
-          QStringLiteral("(Free Text) Began <b>task</b> & more"));
+          QStringLiteral("Began <b>task</b> & more"));
 }
 
 TEST_CASE("review.voiceover: a row is one button reading the whole line and opening Edit", "[ui][review]")

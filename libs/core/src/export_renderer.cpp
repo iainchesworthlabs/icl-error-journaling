@@ -252,10 +252,13 @@ Result<std::string, RenderError> render_line(const Entry& entry, const HeaderHis
         {
             text = collapse(note->m_Value);
         }
-        line += export_format::NOTE_MARKER;
-        if (!text.empty())
+        // The time and the words, with no label: only an error line carries a prefix.
+        if (text.empty())
         {
-            line += ' ';
+            line.pop_back();  // the space after the time
+        }
+        else
+        {
             line += text;
         }
     }

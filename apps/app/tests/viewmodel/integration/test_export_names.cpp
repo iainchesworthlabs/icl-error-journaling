@@ -128,25 +128,25 @@ TEST_CASE("export.name_levels: the screen shows the full name, sharing writes th
 
     const auto screen = viewmodel::export_text(log, fixture.builder().build());
     REQUIRE(screen.has_value());
-    CHECK(screen->find("10:12 (Observation) Paired with Alex Sample\n") != std::string::npos);
+    CHECK(screen->find("10:12 Paired with Alex Sample\n") != std::string::npos);
     CHECK(screen->find("Paired with Alex Sample and Jordan Placeholder") != std::string::npos);
 
     // The default is initials.
     CHECK(fixture.m_Preferences.name_export() == "initials");
     const auto initials = viewmodel::export_text(log, fixture.builder().build_for_sharing());
     REQUIRE(initials.has_value());
-    CHECK(initials->find("10:12 (Observation) Paired with A.S.\n") != std::string::npos);
-    CHECK(initials->find("10:40 (Observation) Paired with A.S. and J.P.") != std::string::npos);
+    CHECK(initials->find("10:12 Paired with A.S.\n") != std::string::npos);
+    CHECK(initials->find("10:40 Paired with A.S. and J.P.") != std::string::npos);
     CHECK(initials->find("Alex") == std::string::npos);
     CHECK(initials->find("Jordan") == std::string::npos);
     CHECK(initials->find("10:05 T| Wrong Response\n") != std::string::npos);
-    CHECK(initials->find("(Observation) T|") == std::string::npos);
+    CHECK(initials->find("T|") == std::string::npos);
 
     fixture.m_Preferences.set_name_export("hidden");
     const auto hidden = viewmodel::export_text(log, fixture.builder().build_for_sharing());
     REQUIRE(hidden.has_value());
-    CHECK(hidden->find("10:12 (Observation) Paired with someone\n") != std::string::npos);
-    CHECK(hidden->find("10:40 (Observation) Paired with someone") != std::string::npos);
+    CHECK(hidden->find("10:12 Paired with someone\n") != std::string::npos);
+    CHECK(hidden->find("10:40 Paired with someone") != std::string::npos);
 
     fixture.m_Preferences.set_name_export("full");
     const auto full = viewmodel::export_text(log, fixture.builder().build_for_sharing());
@@ -167,21 +167,21 @@ TEST_CASE("export.name_levels: Copy line and Copy all follow the setting, Review
 
     // Review: the rows keep the full name whatever the setting is.
     CHECK(model.data(model.index(2), TimelineModel::FULL_LINE).toString() ==
-          QStringLiteral("10:40 (Observation) Paired with Alex Sample and Jordan Placeholder"));
+          QStringLiteral("10:40 Paired with Alex Sample and Jordan Placeholder"));
 
     REQUIRE(model.copyLine(2));
-    CHECK(fixture.m_Clipboard.text() == "10:40 (Observation) Paired with A.S. and J.P.");
+    CHECK(fixture.m_Clipboard.text() == "10:40 Paired with A.S. and J.P.");
     REQUIRE(model.copyLine(0));
     CHECK(fixture.m_Clipboard.text() == "10:05 T| Wrong Response"); // an error line is untouched
 
     REQUIRE(model.copyAll());
     CHECK(fixture.m_Clipboard.text().find("Alex") == std::string::npos);
-    CHECK(fixture.m_Clipboard.text().find("\n10:12 (Observation) Paired with A.S.\n") != std::string::npos);
+    CHECK(fixture.m_Clipboard.text().find("\n10:12 Paired with A.S.\n") != std::string::npos);
 
     // The setting is read at the time of the copy: a log that is copied again uses the current level.
     fixture.m_Preferences.set_name_export("full");
     REQUIRE(model.copyLine(1));
-    CHECK(fixture.m_Clipboard.text() == "10:12 (Observation) Paired with Alex Sample");
+    CHECK(fixture.m_Clipboard.text() == "10:12 Paired with Alex Sample");
     fixture.m_Preferences.set_name_export("hidden");
     REQUIRE(model.copyAll());
     CHECK(fixture.m_Clipboard.text().find("Paired with someone") != std::string::npos);
@@ -213,5 +213,5 @@ TEST_CASE("export.name_levels: without a list of people nobody is named", "[view
     fixture.m_World.m_People = nullptr;
     const auto text = viewmodel::export_text(fixture.m_Document->log(), fixture.builder().build());
     REQUIRE(text.has_value());
-    CHECK(text->find("10:12 (Observation) Paired with someone\n") != std::string::npos);
+    CHECK(text->find("10:12 Paired with someone\n") != std::string::npos);
 }

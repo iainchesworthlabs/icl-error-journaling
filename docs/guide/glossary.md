@@ -39,8 +39,8 @@ The words Field Test uses, in alphabetical order.
 : The place named in the header of a log. You keep a list of places in Settings and pick one in Today's details.
 
 **Marker**
-: The text after the time on a line that says what kind of line it is: `T|` for an error, `(Free Text)` for a note,
-  `(Observation)` for an observation.
+: The text after the time on an error line that says it is an error: `T|` unless you change it in Settings. A note and
+  an observation have none.
 
 **Note template**
 : A chip above the note field. It asks a question and writes the line of the note for you.

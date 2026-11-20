@@ -17,7 +17,7 @@ Software Version: v1.4.2
 
 10:05 T| Wrong Response
 10:20 T| Stopped Responding – caller said wait
-10:30 (Free Text) Device restarted
+10:30 Device restarted
 11:02 T| Slow Response – asked about the schedule
 13:15 Software Version changed: v1.4.2 → v1.5.0
 13:40 T| Connection Lost
@@ -85,10 +85,10 @@ zone the entry was logged in.
 
 ### A note on its own
 
-An entry with a note and no error is marked `(Free Text)`:
+An entry with a note and no error is the time and the words, with no label and no prefix:
 
 ```
-10:30 (Free Text) Device restarted
+10:30 Device restarted
 ```
 
 A note made from a note template is a note like any other: the template writes the words, and the log shows them.
@@ -108,18 +108,18 @@ reads `Location changed:  → Back Room Annex`, with the old value empty.
 
 ### An observation
 
-With the second board on, an observation is a line marked `(Observation)`, with no error prefix, so the ticket indexer
-does not read it:
+With the second board on, an observation is a line with no error prefix, so the ticket indexer does not read it:
 
 ```
-10:12 (Observation) Paired with A.S.
-10:40 (Observation) Paired with A.S., J.P. and P.S.I.
-11:10 (Observation) Paired with someone
-11:20 (Observation) Paired with (person not set)
+10:12 Paired with A.S.
+10:40 Paired with A.S., J.P. and P.S.I.
+11:10 Paired with someone
+11:20 Paired with (person not set)
 ```
 
-- The marker is `(Observation)` by default. The app keeps it as a preference (`observation_marker`); an empty value drops
-  the marker and its space. Whether Settings offers it was not checked for this page.
+- There is no label after the time by default. The app keeps one as a preference (`observation_marker`), which is empty
+  unless it is set; a label is written after the time with a space each side. Whether Settings offers it was not checked
+  for this page.
 - A person's name follows **Names in shared logs**: initials (the default), the full name, or `someone`. A person who is
   forgotten reads `someone`. A type that asks for a person that was never chosen reads `(person not set)`.
 - A note attached to the observation follows after ` – `, as on an error line.

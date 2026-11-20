@@ -49,7 +49,7 @@ Software Version: v1.4.2
 
 10:05 T| Wrong Response
 10:20 T| Stopped Responding – caller said wait
-10:30 (Free Text) Device restarted
+10:30 Device restarted
 ```
 
 [The shared log format](shared-log-format.md) describes every line.

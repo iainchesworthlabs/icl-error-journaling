@@ -182,7 +182,7 @@ TEST_CASE("interaction.line_render: the export line has the label and no ticket 
           "10:48 (Observation) Entered room 1 \xE2\x80\x93 asked about the schedule");
     // An empty label is dropped with its space; an empty note adds nothing.
     CHECK(render_interaction_export_line("10:12", "", "Start task", std::string("  ")) == "10:12 Start task");
-    CHECK(export_format::DEFAULT_INTERACTION_MARKER == "(Observation)");
+    CHECK(export_format::DEFAULT_INTERACTION_MARKER.empty());
 }
 
 TEST_CASE("interaction.name_levels: full, initials and hidden", "[interaction][name]")
@@ -532,18 +532,18 @@ TEST_CASE("export.interaction_lines: an interaction renders at the name level of
         context.m_NameLevel = level;
         return render_entry_line(log, sample_id<EntryId>(1), context);
     };
-    // The note is the attached one, and there is no ticket marker.
+    // The note is the attached one, and there is no ticket marker and, by default, no label.
     CHECK(
         line_at(NameLevel::FULL).value() ==
-        "00:05 (Observation) Paired with Alex Sample and Jordan Placeholder \xE2\x80\x93 asked about \"the schedule\"");
-    CHECK(line_at(NameLevel::INITIALS).value() ==
-          "00:05 (Observation) Paired with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
-    CHECK(line_at(NameLevel::HIDDEN).value() ==
-          "00:05 (Observation) Paired with someone \xE2\x80\x93 asked about \"the schedule\"");
-    // An empty label drops the label and its space.
-    context.m_InteractionMarker = "";
+        "00:05 Paired with Alex Sample and Jordan Placeholder \xE2\x80\x93 asked about \"the schedule\"");
     CHECK(line_at(NameLevel::INITIALS).value() ==
           "00:05 Paired with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
+    CHECK(line_at(NameLevel::HIDDEN).value() ==
+          "00:05 Paired with someone \xE2\x80\x93 asked about \"the schedule\"");
+    // A label the tester has set follows the time.
+    context.m_InteractionMarker = "(Observation)";
+    CHECK(line_at(NameLevel::INITIALS).value() ==
+          "00:05 (Observation) Paired with A.S. and J.P. \xE2\x80\x93 asked about \"the schedule\"");
 }
 
 TEST_CASE("export.interaction_lines: the type is looked up only when the entry has no snapshot", "[interaction][export]")

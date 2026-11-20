@@ -7,4 +7,4 @@ Software Version: v1.4.2
 10:05 T| Wrong Response
 08:10 T| Stopped Responding
 00:20 T| Incorrect Action
-12:00 (Free Text) Back in Melbourne
+12:00 Back in Melbourne

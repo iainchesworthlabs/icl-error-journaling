@@ -9,7 +9,7 @@ Software Version: v1.4.2
 10:20 T| Stopped Responding
 10:31 Began task 1
 10:40 Paired with A.S., J.P. and P.S.I.
-10:45 (Free Text) Device restarted
+10:45 Device restarted
 10:48 Entered room 1 – asked about the schedule
 11:00 Assigned J.P. a card
 11:10 Paired with someone

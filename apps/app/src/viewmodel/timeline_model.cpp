@@ -79,15 +79,8 @@ std::string_view line_marker(const Entry& entry, std::string_view error_prefix)
     {
         return error_prefix;
     }
-    // A note has no marker on the screen (the export keeps it).
+    // A note has no marker.
     return {};
-}
-
-/// The line of `entry` as the screens show it: the export line, without the marker of a note.
-std::string line_of_screen(const Entry& entry, const std::string& export_line)
-{
-    return std::holds_alternative<NoteEntry>(entry.m_Body) ? export_format::without_note_marker(export_line)
-                                                           : export_line;
 }
 
 bool is_header_change(const Entry* entry)
@@ -441,11 +434,10 @@ TimelineModel::Row TimelineModel::make_row(const Log& log, const Entry& entry, c
     {
         const std::string time = format_time(*local, context.m_TimeFormat);
         const std::string prefix = time + " ";
-        if (line->starts_with(prefix))
+        if (line->starts_with(prefix) || *line == time)  // a note with no words is the time alone
         {
             row.m_Time = text_of(time);
-            // A note shows without its marker; the export wording stays in `m_Full`, which Copy line gives.
-            const std::string shown = line_of_screen(entry, *line);
+            const std::string& shown = *line;
             row.m_Line = text_of(shown.substr(std::min(prefix.size(), shown.size())));
             row.m_Full = text_of(*line);
             row.m_Shown = text_of(shown);
@@ -1161,8 +1153,7 @@ QString TimelineModel::previewLine(const QString& entryId, const QVariantMap& ed
     {
         return {};
     }
-    const Entry* saved = scratch.find(*id);
-    return text_of(saved != nullptr ? line_of_screen(*saved, *line) : *line);
+    return text_of(*line);
 }
 
 bool TimelineModel::saveEntry(const QString& entryId, const QVariantMap& edit)

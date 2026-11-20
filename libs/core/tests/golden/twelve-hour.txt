@@ -9,5 +9,5 @@ Software Version: v1.4.2
 09:07 AM T| Wrong Response
 12:00 PM T| Incorrect Action
 01:15 PM Software Version changed: v1.4.2 → v1.5.0
-01:20 PM (Free Text) Back after lunch
+01:20 PM Back after lunch
 11:59 PM T| Timed Out

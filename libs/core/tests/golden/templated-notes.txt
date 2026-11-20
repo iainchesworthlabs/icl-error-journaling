@@ -4,8 +4,8 @@ UNIT #: UNIT-27
 Location: North Site
 Software Version: v1.4.2
 
-09:00 (Free Text) Began task 1
-09:30 (Free Text) Entered room 1: Sam Example waved
-10:00 (Free Text) Task 2 requested twice
-10:15 (Free Text) Began task Spaced Out
-10:30 (Free Text) Calibration done
+09:00 Began task 1
+09:30 Entered room 1: Sam Example waved
+10:00 Task 2 requested twice
+10:15 Began task Spaced Out
+10:30 Calibration done
