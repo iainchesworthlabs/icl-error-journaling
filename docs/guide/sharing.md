@@ -68,18 +68,18 @@ The log has a header (tester, date, unit, location, software version) and one li
 ```
 
 An error line is the time, the error prefix `T|`, the error type, and then the note after a dash. A note on its own, with no
-error, is marked `(Free Text)` instead.
+error, is the time and the words, with no prefix.
 
 !!! warning "Do not edit the lines after you share"
     The downstream ticket indexer reads the `T|` marker. The prefix can be changed in Settings if your tool reads a
     different one. [The shared log format](shared-log-format.md) describes every line.
 
-If you use the second board, an observation is a line of its own, marked `(Observation)` and with no `T|`, so the ticket
-indexer does not read it:
+If you use the second board, an observation is a line of its own with no `T|`, so the ticket indexer does not read
+it:
 
 ```
-10:12 (Observation) Paired with A.S.
-10:31 (Observation) Began task 1
+10:12 Paired with A.S.
+10:31 Began task 1
 ```
 
 ### Names in a shared log

@@ -543,7 +543,6 @@ TEST_CASE("Every row is its time and its line, in every time format", "[viewmode
 
         std::vector<QString> expected = timeline_of(rig.export_now(rig.document().log()));
         REQUIRE(expected.size() == 5);
-        expected[2].remove(QStringLiteral(" (Free Text)")); // the note: the screens show it without the marker
         REQUIRE(static_cast<std::size_t>(rig.model().rowCount()) == expected.size());
         for (int row = 0; row < rig.model().rowCount(); ++row)
         {
@@ -582,16 +581,6 @@ TEST_CASE("Every entry of every golden scenario reads as the export does", "[vie
             const auto reference = render_export(scenario.m_Log, scenario.m_Context);
             REQUIRE(reference.has_value());
             std::vector<QString> expected = timeline_of(*reference);
-            // The export has the marker after the time; the screens show a note without it.
-            for (QString& line : expected)
-            {
-                const auto marker = line.indexOf(QStringLiteral(" (Free Text)"));
-                if (marker >= 0 && marker <= 9)
-                {
-                    line.remove(marker, QStringLiteral(" (Free Text)").size());
-                }
-            }
-
             REQUIRE(static_cast<std::size_t>(rig.model().rowCount()) == expected.size());
             for (int row = 0; row < rig.model().rowCount(); ++row)
             {
@@ -1005,7 +994,7 @@ TEST_CASE("Copy: copyLine and copyAll put exactly the expected bytes on the clip
     CHECK(rig.clipboard().text() == expected);
     CHECK(rig.clipboard().text() ==
           "Tester: Sam Example\nDate: 7 Nov 2026\nUNIT #: UNIT-27\nLocation: North Site\nSoftware Version: v1.4.2\n"
-          "\n11:10 T| A\n11:20 (Free Text) B\n11:30 T| C \xE2\x80\x93 with a note\n11:40 T| D");
+          "\n11:10 T| A\n11:20 B\n11:30 T| C \xE2\x80\x93 with a note\n11:40 T| D");
 
     CHECK_FALSE(rig.model().copyLine(-1));
     CHECK_FALSE(rig.model().copyLine(4));

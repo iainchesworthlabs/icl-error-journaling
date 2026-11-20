@@ -4,4 +4,4 @@ UNIT #: UNIT-27
 Location: North Site
 Software Version: v1.4.2
 
-10:00 (Free Text) Setup only, no errors yet
+10:00 Setup only, no errors yet

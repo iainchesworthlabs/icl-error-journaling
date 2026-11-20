@@ -36,27 +36,15 @@ inline constexpr std::string_view DEFAULT_ERROR_PREFIX = "T|";
 inline constexpr int MAX_ERROR_PREFIX_CHARACTERS = 12;
 /// Between an error name and its attached note (an en dash with a space each side).
 inline constexpr std::string_view ATTACHED_NOTE_SEPARATOR = " \xE2\x80\x93 ";
-/// After the time on a note line.
-inline constexpr std::string_view NOTE_MARKER = "(Free Text)";
-/// After the time on an observation line (preference `observation_marker`); never the error prefix.
-inline constexpr std::string_view DEFAULT_INTERACTION_MARKER = "(Observation)";
+/// The label after the time on an observation line when the tester has set one (preference `interaction_marker`). The
+/// default is none: a note line and an observation line are the time and the words, and only an error line carries a
+/// prefix. An empty marker drops the label with its space.
+inline constexpr std::string_view DEFAULT_INTERACTION_MARKER = "";
 
-/// What the default was before the rename to Observations. `legacy`: a stored marker exactly equal to this was never a
-/// choice, so it is read as `DEFAULT_INTERACTION_MARKER`; any other stored word is kept as typed.
-inline constexpr std::string_view LEGACY_DEFAULT_INTERACTION_MARKER = "(Interaction)";
-
-/// A note line as the screens show it: the line without the marker ("10:30 Began task 1"). The export keeps
-/// the marker (PRD, Export rules, rule 4); only what the person reads on the screen drops it. `line` must be the line of
-/// a note, whose first marker is the one the renderer wrote after the time.
-[[nodiscard]] inline std::string without_note_marker(std::string line)
-{
-    const std::string marker = " " + std::string(NOTE_MARKER);
-    if (const auto at = line.find(marker); at != std::string::npos)
-    {
-        line.erase(at, marker.size());
-    }
-    return line;
-}
+/// Labels that earlier builds wrote as the default and so stored with the other preferences. A stored marker exactly
+/// equal to one of these was never a choice, so it is read as `DEFAULT_INTERACTION_MARKER`; any other stored word is
+/// kept as typed.
+inline constexpr std::string_view LEGACY_DEFAULT_INTERACTION_MARKERS[] = {"(Interaction)", "(Observation)"};
 
 /// After the field label on a header-change line, and between the old and the new value (an arrow).
 inline constexpr std::string_view CHANGED_SUFFIX = " changed: ";

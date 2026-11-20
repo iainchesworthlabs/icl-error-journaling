@@ -794,9 +794,8 @@ void Day::step_18_history()
     {
         lines.push_back(text_in(review, row, "fullLine"));
     }
-    // The review screen shows the export lines, except that a note has no "(Free Text)" marker on the screen.
-    QStringList expected = golden_lines().mid(6, 6);
-    expected.replaceInStrings(QStringLiteral(" (Free Text)"), QString());
+    // The review screen shows the export lines.
+    const QStringList expected = golden_lines().mid(6, 6);
     CHECK(lines == expected);
 
     rig.platform().answer_with(ej::bridge::ShareOutcome::SHARED);

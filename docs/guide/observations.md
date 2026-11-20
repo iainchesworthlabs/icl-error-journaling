@@ -13,7 +13,7 @@ This page is the overview. The steps are in the pages it links to.
 | What it logs | What went wrong | What you did or saw |
 | Tile types | Error types | Observation types, which you make yourself |
 | After a double-tap | Logged at once | Logged at once, or asks who or for an answer if the type's line has a place for one |
-| Line in the shared log | `10:05 T| Wrong Response` | `10:12 (Observation) Paired with A.S.` |
+| Line in the shared log | `10:05 T| Wrong Response` | `10:12 Paired with A.S.` |
 | Read by the ticket indexer | Yes, by the `T|` marker | No: the line has no `T|` |
 | In the totals line | Counted | Not counted |
 

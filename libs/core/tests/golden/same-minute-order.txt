@@ -8,4 +8,4 @@ Software Version: v1.4.2
 10:05 T| Timed Out
 10:05 T| Wrong Response
 10:05 T| Incorrect Action
-10:05 (Free Text) Same millisecond note
+10:05 Same millisecond note
