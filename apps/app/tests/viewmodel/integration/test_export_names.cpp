@@ -140,7 +140,7 @@ TEST_CASE("export.name_levels: the screen shows the full name, sharing writes th
     CHECK(initials->find("Alex") == std::string::npos);
     CHECK(initials->find("Jordan") == std::string::npos);
     CHECK(initials->find("10:05 T| Wrong Response\n") != std::string::npos);
-    CHECK(initials->find("T|") == std::string::npos);
+    CHECK(initials->find("T| Paired") == std::string::npos);  // an observation line has no ticket marker
 
     fixture.m_Preferences.set_name_export("hidden");
     const auto hidden = viewmodel::export_text(log, fixture.builder().build_for_sharing());

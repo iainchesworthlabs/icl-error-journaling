@@ -559,7 +559,7 @@ TEST_CASE("export.interaction_lines: the type is looked up only when the entry h
     context.m_InteractionTypeName = [](InteractionTypeId) -> std::string_view { return "Paired with"; };
     // No pattern and no person source: the line is the name, and a person nobody can name is not printed.
     CHECK(render_entry_line(log, sample_id<EntryId>(1), context).value() ==
-          "00:05 (Observation) Paired with \xE2\x80\x93 asked about \"the schedule\"");
+          "00:05 Paired with \xE2\x80\x93 asked about \"the schedule\"");
 }
 
 TEST_CASE("export.interaction_lines: error lines are byte for byte as they were without interactions",

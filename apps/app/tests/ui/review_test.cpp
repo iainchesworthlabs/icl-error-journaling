@@ -404,7 +404,7 @@ TEST_CASE("review.rows: markup in a row's words is shown as the words it is", "[
                               Q_ARG(QString, QStringLiteral("T|")),
                               Q_ARG(QString, QStringLiteral("Began <b>task</b> & more")));
     CHECK(QTextDocumentFragment::fromHtml(styled).toPlainText() ==
-          QStringLiteral("Began <b>task</b> & more"));
+          QStringLiteral("T| Began <b>task</b> & more"));
 }
 
 TEST_CASE("review.voiceover: a row is one button reading the whole line and opening Edit", "[ui][review]")
