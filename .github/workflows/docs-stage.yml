@@ -1,0 +1,186 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Docs stage
+
+# The preview and the release of the documentation site (docs/ci.md, "Publishing the site").
+#
+# A merge to develop that changes something the site is built from builds the site and deploys that build to a preview address,
+# https://iainchesworthlabs.com/_preview/field-test/stage-<commit>/, which is public to anyone with the link, carries `noindex`
+# and expires after 14 days. The run then stops at the `release` environment, whose required reviewer is the owner: look at the
+# preview, then open the run and choose Review deployments, Approve. That releases the site: the last job moves the branch
+# `site` to this commit with the release bot's App token, exactly as publish-site.yml does, and the push to `site` starts
+# docs.yml, which builds that commit again and deploys it to the live site. Reject, or never approve, and the live site stays as
+# it is. A newer merge replaces this run, so the run that waits is always the latest commit.
+#
+# publish-site.yml is still there for a release without the preview step (it publishes the tip of develop at once).
+#
+# The preview role is the company site's `icl-site-deploy-field-test-preview`, which trusts pull requests of this repository and a
+# push to develop (`previewPushRef` in its apps.ts) and may write `_preview/field-test/*` and nothing else. The role, bucket and
+# distribution come from the repository secrets DOCS_PREVIEW_ROLE_ARN, DOCS_BUCKET and DOCS_DISTRIBUTION_ID. A run that lacks
+# one does not deploy a preview and does not offer a release.
+
+on:
+  push:
+    branches: [develop]
+    paths: ["docs/**", "mkdocs.yml", "requirements/docs.txt", ".github/workflows/docs.yml", ".github/workflows/docs-stage.yml", "tools/docs/**", "config/sample-config.json"]
+
+permissions: {}
+
+# The newest merge replaces an older run, also one that is waiting for approval: what is approved is what was previewed last.
+concurrency:
+  group: docs-stage
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build site
+    permissions:
+      contents: read
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@54f3b7ecd95fa07034f6f50a057c537ee98cd30d # v0.1.28
+    with:
+      site-artifact: docs-site
+
+  preview:
+    name: Deploy preview
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      deployed: ${{ steps.where.outputs.deployed }}
+      url: ${{ steps.where.outputs.url }}
+    steps:
+      - name: Work out where it goes
+        id: where
+        shell: bash
+        env:
+          SHA: ${{ github.sha }}
+          HAVE_ROLE: ${{ secrets.DOCS_PREVIEW_ROLE_ARN != '' }}
+          HAVE_BUCKET: ${{ secrets.DOCS_BUCKET != '' }}
+          HAVE_DISTRIBUTION: ${{ secrets.DOCS_DISTRIBUTION_ID != '' }}
+        run: |
+          set -euo pipefail
+          name="stage-${SHA:0:7}"
+          {
+            echo "key=_preview/field-test/$name"
+            echo "url=https://iainchesworthlabs.com/_preview/field-test/$name/"
+          } >> "$GITHUB_OUTPUT"
+          missing=""
+          [ "$HAVE_ROLE" = "true" ] || missing="$missing DOCS_PREVIEW_ROLE_ARN"
+          [ "$HAVE_BUCKET" = "true" ] || missing="$missing DOCS_BUCKET"
+          [ "$HAVE_DISTRIBUTION" = "true" ] || missing="$missing DOCS_DISTRIBUTION_ID"
+          if [ -n "$missing" ]; then
+            echo "::warning::No preview and no release: secret(s) not available to this run:$missing."
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deployed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download the built site
+        if: steps.where.outputs.deployed == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: docs-site
+          path: site
+
+      - name: Check the site
+        if: steps.where.outputs.deployed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f site/index.html ] || { echo "::error::the artifact has no index.html at its top level"; exit 1; }
+
+      - name: Assume the preview role
+        if: steps.where.outputs.deployed == 'true'
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.DOCS_PREVIEW_ROLE_ARN }}
+          aws-region: ap-southeast-2
+          role-session-name: docs-stage-${{ github.run_id }}
+
+      - name: Sync to S3 and invalidate CloudFront
+        if: steps.where.outputs.deployed == 'true'
+        shell: bash
+        env:
+          BUCKET: ${{ secrets.DOCS_BUCKET }}
+          DISTRIBUTION_ID: ${{ secrets.DOCS_DISTRIBUTION_ID }}
+          KEY: ${{ steps.where.outputs.key }}
+        run: |
+          set -euo pipefail
+          aws --no-cli-pager s3 sync site/ "s3://$BUCKET/$KEY/" --delete --only-show-errors
+          aws --no-cli-pager cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/$KEY/*" "/$KEY" --query Invalidation.Id --output text
+
+      - name: Say where the preview is
+        if: steps.where.outputs.deployed == 'true'
+        shell: bash
+        env:
+          URL: ${{ steps.where.outputs.url }}
+          SHA: ${{ github.sha }}
+        run: |
+          {
+            echo "## Preview of the site (commit ${SHA:0:7})"
+            echo
+            echo "$URL"
+            echo
+            echo "Public to anyone with the link, \`noindex\`, gone after 14 days. Look at it, then choose **Review deployments**, **Approve** on this run to put it on the live site. Reject, or do nothing, and the live site stays as it is."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # A denied role assumption would otherwise be one red step among many. Say what it means and what to do.
+  preview-failed:
+    name: Explain a failed preview
+    needs: preview
+    if: failure() && needs.preview.result == 'failure'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Say what to check
+        shell: bash
+        run: |
+          set -euo pipefail
+          message="The preview was not deployed, so nothing is offered for release and the live site is untouched. If the step 'Assume the preview role' says the web identity token cannot be assumed or the action is not authorized, the preview role's trust policy does not allow a push to refs/heads/develop of this repository: the owner sets previewPushRef to develop on the field-test entry of the company site's apps.ts and runs that stack's deploy (icl-site), then re-runs this run (Re-run all jobs). If another step failed, read its log."
+          echo "::error title=Docs preview failed::$message"
+          echo "$message" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+  # Waits for the owner (the `release` environment has them as its required reviewer). On approval, moves `site` to this commit,
+  # which starts docs.yml and so the live deploy. A push made with the App token starts workflows; one made with GITHUB_TOKEN would not.
+  release:
+    name: Release to the live site
+    needs: preview
+    if: needs.preview.outputs.deployed == 'true' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: release
+      url: ${{ needs.preview.outputs.url }}
+    permissions: {}
+    steps:
+      - name: Create a token for the release bot
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Move the site branch to this commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          current="$(gh api "repos/$REPO/git/ref/heads/site" --jq .object.sha 2>/dev/null || true)"
+          if [ "$current" = "$GITHUB_SHA" ]; then
+            echo "The site branch is already at $GITHUB_SHA, so the live site was published from this commit. To publish it again, re-run the last Docs run of the push to site." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ -n "$current" ]; then
+            # force=false: the move must be a fast-forward, so a commit that is not ahead of the branch stops here.
+            gh api --method PATCH "repos/$REPO/git/refs/heads/site" -f sha="$GITHUB_SHA" -F force=false
+          else
+            gh api --method POST "repos/$REPO/git/refs" -f ref="refs/heads/site" -f sha="$GITHUB_SHA"
+          fi
+          echo "Approved. The site branch is now at $GITHUB_SHA. The Docs workflow builds and publishes it to the live site." >> "$GITHUB_STEP_SUMMARY"

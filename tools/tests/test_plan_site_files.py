@@ -25,7 +25,7 @@ PLAN = json.loads((ROOT / ".github" / "ci" / "plan.json").read_text(encoding="ut
 
 # The application reads these as well as the site, so a change to one of them has to build.
 APPLICATION_READS = {"docs/design/tokens.json", "config/sample-config.json"}
-PUBLISHING_WORKFLOWS = [".github/workflows/docs.yml", ".github/workflows/publish-site.yml"]
+PUBLISHING_WORKFLOWS = [".github/workflows/docs.yml", ".github/workflows/docs-stage.yml", ".github/workflows/publish-site.yml"]
 
 
 def expand(pattern: str) -> list[str]:
